@@ -1,0 +1,56 @@
+
+    <?php
+    $this->Form->create();
+    ?>
+    <div class="row panel-fix">
+        <div class="col-md-12">
+            <ul class="nav nav-tabs">
+                <?php
+                $i = 0;
+                foreach ($contacts ?? [] as $contact) {
+                ?>
+                    <li class="nav-item"><a href="#<?php echo (isset($contact->external_id) ? $this->Html->safe($contact->external_id) : null);?>" class="nav-link<?php echo $i == 0 ? ' active' : '';?>" data-toggle="tab"><?php $this->_('RealtimeRegister.tab_client_contacts.section_' . $contact->external_id);?></a></li>
+                <?php
+                    $i++;
+                }
+                ?>
+            </ul>
+
+            <div class="tab-content">
+                <?php
+                $i = 0;
+                foreach ($contacts ?? [] as $contact) {
+                ?>
+                <div class="tab-pane fade show<?php echo $i == 0 ? ' active' : '';?>" id="<?php echo (isset($contact->external_id) ? $this->Html->safe($contact->external_id) : null);?>">
+                    <?php
+                    foreach ($contact as $field => $value) {
+                        if ($field == 'external_id') {
+                            $this->Form->fieldHidden('contacts[' . $contact->external_id . '][' . $field . ']', $value);
+                            continue;
+                        }
+                    ?>
+                        <div class="form-group">
+                            <?php
+                            $this->Form->label($this->_('RealtimeRegister.tab_client_contacts.field_' . $field, true), $field);
+                            $this->Form->fieldText('contacts[' . $contact->external_id . '][' . $field . ']', (isset($vars->contacts[$contact->external_id][$field]) ? $vars->contacts[$contact->external_id][$field] : $value), ['id' => $field, 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_client_contacts.field_' . $field, true)]);
+                            ?>
+                        </div>
+                    <?php
+                    }
+                    ?>
+                </div>
+                <?php
+                    $i++;
+                }
+                ?>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-light float-right" type="submit">
+        <i class="fas fa-edit"></i> <?php $this->_('RealtimeRegister.tab_client_contacts.field_update');?>
+    </button>
+    <div class="clearfix"></div>
+    <?php
+    $this->Form->end();
+    ?>

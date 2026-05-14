@@ -1,0 +1,68 @@
+<?php /** @var View $this */ ?>
+<div id="dns-records">
+    <h4><?php $this->_('Logicboxes.tab_forwarder.title') ?></h4>
+
+    <?php $this->Form->create(); ?>
+        <div class="form-group">
+            <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.forward_to', true), 'forward_to') ?>
+            <?php $this->Form->fieldText('forward_to', $details['forward'] ?? null, ['id' => 'forward_to', 'class' => 'form-control']) ?>
+        </div>
+        <div class="form-group">
+            <div class="checkbox">
+                <label>
+                    <?php $this->Form->fieldCheckbox('url_masking', null, ($details['urlmasking'] ?? null) == 'true', ['id' => 'url_masking']) ?>
+                    <?php $this->_('Logicboxes.tab_forwarder.url_masking') ?>
+                </label>
+            </div>
+        </div>
+        <div class="form-group" id="meta_tags_item"<?php echo (($details['urlmasking'] ?? null) == 'true' ? '' : ' style="display: none;"') ?>>   
+            <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.meta_tags', true), 'meta_tags') ?>
+            <?php $this->Form->fieldTextarea('meta_tags', $details['headertags'] ?? null, ['id' => 'meta_tags', 'class' => 'form-control']) ?>
+        </div>
+        <div class="form-group">
+            <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.noframes', true), 'noframes') ?>
+            <?php $this->Form->fieldTextarea('noframes', $details['noframes'] ?? null, ['id' => 'noframes', 'class' => 'form-control']) ?>
+        </div>
+        <div class="form-group">
+            <div class="checkbox">
+                <label>
+                    <?php $this->Form->fieldCheckbox('sub_domain_forwarding', null, ($details['subdomainforwarding'] ?? null) == 'true', ['id' => 'sub_domain_forwarding']) ?>
+                    <?php $this->_('Logicboxes.tab_forwarder.sub_domain_forwarding') ?>
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="checkbox">
+                <label>
+                    <?php $this->Form->fieldCheckbox('path_forwarding', null, ($details['pathforwarding'] ?? null) == 'true', ['id' => 'path_forwarding']) ?>
+                    <?php $this->_('Logicboxes.tab_forwarder.path_forwarding') ?>
+                </label>
+            </div>
+        </div>
+
+        <div class="button_row float-right">
+            <?php if (!empty($details)) { ?>
+                <button class="btn btn-light" type="submit" name="action" value="modify">
+                    <i class="fas fa-edit"></i> <?php $this->_('Logicboxes.tab_forwarder.modify') ?>
+                </button>
+                <button class="btn btn-danger" type="submit" name="action" value="disable">
+                    <i class="fas fa-trash"></i> <?php $this->_('Logicboxes.tab_forwarder.disable') ?>
+                </button>
+            <?php } else { ?>
+                <button class="btn btn-light" type="submit" name="action" value="activate">
+                    <i class="fas fa-check"></i> <?php $this->_('Logicboxes.tab_forwarder.activate') ?>
+                </button>
+            <?php } ?>
+        </div>
+    <?php $this->Form->end() ?>
+</div>
+
+<script>
+    $('#url_masking').change(function() {
+        if (this.checked) {
+            $('#meta_tags_item').slideDown();
+        } else {
+            $('#meta_tags_item').slideUp();
+        }
+    })
+</script>

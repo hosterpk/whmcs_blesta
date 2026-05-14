@@ -1,0 +1,32 @@
+{
+    "version": "2.14.2",
+    "type": "registrar",
+    "name": "Logicboxes.name",
+    "description": "Logicboxes.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://www.blesta.com"
+        }
+    ],
+    "package": {
+        "name_key": "domain"
+    },
+    "service": {
+        "name_key": "domain"
+    },
+    "module": {
+        "row": "Logicboxes.module_row",
+        "rows": "Logicboxes.module_row_plural",
+        "row_key": "registrar"
+    },
+    "email_tags": {
+        "module": [],
+        "package": [],
+        "service": ["domain"]
+    },
+    "features": {
+        "dns_management": 1,
+        "id_protection": 1
+    }
+}

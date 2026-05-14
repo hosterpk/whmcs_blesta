@@ -1,0 +1,28 @@
+{
+    "version": "1.0.1",
+    "name": "Enhance.name",
+    "description": "Enhance.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "https://www.blesta.com"
+        }
+    ],
+    "module": {
+        "row": "Enhance.module_row",
+        "rows": "Enhance.module_row_plural",
+        "group": "Enhance.module_group",
+        "row_key": "server_label"
+    },
+    "package": {
+        "name_key": "package"
+    },
+    "service": {
+        "name_key": "domain"
+    },
+    "email_tags": {
+        "module": ["server_label", "hostname", "org_id", "api_token"],
+        "package": ["package"],
+        "service": ["domain", "username", "password", "website_id", "customer_email"]
+    }
+}

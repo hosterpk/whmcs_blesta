@@ -1,0 +1,17 @@
+    <table class="table">
+        <tr class="heading_row">
+            <td class="fixed_small center border_none"><i class="fas fa-level-up-alt fa-rotate-90"></i></td>
+            <td><?php $this->_('VirtfusionDirectProvisioning.service_info.server_id'); ?></td>
+            <td><?php $this->_('VirtfusionDirectProvisioning.service_info.main_ip'); ?></td>
+            <td><?php $this->_('VirtfusionDirectProvisioning.service_info.base_ips'); ?></td>
+            <td><?php $this->_('VirtfusionDirectProvisioning.service_info.extra_ips'); ?></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><?php echo (isset($service_fields->virtfusion_server_id) ? $this->Html->safe($service_fields->virtfusion_server_id) : null); ?></td>
+            <td><?php echo (isset($service_fields->virtfusion_ip) ? $this->Html->safe($service_fields->virtfusion_ip) : null); ?></td>
+            <td><?php echo (isset($service_fields->{'virtfusion-base_ips'}) ? $this->Html->safe($service_fields->{'virtfusion-base_ips'}) : null); ?></td>
+            <td><?php echo (isset($service_fields->{'additional_num_ips'}) ? $this->Html->safe($service_fields->{'additional_num_ips'}) : null); ?></td>
+        </tr>
+    </table>
+

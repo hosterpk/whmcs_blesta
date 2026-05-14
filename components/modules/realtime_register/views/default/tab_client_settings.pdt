@@ -1,0 +1,117 @@
+
+    <div class="pad">
+        <?php
+        $this->Form->create();
+        $this->Form->fieldHidden('action', 'update');
+        ?>
+        <h4><?php $this->_('RealtimeRegister.tab_client_settings.heading');?></h4>
+        <div class="row panel-fix">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_settings.field_registrar_lock', true), 'registrar_lock');
+                    ?>
+                    <div class="radio">
+                        <label>
+                            <?php
+                            $this->Form->fieldRadio('registrar_lock', 'true', ($vars->registrar_lock ?? $registrar_lock ?? null) == 'true');
+                            $this->_('RealtimeRegister.tab_client_settings.field_registrar_lock_yes');
+                            ?>
+                        </label>
+                    </div>
+                    <div class="radio">
+                        <label>
+                            <?php
+                            $this->Form->fieldRadio('registrar_lock', 'false', ($vars->registrar_lock ?? $registrar_lock ?? null) == 'false');
+                            $this->_('RealtimeRegister.tab_client_settings.field_registrar_lock_no');
+                            ?>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_settings.field_status', true), 'status');
+                    ?>
+                    <div>
+                        <?php
+                        foreach ($domain['status'] ?? [] as $status) {
+                        ?>
+                            <div class="badge badge-<?php echo (str_contains($status, 'PROHIBITED')) ? 'danger' : 'info';?> mb-1"><?php echo $this->Html->safe($status);?></div>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-light float-right" type="submit">
+            <i class="fas fa-edit"></i> <?php $this->_('RealtimeRegister.tab_client_settings.field_submit');?>
+        </button>
+        <div class="clearfix"></div>
+        <?php
+        $this->Form->end();
+        ?>
+
+        <?php
+        $this->Form->create();
+        $this->Form->fieldHidden('action', 'enable_dns');
+        ?>
+        <h4><?php $this->_('RealtimeRegister.tab_client_settings.heading_dns');?></h4>
+        <div class="row panel-fix">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_settings.field_enable_dns', true), 'enable_dns');
+                    ?>
+                    <div class="radio">
+                        <label>
+                            <?php
+                            $this->Form->fieldRadio('enable_dns', 'true', ($vars->enable_dns ?? $enable_dns ?? null) == 'true');
+                            $this->_('RealtimeRegister.tab_client_settings.field_enable_dns_yes');
+                            ?>
+                        </label>
+                    </div>
+                    <div class="radio">
+                        <label>
+                            <?php
+                            $this->Form->fieldRadio('enable_dns', 'false', ($vars->enable_dns ?? $enable_dns ?? null) == 'false');
+                            $this->_('RealtimeRegister.tab_client_settings.field_enable_dns_no');
+                            ?>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-light float-right" type="submit">
+            <i class="fas fa-edit"></i> <?php $this->_('RealtimeRegister.tab_client_settings.field_submit');?>
+        </button>
+        <div class="clearfix"></div>
+        <?php
+        $this->Form->end();
+        ?>
+
+        <?php
+        $this->Form->create();
+        $this->Form->fieldHidden('action', 'update_auth_code');
+        ?>
+        <h4 class="mt-4"><?php $this->_('RealtimeRegister.tab_client_settings.heading_auth_code');?></h4>
+        <div class="row panel-fix">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_settings.field_authcode', true), 'authcode');
+                    $this->Form->fieldText('authcode', ($vars->auth_code ?? $domain['authcode'] ?? ''), ['id' => 'authcode', 'class' => 'form-control', 'maxlength' => 64, 'placeholder' => $this->_('RealtimeRegister.tab_client_settings.field_authcode', true)]);
+                    ?>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-light float-right" type="submit">
+            <i class="fas fa-edit"></i> <?php $this->_('RealtimeRegister.tab_client_settings.field_update_auth_code');?>
+        </button>
+        <?php
+        $this->Form->end();
+        ?>
+    </div>

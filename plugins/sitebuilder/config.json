@@ -1,0 +1,11 @@
+{
+    "version": "1.0.11",
+    "name": "SitebuilderPlugin.name",
+    "description": "SitebuilderPlugin.description",
+    "authors": [
+        {
+            "name": "Site.pro",
+            "url": "https://site.pro"
+        }
+    ]
+}

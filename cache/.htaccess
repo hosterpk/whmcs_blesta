@@ -1,0 +1,7 @@
+########################################################
+# package:    minPHP
+# filename:   .htaccess
+########################################################
+
+# Do not allow direct access to this folder
+deny from all

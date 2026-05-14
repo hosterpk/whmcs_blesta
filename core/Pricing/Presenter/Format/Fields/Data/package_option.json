@@ -1,0 +1,9 @@
+{
+    "id":"id",
+    "name":"name",
+    "label":"label",
+    "type":"type",
+    "options":"values",
+    "disable_pricing":"disable_pricing",
+    "hide_on_invoice":"hide_on_invoice"
+}

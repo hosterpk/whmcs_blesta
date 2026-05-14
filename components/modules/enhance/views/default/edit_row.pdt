@@ -1,0 +1,49 @@
+        <?php
+        $this->Widget->clear();
+        $this->Widget->setLinkButtons([]);
+        $this->Widget->create($this->_('Enhance.edit_row.box_title', true));
+        ?>
+        <div class="inner">
+            <?php
+            $this->Form->create();
+            ?>
+            <div class="pad">
+                <ul>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('Enhance.row_meta.server_label', true), 'server_label');
+                        $this->Form->fieldText('server_label', (isset($vars->server_label) ? $vars->server_label : null), ['id' => 'server_label', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('Enhance.row_meta.hostname', true), 'hostname');
+                        $this->Form->fieldText('hostname', (isset($vars->hostname) ? $vars->hostname : null), ['id' => 'hostname', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('Enhance.row_meta.org_id', true), 'org_id');
+                        $this->Form->fieldText('org_id', (isset($vars->org_id) ? $vars->org_id : null), ['id' => 'org_id', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('Enhance.row_meta.api_token', true), 'api_token');
+                        $this->Form->fieldText('api_token', (isset($vars->api_token) ? $vars->api_token : null), ['id' => 'api_token', 'class' => 'block']);
+                        ?>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="button_row">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('Enhance.edit_row.edit_btn', true), ['class' => 'btn btn-primary pull-right']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+        <?php
+        $this->Widget->end();

@@ -1,0 +1,80 @@
+        <?php
+        echo ($message ?? null);
+
+        $this->Widget->clear();
+        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'support_manager_styles']);
+        $this->Widget->create($this->_('AdminMain.settings.boxtitle_settings', true), ['id'=>'admin_main_settings']);
+        ?>
+        <div class="inner">
+            <?php
+            $this->Form->create(null, ['id'=>'settings', 'class' => 'disable-on-submit', 'enctype' => 'multipart/form-data']);
+            ?>
+            <div class="title_row first">
+                <h3><?php $this->_('AdminMain.settings.heading_avatar_settings');?></h3>
+            </div>
+            <div class="pad">
+                <ul>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('AdminMain.settings.field_avatar', true), 'avatar');
+                        $this->Form->fieldSelect(
+                            'avatar',
+                            $avatar_options ?? [],
+                            ($vars->avatar ?? 'default'),
+                            ['id' => 'avatar']
+                        );
+                        ?>
+                    </li>
+                    <li id="default_avatar_section">
+                        <?php
+                        $this->Form->label($this->_('AdminMain.settings.field_default_avatar', true), 'default_avatar');
+                        ?>
+                        <img src="<?php echo WEBDIR . 'uploads/avatar/0/?support_manager=true';?>" class="img-thumbnail mb-1" style="width: 120px; height: 120px"/>
+                        <?php
+                        if (!empty($settings['default_avatar'] ?? '')) {
+                        ?>
+                            <label>
+                                <?php
+                                $this->Form->fieldCheckbox('remove_default_avatar', '1', false, ['id' => 'remove_default_avatar']);
+                                echo $this->_('AdminMain.settings.text_remove_avatar', true);
+                                ?>
+                            </label>
+                        <?php
+                        }
+                        ?>
+                        <div class="d-block mt-1">
+                            <?php
+                            $this->Form->fieldFile('default_avatar', ['id' => 'default_avatar', 'accept' => 'image/*']);
+                            ?>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="button_row">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('AdminMain.settings.field_submit', true), ['class'=>'btn btn-primary pull-right']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+        <?php
+        $this->Widget->end();
+        ?>
+        <script>
+            $(document).ready(function() {
+                function toggleDefaultAvatarSection() {
+                    var avatar = $('#avatar').val();
+                    if (avatar === 'default' || avatar === 'fallback') {
+                        $('#default_avatar_section').show();
+                    } else {
+                        $('#default_avatar_section').hide();
+                    }
+                }
+
+                toggleDefaultAvatarSection();
+                $('#avatar').on('change', toggleDefaultAvatarSection);
+            });
+        </script>

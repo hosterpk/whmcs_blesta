@@ -1,0 +1,102 @@
+
+        <div class="title_row first">
+            <h3><?php $this->_('RealtimeRegister.tab_hosts.heading');?></h3>
+        </div>
+
+        <div class="pad">
+            <table class="table">
+                <tbody>
+                    <tr class="heading_row">
+                        <td><?php $this->_('RealtimeRegister.tab_hosts.heading_host');?></td>
+                        <td><?php $this->_('RealtimeRegister.tab_hosts.heading_ip_address');?></td>
+                        <td class="last"><?php $this->_('RealtimeRegister.tab_hosts.heading_options');?></td>
+                    </tr>
+
+                <?php
+                if (!empty($hosts)) {
+                    $i = 0;
+                    foreach ($hosts as $host) {
+                ?>
+                    <tr class="<?php echo ($i % 2 == 1) ? 'odd_row' : ''; ?>">
+                        <td><?php echo $this->Html->safe($host['host'] ?? '');?></td>
+                        <td>
+                            <?php
+                            foreach ($host['ips'] as $ip) {
+                            ?>
+                                <?php echo $this->Html->safe($ip['ip'] ?? '');?>
+                            <?php
+                            }
+                            ?>
+                        </td>
+                        <td>
+                            <?php
+                            $this->Form->create();
+                            $this->Form->fieldHidden('action', 'delete');
+                            $this->Form->fieldHidden('host', $host['host'] ?? '');
+                            ?>
+                            <button class="btn btn-danger btn-xs" type="submit">
+                                <i class="fas fa-ban"></i> <?php $this->_('RealtimeRegister.tab_hosts.field_delete');?>
+                            </button>
+                            <?php
+                            $this->Form->end();
+                            ?>
+                        </td>
+                    </tr>
+                <?php
+                        $i++;
+                    }
+                } else {
+                ?>
+                    <tr>
+                        <td colspan="3">
+                            <div class="empty_section">
+                                <div class="empty_box"><?php $this->_('RealtimeRegister.tab_hosts.text_no_hosts');?></div>
+                            </div>
+                        </td>
+                    </tr>
+                <?php
+                }
+                ?>
+                </tbody>
+            </table>
+        </div>
+
+        <?php
+        $this->Form->create();
+        $this->Form->fieldHidden('action', 'add');
+        ?>
+        <div class="title_row">
+            <h3><?php $this->_('RealtimeRegister.tab_hosts.heading_add');?></h3>
+        </div>
+
+        <div class="pad">
+            <ul>
+                <li>
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_hosts.field_host', true), 'host');
+                    $this->Form->fieldText('host', ($vars->host ?? ''), ['id' => 'host', 'class'=>'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_hosts.field_host', true)]);
+                    ?>
+                </li>
+                <li>
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_hosts.field_ip_address', true), 'ip_address');
+                    $this->Form->fieldText('ip_address[0]', ($vars->ip_address[0] ?? ''), ['class'=>'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_hosts.field_ip_address', true)]);
+                    ?>
+                </li>
+                <li>
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_hosts.field_ip_address', true), 'ip_address');
+                    $this->Form->fieldText('ip_address[1]', ($vars->ip_address[1] ?? ''), ['class'=>'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_hosts.field_ip_address', true)]);
+                    ?>
+                </li>
+            </ul>
+        </div>
+
+        <div class="button_row">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('RealtimeRegister.tab_hosts.field_add', true), ['class' => 'btn btn-primary float-right']);
+            ?>
+        </div>
+        <?php
+        $this->Form->end();
+        ?>

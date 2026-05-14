@@ -1,0 +1,20 @@
+{
+    "name": "blesta/openprovider",
+    "description": "Blesta module for OpenProvider",
+    "type": "blesta-module",
+    "license": "proprietary",
+    "require": {
+        "php": ">=7.2",
+        "blesta/composer-installer": "~1.0",
+        "openprovider/rest-client-php": "v1.0.1-beta@dev",
+        "phpdocumentor/reflection-docblock": "^5.2",
+        "symfony/serializer": "^5.2",
+        "symfony/property-access": "^5.2"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/openprovider/rest-client-php"
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "name": "blesta/paysera",
+    "description": "A convenient and popular online payment processing tool, allowing to accept payments in different countries and in different currencies.",
+    "license": "proprietary",
+    "type": "blesta-gateway-nonmerchant",
+    "require": {
+        "blesta/composer-installer": "~1.0",
+        "webtopay/libwebtopay": "~1.8"
+    },
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "homepage": "http://blesta.com"
+        }
+    ]
+}

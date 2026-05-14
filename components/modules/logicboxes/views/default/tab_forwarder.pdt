@@ -1,0 +1,62 @@
+<?php /** @var View $this */ ?>
+<div id="dns-records">
+    <div class="title_row first">
+        <h3><?php $this->_('Logicboxes.tab_forwarder.title') ?></h3>
+    </div>
+
+    <?php $this->Form->create(); ?>
+        <div class="pad">
+            <ul>
+                <li>
+                    <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.forward_to', true), 'forward_to') ?>
+                    <?php $this->Form->fieldText('forward_to', $details['forward'] ?? null, ['id' => 'forward_to']) ?>
+                </li>
+                <li>
+                    <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.url_masking', true), 'url_masking') ?>
+                    <?php $this->Form->fieldCheckbox('url_masking', null, ($details['urlmasking'] ?? null) == 'true', ['id' => 'url_masking']) ?>
+                </li>
+                <li id="meta_tags_item"<?php echo (($details['urlmasking'] ?? null) == 'true' ? '' : ' style="display: none;"') ?>>   
+                    <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.meta_tags', true), 'meta_tags') ?>
+                    <?php $this->Form->fieldTextarea('meta_tags', $details['headertags'] ?? null, ['id' => 'meta_tags']) ?>
+                </li>
+                <li>
+                    <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.noframes', true), 'noframes') ?>
+                    <?php $this->Form->fieldTextarea('noframes', $details['noframes'] ?? null, ['id' => 'noframes']) ?>
+                </li>
+                <li>
+                    <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.sub_domain_forwarding', true), 'sub_domain_forwarding') ?>
+                    <?php $this->Form->fieldCheckbox('sub_domain_forwarding', null, ($details['subdomainforwarding'] ?? null) == 'true', ['id' => 'sub_domain_forwarding']) ?>
+                </li>
+                <li>
+                    <?php $this->Form->label($this->_('Logicboxes.tab_forwarder.path_forwarding', true), 'path_forwarding') ?>
+                    <?php $this->Form->fieldCheckbox('path_forwarding', null, ($details['pathforwarding'] ?? null) == 'true', ['id' => 'path_forwarding']) ?>
+                </li>
+            </ul>
+
+            <div class="button_row">
+                <?php if (!empty($details)) { ?>
+                    <button class="btn btn-danger pull-right" type="submit" name="action" value="disable">
+                        <i class="fas fa-trash"></i> <?php $this->_('Logicboxes.tab_forwarder.disable') ?>
+                    </button>
+                    <button class="btn btn-primary pull-right" type="submit" name="action" value="modify">
+                        <i class="fas fa-edit"></i> <?php $this->_('Logicboxes.tab_forwarder.modify') ?>
+                    </button>
+                <?php } else { ?>
+                    <button class="btn btn-primary pull-right" type="submit" name="action" value="activate">
+                        <i class="fas fa-check"></i> <?php $this->_('Logicboxes.tab_forwarder.activate') ?>
+                    </button>
+                <?php } ?>
+            </div>
+        </div>
+    <?php $this->Form->end() ?>
+</div>
+
+<script>
+    $('#url_masking').change(function() {
+        if (this.checked) {
+            $('#meta_tags_item').slideDown();
+        } else {
+            $('#meta_tags_item').slideUp();
+        }
+    })
+</script>

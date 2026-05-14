@@ -1,0 +1,44 @@
+        <?php
+        $this->Widget->clear();
+        $this->Widget->setLinkButtons([]);
+        $this->Widget->create($this->_('VirtfusionDirectProvisioning.edit_row.box_title', true));
+        ?>
+        <div class="inner">
+            <?php
+            $this->Form->create();
+            ?>
+            <div class="pad">
+                <ul>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('VirtfusionDirectProvisioning.row_meta.name', true), 'name');
+                        $this->Form->fieldText('name', (isset($vars->name) ? $vars->name : null), ['id' => 'name', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('VirtfusionDirectProvisioning.row_meta.hostname', true), 'hostname');
+                        $this->Form->fieldText('hostname', (isset($vars->hostname) ? $vars->hostname : null), ['id' => 'hostname', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('VirtfusionDirectProvisioning.row_meta.api_token', true), 'api_token');
+                        $this->Form->fieldTextarea('api_token', (isset($vars->api_token) ? $vars->api_token : null), ['id' => 'api_token', 'class' => 'block']);
+                        ?>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="button_row">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('VirtfusionDirectProvisioning.edit_row.edit_btn', true), ['class' => 'btn btn-primary pull-right']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+        <?php
+        $this->Widget->end();
+        ?>

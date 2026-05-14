@@ -1,0 +1,15 @@
+{
+    "name": "blesta/realtime_register",
+    "description": "We offer 2,000+ TLDs from over 150 registries, and are constantly adding new ones. We take care of registry updates and all policies and procedures.",
+    "license": "proprietary",
+    "type": "blesta-module",
+    "require": {
+        "blesta/composer-installer": "~1.0"
+    },
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "homepage": "https://blesta.com"
+        }
+    ]
+}

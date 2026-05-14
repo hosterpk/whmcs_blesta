@@ -1,0 +1,77 @@
+
+                        <ul>
+                            <li>
+                                <?php
+                                $this->Form->fieldCheckbox('enable_gateway_restrictions', 'true', ($vars['enable_gateway_restrictions'] ?? 'false') == 'true', ['id' => 'enable_gateway_restrictions']);
+                                $this->Form->label($this->_('AdminCompanyClientoptions.gatewayrestrictions.field_enable_gateway_restrictions', true), 'enable_gateway_restrictions', ['class' => 'inline']);
+                                ?>
+                                <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyClientoptions.!tooltip.enable_gateway_restrictions');?></div></span>
+                            </li>
+                        </ul>
+
+                        <?php
+                        if (!empty($gateways)) {
+                        ?>
+                            <table class="table" id="gateway_restrictions">
+                                <tbody>
+                                    <tr class="heading_row">
+                                        <td class="icon"><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.heading_enable');?></td>
+                                        <td><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.heading_gateway');?></td>
+                                        <td class="last"><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.heading_type');?></td>
+                                    </tr>
+
+                                    <?php
+                                    $i = 0;
+                                    foreach ($gateways as $gateway) {
+                                    ?>
+                                        <tr<?php echo ($i % 2 == 1) ? ' class="odd_row"' : '';?>>
+                                            <td class="text-center"><?php $this->Form->fieldCheckbox('allowed_gateways[]', $gateway->id, in_array($gateway->id, ($vars['allowed_gateways'] ?? [])), ['id' => 'gateway_' . $gateway->class]);?></td>
+                                            <td><?php echo $this->Html->safe($gateway->name);?></td>
+                                            <td><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.text_gateway_type_' . $gateway->type);?></td>
+                                        </tr>
+                                    <?php
+                                        $i++;
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                        <?php
+                        } else {
+                        ?>
+                            <div class="empty_section">
+                                <div class="empty_box"><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.no_gateways_text');?></div>
+                            </div>
+                        <?php
+                        }
+                        ?>
+
+<?php
+$this->Javascript->setInline("
+$(document).ready(function() {
+    setTimeout(function(){
+        if ($('#enable_gateway_restrictions').is(':checked')) {
+            $('#gateway_restrictions input').prop('disabled', false);
+        } else {
+            $('#gateway_restrictions input').prop('disabled', true);
+        }
+    }, 500);
+        
+    $('#use_company_settings').change(function () {
+        setTimeout(function(){
+            if ($('#enable_gateway_restrictions').is(':checked')) {
+                $('#gateway_restrictions input').prop('disabled', false);
+            } else {
+                $('#gateway_restrictions input').prop('disabled', true);
+            }
+        }, 500);
+    });
+    
+    $('#enable_gateway_restrictions').change(function () {
+        if ($(this).is(':checked')) {
+            $('#gateway_restrictions input').prop('disabled', false);
+        } else {
+            $('#gateway_restrictions input').prop('disabled', true);
+        }
+    });
+});
+");

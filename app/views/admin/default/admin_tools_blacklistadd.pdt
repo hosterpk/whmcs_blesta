@@ -1,0 +1,61 @@
+
+        <?php
+        echo ($message ?? null);
+
+        $this->Widget->clear();
+        $this->Widget->create($this->_('AdminTools.blacklistadd.boxtitle_addrule', true), ['id' => 'admin_tools_blacklistadd'], ($render_section ?? null));
+        ?>
+        <div class="inner">
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+            <div class="pad">
+                <ul>
+                    <li>
+                        <?php $this->Form->label($this->_('AdminTools.blacklistadd.field_type', true), 'type');?>
+                        <?php $this->Form->fieldSelect('type', ($types ?? []), ($vars->type ?? null), ['id' => 'type', 'class' => 'block']);?>
+                    </li>
+                    <li>
+                        <?php $this->Form->label($this->_('AdminTools.blacklistadd.field_rule', true), 'rule', ['class' => 'inline']);?>
+                        <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminTools.!tooltip.rule');?></div></span>
+                        <?php $this->Form->fieldText('rule', ($vars->rule ?? null), ['id' => 'rule', 'class' => 'block']);?>
+                    </li>
+                    <li>
+                        <?php $this->Form->fieldCheckbox('block_outgoing', '1', isset($vars->block_outgoing), ['id' => 'block_outgoing']); ?>
+                        <?php $this->Form->label($this->_('AdminTools.blacklistadd.field_block_outgoing', true), 'block_outgoing', ['class' => 'inline']); ?>
+                    </li>
+                    <li>
+                        <?php $this->Form->label($this->_('AdminTools.blacklistadd.field_note', true), 'note');?>
+                        <?php $this->Form->fieldTextarea('note', ($vars->note ?? null), ['id' => 'note']);?>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="button_row">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('AdminTools.blacklistadd.field_submit', true), ['class' => 'btn btn-primary pull-right']);
+                ?>
+            </div>
+            <?php $this->Form->end();?>
+        </div>
+        <?php
+        $this->Widget->end();
+        ?>
+
+        <script type="text/javascript">
+            $(document).ready(function() {
+                function toggleBlockOutgoing() {
+                    var type = $('#type').val();
+                    var block_outgoing = $('#block_outgoing').closest('li');
+
+                    if (type === 'ip') {
+                        block_outgoing.hide();
+                    } else {
+                        block_outgoing.show();
+                    }
+                }
+                toggleBlockOutgoing();
+
+                $('#type').change(function() {
+                    toggleBlockOutgoing();
+                });
+            });
+        </script>

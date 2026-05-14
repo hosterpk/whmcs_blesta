@@ -1,0 +1,28 @@
+{
+    "version": "1.0.3",
+    "name": "VirtfusionDirectProvisioning.name",
+    "description": "VirtfusionDirectProvisioning.description",
+    "authors": [
+        {
+            "name": "VirtFusion",
+            "url": "https://virtfusion.com/"
+        }
+    ],
+    "module": {
+        "row": "VirtfusionDirectProvisioning.module_row",
+        "rows": "VirtfusionDirectProvisioning.module_row_plural",
+        "group": "VirtfusionDirectProvisioning.module_group",
+        "row_key": "name"
+    },
+    "service": {
+        "name_key": "label"
+    },
+    "package": {
+        "name_key": "hypervisor_group_id"
+    },
+    "email_tags": {
+        "module": ["name","hostname"],
+        "package": ["hypervisor_group_id","default_ipv4","package_id"],
+        "service": ["virtfusion_server_id", "virtfusion_hostname", "virtfusion_password", "virtfusion_ip", "virtfusion-base_ips", "virtfusion_ipv6_cidr"]
+    }
+}

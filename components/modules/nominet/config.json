@@ -1,0 +1,35 @@
+{
+    "version": "1.1.0",
+    "type": "registrar",
+    "name": "Nominet.name",
+    "description": "Nominet.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://blesta.com/"
+        }
+    ],
+    "module": {
+        "row": "Nominet.module_row",
+        "rows": "Nominet.module_row_plural",
+        "group": "Nominet.module_group",
+        "row_key": "username"
+    },
+    "package": {
+        "name_key": "epp_code"
+    },
+    "service": {
+        "name_key": "domain"
+    },
+    "email_tags": {
+        "module": [],
+        "package": ["epp_code"],
+        "service": ["domain"]
+    },
+    "features": {
+        "dns_management": 1,
+        "email_forwarding": 0,
+        "id_protection": 0,
+        "epp_code": 1
+    }
+}

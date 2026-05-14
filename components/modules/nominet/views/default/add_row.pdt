@@ -1,0 +1,50 @@
+        <?php
+        $this->Widget->clear();
+        $this->Widget->setLinkButtons([]);
+        $this->Widget->create($this->_('Nominet.add_row.box_title', true));
+        ?>
+        <div class="inner">
+            <?php
+            $this->Form->create();
+            ?>
+            <div class="pad">
+                <ul>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('Nominet.row_meta.username', true), 'username');
+                        $this->Form->fieldText('username', ($vars->username ?? null), ['id' => 'username', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('Nominet.row_meta.password', true), 'password');
+                        $this->Form->fieldText('password', ($vars->password ?? null), ['id' => 'password', 'class' => 'block']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->fieldCheckbox('secure', 'true', ($vars->secure ?? 'false') == 'true', ['id' => 'secure']);
+                        $this->Form->label($this->_('Nominet.row_meta.secure', true), 'secure', ['class' => 'inline']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->fieldCheckbox('sandbox', 'true', ($vars->sandbox ?? 'false') == 'true', ['id' => 'sandbox']);
+                        $this->Form->label($this->_('Nominet.row_meta.sandbox', true), 'sandbox', ['class' => 'inline']);
+                        ?>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="button_row">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('Nominet.add_row.add_btn', true), ['class' => 'btn btn-primary pull-right']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+        <?php
+        $this->Widget->end();
+        ?>

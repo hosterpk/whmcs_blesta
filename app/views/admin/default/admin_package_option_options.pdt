@@ -1,0 +1,197 @@
+
+        <?php
+        $this->Form->create(null, ['id' => 'options_form', 'class' => 'disable-on-submit']);
+
+        if (!empty($package_options)) {
+        ?>
+        <table class="table" id="package_options">
+            <tr class="heading_row">
+                <td class="icon"><?php $this->Form->fieldCheckbox('package_option_ids[]', 'all', (($vars->package_option_ids[0] ?? null) == 'all'), ['class' => 'actions']);?></td>
+                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'package_options/index/' . (isset($type) ? $type : null) . '/?sort=label&order=' . ($sort == 'label' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'label' ? ' ' . $order : '');?>"><?php $this->_('AdminPackageOptions.index.heading_label');?></a></span></td>
+                <td class="last"><span><?php $this->_('AdminPackageOptions.index.heading_options');?></span></td>
+            </tr>
+            <?php
+            // Display all package options
+            $i = 0;
+            foreach ((isset($package_options) ? $package_options : []) as $package_option) {
+            ?>
+            <tr class="<?php echo $this->Html->concat(' ', ($i++ % 2 == 1) ? 'odd_row' : '', 'expand', 'package_option');?>">
+                <td>
+                    <?php $this->Form->fieldCheckbox('package_option_ids[]', ($package_option->id ?? null), in_array(($package_option->id ?? null), ($vars->package_option_ids ?? [])), ['class' => 'actions']);?>
+                </td>
+                <td><?php (print (isset($package_option->label) ? $this->Html->safe($package_option->label) : null));?></td>
+                <td class="last">
+                    <a href="<?php echo $this->base_uri . 'package_options/edit/' . (isset($package_option->id) ? $this->Html->safe($package_option->id) : null) . '/';?>"><?php $this->_('AdminPackageOptions.index.option_edit');?></a>,
+                    <a href="<?php echo $this->base_uri . 'package_options/delete/';?>" class="manage" data-option-id="<?php (print (isset($package_option->id) ? $this->Html->safe($package_option->id) : null));?>" rel="<?php echo $this->Html->safe($this->_('AdminPackageOptions.index.confirm_delete_option', true));?>"><?php $this->_('AdminPackageOptions.index.option_delete');?></a>
+                </td>
+            </tr>
+            <tr class="expand_details" id="package_option_<?php (print (isset($package_option->id) ? $this->Html->safe($package_option->id) : null));?>">
+                <td colspan="5" class="subtable">
+                </td>
+            </tr>
+            <?php
+            }
+            unset($i);
+            ?>
+        </table>
+        <?php
+            // Set pagination
+            $this->Pagination->build();
+        } else {
+        ?>
+        <div class="empty_section">
+            <div class="empty_box">
+                <?php
+                $type = (isset($type) ? $type : 'options');
+                $this->_('AdminPackageOptions.index.no_results_' . $type);
+                ?>
+            </div>
+        </div>
+        <?php
+        }
+        ?>
+        <div id="package_option_actions" class="button_row pad_top">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminPackageOptions.index.field_actionsubmit', true), ['class' => 'btn btn-primary btn-sm btn-modal pull-right']);
+            ?>
+            <div class="actions">
+                <?php
+                $this->Form->fieldSelect('action', $actions ?? [], $vars->action ?? null);
+                ?>
+            </div>
+        </div>
+        <?php
+        $this->Form->end();
+        $this->Form->create($this->base_uri . 'package_options/delete/', ['id' => 'delete_package_option']);
+        $this->Form->fieldHidden('id', '', ['id' => 'delete_package_option_id']);
+        $this->Form->end();
+        ?>
+
+        <div id="confirmation_modal" style="display: none;">
+            <div class="common_box">
+                <div class="inner">
+                    <section class="error_section">
+                        <article class="error_box alert">
+                            <div class="icon-line fa-2x">
+                                <i class="fas fa-exclamation-triangle fa-fw"></i>
+                                <p><?php $this->_('AdminPackageOptions.!notice.package_option_actions');?></p>
+                            </div>
+                        </article>
+                    </section>
+                    <div class="button_row">
+                        <a href="#" class="btn btn-default pull-right cancel"><?php $this->_('AdminPackageOptions.index.field_cancel');?></a>
+                        <a href="#" class="btn btn-primary pull-right continue"><?php $this->_('AdminPackageOptions.index.field_continue');?></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("tr.package_option").click(function() {
+            $(this).blestaUpdateRow("<?php echo (isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'package_options/optioninfo/';?>" + $(this).next("tr").attr("id").split("_")[2], ".subtable");
+        });
+
+        showPackageOptionActions();
+        $('#package_options input.actions').click(function() {
+            // Show/hide actions
+            if ($('#package_options input.actions:checked').length > 0) {
+                // Check all checkboxes
+                if ($(this).val() === 'all') {
+                    if ($(this).prop('checked')) {
+                        // Check all checkboxes
+                        $('#package_options input.actions').each(function() {
+                            $(this).prop('checked', true);
+                        });
+
+                        // Show email input
+                        $('#package_option_actions').show();
+                    }
+                    else {
+                        // Uncheck all checkboxes
+                        $('#package_options input.actions').each(function() {
+                            $(this).prop('checked', false);
+                        });
+
+                        // Hide email input
+                        $('#package_option_actions').hide();
+                    }
+                }
+                else {
+                    // Check individual checkboxes
+                    if ($(this).prop('checked')) {
+                        $('#package_option_actions').show();
+                    }
+                    else {
+                        // Uncheck 'all'
+                        $('#package_options input[value=all].actions').prop('checked', false);
+                    }
+                }
+            } else {
+                // Hide input
+                $('#package_option_actions').hide();
+            }
+        });
+
+        function showPackageOptionActions() {
+            if ($('#package_options input.actions:checked').length > 0) {
+                $('#package_option_actions').show();
+            } else {
+                $('#package_option_actions').hide();
+            }
+        }
+
+        // Process actions form
+        $('#options_form').on('submit', submitActions);
+        function submitActions(event) {
+            // Stop form from submitting
+            event.preventDefault();
+
+            // Show message modal
+            $('#options_form .btn-modal').blestaModal({
+                close: '<?php $this->_('AppController.modal.text_close');?>',
+                url: false,
+                title: $('#options_form select[name="action"] option:selected').text(),
+                text: $('#confirmation_modal').html(),
+                open: true,
+                onRender: function (event, api) {
+                    // If 'continue' is clicked, forward to where we wanted to go
+                    $('.btn.continue', api.elements.content).click(function () {
+                        resubmitActions();
+                    });
+
+                    // If 'cancel' is clicked, close the modal
+                    $('.btn.cancel', api.elements.content).click(function () {
+                        api.hide();
+                        return false;
+                    });
+                },
+                onHide: function (event, api) {
+                    $(this).blestaEnableFormSubmission($('#options_form'));
+
+                    // blestaModal() updates the button to prevent it from functioning by
+                    // assigning an onClick(function(){return false;}). Remove this event
+                    // to allow the button to trigger another submission/event cascade
+                    $('#options_form .btn').off('click');
+                    api.destroy();
+                }
+            });
+        }
+
+        function resubmitActions() {
+            $(this).blestaEnableFormSubmission($('#options_form'));
+            $('#options_form').off('submit', submitActions);
+            $('#options_form').submit();
+        }
+
+
+        // Handle confirmation
+        $('#package_options a.manage[rel]').click(function() {
+            var option_id = $(this).attr('data-option-id');
+            $('#delete_package_option_id').val(option_id);
+        });
+        $('#package_options a.manage[rel]').each(function() {
+            $(this).blestaModalConfirm({base_url: '<?php echo $this->base_uri;?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true, form: $('#delete_package_option')});
+        });
+    });
+</script>

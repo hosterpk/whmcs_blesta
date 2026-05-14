@@ -1,0 +1,31 @@
+
+            <p><?php $this->_('ClientRevenue.description'); ?></p>
+            <div class="pad_side">
+                <ul>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('ClientRevenue.options.currency', true), 'currency');
+                        $this->Form->fieldSelect('currency', ($currencies ?? null), ($vars->currency ?? ($default_currency ?? 'USD')), ['id' => 'currency']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('ClientRevenue.options.field_start_date', true), 'start_date');
+                        $this->Form->fieldText('start_date', ($vars->start_date ?? null), ['id' => 'start_date', 'class' => 'date']);
+                        ?>
+                    </li>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('ClientRevenue.options.field_end_date', true), 'end_date');
+                        $this->Form->fieldText('end_date', ($vars->end_date ?? null), ['id' => 'end_date', 'class' => 'date']);
+                        ?>
+                    </li>
+                </ul>
+            </div>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('input.date').datePicker({
+            startDate:'1996-01-01'
+        });
+    });
+</script>

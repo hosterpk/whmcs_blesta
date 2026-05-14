@@ -1,0 +1,236 @@
+
+        <?php echo (isset($left_nav) ? $left_nav : null);?>
+        <div id="right_outer">
+            <div id="message">
+                <?php echo (isset($message) ? $message : null);?>
+            </div>
+            <section id="right_container">
+                <?php
+                $this->Widget->clear();
+
+                $this->Widget->create($this->_('AdminCompanyEmails.mail.boxtitle_mail', true));
+                $this->Form->create(null, ['id' => 'mail', 'class' => 'disable-on-submit']);
+                ?>
+                <div class="inner">
+                    <div class="pad">
+                        <p><?php $this->_('AdminCompanyEmails.mail.text_section');?></p>
+                        <ul>
+                            <li>
+                                <?php $this->Form->fieldCheckbox('html_email', 'true', (isset($vars['html_email']) && ($vars['html_email'] == 'true') ? true : false), ['id' => 'html_email']);?>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.html_email', true), 'html_email', ['class' => 'inline']);?>
+                                <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.html_email');?></div></span>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.mail_delivery', true), 'mail_delivery', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.mail_delivery');?></div></span>
+                                <?php $this->Form->fieldSelect('mail_delivery', (isset($delivery_methods) ? $delivery_methods : null), (isset($vars['mail_delivery']) ? $vars['mail_delivery'] : null), ['id' => 'mail_delivery', 'class' => 'block']);?>
+                            </li>
+                        </ul>
+                        <ul id="sendmail_settings">
+                            <li>
+                                <a class="test_mail btn btn-sm btn-default" href="#"><?php $this->_('AdminCompanyEmails.mail.field.test');?></a>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.sendmail_path', true), 'sendmail_path', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.sendmail_path');?></div></span>
+                                <?php $this->Form->fieldText('sendmail_path', (isset($vars['sendmail_path']) ? $vars['sendmail_path'] : null), ['id' => 'sendmail_path', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.sendmail_from', true), 'sendmail_from', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.sendmail_from');?></div></span>
+                                <?php $this->Form->fieldText('sendmail_from', (isset($vars['sendmail_from']) ? $vars['sendmail_from'] : null), ['id' => 'sendmail_from', 'class' => 'block']);?>
+                                <div class="font-weight-bold mt-2 w-50"><?php $this->_('AdminCompanyEmails.mail.text_mail_from_test');?></div>
+                            </li>
+                        </ul>
+                        <ul id="smtp_settings">
+                            <li>
+                                <a class="test_mail btn btn-sm btn-default" href="#"><?php $this->_('AdminCompanyEmails.mail.field.test');?></a>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.smtp_host', true), 'smtp_host', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.smtp_host');?></div></span>
+                                <?php $this->Form->fieldText('smtp_host', (isset($vars['smtp_host']) ? $vars['smtp_host'] : null), ['id' => 'smtp_host', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.smtp_port', true), 'smtp_port', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.smtp_port');?></div></span>
+                                <?php $this->Form->fieldText('smtp_port', (isset($vars['smtp_port']) ? $vars['smtp_port'] : null), ['id' => 'smtp_port', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.smtp_user', true), 'smtp_user', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.smtp_user');?></div></span>
+                                <?php $this->Form->fieldText('smtp_user', (isset($vars['smtp_user']) ? $vars['smtp_user'] : null), ['id' => 'smtp_user', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.smtp_password', true), 'smtp_password', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.smtp_password');?></div></span>
+                                <?php $this->Form->fieldPassword('smtp_password', ['id' => 'smtp_password', 'value' => (isset($vars['smtp_password']) ? $vars['smtp_password'] : null), 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.smtp_from', true), 'smtp_from', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.smtp_from');?></div></span>
+                                <?php $this->Form->fieldText('smtp_from', (isset($vars['smtp_from']) ? $vars['smtp_from'] : null), ['id' => 'smtp_from', 'class' => 'block']);?>
+                                <div class="font-weight-bold mt-2 w-50"><?php $this->_('AdminCompanyEmails.mail.text_mail_from_test');?></div>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.smtp_to', true), 'smtp_to', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.smtp_to');?></div></span>
+                                <?php $this->Form->fieldText('smtp_to', (isset($vars['smtp_to']) ? $vars['smtp_to'] : null), ['id' => 'smtp_to', 'class' => 'block', 'placeholder' => $this->_('AdminCompanyEmails.mail.text_optional', true)]);?>
+                            </li>
+                        </ul>
+                        <ul id="oauth2_settings">
+                            <section class="error_section"><article class="error_box alert"><i class="fas fa-fw fa-exclamation-triangle"></i>  <?php $this->_('AdminCompanyEmails.mail.text_redirect');?></article></section>
+                            <li>
+                                <a class="test_mail btn btn-sm btn-default" href="#"><?php $this->_('AdminCompanyEmails.mail.field.test');?></a>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_host', true), 'oauth2_host', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_host');?></div></span>
+                                <?php $this->Form->fieldText('oauth2_host', (isset($vars['oauth2_host']) ? $vars['oauth2_host'] : null), ['id' => 'oauth2_host', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_port', true), 'oauth2_port', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_port');?></div></span>
+                                <?php $this->Form->fieldText('oauth2_port', (isset($vars['oauth2_port']) ? $vars['oauth2_port'] : '465'), ['id' => 'oauth2_port', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_provider', true), 'oauth2_provider', ['class' => 'inline']);?>
+                                <?php $this->Form->fieldSelect('oauth2_provider', ($oauth2_providers ?? []), (isset($vars['oauth2_provider']) ? $vars['oauth2_provider'] : null), ['id' => 'oauth2_provider', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_redirect_uri', true), 'oauth2_redirect_uri', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_redirect_uri');?></div></span>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <?php $this->Form->fieldText('oauth2_redirect_uri', (isset($oauth2_redirect_uri) ? $oauth2_redirect_uri : ''), ['id' => 'oauth2_redirect_uri', 'class' => 'block', 'readonly' => 'readonly']);?>
+                                    <button type="button" id="copy_redirect_uri" class="btn btn-sm btn-default" style="white-space: nowrap;">
+                                        <i class="fas fa-copy"></i> <?php $this->_('AdminCompanyEmails.mail.text_copy');?>
+                                    </button>
+                                </div>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_user', true), 'oauth2_user', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_user');?></div></span>
+                                <?php $this->Form->fieldText('oauth2_user', (isset($vars['oauth2_user']) ? $vars['oauth2_user'] : null), ['id' => 'oauth2_user', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_client_id', true), 'oauth2_client_id', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_client_id');?></div></span>
+                                <?php $this->Form->fieldText('oauth2_client_id', (isset($vars['oauth2_client_id']) ? $vars['oauth2_client_id'] : null), ['id' => 'oauth2_client_id', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_client_secret', true), 'oauth2_client_secret', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_client_secret');?></div></span>
+                                <?php $this->Form->fieldPassword('oauth2_client_secret', ['id' => 'oauth2_client_secret', 'value' => (isset($vars['oauth2_client_secret']) ? $vars['oauth2_client_secret'] : null), 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_from', true), 'oauth2_from', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_from');?></div></span>
+                                <?php $this->Form->fieldText('oauth2_from', (isset($vars['oauth2_from']) ? $vars['oauth2_from'] : null), ['id' => 'oauth2_from', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.mail.field.oauth2_to', true), 'oauth2_to', ['class' => 'inline']);?>
+                                <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompanyEmails.!tooltip.oauth2_to');?></div></span>
+                                <?php $this->Form->fieldText('oauth2_to', (isset($vars['oauth2_to']) ? $vars['oauth2_to'] : null), ['id' => 'oauth2_to', 'class' => 'block', 'placeholder' => $this->_('AdminCompanyEmails.mail.text_optional', true)]);?>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="button_row">
+                        <?php
+                        $this->Form->fieldSubmit('save', $this->_('AdminCompanyEmails.mail.field.submitmail', true), ['class' => 'btn btn-primary pull-right']);
+                        ?>
+                    </div>
+                </div>
+                <?php
+                $this->Form->end();
+                $this->Widget->end();
+                ?>
+            </section>
+        </div>
+        <div id="message_unauthorized" style="display:none;"><?php echo (isset($message_unauthorized) ? $message_unauthorized : null)?></div>
+
+<?php
+$this->Javascript->setInline("
+    $(document).ready(function() {
+        showMailSettings();
+
+        $('#mail_delivery').change(function() {
+            showMailSettings();
+        });
+
+        function showMailSettings() {
+            $('ul[id$=\"_settings\"]').hide();
+            $('#' + $('#mail_delivery').val() + '_settings').show();
+        }
+
+        // Auto-fill SMTP server for OAuth providers
+        autofillOauthSmtpServer();
+        $('#oauth2_provider').change(function() {
+            autofillOauthSmtpServer();
+        });
+        function autofillOauthSmtpServer() {
+            var provider = $('#oauth2_provider').val();
+            var smtp_servers = " . json_encode($smtp_servers ?? []) . ";
+
+            if (smtp_servers.hasOwnProperty(provider)) {
+                $('#oauth2_host').val(smtp_servers[provider]);
+            }
+        }
+
+        // Copy redirect URI to clipboard
+        $('#copy_redirect_uri').click(function() {
+            var redirectUri = $('#oauth2_redirect_uri');
+            redirectUri.select();
+
+            try {
+                // Try using modern clipboard API
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(redirectUri.val()).then(function() {
+                        showCopySuccess();
+                    });
+                } else {
+                    // Fallback for older browsers
+                    document.execCommand('copy');
+                    showCopySuccess();
+                }
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+
+            function showCopySuccess() {
+                var btn = $('#copy_redirect_uri');
+                var originalHtml = btn.html();
+                btn.html('<i class=\"fas fa-check\"></i> " . $this->_('AdminCompanyEmails.mail.text_copied', true) . "');
+                btn.addClass('btn-success').removeClass('btn-default');
+
+                setTimeout(function() {
+                    btn.html(originalHtml);
+                    btn.removeClass('btn-success').addClass('btn-default');
+                }, 2000);
+            }
+        });
+
+        // Request to validate the SMTP info entered in this form
+        $('.test_mail').click(function() {
+            if ($('#mail').blestaDisableFormSubmission($('#mail'))) {
+                $(this).blestaRequest('POST', '" . $this->base_uri . 'settings/company/emails/mailtest/' . "', $('#mail').serialize(),
+                    function(data) {
+                        $('#message').html('');
+                        // On success, draw the success or error message
+                        $('#message').html(data).blestaBindCloseMessage();
+                        $('#message .error_section').show();
+                    },
+                    function(data) {
+                        $('#message').html('');
+                        // On success, draw the success or error message
+                        $('#message').html($('#message_unauthorized').html()).blestaBindCloseMessage();
+                        $('#message .error_section').show();
+                    },
+                    {complete: function() { $('#mail').blestaEnableFormSubmission($('#mail')); }}
+                );
+            }
+
+            return false;
+        });
+    });
+");
+?>

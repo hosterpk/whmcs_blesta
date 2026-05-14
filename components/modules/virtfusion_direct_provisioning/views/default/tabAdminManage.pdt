@@ -1,0 +1,21 @@
+
+    <div id="tabAdminManage">
+  <?php
+         $this->Form->create(
+ //// $this->base_uri . 'services/manage/' . (isset($service_id) ? $service_id : null) . '/tabAdminManage/'
+        '',
+        array('target' => '_blank')
+         );
+         ?>
+         <div class="col-md-12">
+          <input type="hidden" name="action" value="manage"/>
+             <div class="mt-1">
+                 <button type="submit" value="submit" class="btn btn-default">
+              Manage Server as Client
+                 </button>
+             </div>
+         </div>
+         <?php
+         $this->Form->end();
+         ?>
+    </div>

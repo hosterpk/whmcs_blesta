@@ -1,0 +1,204 @@
+        <?php
+        echo ($message ?? null);
+
+        $tabs = [
+            ['name' => $this->_('AdminTools.renewals.category_provision', true), 'current' => ((isset($category) ? $category : null) == 'provision' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/provision/']],
+            ['name' => $this->_('AdminTools.renewals.category_renewal', true), 'current' => ((isset($category) ? $category : null) == 'renewal' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/renewal/']],
+            ['name' => $this->_('AdminTools.renewals.category_unpaid_renewal', true), 'current' => ((isset($category) ? $category : null) == 'unpaid_renewal' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/unpaid_renewal/']],
+            ['name' => $this->_('AdminTools.renewals.category_suspension', true), 'current' => ((isset($category) ? $category : null) == 'suspension' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/suspension/']],
+            ['name' => $this->_('AdminTools.renewals.category_unsuspension', true), 'current' => ((isset($category) ? $category : null) == 'unsuspension' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/unsuspension/']],
+            ['name' => $this->_('AdminTools.renewals.category_cancelation', true), 'current' => ((isset($category) ? $category : null) == 'cancelation' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/cancelation/']],
+            ['name' => $this->_('AdminTools.renewals.category_changes', true), 'current' => ((isset($category) ? $category : null) == 'changes' ? true : false), 'attributes' => ['href' => $this->base_uri . 'tools/provisioning/changes/']]
+        ];
+
+        $this->Widget->clear();
+        $this->Widget->setTabs($tabs);
+        $this->Widget->create($this->_('AdminTools.renewals.boxtitle_service_queue', true), ['id' => 'admin_tools_provisioning'], ($render_section ?? null));
+        ?>
+
+    <div class="inner">
+        <?php
+        if (($num_services = count($services ?? [])) > 0) {
+        ?>
+        <table class="table">
+            <tr class="heading_row">
+                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'tools/provisioning/' . $category . '?sort=client_id_code&order=' . ($sort == 'client_id_code' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'client_id_code' ? ' ' . $order : '');?>"><?php $this->_('AdminTools.renewals.heading_client');?></a></span></td>
+                <td><?php $this->_('AdminTools.renewals.heading_service_id');?></td>
+                <td><?php $this->_('AdminTools.renewals.heading_invoice');?></td>
+
+                <?php
+                if ($category !== 'changes') {
+                ?>
+                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'tools/provisioning/' . $category . '?sort=failed_attempts&order=' . ($sort == 'failed_attempts' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'failed_attempts' ? ' ' . $order : '');?>"><?php $this->_('AdminTools.renewals.heading_failed_attempts');?></a></span></td>
+                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'tools/provisioning/' . $category . '?sort=maximum_attempts&order=' . ($sort == 'maximum_attempts' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'maximum_attempts' ? ' ' . $order : '');?>"><?php $this->_('AdminTools.renewals.heading_maximum_attempts');?></a></span></td>
+                <?php
+                } else {
+                ?>
+                    <td><?php $this->_('AdminTools.renewals.heading_status');?></td>
+                <?php
+                }
+                ?>
+
+                <?php
+                if ($category == 'changes') {
+                ?>
+                    <td>
+                        <span><a href="<?php echo $this->Html->safe($this->base_uri . 'tools/provisioning/' . $category . '?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'date_added' ? ' ' . $order : '');?>"><?php $this->_('AdminTools.renewals.heading_date_' . $category);?></a></span>
+                    </td>
+                    <td>
+                        <span><a href="<?php echo $this->Html->safe($this->base_uri . 'tools/provisioning/' . $category . '?sort=date_status&order=' . ($sort == 'date_status' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'date_status' ? ' ' . $order : '');?>"><?php $this->_('AdminTools.renewals.heading_date_status');?></a></span>
+                    </td>
+                    <td><?php $this->_('AdminTools.renewals.heading_date_next_attempt');?></td>
+                <?php
+                } else {
+                ?>
+                    <td><?php $this->_('AdminTools.renewals.heading_date_' . $category);?></td>
+                    <td>
+                        <span><a href="<?php echo $this->Html->safe($this->base_uri . 'tools/provisioning/' . $category . '?sort=date_next_attempt&order=' . ($sort == 'date_next_attempt' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'date_next_attempt' ? ' ' . $order : '');?>"><?php $this->_('AdminTools.renewals.heading_date_next_attempt');?></a></span>
+                    </td>
+                <?php
+                }
+                ?>
+                <td><span><?php $this->_('AdminTools.renewals.heading_options');?></span></td>
+            </tr>
+            <?php
+            // Display all services
+            for ($i = 0; $i < $num_services; $i++) {
+            ?>
+            <tr<?php echo ($i % 2 == 1) ? ' class="odd_row"' : ''?>>
+                <td><span class="tooltip quiet"><a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . ($services[$i]->client->id ?? $services[$i]->client_id ?? null) . '/');?>"><?php (print $this->Html->safe($services[$i]->client->id_code ?? $services[$i]->client_id_code ?? null));?></a><div><?php echo $this->Html->safe($services[$i]->client->first_name ?? $services[$i]->client_first_name ?? null) . ' ' . $this->Html->safe($services[$i]->client->last_name ?? $services[$i]->client_last_name ?? null);?></div></span></td>
+                <td><span class="tooltip quiet"><a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editservice/' . ($services[$i]->client->id ?? $services[$i]->client_id ?? null) . '/' . ($services[$i]->service->id ?? $services[$i]->id ?? null) . '/');?>"><?php (print $this->Html->safe($services[$i]->service->id_code ?? $services[$i]->id_code ?? null));?></a><div><?php echo $this->Html->safe($services[$i]->service->name ?? $services[$i]->name ?? null);?></div></span></td>
+                <td><a href="<?php echo $this->base_uri . 'clients/editinvoice/' . ($services[$i]->client->id ?? $services[$i]->client_id ?? null) . '/' . ($services[$i]->invoice->id ?? $services[$i]->invoice_id ?? null) . '/';?>"><?php echo $this->Html->safe($services[$i]->invoice->id_code ?? null);?></a></td>
+
+                <?php
+                if ($category !== 'changes') {
+                ?>
+                    <td><?php echo $services[$i]->failed_attempts ?? 0; ?></td>
+                    <td><?php echo $services[$i]->maximum_attempts ?? 0; ?></td>
+                <?php
+                } else {
+                ?>
+                    <td><?php $this->_('AdminTools.renewals.status_' . $services[$i]->status);?></td>
+                <?php
+                }
+                ?>
+
+                <td>
+                    <?php
+                    if ($category == 'provision') {
+                        echo $this->Date->cast($services[$i]->date_added ?? null, 'date_time');
+                    }
+                    if ($category == 'renewal') {
+                        echo $this->Date->cast($services[$i]->date_renews ?? null, 'date_time');
+                    }
+                    if ($category == 'suspension') {
+                        echo $this->Date->cast($services[$i]->invoice->date_due ?? null, 'date_time');
+                    }
+                    if ($category == 'unsuspension') {
+                        echo $this->Date->cast($services[$i]->invoice->date_closed ?? null, 'date_time');
+                    }
+                    if ($category == 'cancelation') {
+                        echo $this->Date->cast($services[$i]->date_canceled ?? null, 'date_time');
+                    }
+                    if ($category == 'changes') {
+                        echo $this->Date->cast($services[$i]->date_added ?? null, 'date_time');
+                    }
+                    ?>
+                </td>
+
+                <?php
+                if ($category == 'changes') {
+                ?>
+                    <td><?php echo $this->Date->cast($services[$i]->date_status ?? null);?></td>
+                <?php
+                }
+                ?>
+
+                <td><?php echo $this->Date->cast($services[$i]->date_next_attempt ?? $next_execution ?? null);?></td>
+                <td>
+                    <?php
+                    if ($category == 'changes') {
+                    ?>
+                        <?php
+                        $this->Form->create($this->base_uri . 'tools/servicechangescancel/');
+                        $this->Form->fieldHidden('id', (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null));
+
+                        $this->Form->fieldCheckbox('void_invoice', 'true', ($vars->void_invoice ?? null), ['id' => 'void_invoice_' . (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null)]);
+                        $this->Form->label($this->_('AdminTools.renewals.field_void_invoice', true), 'void_invoice_' . (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null), ['class' => 'inline mr-1']);
+                        ?>
+                            <a class="manage" href="<?php echo $this->base_uri . 'tools/servicechangescancel/' . (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null) . '/';?>" rel="<?php echo $this->Html->safe($this->_('AdminTools.renewals.modal_cancel', true));?>"><?php $this->_('AdminTools.renewals.option_cancel');?></a><?php echo (($services[$i]->status ?? null) == 'error') ? ', ' : '';?>
+                        <?php
+                        $this->Form->end();
+
+                        if (($services[$i]->status ?? null) == 'error') {
+                            $this->Form->create($this->base_uri . 'tools/servicechangesretry/');
+                            $this->Form->fieldHidden('id', (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null));
+                        ?>
+                            <a class="manage" href="<?php echo $this->base_uri . 'tools/servicechangesretry/' . (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null) . '/';?>" rel="<?php echo $this->Html->safe($this->_('AdminTools.renewals.modal_retry', true));?>"><?php $this->_('AdminTools.renewals.option_retry');?></a>
+                        <?php
+                            $this->Form->end();
+                        }
+                        ?>
+                    <?php
+                    } else {
+                    ?>
+                        <a class="manage" href="<?php echo $this->base_uri . 'tools/dequeue/' . $this->Html->safe($services[$i]->id) . '/';?>" rel="<?php echo $this->Html->safe($this->_('AdminTools.renewals.confirm_dequeue', true));?>"><?php $this->_('AdminTools.renewals.option_dequeue');?></a>,
+                        <a href="<?php echo $this->base_uri . 'tools/changemaxattempts/' . $this->Html->safe($services[$i]->id) . '/';?>" class="modal"><?php $this->_('AdminTools.renewals.option_change_max');?></a>
+                    <?php
+                    }
+                    ?>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </table>
+        <?php
+            $this->Pagination->build();
+        } else {
+        ?>
+        <div class="empty_section">
+            <div class="empty_box">
+                <?php $this->_('AdminTools.renewals.no_results_' . $category);?>
+            </div>
+        </div>
+        <?php
+        }
+        ?>
+    </div>
+        <?php
+        $this->Widget->end();
+        ?>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $(this).blestaBindToolTips();
+
+        // Handle confirmation
+        <?php
+        if (($category ?? null) == 'changes') {
+        ?>
+            $('#admin_tools_provisioning a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->base_uri;?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
+        <?php
+        } else {
+        ?>
+            $('#admin_tools_provisioning a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->base_uri;?>', close: '<?php $this->_('AppController.modal.text_close');?>'});
+        <?php
+        }
+        ?>
+
+        // Load modal content
+        $('#admin_tools_provisioning .table a.modal').each(function() {
+            $(this).blestaModal({
+                close: '<?php $this->_('AppController.modal.text_close');?>',
+                url: $(this).attr('href'),
+                onShow: function (event, api) {
+                    var qtip = $('#' + api._id);
+
+                    qtip.addClass('common_box_modal');
+                    qtip.find('.qtip-content').removeClass('qtip-content');
+                }
+            });
+        });
+    });
+</script>

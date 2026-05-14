@@ -1,0 +1,109 @@
+<?php
+    /** @var View $this */
+
+    echo $message ?? null;
+
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminMain.manage.boxtitle', true));
+
+    $this->Form->create(null, ['id' => 'portal_form']);
+?>
+    <div class="inner">
+        <div class="pad">
+            <ul>
+                <li>
+                    <?php $this->Form->label($this->_('AdminMain.manage.label.uri', true), 'uri'); ?>
+                    <?php $this->Form->fieldText('uri', $uri ?? null, ['id' => 'uri']); ?>
+                </li>
+                <li>
+                    <div class="tab_content inverse">
+                        <ul class="tabs">
+                            <?php foreach ($languages as $lang) { ?>
+                                <li<?= ($lang->code ?? null) == Configure::get('Blesta.language') ? ' class="current"' : '' ?>>
+                                    <a href="#"><?= $this->Html->safe($lang->name ?? null) ?></a>
+                                </li>
+                            <?php } ?>
+                        </ul>
+                        <div class="inner_content">
+                            <?php foreach ($languages as $i => $lang) { ?>
+                                <?php $page = (object)($vars[$lang->code] ?? $pages[$lang->code] ?? []); ?>
+                                <div>
+                                    <ul>
+                                        <li>
+                                            <?php $this->Form->label($this->_('AdminMain.manage.label.title', true), 'title'); ?>
+                                            <?php $this->Form->fieldText('pages[' . $lang->code . '][title]', ($page->title ?? null), ['id' => 'title']); ?>
+                                        </li>
+                                        <li>
+                                            <?php $this->Form->label($this->_('AdminMain.manage.label.tags', true), 'tags'); ?>
+                                            <div class="accent_box">
+                                                <?php foreach (($tags ?? []) as $tag) { ?>
+                                                    <?= $this->Html->concat(' ', $this->Html->safe($tag ?? null), ' '); ?>
+                                                <?php } ?>
+                                            </div>
+                                        </li>
+                                        <li>
+                                            <?php $this->Form->label($this->_('AdminMain.manage.label.content_type', true), 'content_type') ?>
+                                            <?php foreach ($content_types as $type => $name) { ?>
+                                                <?php $this->Form->fieldRadio('pages[' . $lang->code . '][content_type]', $type, ($page->content_type ?? array_keys($content_types ?? [])[0] ?? null) == $type, ['id' => 'content_type_' . $type . '-' . $i, 'class' => 'content_type']) ?>
+                                                <?php $this->Form->label($name, 'content_type_' . $type . '-' . $i, ['class' => 'inline']) ?>
+                                            <?php } ?>
+                                        </li>
+                                        <?php foreach ($content_types as $type => $name) {?>
+                                            <?php $current_type = $type == ($page->content_type ?? array_keys($content_types ?? [])[0] ?? null); ?>
+                                            <li class="content <?= 'content_' . $type ?>"<?= $current_type ? '' : ' style="display:none"' ?>>
+                                                <?php 
+                                                    $attributes = $current_type ? [] : ['disabled' => '']; 
+                                                    switch($type) {
+                                                        case 'wysiwyg':
+                                                            $attributes['class'] = 'wysiwyg';
+                                                            break;
+                                                        case 'md':
+                                                            $attributes['data-markdown-editor'] = '';
+                                                            unset($attributes['disabled']); // Disables the whole editor, let javascript disable it
+                                                            break;
+                                                    }
+
+                                                    $this->Form->label($this->_('AdminMain.manage.label.content', true), 'content');
+                                                    $this->Form->fieldTextarea('pages[' . $lang->code . '][content]', ($page->content_type ?? array_keys($content_types ?? [])[0] ?? null) == $type ? ($page->content ?? null) : '', $attributes);
+                                                ?>
+                                            </li>
+                                        <?php } ?>
+                                    </ul>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="button_row">
+                <?php $this->Form->fieldSubmit('save', $this->_('AdminMain.manage.submit', true), ['class' => 'btn btn-primary pull-right']); ?>
+            </div>
+        </div>
+    </div>
+<?php
+    $this->Form->end();
+    $this->Widget->end();
+?>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('div.tab_content').blestaTabbedContent();
+    
+        $('textarea.wysiwyg').blestaBindWysiwygEditor({language: '<?= substr(Configure::get('Blesta.language'), 0, 2) ?>'});
+    
+        $('.content_type').on('change', function() {
+            let container = $(this).parents('ul').first();
+
+            // Hide all contents
+            container.find('.content').hide();
+            container.find('textarea').prop('disabled', true);
+
+            // Display selected
+            container.find('.content_' + $(this).val()).show();
+            container.find('.content_' + $(this).val()).find('textarea').prop('disabled', false);
+        });
+
+        $('.content:hidden').find('textarea').prop('disabled', true);
+    });
+</script>

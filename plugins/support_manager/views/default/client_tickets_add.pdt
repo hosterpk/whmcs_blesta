@@ -1,0 +1,219 @@
+
+            <?php
+            // Don't show this container when only rendering the widget section
+            if (!(isset($render_section) ? $render_section : null)) {
+            ?>
+        <div class="col-md-12">
+            <?php
+            }
+            echo (isset($message) ? $message : null);
+
+            $this->WidgetClient->clear();
+            $this->WidgetClient->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'support_manager_styles']);
+            $this->WidgetClient->create($this->_('ClientTickets.add.boxtitle_add', true));
+            $this->WidgetClient->startBody();
+
+            $this->Form->create(null, ['id'=>'create_ticket', 'enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+
+            // Require email address for those not logged in
+            if (!(isset($logged_in) ? $logged_in : false)) {
+            ?>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('ClientTickets.add.field_email', true), 'email');
+                $this->Form->fieldText('email', (isset($vars->email) ? $vars->email : null), ['id' => 'email', 'class' => 'form-control', 'placeholder' => $this->_('ClientTickets.add.field_email', true)]);
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('ClientTickets.add.field_summary', true), 'summary');
+                $this->Form->fieldText('summary', (isset($vars->summary) ? $vars->summary : null), ['id' => 'summary', 'class' => 'form-control', 'placeholder' => $this->_('ClientTickets.add.placeholder_summary', true)]);
+                ?>
+            </div>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('ClientTickets.add.field_priority', true), 'priority');
+                $this->Form->fieldSelect('priority', (isset($priorities) ? $priorities : null), (isset($vars->priority) ? $vars->priority : null), ['id' => 'priority', 'class' => 'form-control']);
+                ?>
+            </div>
+            <?php
+            if ($enable_related_services ?? false) {
+            ?>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('ClientTickets.add.field_service_id', true), 'service_id');
+                $this->Form->fieldSelect('service_id', (isset($service_ids) ? $service_ids : null), (isset($vars->service_id) ? $vars->service_id: null), ['id' => 'service_id', 'class' => 'form-control']);
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('ClientTickets.add.field_details', true), 'details');
+                $this->Form->fieldTextarea('details', (isset($vars->details) ? $vars->details : null), ['id' => 'details', 'rows' => 5, 'class' => 'form-control', 'data-markdown-editor' => '', 'placeholder' => $this->_('ClientTickets.add.placeholder_details', true)]);
+                ?>
+            </div>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('ClientTickets.add.field_attachments', true), 'attachment[]');
+                $this->Form->fieldFile('attachment[]', ['class' => 'form-control drag-drop', 'rel' => $this->_('AppController.dropzone.text', true)]);
+                ?>
+            </div>
+            <div class="form-group">
+                <div class="btn btn-light" data-toggle="collapse" data-target="#recipients-section">
+                    <i class="fas fa-chevron-down"></i>
+                    <?php $this->_('ClientTickets.add.field_add_recipients');?>
+                </div>
+
+                <div class="collapse" id="recipients-section">
+                    <div class="card mt-2">
+                        <div class="card-body p-3">
+                            <?php
+                            if (isset($contacts) && !empty($contacts)) {
+                            ?>
+                            <div class="form-group">
+                                <?php
+                                $this->Form->label($this->_('ClientTickets.add.field_contacts', true), 'contacts');
+                                $this->Form->fieldHidden('contacts[]', '', ['id' => 'contacts_placeholder']);
+                                ?>
+                                <div class="checkbox-list">
+                                <?php
+                                foreach ($contacts as $contact_id => $contact_name) {
+                                ?>
+                                    <div class="form-check">
+                                        <?php
+                                        $this->Form->fieldCheckbox('contacts[]', $contact_id, (isset($vars->contacts) && in_array($contact_id, $vars->contacts)), ['id' => 'contact_' . $contact_id, 'class' => 'form-check-input']);
+                                        $this->Form->label($contact_name, 'contact_' . $contact_id, ['class' => 'form-check-label']);
+                                        ?>
+                                    </div>
+                                <?php
+                                }
+                                ?>
+                                </div>
+                            </div>
+                            <?php
+                            }
+                            ?>
+                            <div class="form-group mb-0">
+                                <?php
+                                $this->Form->label($this->_('ClientTickets.add.field_additional_emails', true), 'recipients');
+                                ?>
+                                <div id="email-recipients">
+                                    <?php
+                                    $recipients = (isset($vars->recipients) ? $vars->recipients : []);
+                                    if (empty($recipients)) {
+                                        $recipients = [''];
+                                    }
+                                    foreach ($recipients as $index => $recipient) {
+                                    ?>
+                                        <div class="input-group mb-2">
+                                            <?php
+                                            $this->Form->fieldText('recipients[]', $recipient, ['class' => 'form-control', 'placeholder' => $this->_('ClientTickets.add.placeholder_recipient_email', true)]);
+                                            ?>
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-light remove-recipient">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    <?php
+                                    }
+                                    ?>
+                                </div>
+                                <button type="button" class="btn btn-light" id="add-recipient">
+                                    <i class="fas fa-plus"></i> <?php $this->_('ClientTickets.add.field_add_email');?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="custom_fields mt-4"><?php echo $department_fields ?? '';?></div>
+            </div>
+
+            <?php
+            if ((isset($captcha) ? $captcha : null)) {
+            ?>
+            <div class="col-md-12">
+                <?php echo $captcha;?>
+            </div>
+            <?php
+            }
+            ?>
+
+            <button type="submit" class="btn btn-light float-right">
+                <i class="fas fa-plus-circle"></i> <?php $this->_('ClientTickets.add.field_addsubmit');?>
+            </button>
+            <?php
+            $this->Form->end();
+            $this->WidgetClient->endBody();
+            $this->WidgetClient->end();
+
+            // Don't show this container when only rendering the widget section
+            if (!(isset($render_section) ? $render_section : null)) {
+            ?>
+        </div>
+            <?php
+            }
+            $this->Javascript->setInline("
+                $(document).ready(function() {
+                    // Set the markdown editor to WYSIWYG mode by default
+                    this.querySelector('#' + $('#details').next().attr('id'))._editor.changeMode('wysiwyg');
+
+                    // Initialize dropzone
+                    $(this).blestaBindDropZone();
+
+                    // Recipients functionality
+                    $('#add-recipient').click(function() {
+                        var last_recipient = $('#email-recipients .input-group').last();
+                        var new_recipient = last_recipient.clone();
+                        new_recipient.find('input').val('');
+                        $('#email-recipients').append(new_recipient);
+                    });
+
+                    $(document).on('click', '.remove-recipient', function() {
+                        if ($('.remove-recipient').length > 1) {
+                            $(this).closest('.input-group').remove();
+                        }
+                    });
+
+                    // Toggle recipients section chevron
+                    $('#recipients-section').on('show.bs.collapse', function () {
+                        $('.card-header i').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                    });
+                    $('#recipients-section').on('hide.bs.collapse', function () {
+                        $('.card-header i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                    });
+
+                    // Format form
+                    $('#create_ticket').submit(function() {
+                        // Submit unchecked checkboxes
+                        $('#create_ticket input[type=\"checkbox\"]:not(:checked):not([name=\"contacts[]\"])').each(function() {
+                            $(this).prop('disabled', true);
+                            $('<input>', {
+                                type: 'hidden',
+                                name: $(this).attr('name'),
+                                value: '0'
+                            }).appendTo($(this).parent());
+                        });
+
+                        // Remove contacts placeholder only if at least one contact is checked
+                        if ($('#create_ticket input[name=\"contacts[]\"]:checked').length > 0) {
+                            $('#contacts_placeholder').remove();
+                        }
+
+                        // Remove empty recipient fields before submitting
+                        $('#email-recipients input[name=\"recipients[]\"]').each(function() {
+                            if ($(this).val().trim() === '') {
+                                $(this).parent().remove();
+                            }
+                        });
+                    });
+                });
+            ");

@@ -1,0 +1,100 @@
+
+    <div class="pad">
+        <h4><?php $this->_('RealtimeRegister.tab_client_dnssec.heading');?></h4>
+        <div class="row panel-fix">
+            <div class="col-md-12">
+                <table class="table table-curved table-striped">
+                    <thead>
+                        <tr>
+                            <th><?php $this->_('RealtimeRegister.tab_client_dnssec.heading_protocol');?></th>
+                            <th><?php $this->_('RealtimeRegister.tab_client_dnssec.heading_flags');?></th>
+                            <th><?php $this->_('RealtimeRegister.tab_client_dnssec.heading_algorithm');?></th>
+                            <th><?php $this->_('RealtimeRegister.tab_client_dnssec.heading_public_key');?></th>
+                            <th><?php $this->_('RealtimeRegister.tab_client_dnssec.heading_options');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php
+                    if (!empty($dnssec_key)) {
+                        foreach ($dnssec_key as $key) {
+                    ?>
+                        <tr>
+                            <td><?php echo $this->Html->safe($key->protocol ?? '');?></td>
+                            <td><?php echo $this->Html->safe($dnssec_flags[$key->flags] ?? $key->flags ?? '');?></td>
+                            <td><?php echo $this->Html->safe($dnssec_algorithms[$key->algorithm] ?? $key->algorithm ?? '');?></td>
+                            <td><?php echo $this->Html->safe($key->publicKey ?? '');?></td>
+                            <td>
+                                <?php
+                                $this->Form->create();
+                                $this->Form->fieldHidden('action', 'delete');
+                                $this->Form->fieldHidden('public_key', $key->publicKey ?? '');
+                                ?>
+                                <button class="btn btn-light btn-xs" type="submit">
+                                    <i class="fas fa-ban"></i> <?php $this->_('RealtimeRegister.tab_client_dnssec.field_delete');?>
+                                </button>
+                                <?php
+                                $this->Form->end();
+                                ?>
+                            </td>
+                        </tr>
+                    <?php
+                        }
+                    } else {
+                    ?>
+                        <tr>
+                            <td colspan="5">
+                                <div class="alert alert-info">
+                                    <p><?php $this->_('RealtimeRegister.tab_client_dnssec.text_no_dnssec_keys');?></p>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php
+                    }
+                    ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <?php
+        $this->Form->create();
+        $this->Form->fieldHidden('action', 'add');
+        ?>
+        <h4 class="mt-4"><?php $this->_('RealtimeRegister.tab_client_dnssec.heading_add_dnssec');?></h4>
+        <div class="row panel-fix">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_dnssec.field_protocol', true), 'protocol');
+                    $this->Form->fieldText('protocol', ($vars->protocol ?? '3'), ['id' => 'protocol', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_client_dnssec.field_protocol', true)]);
+                    ?>
+                </div>
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_dnssec.field_flags', true), 'flags');
+                    $this->Form->fieldSelect('flags', $dnssec_flags ?? [], ($vars->flags ?? ''), ['id' => 'flags', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_client_dnssec.field_flags', true)]);
+                    ?>
+                </div>
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_dnssec.field_algorithm', true), 'algorithm');
+                    $this->Form->fieldSelect('algorithm', $dnssec_algorithms ?? [], ($vars->algorithm ?? ''), ['id' => 'algorithm', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_client_dnssec.field_algorithm', true)]);
+                    ?>
+                </div>
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('RealtimeRegister.tab_client_dnssec.field_publicKey', true), 'publicKey');
+                    $this->Form->fieldTextArea('publicKey', ($vars->publicKey ?? ''), ['id' => 'publicKey', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_client_dnssec.field_publicKey', true)]);
+                    ?>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-light float-right" type="submit">
+            <i class="fas fa-plus"></i> <?php $this->_('RealtimeRegister.tab_client_dnssec.field_add');?>
+        </button>
+        <div class="clearfix"></div>
+        <?php
+        $this->Form->end();
+        ?>
+    </div>

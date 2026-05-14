@@ -1,0 +1,52 @@
+<h4><?php echo htmlspecialchars($buttonName ?? ''); ?></h4>
+
+<?php if ($sitebuilderOutput ?? false): ?>
+<div class="sitebuilder-output">
+	<?php echo $sitebuilderOutput; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($ftpFormData ?? false): ?>
+	<p><?php echo $this->_('SitebuilderPlugin.enterFtpData', true); ?></p>
+	<?php 
+	$this->Form->create();
+	?>
+		<div class="form-group">
+			<?php
+			$this->Form->fieldText('ftp_form_host', ($ftpFormData->host ?? ''), ['id' => 'ftp_form_host', 'required' => 'required']);
+			$this->Form->label($this->_('SitebuilderPlugin.ftpFormHost', true), 'ftp_form_host');
+			?>
+		</div>
+		<div class="form-group">
+			<?php
+			$this->Form->fieldText('ftp_form_username', ($ftpFormData->user ?? ''), ['id' => 'ftp_form_username', 'required' => 'required']);
+			$this->Form->label($this->_('SitebuilderPlugin.ftpFormUsername', true), 'ftp_form_username');
+			?>
+		</div>
+		<div class="form-group">
+			<?php
+			$this->Form->fieldPassword('ftp_form_password', ['id' => 'ftp_form_password', 'value' => ($ftpFormData->pass ?? ''), 'required' => 'required']);
+			$this->Form->label($this->_('SitebuilderPlugin.ftpFormUsername', true), 'ftp_form_username');
+			?>
+		</div>
+		<div class="form-group">
+			<?php
+			$this->Form->fieldText('ftp_form_path', ($ftpFormData->path ?? '/public_html'), ['id' => 'ftp_form_path']);
+			$this->Form->label($this->_('SitebuilderPlugin.ftpFormPath', true), 'ftp_form_path');
+			?>
+		</div>
+		<div class="button_row">
+			<?php
+			$this->Form->fieldSubmit('form_submit', $this->_('SitebuilderPlugin.launch', true), ['class' => 'btn btn-primary pull-left']);
+			?>
+		</div>
+	<?php
+	$this->Form->end();
+	?>
+<?php endif; ?>
+
+<?php if (!$sitebuilderOutput && !$ftpFormData && !$isFatalError): ?>
+	<div style="text-align: center; padding: 15px 0;">
+		<a href="?launch=1" class="btn btn-lg btn-primary"<?php if (!($sitebuilderError ?? false)) echo ' target="_blank"'; ?>><?php echo $this->_('SitebuilderPlugin.launch', true); ?></a>
+	</div>
+<?php endif; ?>

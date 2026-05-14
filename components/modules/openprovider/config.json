@@ -1,0 +1,37 @@
+{
+    "version": "1.1.1",
+    "name": "OpenProvider.config.name",
+    "type": "registrar",
+    "description": "OpenProvider.config.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "https://blesta.com/"
+        },
+        {
+            "name": "Openprovider",
+            "url": "https://openprovider.com/"
+        },
+        {
+            "name": "Github repository",
+            "url": "https://github.com/openprovider/blesta-module"
+        }
+    ],
+    "package": {
+        "name_key": "domain"
+    },
+    "service": {
+        "name_key": "domain"
+    },
+    "module": {
+        "row": "OpenProvider.config.module.row",
+        "rows": "OpenProvider.config.module.rows",
+        "group": "OpenProvider.config.module.group",
+        "row_key": "username"
+    },
+    "email_tags": {
+        "module": [],
+        "package": [],
+        "service": ["domain"]
+    }
+}

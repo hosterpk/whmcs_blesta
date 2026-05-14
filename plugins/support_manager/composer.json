@@ -1,0 +1,17 @@
+{
+    "name": "blesta/support_manager",
+    "description": "Support Manager",
+    "license": "proprietary",
+    "type": "blesta-plugin",
+    "require": {
+        "blesta/composer-installer": "~1.0",
+        "javanile/php-imap2": "~0.1.10"
+    },
+    "config": {
+        "vendor-dir": "vendors",
+        "allow-plugins": {
+            "composer/installers": true,
+            "blesta/composer-installer": true
+        }
+    }
+}

@@ -1,0 +1,116 @@
+
+        <?php echo (isset($left_nav) ? $left_nav : null);?>
+        <div id="right_outer">
+            <?php echo (isset($message) ? $message : null);?>
+            <section id="right_container">
+                <?php
+                $this->Widget->clear();
+                $this->Widget->create($this->_('AdminCompanyEmails.addhtmltemplate.boxtitle_addhtmltemplate', true));
+                $this->Form->create(null, ['enctype' => 'multipart/form-data', 'class' => 'disable-on-submit', 'id' => 'admin_company_emails_edittemplate']);
+                ?>
+                <div class="inner">
+                    <div class="pad">
+                        <ul>
+                            <li>
+                                <?php $this->Form->label($this->_('AdminCompanyEmails.addhtmltemplate.field.name', true), 'name', ['class' => 'inline']);?>
+                                <?php $this->Form->fieldText('name', ($vars->name ?? null), ['id' => 'name', 'class' => 'block']);?>
+                            </li>
+                            <li>
+                                <?php
+                                $this->Form->label($this->_('AdminCompanyEmails.addhtmltemplate.field.tags', true), 'tags');
+
+                                if (!empty($tags) && is_array($tags)) {
+                                    ?>
+                                    <div class="accent_box">
+                                        <?php
+                                        for ($i = 0, $num_tags = count($tags); $i < $num_tags; $i++) {
+                                            ?>
+                                            <?php (print (isset($tags[$i]) ? $this->Html->safe($tags[$i]) : null));?>
+                                            <?php
+                                        }
+                                        ?>
+                                    </div>
+                                    <?php
+                                }
+                                ?>
+                            </li>
+                            <li>
+                                <div class="tab_content">
+                                    <ul class="tabs">
+                                        <?php
+                                        $i = 0;
+                                        foreach ($languages ?? [] as $language) {
+                                        ?>
+                                            <li<?php echo ($i == 0 ? ' class="current"' : '')?>>
+                                                <a href="#"><?php $this->Form->label($language->name, 'html');?></a>
+                                            </li>
+                                        <?php
+                                            $i++;
+                                        }
+                                        ?>
+                                    </ul>
+                                    <div class="inner_content">
+                                        <?php
+                                        $i = 0;
+                                        foreach ($languages ?? [] as $language) {
+                                        ?>
+                                            <div>
+                                                <?php
+                                                $this->Form->fieldTextarea('templates[' . $i . '][html]', ($vars->templates[$i]['html'] ?? null), ['id' => $language->code]);
+                                                $this->Form->fieldHidden('templates[' . $i . '][lang]', $language->code);
+                                                ?>
+                                            </div>
+                                        <?php
+                                            $i++;
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="button_row">
+                        <?php
+                        $this->Form->fieldSubmit('save', $this->_('AdminCompanyEmails.addhtmltemplate.field.addtemplatesubmit', true), ['class' => 'btn btn-primary pull-right']);
+                        ?>
+                        <a class="btn btn-default pull-right" href="<?php echo $this->base_uri;?>settings/company/emails/htmltemplates/"><?php $this->_('AdminCompanyEmails.!cancel.field.cancel');?></a>
+                    </div>
+                </div>
+                <?php
+                $this->Form->end();
+                $this->Widget->end();
+                ?>
+            </section>
+        </div>
+<?php
+$this->Javascript->setInline("
+$(document).ready(function() {
+    $('div.tab_content').blestaTabbedContent();
+    
+    // Initialize Ace editor
+    var languages = " . json_encode($languages ?? []) . ";
+    
+    languages.forEach(function (value, index, array) {
+        var parent = $('#' + value.code).parent();
+        window['editor_' + value.code] = ace.edit(value.code);
+        window['editor_' + value.code].session.setMode('ace/mode/html');
+        $('.ace_editor').addClass('border rounded m-0').css('min-height', '250px');
+        
+        if ($('textarea[name=\"templates[' + index + '][html]\"]').length == 0) {
+            $(parent).prepend('<textarea style=\"display: none;\" name=\"templates[' + index + '][html]\">' + window['editor_' + value.code].getValue() + '</textarea>');
+        } else {
+            $('textarea[name=\"templates[' + index + '][html]\"]').val(window['editor_' + value.code].getValue());
+        }
+        
+        window['editor_' + value.code].session.on('change', function() {
+            if ($('textarea[name=\"templates[' + index + '][html]\"]').length == 0) {
+                $(parent).prepend('<textarea style=\"display: none;\" name=\"templates[' + index + '][html]\">' + window['editor_' + value.code].getValue() + '</textarea>');
+            } else {
+                $('textarea[name=\"templates[' + index + '][html]\"]').val(window['editor_' + value.code].getValue());
+            }
+        });
+    });
+});
+");
+?>

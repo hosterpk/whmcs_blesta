@@ -1,0 +1,171 @@
+
+                <?php
+                // Don't show this container when only rendering the widget section
+                if (!($render_section ?? null)) {
+                ?>
+            <div class="col-md-12">
+                <?php
+                }
+                echo ($message ?? null);
+
+                $this->WidgetClient->clear();
+                $this->WidgetClient->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'support_manager_styles']);
+                $this->WidgetClient->create($this->_('ClientTickets.feedback.boxtitle_feedback', true, ($ticket->code ?? null)), ['id' => 'client_ticket_feedback']);
+                $this->WidgetClient->startBody();
+
+                $this->Form->create(null, ['id' => 'tickets_feedback']);
+
+                $ticket_priority = (isset($ticket->priority) ? $ticket->priority : null);
+                $priority_class = (isset($priority_classes[$ticket_priority]) ? $priority_classes[$ticket_priority] : null);
+                if (empty($priority_class)) {
+                    $priority_class = 'default';
+                }
+                ?>
+                    <div class="card p-3 mb-3 bg-light">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label><?php $this->_('ClientTickets.feedback.heading_summary');?></label>
+                                <p><?php echo (isset($ticket->summary) ? $this->Html->safe($ticket->summary) : null);?></p>
+                                <hr />
+                            </div>
+                            <div class="col-md-3">
+                                <label><?php $this->_('ClientTickets.feedback.heading_department');?></label>
+                                <p><?php echo (isset($ticket->department_name) ? $this->Html->safe($ticket->department_name) : null);?></p>
+                            </div>
+                            <div class="col-md-3">
+                                <label><?php $this->_('ClientTickets.feedback.heading_priority');?></label>
+                                <p><span class="badge badge-<?php echo (isset($priority_class) ? $this->Html->safe($priority_class) : null);?>"><?php echo (isset($priorities[$ticket->priority]) ? $priorities[$ticket->priority] : null)?></span></p>
+                            </div>
+                            <?php
+                            if ($enable_related_services ?? null) {
+                            ?>
+                                <div class="col-md-3">
+                                    <label><?php $this->_('ClientTickets.feedback.heading_service_id');?></label>
+                                    <?php
+                                    if ($service ?? null) {
+                                        ?>
+                                        <a href="<?php echo $this->client_uri . 'services/manage/' . $service->id; ?>"><?php echo $this->Html->safe($service->name . ' (ID: ' . $service->id_code . ')'); ?></a>
+                                        <?php
+                                    } else {
+                                        ?>
+                                        <p><?php echo $this->_('ClientTickets.feedback.text_service_none'); ?></p>
+                                        <?php
+                                    }
+                                    ?>
+                                </div>
+                            <?php
+                            }
+                            ?>
+                            <div class="col-md-3">
+                                <label><?php $this->_('ClientTickets.feedback.heading_status');?></label>
+                                <p><?php echo (isset($statuses[$ticket->status]) ? $statuses[$ticket->status] : null);?></p>
+                            </div>
+                            <div class="col-md-3">
+                                <label><?php $this->_('ClientTickets.feedback.heading_date_added');?></label>
+                                <p><?php echo $this->Date->cast((isset($ticket->date_added) ? $ticket->date_added : null), 'date_time');?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-1">
+                        <h4><?php $this->_('ClientTickets.feedback.heading_rate_our_assistance');?></h4>
+                        <div class="row justify-content-center align-items-end my-4">
+                            <div class="col-2 text-center">
+                                <div class="rating-star">
+                                    <div class="d-none d-md-block font-weight-bold pb-1"><?php $this->_('ClientTickets.feedback.text_very_dissatisfied');?></div>
+                                    <i class="fa-star h3 <?php echo (($vars->rating ?? 0) >= 1) ? 'fas text-warning' : 'far text-black-50';?>"></i>
+                                    <?php
+                                    $this->Form->fieldRadio('rating', '1', (($vars->rating_comment ?? 0) == 1), ['class' => 'd-none']);
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="col-2 text-center">
+                                <div class="rating-star">
+                                    <div class="d-none d-md-block font-weight-bold pb-1"><?php $this->_('ClientTickets.feedback.text_dissatisfied');?></div>
+                                    <i class="fa-star h3 <?php echo (($vars->rating ?? 0) >= 2) ? 'fas text-warning' : 'far text-black-50';?>"></i>
+                                    <?php
+                                    $this->Form->fieldRadio('rating', '2', (($vars->rating_comment ?? 0) == 2), ['class' => 'd-none']);
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="col-2 text-center">
+                                <div class="rating-star">
+                                    <div class="d-none d-md-block font-weight-bold pb-1"><?php $this->_('ClientTickets.feedback.text_neutral');?></div>
+                                    <i class="fa-star h3 <?php echo (($vars->rating ?? 0) >= 3) ? 'fas text-warning' : 'far text-black-50';?>"></i>
+                                    <?php
+                                    $this->Form->fieldRadio('rating', '3', (($vars->rating_comment ?? 0) == 3), ['class' => 'd-none']);
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="col-2 text-center">
+                                <div class="rating-star">
+                                    <div class="d-none d-md-block font-weight-bold pb-1"><?php $this->_('ClientTickets.feedback.text_satisfied');?></div>
+                                    <i class="fa-star h3 <?php echo (($vars->rating ?? 0) >= 4) ? 'fas text-warning' : 'far text-black-50';?>"></i>
+                                    <?php
+                                    $this->Form->fieldRadio('rating', '4', (($vars->rating_comment ?? 0) == 4), ['class' => 'd-none']);
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="col-2 text-center">
+                                <div class="rating-star">
+                                    <div class="d-none d-md-block font-weight-bold pb-1"><?php $this->_('ClientTickets.feedback.text_very_satisfied');?></div>
+                                    <i class="fa-star h3 <?php echo (($vars->rating ?? 0) >= 5) ? 'fas text-warning' : 'far text-black-50';?>"></i>
+                                    <?php
+                                    $this->Form->fieldRadio('rating', '5', (($vars->rating_comment ?? 0) == 5), ['class' => 'd-none']);
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <div class="p-1">
+                        <h4><?php $this->_('ClientTickets.feedback.heading_rate_comment');?></h4>
+                        <div class="row my-3">
+                            <div class="col-12">
+                                <?php
+                                $this->Form->fieldTextarea('rating_comment', $vars->rating_comment ?? null, ['class' => 'form-control', 'style' => 'height: 120px;']);
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-light float-right">
+                        <i class="fas fa-plus-circle"></i> <?php $this->_('ClientTickets.feedback.field_submit');?>
+                    </button>
+                <?php
+                $this->Form->end();
+
+                $this->WidgetClient->endBody();
+                $this->WidgetClient->end();
+                ?>
+
+                <?php
+                // Don't show this container when only rendering the widget section
+                if (!(isset($render_section) ? $render_section : null)) {
+                ?>
+            </div>
+                <?php
+                }
+                ?>
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    $('.rating-star').click(function() {
+                        var clicked_star = $(this);
+
+                        clicked_star.find('input[type="radio"]').prop('checked', true);
+
+                        var stars = clicked_star.closest('.row').find('.rating-star');
+                        stars.each(function() {
+                            var star_icon = $(this).find('.fa-star');
+                            if (stars.index(this) <= stars.index(clicked_star)) {
+                                star_icon.addClass('text-warning').addClass('fas').removeClass('text-black-50').removeClass('far');
+                            } else {
+                                star_icon.removeClass('text-warning').removeClass('fas').addClass('text-black-50').addClass('far');
+                            }
+                        });
+                    });
+                });
+            </script>

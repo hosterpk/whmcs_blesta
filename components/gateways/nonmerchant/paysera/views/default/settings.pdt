@@ -1,0 +1,21 @@
+
+	<ul>
+        <li>
+            <?php
+            $this->Form->label($this->_('Paysera.project_id', true), 'project_id');
+            $this->Form->fieldText('project_id', ($meta['project_id'] ?? null), ['id' => 'project_id']);
+            ?>
+        </li>
+        <li>
+            <?php
+            $this->Form->label($this->_('Paysera.project_password', true), 'project_password');
+            $this->Form->fieldText('project_password', ($meta['project_password'] ?? null), ['id' => 'project_password']);
+            ?>
+        </li>
+        <li>
+            <?php
+            $this->Form->fieldCheckbox('sandbox', 'true', ((isset($meta['sandbox']) ? $meta['sandbox'] : 'false') == 'true'), ['id' => 'test_mode']);
+            $this->Form->label($this->_('Paysera.sandbox', true), 'sandbox', ['class' => 'inline']);
+            ?>
+        </li>
+	</ul>

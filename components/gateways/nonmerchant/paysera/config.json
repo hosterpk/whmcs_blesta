@@ -1,0 +1,13 @@
+{
+	"version": "1.0.0",
+	"name": "Paysera.name",
+	"description": "Paysera.description",
+	"authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://blesta.com"
+        }
+    ],
+	"currencies": ["USD","EUR"],
+	"signup_url": "https://bank.paysera.com/en/registration"
+}

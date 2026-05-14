@@ -1,0 +1,13 @@
+{
+    "name": "UBL XML",
+    "description": "Universal Business Language OASIS Standard.",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://www.blesta.com"
+        }
+    ],
+    "mime_type": "application/xml",
+    "file_extension": "xml"
+}

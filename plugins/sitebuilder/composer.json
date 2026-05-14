@@ -1,0 +1,9 @@
+{
+    "name": "blesta/sitebuilder",
+    "description": "Site.pro Website Builder",
+    "license": "proprietary",
+    "type": "blesta-plugin",
+    "require": {
+        "blesta/composer-installer": "~1.0"
+    }
+}

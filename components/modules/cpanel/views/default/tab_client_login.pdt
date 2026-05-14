@@ -1,0 +1,22 @@
+
+    <div id="change_password">
+        <h4><?php $this->_('Cpanel.tab_client_login.logintocpanel');?></h4>
+
+        <div class="col-md-12">
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('Cpanel.tab_client_login.field_cpanel_username', true), 'cpanel_username');
+                $this->Form->fieldText('cpanel_username', $service_fields->cpanel_username ?? '', ['disabled' => 'disabled', 'id' => 'cpanel_username', 'class'=>'form-control']);
+                ?>
+            </div>
+            <div class="form-group">
+                <?php
+                $this->Form->label($this->_('Cpanel.tab_client_login.field_cpanel_password', true), 'cpanel_password');
+                $this->Form->fieldText('cpanel_password', $service_fields->cpanel_password ?? '', ['disabled' => 'disabled', 'id' => 'cpanel_password', 'class'=>'form-control']);
+                ?>
+            </div>
+        </div>
+        <a href="<?php echo (isset($login_url) ? $this->Html->safe($login_url) : null);?>" target="_blank" class="btn btn-light float-right">
+            <i class="fas fa-sign-in-alt"></i> <?php $this->_('Cpanel.tab_client_login.field_login');?>
+        </a>
+    </div>

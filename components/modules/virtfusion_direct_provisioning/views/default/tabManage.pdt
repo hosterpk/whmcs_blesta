@@ -1,0 +1,23 @@
+
+    <div id="tabManage">
+        <?php
+        $this->Form->create(
+//// $this->base_uri . 'clients/serviceTab/' . (isset($client_id) ? $client_id : null) . '/' . (isset($service_id) ? $service_id : null) . '/tabManage/',
+        '',
+        array('target' => '_blank')
+        );
+        ?>
+        <div class="col-md-12">
+            <p>Manage your server via our dedicated control panel. You will be automatically authenticated and redirected to the control panel.</p>
+
+<input type="hidden" name="action" value="manage"/>
+            <div class="button_row mt-3">
+                <button type="submit" value="submit" class="btn btn-default">
+             Manage my Server
+                </button>
+            </div>
+        </div>
+        <?php
+        $this->Form->end();
+        ?>
+    </div>

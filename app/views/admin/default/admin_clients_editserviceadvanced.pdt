@@ -1,0 +1,188 @@
+
+        <?php
+        $this->Widget->clear();
+        $this->Widget->setTabs($tabs);
+        $this->Widget->create($this->_('AdminClients.editservice.boxtitle_editservice', true, (isset($package->name) ? $package->name : null), (isset($service->name) ? $service->name : null)), ['id' => 'admin_clients_editservice'], (isset($render_section) ? $render_section : null));
+        ?>
+        <div class="inner">
+            <section class="error_section pb-2">
+                <article class="error_box alert">
+                    <div class="icon-line fa-2x">
+                        <i class="fas fa-exclamation-triangle fa-fw"></i>
+                        <p class="py-0"><?php $this->_('AdminClients.!notice.edit_service_advanced');?></p>
+                    </div>
+                </article>
+            </section>
+
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'service_fields']); ?>
+            <div class="title_row first">
+                <h3><?php $this->_('AdminClients.editservice.advanced_heading');?></h3>
+            </div>
+            <div class="pad">
+                <ul>
+                    <?php
+                    $fields = ['date_added', 'date_renews', 'date_last_renewed', 'date_paid_through', 'date_suspended', 'date_canceled'];
+                    foreach ($fields as $field) {
+                        $label = $this->_('AdminClients.editservice.field_' . $field, true) . ' (' . $field . ')';
+                    ?>
+                        <li>
+                            <?php
+                            $this->Form->label($label, $field);
+                            $this->Form->fieldText($field, isset($vars->{$field}) ? substr($vars->{$field}, 0, 10) : null, ['class' => 'date', 'id' => $field]);
+                            // Store original UTC timestamp to prevent double timezone conversion
+                            // Use $original_dates which contains UTC values before conversion to company timezone
+                            $this->Form->fieldHidden('original_' . $field, isset($original_dates->{$field}) ? $original_dates->{$field} : null);
+                            ?>
+                        </li>
+                    <?php
+                    }
+                    ?>
+                </ul>
+            </div>
+
+            <div class="title_row">
+                <h3><?php $this->_('AdminClients.editservice.service_fields_heading');?></h3>
+            </div>
+            <div class="pad">
+                <div class="mb-2">
+                    <a href="#" class="btn btn-default btn-sm float-right add_service_field">
+                        <i class="fas fa-plus fa-fw"></i>
+                    </a>
+                    <div class="clearfix"></div>
+                </div>
+                <ul>
+                    <?php
+                    foreach ($service->fields ?: [(object)[]] as $key => $field) {
+                    ?>
+                        <li class="border p-2 mb-2">
+                            <div class="float-right">
+                                <a href="#" class="remove_service_field text-decoration-none text-danger">
+                                    <i class="fas fa-times fa-fw"></i>
+                                </a>
+                            </div>
+
+                            <div class="d-block mb-1">
+                                <?php
+                                $this->Form->label($this->_('AdminClients.editservice.field_key', true), 'key_' . $key);
+                                $this->Form->fieldText('fields[key][]', ($vars->fields['key'][$key] ?? $field->key ?? null), ['id' => 'key_' . $key]);
+                                ?>
+                            </div>
+
+                            <div class="d-block mb-1 pr-1">
+                                <?php
+                                $this->Form->label($this->_('AdminClients.editservice.field_value', true), 'value_' . $key);
+                                if (is_scalar($field->value ?? '')) {
+                                    $this->Form->fieldText('fields[value][]', ($vars->fields['value'][$key] ?? $field->value ?? null), ['id' => 'value_' . $key]);
+                                } else {
+                                    $this->Form->fieldTextarea('fields[value][]', serialize($vars->fields['value'][$key] ?? $field->value ?? null), ['id' => 'value_' . $key]);
+                                }
+                                ?>
+                            </div>
+
+                            <div class="d-block mb-1">
+                                <?php
+                                $this->Form->fieldCheckbox('fields[serialized][]', '1', ($vars->fields['serialized'][$key] ?? $field->serialized ?? null) == '1', ['class' => 'serialize_service_field', 'id' => 'serialized_' . $key]);
+                                $this->Form->label($this->_('AdminClients.editservice.field_serialized', true), 'serialized_' . $key, ['class' => 'inline']);
+                                ?>
+
+                                <?php
+                                $this->Form->fieldCheckbox('fields[encrypted][]', '1', ($vars->fields['encrypted'][$key] ?? $field->encrypted ?? null) == '1', ['id' => 'encrypted_' . $key]);
+                                $this->Form->label($this->_('AdminClients.editservice.field_encrypted', true), 'encrypted_' . $key, ['class' => 'inline']);
+                                ?>
+                            </div>
+                        </li>
+                    <?php
+                    }
+                    ?>
+                </ul>
+            </div>
+
+            <div class="button_row">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('AdminClients.editservice.field_module_save', true), ['class' => 'btn btn-primary pull-right']);
+                ?>
+            </div>
+            <?php $this->Form->end(); ?>
+        </div>
+        <?php
+        $this->Widget->end();
+        ?>
+
+        <script type="text/javascript">
+            $(document).ready(function() {
+                $('.common_box .common_box_inner').on('click', '.remove_service_field', function() {
+                    if ($('.remove_service_field').length > 1) {
+                        var field = $(this).parent().parent();
+                        field.remove();
+                    }
+                });
+
+                $('.common_box .common_box_inner').on('change', '.serialize_service_field', function() {
+                    var field = $(this).parent().parent();
+
+                    if ($(this).is(':checked')) {
+                        var input = field.find('input[type="text"][id^="value_"]');
+                        var textarea = $('<textarea>', {
+                            name: input.attr('name'),
+                            text: input.val(),
+                            id: input.attr('id')
+                        });
+
+                        input.replaceWith(textarea);
+                    } else {
+                        var textarea = field.find('textarea[id^="value_"]');
+                        var input = $('<input>', {
+                            type: 'text',
+                            name: textarea.attr('name'),
+                            value: textarea.val(),
+                            id: textarea.attr('id')
+                        });
+
+                        textarea.replaceWith(input);
+                    }
+                });
+
+                $('.common_box .common_box_inner').on('click', '.add_service_field', function() {
+                    var service_fields = $(this).parent().parent().find('ul');
+                    var service_field = service_fields.find('li').first();
+
+                    // Add new service field
+                    var new_service_field = service_field.clone();
+                    new_service_field.find('input, textarea').each(function () {
+                        var form_field = $(this);
+
+                        // Clear form fields
+                        if (form_field.is(':checkbox')) {
+                            form_field.prop('checked', false);
+                        } else if (form_field.is('textarea')) {
+                            var input = $('<input>', {
+                                type: 'text',
+                                name: form_field.attr('name'),
+                                id: form_field.attr('id'),
+                                value: ''
+                            });
+                            form_field.replaceWith(input);
+                        } else {
+                            form_field.val('');
+                        }
+                    });
+
+                    service_fields.prepend(new_service_field);
+                });
+
+                $('#service_fields').on('submit', function () {
+                    $(this).find('input[type="checkbox"]:not(:checked)').each(function () {
+                        var checkbox = $(this);
+                        var existing = checkbox.siblings('input[type="hidden"][name="' + checkbox.attr('name') + '"]');
+
+                        if (existing.length === 0) {
+                            $('<input>', {
+                                type: 'hidden',
+                                name: checkbox.attr('name'),
+                                value: '0'
+                            }).insertAfter(checkbox);
+                        }
+                    });
+                });
+            });
+        </script>

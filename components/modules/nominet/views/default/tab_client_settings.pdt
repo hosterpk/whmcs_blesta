@@ -1,0 +1,44 @@
+
+    <?php
+    $this->Form->create();
+
+    if ($ips_tag ?? false) {
+    ?>
+    <h4><?php $this->_('Nominet.tab_client_settings.heading_push_domain');?></h4>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                <p><?php $this->_('Nominet.tab_client_settings.text_push_domain');?></p>
+                <?php
+                $this->Form->label($this->_('Nominet.tab_client_settings.field_tag', true), 'tag');
+                $this->Form->fieldText('tag', ($vars->key_tag ?? null), ['id' => 'tag', 'class'=>'form-control', 'placeholder' => $this->_('Nominet.tab_client_settings.field_tag', true)]);
+                ?>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-light float-right" type="submit">
+        <i class="fas fa-edit"></i> <?php $this->_('Nominet.tab_client_settings.field_submit');?>
+    </button>
+    <div class="clearfix"></div>
+    <?php
+    }
+
+    $this->Form->end();
+    ?>
+
+    <?php
+    if ($epp_code ?? false) {
+    ?>
+    <h4><?php $this->_('Nominet.tab_client_settings.heading_auth_code');?></h4>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-group">
+                <p><?php $this->_('Nominet.tab_client_settings.text_auth_code');?></p>
+                <div class="badge badge-info mt-2"><?php echo $this->Html->safe($domain['epp_code'] ?? '');?></div>
+            </div>
+        </div>
+    </div>
+    <?php
+    }
+    ?>

@@ -1,0 +1,29 @@
+
+        <?php echo (isset($left_nav) ? $left_nav : null);?>
+        <div id="right_outer">
+            <?php echo (isset($message) ? $message : null);?>
+            <section id="right_container">
+                <?php
+                $this->Widget->clear();
+
+                $this->Widget->create($this->_('AdminCompanyBilling.credithandling.boxtitle_credithandling', true));
+                $this->Form->create(null, ['class' => 'disable-on-submit']);
+                ?>
+                <div class="inner">
+                    <div class="pad">
+                        <?php
+                        echo (isset($credit_form) ? $credit_form : null);
+                        ?>
+                    </div>
+                    <div class="button_row">
+                        <?php
+                        $this->Form->fieldSubmit('save', $this->_('AdminCompanyBilling.credithandling.field.submit', true), ['class' => 'btn btn-primary pull-right']);
+                        ?>
+                    </div>
+                </div>
+                <?php
+                $this->Form->end();
+                $this->Widget->end();
+                ?>
+            </section>
+        </div>

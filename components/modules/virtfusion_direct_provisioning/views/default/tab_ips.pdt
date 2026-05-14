@@ -1,0 +1,87 @@
+
+<div id="vf_ip-table">
+    <?php
+    foreach($this->Html->ifSet($ip_addresses) as $index => $ip_table) {
+        $is_editable = ($this->Html->ifSet($ip_table->editable) && $view_type == 'tabClientIPAddresses');
+        $col_span = "2";
+        if ($is_editable) {
+            $col_span = "1";
+        }
+    ?>
+    <table class="table" style='margin-top:1rem;'>
+        <thead>
+            <tr class="heading_row">
+                <td colspan="<?php echo $col_span ?>">
+                    <span><?php echo $this->Html->_($ip_table->header) ?></span>
+                </td>
+                <?php
+                if ($is_editable) {
+                ?>
+                    <td class="text-center">
+                        <span>Action</span>
+                    </td>
+                <?php
+                }
+                ?>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            if (!empty($ip_table->ip_addresses) && $ip_table->ip_addresses[0] != 'N;') {
+                foreach($ip_table->ip_addresses as $index => $ip_address) { 
+            ?>
+                <tr class="<?php echo ($index % 2 == 1) ? 'odd_row' : '' ?>" >
+                    <td>
+                        <?php echo $ip_address ?>
+                    </td>
+                    <td class="text-center">
+                        <?php
+                        if ($is_editable) {
+                            $this->Form->create();
+                            $this->Form->fieldHidden('submit_uri', $this->Html->ifSet($submit_uri));
+                            $this->Form->fieldHidden('ip_address', $this->Html->ifSet($ip_address));
+                            $this->Form->fieldHidden('current_tab', $this->Html->ifSet($view_type));
+                            $this->Form->fieldHidden('can_remove', $this->Html->ifSet($ip_table->editable));
+                        ?>
+                            <a class="manage text-danger" href="#" rel="<?php $this->_('VirtfusionDirectProvisioning.ipAddresses.remove');?>">
+                                <?php $this->_('VirtfusionDirectProvisioning.ipAddresses.remove');?>
+                            </a>
+                        <?php
+                            $this->Form->end();
+                        }
+                        ?>
+                    </td>
+                </tr>
+            <?php
+                }
+            } else {
+            ?>
+            <tr>
+                <td colspan="2">No <span><?php echo $this->Html->_($ip_table->header) ?></span> Found</td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+    <?php
+    }
+    ?>
+</div>
+
+<?php
+if ($this->Html->ifSet($is_admin)) {
+    $this->Form->create(null, [ 'class' => 'mt-3' ]);
+    $this->Form->fieldSubmit('refresh_ipv6', $this->_('VirtfusionDirectProvisioning.ipAddresses.ipv6_refresh', true), ['class' => 'btn btn-success']);
+    $this->Form->end();
+}
+?>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        // Handle confirmation
+        console.log('<?php echo $this->base_uri ?>')
+        $('#vf_ip-table a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->base_uri;?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
+    });
+</script>
+

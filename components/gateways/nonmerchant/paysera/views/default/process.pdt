@@ -1,0 +1,16 @@
+
+    <?php
+    // Disable CSRF for this form
+    $this->Form->setCsrfOptions(['set_on_create' => false]);
+
+    // Build payment button
+    $this->Form->create(null, ['method' => 'get', 'id' => 'paysera_button']);
+
+    $this->Form->fieldHidden('proceed', 'true');
+
+    $this->Form->fieldButton(
+        'sign',
+        $this->_('Paysera.buildprocess.submit', true),
+        ['type' => 'submit', 'class' => 'btn btn-info', 'value' => 'proceed']
+    );
+    $this->Form->end();

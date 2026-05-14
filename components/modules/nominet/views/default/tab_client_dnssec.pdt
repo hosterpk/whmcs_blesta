@@ -1,0 +1,98 @@
+    <div class="pad">
+        <h4><?php $this->_('Nominet.tab_client_dnssec.heading');?></h4>
+        <div class="table-responsive my-2">
+            <table class="table table-curved table-striped">
+                <thead>
+                    <tr>
+                        <th><span><?php $this->_('Nominet.tab_client_dnssec.header_key_tag'); ?></span></th>
+                        <th><span><?php $this->_('Nominet.tab_client_dnssec.header_digest_type'); ?></span></th>
+                        <th><span><?php $this->_('Nominet.tab_client_dnssec.header_algorithm'); ?></span></th>
+                        <th><span><?php $this->_('Nominet.tab_client_dnssec.header_digest'); ?></span></th>
+                        <th><span><?php $this->_('Nominet.tab_client_dnssec.header_options'); ?></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    if (!empty($dnssec)) {
+                        foreach ($dnssec ?? [] as $record) {
+                    ?>
+                        <tr>
+                            <td><?php echo $this->Html->safe($record->key_tag ?? null); ?></td>
+                            <td><?php echo $this->Html->safe($digest[$record->digest_type] ?? null); ?></td>
+                            <td><?php echo $this->Html->safe($algorithms[$record->algorithm] ?? null); ?></td>
+                            <td style="word-wrap:break-word; overflow-wrap: break-word; word-break: break-word;"><?php echo ($record->digest ?? null); ?></td>
+                            <td>
+                                <?php
+                                $this->Form->create();
+                                $this->Form->fieldHidden('digest', ($record->digest ?? null));
+                                $this->Form->fieldHidden('key_tag', ($record->key_tag ?? null));
+                                $this->Form->fieldHidden('algorithm', ($record->algorithm ?? null));
+                                $this->Form->fieldHidden('digest_type', ($record->digest_type ?? null));
+                                $this->Form->fieldButton('action', $this->_('Nominet.tab_client_dnssec.field_delete', true), ['class' => 'btn btn-danger', 'value' => 'delete', 'type' => 'submit']);
+                                $this->Form->end();
+                                ?>
+                            </td>
+                        </tr>
+                    <?php
+                        }
+                    } else {
+                    ?>
+                        <tr>
+                            <td colspan="5">
+                                <div class="alert alert-info">
+                                    <p><?php $this->_('Nominet.tab_client_dnssec.no_results');?></p>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php
+                    }
+                    ?>
+                </tbody>
+            </table>
+        </div>
+
+        <h4><?php $this->_('Nominet.tab_client_dnssec.heading_add_record');?></h4>
+        <?php
+        $this->Form->create();
+        ?>
+        <div class="row panel-fix">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('Nominet.tab_client_dnssec.field_key_tag', true), 'key_tag');
+                    $this->Form->fieldText('key_tag', ($vars->key_tag ?? null), ['id' => 'key_tag', 'class'=>'form-control', 'placeholder' => $this->_('Nominet.tab_client_dnssec.field_key_tag', true)]);
+                    ?>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('Nominet.tab_client_dnssec.field_digest_type', true), 'digest_type');
+                    $this->Form->fieldSelect('digest_type', ($digest ?? null), ($vars->digest_type ?? null), ['id' => 'digest_type', 'class'=>'form-control']);
+                    ?>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('Nominet.tab_client_dnssec.field_algorithm', true), 'algorithm');
+                    $this->Form->fieldSelect('algorithm', ($algorithms ?? null), ($vars->algorithm ?? null), ['id' => 'algorithm', 'class'=>'form-control']);
+                    ?>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                    <?php
+                    $this->Form->label($this->_('Nominet.tab_client_dnssec.field_digest', true), 'digest');
+                    $this->Form->fieldText('digest', ($vars->digest ?? null), ['id' => 'digest', 'class'=>'form-control', 'placeholder' => $this->_('Nominet.tab_client_dnssec.field_digest', true)]);
+                    ?>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-light float-right" type="submit">
+            <i class="fas fa-edit"></i> <?php $this->_('Nominet.tab_client_dnssec.field_submit');?>
+        </button>
+        <?php
+        $this->Form->end();
+        ?>
+    </div>

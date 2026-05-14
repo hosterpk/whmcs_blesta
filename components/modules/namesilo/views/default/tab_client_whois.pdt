@@ -1,0 +1,61 @@
+
+<?php
+    $this->Form->create();
+    ?>
+
+    <?php
+    $i = 0;
+    foreach ($sections as $key) {
+        ?>
+        <div class="title_row">
+            <h4><?php $this->_('Namesilo.tab_whois.section_' . $key); ?></h4>
+        </div>
+        <div class="form-group">
+        <?php
+        $this->Form->fieldSelect($key, $contact_ids, $vars->{$key} ?? null, ['class' => 'form-control']);
+        ?>
+        </div>
+        <?php
+        $i++;
+    }
+    ?>
+    <button class="btn btn-light float-right" type="submit">
+        <i class="fas fa-edit"></i> <?php $this->_('Namesilo.tab_whois.field_submit'); ?>
+    </button>
+    <?php
+    $this->Form->end();
+    ?>
+
+    <script>
+        $(document).ready(function () {
+            $('.match-registrant').click(copyRegistrantInfo);
+        });
+        function copyInfo(that) {
+            const line_name = $(that).attr('name').match(/\[(.*)\]/)[1];
+            const main_val = $("input[name='registrant[" + line_name + "]']").val();
+
+            $(that).val(main_val);
+        }
+
+        function copyRegistrantInfo(e) {
+            e.preventDefault();
+            const value = $(this).attr('name');
+            switch(value) {
+                case 'admin':
+                    $( "input[name^='administrative']:not([type='submit'])" ).each(function() {
+                        copyInfo(this);
+                    });
+                    break;
+                case 'tech':
+                    $( "input[name^='technical']:not([type='submit'])" ).each(function() {
+                        copyInfo(this);
+                    });
+                    break;
+                case 'billing':
+                    $( "input[name^='billing']:not([type='submit'])" ).each(function() {
+                        copyInfo(this);
+                    });
+                    break;
+            }
+        }
+    </script>

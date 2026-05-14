@@ -1,0 +1,28 @@
+{
+    "version": "2.14.0",
+    "type": "registrar",
+    "name": "Namecheap.name",
+    "description": "Namecheap.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://www.blesta.com"
+        }
+    ],
+    "package": {
+        "name_key": "domain"
+    },
+    "service": {
+        "name_key": "domain"
+    },
+    "module": {
+        "row": "Namecheap.module_row",
+        "rows": "Namecheap.module_row_plural",
+        "row_key": "user"
+    },
+    "email_tags": {
+        "module": [],
+        "package": [],
+        "service": ["domain"]
+    }
+}

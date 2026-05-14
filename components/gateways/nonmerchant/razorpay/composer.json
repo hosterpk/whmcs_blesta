@@ -1,0 +1,16 @@
+{
+    "name": "blesta/razorpay",
+    "description": "Razorpay",
+    "license": "proprietary",
+    "type": "blesta-gateway-nonmerchant",
+    "require": {
+        "razorpay/razorpay": "2.8.2",
+        "blesta/composer-installer": "~1.0"
+    },
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "homepage": "https://www.blesta.com"
+        }
+    ]
+}

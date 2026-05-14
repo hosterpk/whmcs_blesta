@@ -1,0 +1,44 @@
+
+    <?php
+    $this->Form->create();
+
+    $i = 0;
+    foreach ($contacts ?? [] as $contact) {
+    ?>
+        <div class="title_row <?php echo $i == 0 ? 'first' : '' ?>">
+            <h3><?php $this->_('RealtimeRegister.tab_contacts.section_' . $contact->external_id);?></h3>
+        </div>
+
+        <div class="pad">
+            <ul>
+                <?php
+                foreach ($contact as $field => $value) {
+                    if ($field == 'external_id') {
+                        $this->Form->fieldHidden('contacts[' . $contact->external_id . '][' . $field . ']', $value);
+                        continue;
+                    }
+                ?>
+                    <li>
+                        <?php
+                        $this->Form->label($this->_('RealtimeRegister.tab_contacts.field_' . $field, true), $field);
+                        $this->Form->fieldText('contacts[' . $contact->external_id . '][' . $field . ']', (isset($vars->contacts[$contact->external_id][$field]) ? $vars->contacts[$contact->external_id][$field] : $value), ['id' => $field, 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_contacts.field_' . $field, true)]);
+                        ?>
+                    </li>
+                <?php
+                }
+                ?>
+            </ul>
+        </div>
+    <?php
+        $i++;
+    }
+    ?>
+
+    <div class="button_row">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('RealtimeRegister.tab_contacts.field_update', true), ['class' => 'btn btn-primary float-right']);
+        ?>
+    </div>
+    <?php
+    $this->Form->end();
+    ?>
