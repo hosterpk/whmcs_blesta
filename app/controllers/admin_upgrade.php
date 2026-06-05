@@ -42,6 +42,10 @@ class AdminUpgrade extends AppController
         $company = $this->getCompany();
         $this->primeCompany($company);
 
+        // Clear cached settings so database_version is read fresh from the DB,
+        // not from a stale cache entry written before files were updated
+        \Blesta\App\Models\Settings::clearSettingsCache();
+
         // Fetch the license info
         $data = $this->Settings->getSetting('database_version');
 
@@ -53,6 +57,12 @@ class AdminUpgrade extends AppController
             $versions = array_keys($this->Upgrades->getMappings());
             $this->database_version = $versions[0];
             unset($version);
+        }
+
+        // Handle CLI execution for any action when in CLI mode
+        if ($this->is_cli) {
+            $this->processCli();
+            return false;
         }
     }
 
@@ -87,11 +97,6 @@ class AdminUpgrade extends AppController
      */
     public function index()
     {
-        // Process the upgrade via CLI
-        if ($this->is_cli) {
-            return $this->processCli();
-        }
-
         // Only allow to continue if upgrade is possible
         if (version_compare($this->database_version, $this->file_version, '>=')) {
             $this->redirect($this->base_uri);
@@ -149,6 +154,22 @@ class AdminUpgrade extends AppController
         // Initialize the console
         $this->Console = new Console();
 
+        // Parse CLI arguments for help and non-interactive mode
+        $confirmed = false;
+        foreach ($_SERVER['argv'] as $i => $val) {
+            if ($val == '-help' || $val == '-h') {
+                $this->Console->output("%s\nBlesta CLI Upgrader\n%s\n", str_repeat('-', 40), str_repeat('-', 40));
+                $this->Console->output("The options are as follows:\n");
+                $this->Console->output("-y, --confirm  Automatically confirm and proceed with the upgrade without prompting\n");
+                $this->Console->output("-h, -help      Display this help message\n");
+                $this->Console->output("Pass no parameters to upgrade via interactive mode.\n");
+                exit;
+            }
+            if ($val == '-y' || $val == '--confirm') {
+                $confirmed = true;
+            }
+        }
+
         // Welcome message
         $this->Console->output("%s\nBlesta CLI Upgrader\n%s\n", str_repeat('-', 40), str_repeat('-', 40));
 
@@ -157,10 +178,13 @@ class AdminUpgrade extends AppController
             exit;
         }
 
-        $this->Console->output('Upgrade from ' . $this->database_version . ' to ' . $this->file_version . '? (Y/N): ');
-        if (strtolower(substr($this->Console->getLine(), 0, 1)) != 'y') {
-            $this->Console->output("Upgrade will not be performed. Goodbye.\n");
-            exit;
+        // Only prompt if not already confirmed
+        if (!$confirmed) {
+            $this->Console->output('Upgrade from ' . $this->database_version . ' to ' . $this->file_version . '? (Y/N): ');
+            if (strtolower(substr($this->Console->getLine(), 0, 1)) != 'y') {
+                $this->Console->output("Upgrade will not be performed. Goodbye.\n");
+                exit;
+            }
         }
 
         $this->Upgrades->start($this->database_version, $this->file_version, [$this->Console, 'progressBar'], false);
@@ -193,6 +217,6 @@ class AdminUpgrade extends AppController
             $this->Console->output("\nFinished.\n");
         }
 
-        return false;
+        exit(0);
     }
 }

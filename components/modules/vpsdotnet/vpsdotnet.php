@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * VPS.NET Module
  *
@@ -40,13 +42,13 @@ class Vpsdotnet extends Module
         }
 
         // Set cloud, template group, and template from the package if set
-        if ((isset($package->meta->cloud) ? $package->meta->cloud : null)) {
+        if (($package->meta->cloud ?? null)) {
             $vars['vpsdotnet_cloud'] = $package->meta->cloud;
         }
-        if ((isset($package->meta->template_group) ? $package->meta->template_group : null)) {
+        if (($package->meta->template_group ?? null)) {
             $vars['vpsdotnet_template_group'] = $package->meta->template_group;
         }
-        if ((isset($package->meta->template) ? $package->meta->template : null)) {
+        if (($package->meta->template ?? null)) {
             $vars['vpsdotnet_template'] = $package->meta->template;
         }
 
@@ -90,7 +92,7 @@ class Vpsdotnet extends Module
                     'message' => Language::_('Vpsdotnet.!error.vpsdotnet_label.empty', true)
                 ],
                 'format' => [
-                    'rule' => ['matches', "/^[a-z0-9 \.,]*$/i"],
+                    'rule' => ['matches', '/^[a-z0-9 \.,]*$/i'],
                     'message' => Language::_('Vpsdotnet.!error.vpsdotnet_label.format', true)
                 ]
             ],
@@ -190,8 +192,10 @@ class Vpsdotnet extends Module
         $service_params = [];
         if (isset($result) && $result && property_exists($result, 'virtual_machine')) {
             // Set information about the primary IP address
-            if (property_exists($result->virtual_machine, 'primary_ip_address') &&
-                property_exists($result->virtual_machine->primary_ip_address, 'ip_address')) {
+            if (
+                property_exists($result->virtual_machine, 'primary_ip_address') &&
+                property_exists($result->virtual_machine->primary_ip_address, 'ip_address')
+            ) {
                 if (property_exists($result->virtual_machine->primary_ip_address->ip_address, 'ip_address')) {
                     $service_params['primary_ip_address']
                         = $result->virtual_machine->primary_ip_address->ip_address->ip_address;
@@ -238,22 +242,22 @@ class Vpsdotnet extends Module
             ],
             [
                 'key' => 'vpsdotnet_primary_ip_address',
-                'value' => (isset($service_params['primary_ip_address']) ? $service_params['primary_ip_address'] : ''),
+                'value' => ($service_params['primary_ip_address'] ?? ''),
                 'encrypted' => 0
             ],
             [
                 'key' => 'vpsdotnet_consumer_id',
-                'value' => (isset($service_params['consumer_id']) ? $service_params['consumer_id'] : ''),
+                'value' => ($service_params['consumer_id'] ?? ''),
                 'encrypted' => 0
             ],
             [
                 'key' => 'vpsdotnet_password',
-                'value' => (isset($service_params['password']) ? $service_params['password'] : ''),
+                'value' => ($service_params['password'] ?? ''),
                 'encrypted' => 1
             ],
             [
                 'key' => 'vpsdotnet_id',
-                'value' => (isset($service_params['id']) ? $service_params['id'] : ''),
+                'value' => ($service_params['id'] ?? ''),
                 'encrypted' => 0
             ]
         ];
@@ -613,6 +617,14 @@ class Vpsdotnet extends Module
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -639,6 +651,14 @@ class Vpsdotnet extends Module
             $vars = $module_row->meta;
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -719,7 +739,7 @@ class Vpsdotnet extends Module
      */
     public function getGroupOrderOptions()
     {
-        return ['first'=>Language::_('Vpsdotnet.order_options.first', true)];
+        return ['first' => Language::_('Vpsdotnet.order_options.first', true)];
     }
 
     /**
@@ -741,7 +761,6 @@ class Vpsdotnet extends Module
             switch ($group->add_order) {
                 default:
                 case 'first':
-
                     foreach ($group->rows as $row) {
                         return $row->id;
                     }
@@ -771,28 +790,30 @@ class Vpsdotnet extends Module
 
         // Fetch all packages available for the given server or server group
         $module_row = $this->getModuleRowByServer(
-            (isset($vars->module_row) ? $vars->module_row : 0),
-            (isset($vars->module_group) ? $vars->module_group : '')
+            ($vars->module_row ?? 0),
+            ($vars->module_group ?? '')
         );
 
         // Fetch clouds, OSs, templates
         if ($module_row) {
             // Fetch clouds
-            if ((isset($vars->meta['set_cloud']) ? $vars->meta['set_cloud'] : null) == 'admin') {
+            if (($vars->meta['set_cloud'] ?? null) == 'admin') {
                 $clouds = $please_select + $this->getClouds($module_row);
             }
 
             // Fetch template groups (operating systems) based on cloud
-            if ((isset($vars->meta['set_template_group']) ? $vars->meta['set_template_group'] : null) == 'admin'
-                && (isset($vars->meta['cloud']) ? $vars->meta['cloud'] : false)
+            if (
+                ($vars->meta['set_template_group'] ?? null) == 'admin'
+                && ($vars->meta['cloud'] ?? false)
             ) {
                 $template_groups = $please_select + $this->getTemplateGroups($module_row, $vars->meta['cloud']);
             }
 
             // Fetch templates based on template group
-            if ((isset($vars->meta['set_template']) ? $vars->meta['set_template'] : null) == 'admin'
-                && (isset($vars->meta['cloud']) ? $vars->meta['cloud'] : false)
-                && (isset($vars->meta['template_group']) ? $vars->meta['template_group'] : false)
+            if (
+                ($vars->meta['set_template'] ?? null) == 'admin'
+                && ($vars->meta['cloud'] ?? false)
+                && ($vars->meta['template_group'] ?? false)
             ) {
                 $all_templates = $this->getTemplates($module_row, $vars->meta['cloud'], $vars->meta['template_group']);
 
@@ -827,7 +848,7 @@ class Vpsdotnet extends Module
         $nodes->attach(
             $fields->fieldText(
                 'meta[number_of_nodes]',
-                (isset($vars->meta['number_of_nodes']) ? $vars->meta['number_of_nodes'] : null),
+                ($vars->meta['number_of_nodes'] ?? null),
                 ['id' => 'vpsdotnet_number_of_nodes', 'class' => 'small']
             )
         );
@@ -847,7 +868,7 @@ class Vpsdotnet extends Module
             $fields->fieldRadio(
                 'meta[set_cloud]',
                 'client',
-                (isset($vars->meta['set_cloud']) ? $vars->meta['set_cloud'] : 'client') == 'client',
+                ($vars->meta['set_cloud'] ?? 'client') == 'client',
                 ['id' => 'vpsdotnet_client_set_cloud', 'class' => 'vpsdotnet_chosen_cloud'],
                 $client_set_cloud
             )
@@ -856,27 +877,27 @@ class Vpsdotnet extends Module
             $fields->fieldRadio(
                 'meta[set_cloud]',
                 'admin',
-                (isset($vars->meta['set_cloud']) ? $vars->meta['set_cloud'] : null) == 'admin',
+                ($vars->meta['set_cloud'] ?? null) == 'admin',
                 ['id' => 'vpsdotnet_admin_set_cloud', 'class' => 'vpsdotnet_chosen_cloud'],
                 $admin_set_cloud
             )
         );
         $fields->setField($set_cloud);
 
-        if ((isset($vars->meta['set_cloud']) ? $vars->meta['set_cloud'] : null) == 'admin') {
+        if (($vars->meta['set_cloud'] ?? null) == 'admin') {
             // Set clouds that admin may choose from
             $cloud = $fields->label(Language::_('Vpsdotnet.package_fields.cloud', true), 'vpsdotnet_cloud');
             $cloud->attach(
                 $fields->fieldSelect(
                     'meta[cloud]',
                     $clouds,
-                    (isset($vars->meta['cloud']) ? $vars->meta['cloud'] : null),
+                    ($vars->meta['cloud'] ?? null),
                     ['id' => 'vpsdotnet_cloud']
                 )
             );
             $fields->setField($cloud);
 
-            if ((isset($vars->meta['cloud']) ? $vars->meta['cloud'] : null)) {
+            if (($vars->meta['cloud'] ?? null)) {
                 // Set field whether client or admin may choose template group (operating system)
                 $set_template_group = $fields->label('', 'vpsdotnet_client_set_template_group');
                 $admin_set_template = $fields->label(
@@ -891,7 +912,7 @@ class Vpsdotnet extends Module
                     $fields->fieldRadio(
                         'meta[set_template_group]',
                         'client',
-                        (isset($vars->meta['set_template_group']) ? $vars->meta['set_template_group'] : 'client') == 'client',
+                        ($vars->meta['set_template_group'] ?? 'client') == 'client',
                         ['id' => 'vpsdotnet_client_set_template_group', 'class' => 'vpsdotnet_chosen_template_group'],
                         $client_set_template
                     )
@@ -900,7 +921,7 @@ class Vpsdotnet extends Module
                     $fields->fieldRadio(
                         'meta[set_template_group]',
                         'admin',
-                        (isset($vars->meta['set_template_group']) ? $vars->meta['set_template_group'] : null) == 'admin',
+                        ($vars->meta['set_template_group'] ?? null) == 'admin',
                         ['id' => 'vpsdotnet_admin_set_template_group', 'class' => 'vpsdotnet_chosen_template_group'],
                         $admin_set_template
                     )
@@ -908,7 +929,7 @@ class Vpsdotnet extends Module
                 $fields->setField($set_template_group);
 
                 // Set template groups (operating systems)
-                if ((isset($vars->meta['set_template_group']) ? $vars->meta['set_template_group'] : null) == 'admin') {
+                if (($vars->meta['set_template_group'] ?? null) == 'admin') {
                     // Set template groups (operating systems) that admin may choose from
                     $group = $fields->label(
                         Language::_('Vpsdotnet.package_fields.template_group', true),
@@ -918,13 +939,13 @@ class Vpsdotnet extends Module
                         $fields->fieldSelect(
                             'meta[template_group]',
                             $template_groups,
-                            (isset($vars->meta['template_group']) ? $vars->meta['template_group'] : null),
+                            ($vars->meta['template_group'] ?? null),
                             ['id' => 'vpsdotnet_template_group']
                         )
                     );
                     $fields->setField($group);
 
-                    if ((isset($vars->meta['template_group']) ? $vars->meta['template_group'] : null)) {
+                    if (($vars->meta['template_group'] ?? null)) {
                         // Set field whether client or admin may choose template
                         $set_template = $fields->label('', 'vpsdotnet_client_set_template');
                         $admin_set_template = $fields->label(
@@ -939,7 +960,7 @@ class Vpsdotnet extends Module
                             $fields->fieldRadio(
                                 'meta[set_template]',
                                 'client',
-                                (isset($vars->meta['set_template']) ? $vars->meta['set_template'] : 'client') == 'client',
+                                ($vars->meta['set_template'] ?? 'client') == 'client',
                                 ['id' => 'vpsdotnet_client_set_template', 'class' => 'vpsdotnet_chosen_template'],
                                 $client_set_template
                             )
@@ -948,7 +969,7 @@ class Vpsdotnet extends Module
                             $fields->fieldRadio(
                                 'meta[set_template]',
                                 'admin',
-                                (isset($vars->meta['set_template']) ? $vars->meta['set_template'] : null) == 'admin',
+                                ($vars->meta['set_template'] ?? null) == 'admin',
                                 ['id' => 'vpsdotnet_admin_set_template', 'class' => 'vpsdotnet_chosen_template'],
                                 $admin_set_template
                             )
@@ -956,7 +977,7 @@ class Vpsdotnet extends Module
                         $fields->setField($set_template);
 
                         // Set templates that admin may choose from
-                        if ((isset($vars->meta['set_template']) ? $vars->meta['set_template'] : null) == 'admin') {
+                        if (($vars->meta['set_template'] ?? null) == 'admin') {
                             // Set templates that admin may choose from
                             $template = $fields->label(
                                 Language::_('Vpsdotnet.package_fields.template', true),
@@ -966,7 +987,7 @@ class Vpsdotnet extends Module
                                 $fields->fieldSelect(
                                     'meta[template]',
                                     $templates,
-                                    (isset($vars->meta['template']) ? $vars->meta['template'] : null),
+                                    ($vars->meta['template'] ?? null),
                                     ['id' => 'vpsdotnet_template']
                                 )
                             );
@@ -996,8 +1017,8 @@ class Vpsdotnet extends Module
 
         // Fetch the module row available for this package
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
         $module = $this->getModule();
 
@@ -1006,13 +1027,13 @@ class Vpsdotnet extends Module
         $choose_fields = [];
         $please_select = ['' => Language::_('AppController.select.please', true)];
 
-        if ((isset($package->meta->set_template) ? $package->meta->set_template : null) == 'client') {
+        if (($package->meta->set_template ?? null) == 'client') {
             $choose_fields = ['template'];
         }
-        if ((isset($package->meta->set_template_group) ? $package->meta->set_template_group : null) == 'client') {
+        if (($package->meta->set_template_group ?? null) == 'client') {
             $choose_fields = ['template_group', 'template'];
         }
-        if ((isset($package->meta->set_cloud) ? $package->meta->set_cloud : null) == 'client') {
+        if (($package->meta->set_cloud ?? null) == 'client') {
             $choose_fields = ['cloud', 'template_group', 'template'];
         }
 
@@ -1056,7 +1077,7 @@ class Vpsdotnet extends Module
         $host_name->attach(
             $fields->fieldText(
                 'vpsdotnet_hostname',
-                (isset($vars->vpsdotnet_hostname) ? $vars->vpsdotnet_hostname : ($vars->domain ?? null)),
+                ($vars->vpsdotnet_hostname ?? ($vars->domain ?? null)),
                 ['id' => 'vpsdotnet_hostname']
             )
         );
@@ -1069,7 +1090,7 @@ class Vpsdotnet extends Module
         $label->attach(
             $fields->fieldText(
                 'vpsdotnet_label',
-                (isset($vars->vpsdotnet_label) ? $vars->vpsdotnet_label : null),
+                ($vars->vpsdotnet_label ?? null),
                 ['id' => 'vpsdotnet_label']
             )
         );
@@ -1089,7 +1110,7 @@ class Vpsdotnet extends Module
                 $fields->fieldSelect(
                     'vpsdotnet_cloud',
                     $clouds,
-                    (isset($vars->vpsdotnet_cloud) ? $vars->vpsdotnet_cloud : null),
+                    ($vars->vpsdotnet_cloud ?? null),
                     ['id' => 'vpsdotnet_cloud']
                 )
             );
@@ -1097,7 +1118,7 @@ class Vpsdotnet extends Module
         }
 
         // Set the operating system field
-        $cloud = (isset($package->meta->cloud) ? $package->meta->cloud : ($vars->vpsdotnet_cloud ?? null));
+        $cloud = ($package->meta->cloud ?? ($vars->vpsdotnet_cloud ?? null));
         if (in_array('template_group', $choose_fields) && !empty($cloud)) {
             // Set template groups to choose from
             $template_groups = $please_select + $this->getTemplateGroups($module_row, $cloud);
@@ -1110,7 +1131,7 @@ class Vpsdotnet extends Module
                 $fields->fieldSelect(
                     'vpsdotnet_template_group',
                     $template_groups,
-                    (isset($vars->vpsdotnet_template_group) ? $vars->vpsdotnet_template_group : null),
+                    ($vars->vpsdotnet_template_group ?? null),
                     ['id' => 'vpsdotnet_template_group']
                 )
             );
@@ -1118,9 +1139,7 @@ class Vpsdotnet extends Module
         }
 
         // Set the template field
-        $template_group = (isset($package->meta->template_group)
-            ? $package->meta->template_group
-            : (isset($vars->vpsdotnet_template_group) ? $vars->vpsdotnet_template_group : null)
+        $template_group = ($package->meta->template_group ?? ($vars->vpsdotnet_template_group ?? null)
         );
         if (in_array('template', $choose_fields) && !empty($cloud) && !empty($template_group)) {
             // Set templates to choose from
@@ -1138,7 +1157,7 @@ class Vpsdotnet extends Module
                 $fields->fieldSelect(
                     'vpsdotnet_template',
                     $templates,
-                    (isset($vars->vpsdotnet_template) ? $vars->vpsdotnet_template : null),
+                    ($vars->vpsdotnet_template ?? null),
                     ['id' => 'vpsdotnet_template']
                 )
             );
@@ -1408,9 +1427,7 @@ class Vpsdotnet extends Module
         $template_groups = $this->getTemplateGroups($module_row, $service_fields->vpsdotnet_cloud);
 
         // Get templates
-        $template_group = (isset($post['vpsdotnet_template_group'])
-            ? $post['vpsdotnet_template_group']
-            : $service_fields->vpsdotnet_template_group
+        $template_group = ($post['vpsdotnet_template_group'] ?? $service_fields->vpsdotnet_template_group
         );
         $templates = $this->getTemplates($module_row, $service_fields->vpsdotnet_cloud, $template_group);
 
@@ -1462,7 +1479,8 @@ class Vpsdotnet extends Module
         $group_index = ($client ? 5 : 6);
 
         // Must be a valid request
-        if (!(
+        if (
+            !(
                 isset($_SERVER['HTTP_X_REQUESTED_WITH'])
                 && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
             )
@@ -1472,7 +1490,7 @@ class Vpsdotnet extends Module
             || !property_exists($module_row->meta, 'email')
             || !property_exists($module_row->meta, 'key')
         ) {
-            header((isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0') . ' 403 Forbidden');
+            header(($_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.0') . ' 403 Forbidden');
             exit();
         }
 
@@ -1683,8 +1701,8 @@ class Vpsdotnet extends Module
                     'negate' => true,
                     'message' => Language::_('Vpsdotnet.!error.key.empty', true)
                 ],
-                'valid_connection'=>[
-                    'rule' => [[$this, 'validateConnection'], (isset($vars['email']) ? $vars['email'] : '')],
+                'valid_connection' => [
+                    'rule' => [[$this, 'validateConnection'], ($vars['email'] ?? '')],
                     'message' => Language::_('Vpsdotnet.!error.key.valid_connection', true)
                 ]
             ]
@@ -1741,25 +1759,19 @@ class Vpsdotnet extends Module
         $module_row = $this->getModuleRow($package->module_row);
 
         // Set cloud, template group, and template from the package if set
-        $cloud = (isset($package->meta->cloud)
-            ? $package->meta->cloud
-            : (isset($vars['vpsdotnet_cloud']) ? $vars['vpsdotnet_cloud'] : null)
+        $cloud = ($package->meta->cloud ?? ($vars['vpsdotnet_cloud'] ?? null)
         );
-        $template = (isset($package->meta->template)
-            ? $package->meta->template
-            : (isset($vars['vpsdotnet_template']) ? $vars['vpsdotnet_template'] : null)
+        $template = ($package->meta->template ?? ($vars['vpsdotnet_template'] ?? null)
         );
-        $template_group = (isset($package->meta->template_group)
-            ? $package->meta->template_group
-            : (isset($vars['vpsdotnet_template_group']) ? $vars['vpsdotnet_template_group'] : null)
+        $template_group = ($package->meta->template_group ?? ($vars['vpsdotnet_template_group'] ?? null)
         );
 
         $fields = [
             'hostname' => isset($vars['vpsdotnet_hostname']) ? strtolower($vars['vpsdotnet_hostname']) : null,
-            'label' => (isset($vars['vpsdotnet_label']) ? $vars['vpsdotnet_label'] : null),
+            'label' => ($vars['vpsdotnet_label'] ?? null),
             'cloud_id' => $cloud,
             'system_template_id' => $template,
-            'slices_required' => (isset($package->meta->number_of_nodes) ? $package->meta->number_of_nodes : null),
+            'slices_required' => ($package->meta->number_of_nodes ?? null),
             'backups_enabled' => 'false',
             'rsync_backups_enabled' => 'false',
             'r1_soft_backups_enabled' => 'false',
@@ -1782,7 +1794,7 @@ class Vpsdotnet extends Module
         try {
             // An error may be generated if the key is not given
             return VPSNET::getInstance($email, $key);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
     }
@@ -1864,7 +1876,8 @@ class Vpsdotnet extends Module
         // Check for fields that have changed
         $delta = [];
         foreach ($vars as $key => $value) {
-            if (in_array($key, $updatable_fields)
+            if (
+                in_array($key, $updatable_fields)
                 && (!property_exists($service_fields, $key) || $value != $service_fields->{$key})
             ) {
                 $delta[$key] = $value;
@@ -2150,13 +2163,9 @@ class Vpsdotnet extends Module
 
         try {
             $result['result'] = call_user_func_array([$api, $method], $params);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // The API causes an 'undefined index: response' error when incorrect auth details are set
-            if (strtolower($e->getMessage()) == 'undefined index: response') {
-                $result['error'] = Language::_('Vpsdotnet.!error.key.valid_connection', true);
-            } else {
-                $result['error'] = $e->getMessage();
-            }
+            $result['error'] = strtolower($e->getMessage()) == 'undefined index: response' ? Language::_('Vpsdotnet.!error.key.valid_connection', true) : $e->getMessage();
         }
 
         return $result;
@@ -2354,14 +2363,14 @@ class Vpsdotnet extends Module
             'meta[cloud]' => [
                 'format' => [
                     // Cloud integer ID must be given if the admin chose to set a cloud
-                    'if_set' => !((isset($vars['meta']['set_cloud']) ? $vars['meta']['set_cloud'] : null) == 'admin'),
+                    'if_set' => !(($vars['meta']['set_cloud'] ?? null) == 'admin'),
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('Vpsdotnet.!error.meta[cloud].format', true)
                 ]
             ],
             'meta[set_template_group]' => [
                 'format' => [
-                    'if_set' => !(isset($vars['meta']['cloud']) ? $vars['meta']['cloud'] : null),
+                    'if_set' => !($vars['meta']['cloud'] ?? null),
                     'rule' => ['in_array', $user_types],
                     'message' => Language::_('Vpsdotnet.!error.meta[set_template_group].format', true)
                 ]
@@ -2369,7 +2378,7 @@ class Vpsdotnet extends Module
             'meta[template_group]' => [
                 'format' => [
                     // OS must be set if the admin chose to set an OS
-                    'if_set' => !((isset($vars['meta']['set_template_group']) ? $vars['meta']['set_template_group'] : null) == 'admin'),
+                    'if_set' => !(($vars['meta']['set_template_group'] ?? null) == 'admin'),
                     'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('Vpsdotnet.!error.meta[template_group].format', true)
@@ -2377,7 +2386,7 @@ class Vpsdotnet extends Module
             ],
             'meta[set_template]' => [
                 'format' => [
-                    'if_set' => !(isset($vars['meta']['template_group']) ? $vars['meta']['template_group'] : null),
+                    'if_set' => !($vars['meta']['template_group'] ?? null),
                     'rule' => ['in_array', $user_types],
                     'message' => Language::_('Vpsdotnet.!error.meta[set_template].format', true)
                 ]
@@ -2385,7 +2394,7 @@ class Vpsdotnet extends Module
             'meta[template]' => [
                 'format' => [
                     // Template must be set if the admin chose to set a template
-                    'if_set' => !((isset($vars['meta']['set_template']) ? $vars['meta']['set_template'] : null) == 'admin'),
+                    'if_set' => !(($vars['meta']['set_template'] ?? null) == 'admin'),
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('Vpsdotnet.!error.meta[template].format', true)
                 ]

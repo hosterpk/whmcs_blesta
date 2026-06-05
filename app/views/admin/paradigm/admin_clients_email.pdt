@@ -1,0 +1,98 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.email.boxtitle_emailclient', true));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+?>
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <?php
+            $this->Form->label($this->_('AdminClients.email.field_recipient', true), 'recipient', ['class' => 'form-label']);
+            ?>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="form-check mb-0">
+                    <?php
+                    $this->Form->fieldRadio('email_field', 'email_selected', ((isset($vars->email_field) ? $vars->email_field : 'email_selected') == 'email_selected'), ['id' => 'email_field_selected', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.email.field_recipient_selected', true), 'email_field_selected', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <?php
+                $this->Form->fieldSelect('recipient', (isset($contacts) ? $contacts : null), (isset($vars->recipient) ? $vars->recipient : null), ['id' => 'recipient', 'class' => 'form-select', 'style' => 'width: auto; min-width: 200px;']);
+                ?>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="form-check mb-0">
+                    <?php
+                    $this->Form->fieldRadio('email_field', 'email_other', ((isset($vars->email_field) ? $vars->email_field : null) == 'email_other'), ['id' => 'email_field_other', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.email.field_recipient_other', true), 'email_field_other', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <?php
+                $this->Form->fieldText('recipient_other', (((isset($vars->email_field) ? $vars->email_field : null) == 'email_other') ? (isset($vars->recipient_other) ? $vars->recipient_other : null) : ''), ['id' => 'recipient_other', 'class' => 'form-control', 'style' => 'width: auto; min-width: 200px;']);
+                ?>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.email.field_fromname', true), 'from_name', ['class' => 'form-label']);
+            $this->Form->fieldText('from_name', (isset($vars->from_name) ? $vars->from_name : null), ['id' => 'from_name', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.email.field_from', true), 'from', ['class' => 'form-label']);
+            $this->Form->fieldText('from', (isset($vars->from) ? $vars->from : null), ['id' => 'from', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-12">
+            <?php
+            $this->Form->label($this->_('AdminClients.email.field_subject', true), 'subject', ['class' => 'form-label']);
+            $this->Form->fieldText('subject', (isset($vars->subject) ? $vars->subject : null), ['id' => 'subject', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-12">
+            <ul class="nav nav-tabs-connected" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo (!empty($vars->html) || empty($vars->message)) ? 'active' : '';?>" id="html-tab" data-bs-toggle="tab" data-bs-target="#html-panel" type="button" role="tab" aria-controls="html-panel" aria-selected="<?php echo (!empty($vars->html) || empty($vars->message)) ? 'true' : 'false';?>">
+                        <?php $this->_('AdminClients.email.field_messagehtml');?>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link <?php echo (empty($vars->html) && !empty($vars->message)) ? 'active' : '';?>" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-panel" type="button" role="tab" aria-controls="text-panel" aria-selected="<?php echo (empty($vars->html) && !empty($vars->message)) ? 'true' : 'false';?>">
+                        <?php $this->_('AdminClients.email.field_message');?>
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content tab-content-connected">
+                <div class="tab-pane fade <?php echo (!empty($vars->html) || empty($vars->message)) ? 'show active' : '';?>" id="html-panel" role="tabpanel" aria-labelledby="html-tab">
+                    <textarea id="ckeditor" name="html"><?php echo (isset($vars->html) ? $this->Html->safe($vars->html) : null);?></textarea>
+                </div>
+                <div class="tab-pane fade <?php echo (empty($vars->html) && !empty($vars->message)) ? 'show active' : '';?>" id="text-panel" role="tabpanel" aria-labelledby="text-tab">
+                    <?php $this->Form->fieldTextarea('text', (isset($vars->message) ? $vars->message : null), ['id' => 'text', 'class' => 'form-control', 'rows' => 15]);?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.email.field_emailsubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+    blestaBindWysiwygEditor('#ckeditor', {
+        language: <?php echo json_encode(substr(Configure::get('Blesta.language'), 0, 2));?>
+    });
+</script>

@@ -1,0 +1,1058 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+
+    $tabs = [];
+
+    // Set tab language
+    if (is_array((isset($templates) ? $templates : null)) && ($num_templates = count($templates)) > 0) {
+        for ($i = 0; $i < $num_templates; $i++) {
+            $tabs[$i]['name'] = (isset($templates[$i]->lang_name) ? $this->Html->safe($templates[$i]->lang_name) : null);
+            $tabs[$i]['current'] = ((isset($vars->lang) ? $this->Html->safe($vars->lang) : null) == (isset($templates[$i]->lang) ? $this->Html->safe($templates[$i]->lang) : null) ? true : false);
+            $tabs[$i]['attributes'] = ['href' => $this->base_uri . 'settings/company/emails/edittemplate/' . $templates[$i]->email_group_id . '/' . $templates[$i]->id . '/'];
+        }
+    }
+
+    $this->Widget->setStyleSheet(VENDORWEBDIR . 'dropzone/dist/dropzone.css');
+    $this->Widget->setTabs($tabs);
+
+    $this->Widget->create($this->_('AdminCompanyEmails.edittemplate.boxtitle_edittemplate', true, (isset($template_name) ? $template_name : null)), ['id' => 'admin_company_emails_edittemplate']);
+    ?>
+            <?php
+            $this->Form->create(null, ['enctype' => 'multipart/form-data', 'id' => 'admin_company_emails_edittemplate', 'class' => 'disable-on-submit']);
+            ?>
+
+            <!-- Email Template Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyEmails.edittemplate.heading_email_template');?></h6>
+
+            <!-- From Name -->
+            <div class="mb-3">
+                <label for="fromName" class="form-label">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.from_name');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.from_name', true));?>"></i>
+                </label>
+                <?php $this->Form->fieldText('from_name', (isset($vars->from_name) ? $vars->from_name : null), ['id' => 'fromName', 'class' => 'form-control', 'placeholder' => $this->_('AdminCompanyEmails.edittemplate.text_from_name', true)]);?>
+            </div>
+
+            <!-- From Email -->
+            <div class="mb-3">
+                <label for="fromEmail" class="form-label">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.from');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.from', true));?>"></i>
+                </label>
+                <?php $this->Form->fieldText('from', (isset($vars->from) ? $vars->from : null), ['id' => 'fromEmail', 'class' => 'form-control', 'placeholder' => $this->_('AdminCompanyEmails.edittemplate.text_from_email', true)]);?>
+            </div>
+
+            <!-- Subject -->
+            <div class="mb-3">
+                <label for="subject" class="form-label">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.subject');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.subject', true));?>"></i>
+                </label>
+                <?php $this->Form->fieldText('subject', (isset($vars->subject) ? $vars->subject : null), ['id' => 'subject', 'class' => 'form-control', 'placeholder' => $this->_('AdminCompanyEmails.edittemplate.text_subject', true)]);?>
+            </div>
+
+            <!-- HTML Template -->
+            <div class="mb-3">
+                <label for="htmlTemplate" class="form-label">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.email_template_group_id');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.email_template_group_id', true));?>"></i>
+                </label>
+                <?php $this->Form->fieldSelect('email_template_group_id', $email_template_groups ?? [], ($vars->email_template_group_id ?? null), ['id' => 'htmlTemplate', 'class' => 'form-select']);?>
+            </div>
+
+            <!-- Available Tags -->
+            <?php
+            if (is_array($template->tags ?? null) && !empty($template->tags)) {
+            ?>
+            <div class="alert alert-info mb-3">
+                <h6 class="alert-heading mb-2"><i class="bi bi-tags me-2"></i><?php $this->_('AdminCompanyEmails.edittemplate.text_available_tags');?></h6>
+                <p class="mb-1 small"><?php $this->_('AdminCompanyEmails.edittemplate.text_tags_description');?></p>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <?php
+                    foreach ($template->tags as $tag) {
+                    ?>
+                    <code><?php echo $this->Html->safe($tag);?></code>
+                    <?php
+                    }
+                    ?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+
+            <?php if ($ai_feature_enabled ?? false): ?>
+            <!-- AI Assist Buttons (above tabs, generates both HTML and Text) -->
+            <div class="ai-assist-buttons mb-2 d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary ai-response-alert-btn ai-icon active" type="button"
+                        data-ai-action="generate"
+                        data-ai-target="both"
+                        data-ai-type="email-both"
+                        data-ai-lang="<?php echo $this->Html->safe($vars->lang ?? 'en_us'); ?>">
+                    <i class="bi bi-stars me-1"></i><?php $this->_('AdminCompanyEmails.ai.generate_button');?>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary ai-regenerate-btn ai-icon active" type="button"
+                        data-ai-action="rewrite"
+                        data-ai-target="both"
+                        data-ai-type="email-both"
+                        data-ai-lang="<?php echo $this->Html->safe($vars->lang ?? 'en_us'); ?>"
+                        disabled>
+                    <i class="bi bi-arrow-repeat me-1"></i><?php $this->_('AdminCompanyEmails.ai.rewrite_button');?>
+                </button>
+            </div>
+            <?php endif; ?>
+
+            <!-- HTML/Text Editor Tabs -->
+            <ul class="nav nav-tabs-connected" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="html-tab" data-bs-toggle="tab" data-bs-target="#html-editor" type="button" role="tab" aria-controls="html-editor" aria-selected="true"><?php $this->_('AdminCompanyEmails.edittemplate.field.html');?></button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-editor" type="button" role="tab" aria-controls="text-editor" aria-selected="false"><?php $this->_('AdminCompanyEmails.edittemplate.field.text');?></button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content tab-content-connected">
+                <div class="tab-pane fade show active" id="html-editor" role="tabpanel" aria-labelledby="html-tab">
+                    <textarea id="ckeditor" name="html"><?php echo (isset($vars->html) ? $this->Html->safe($vars->html) : null);?></textarea>
+                </div>
+                <div class="tab-pane fade" id="text-editor" role="tabpanel" aria-labelledby="text-tab">
+                    <?php $this->Form->fieldTextarea('text', (isset($vars->text) ? $vars->text : null), ['id' => 'text', 'class' => 'form-control', 'rows' => 15, 'placeholder' => $this->_('AdminCompanyEmails.edittemplate.text_plain_text', true)]);?>
+                </div>
+            </div>
+
+            <!-- Signature -->
+            <div class="mb-3 mt-3">
+                <label for="signature" class="form-label">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.email_signature_id');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.email_signature_id', true));?>"></i>
+                </label>
+                <?php $this->Form->fieldSelect('email_signature_id', (isset($signatures) ? $signatures : null), (isset($vars->email_signature_id) ? $vars->email_signature_id : null), ['id' => 'signature', 'class' => 'form-select']);?>
+            </div>
+
+            <!-- Include Any Attachments -->
+            <div class="form-check mb-3">
+                <?php
+                $this->Form->fieldCheckbox('include_attachments', '1', ((isset($vars->include_attachments) ? $vars->include_attachments : '0') == '1'), ['id' => 'includeAttachments', 'class' => 'form-check-input']);
+                ?>
+                <label class="form-check-label" for="includeAttachments">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.include_attachments');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.include_attachments', true));?>"></i>
+                </label>
+            </div>
+
+            <!-- Enabled -->
+            <div class="form-check mb-4">
+                <?php
+                $this->Form->fieldCheckbox('status', 'active', (isset($vars->status) && $vars->status == 'active' ? true : false), ['id' => 'enabled', 'class' => 'form-check-input']);
+                ?>
+                <label class="form-check-label" for="enabled">
+                    <?php $this->_('AdminCompanyEmails.edittemplate.field.status');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.!tooltip.status', true));?>"></i>
+                </label>
+            </div>
+
+            <!-- Restore Snapshot Button -->
+            <div class="d-flex justify-content-end mb-3">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        id="toggleSnapshots"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#snapshotsContainer"
+                        aria-expanded="false"
+                        aria-controls="snapshotsContainer"<?php echo (empty($snapshots) ? ' disabled' : '');?>>
+                    <i class="bi bi-clock-history me-1"></i> <?php $this->_('AdminCompanyEmails.edittemplate.field_restore_snapshot');?>
+                </button>
+            </div>
+
+            <!-- Snapshots Container -->
+            <div id="snapshotsContainer" class="collapse mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><?php $this->_('AdminCompanyEmails.edittemplate.heading_snapshots');?></h6>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        if (!empty($snapshots)) {
+                        ?>
+                            <div class="list-group">
+                                <?php
+                                foreach ($snapshots as $snapshot) {
+                                ?>
+                                    <div class="bg-transparent border-secondary-subtle list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="small text-muted mb-1"><?php echo $this->Date->cast($snapshot->date_saved);?></div>
+                                                <div><strong><?php $this->_('AdminCompanyEmails.edittemplate.field.subject');?>:</strong> <?php echo $this->Html->safe($snapshot->subject);?></div>
+                                                <div><strong><?php $this->_('AdminCompanyEmails.edittemplate.field.from');?>:</strong> <?php echo $this->Html->safe($snapshot->from);?></div>
+                                            </div>
+                                            <a href="<?php echo $this->base_uri . 'settings/company/emails/restoresnapshot/';?>"
+                                               class="btn btn-sm btn-primary restoreSnapshot"
+                                               data-email-id="<?php echo $this->Html->safe($template->id);?>"
+                                               data-snapshot-id="<?php echo $this->Html->safe($snapshot->id);?>"
+                                               data-confirm="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.edittemplate.confirm_restore_snapshot', true));?>"
+                                               data-bs-toggle="modal"
+                                               data-bs-target="#restoreSnapshotModal">
+                                                <i class="bi bi-arrow-counterclockwise"></i> <?php $this->_('AdminCompanyEmails.edittemplate.field_restore');?>
+                                            </a>
+                                        </div>
+                                    </div>
+                                <?php
+                                }
+                                ?>
+                            </div>
+                        <?php
+                        } else {
+                        ?>
+                            <p class="text-muted mb-0"><?php $this->_('AdminCompanyEmails.edittemplate.text_no_snapshots');?></p>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Attachments Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyEmails.edittemplate.heading_additional_attachments');?></h6>
+
+            <?php
+            if (!empty($template->attachments ?? [])) {
+            ?>
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered" id="attachments">
+                    <thead>
+                        <tr>
+                            <th><?php $this->_('AdminCompanyEmails.edittemplate.heading_file_name');?></th>
+                            <th class="text-end"><?php $this->_('AdminCompanyEmails.edittemplate.heading_options');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        foreach ($template->attachments as $attachment) {
+                        ?>
+                        <tr>
+                            <td>
+                                <?php echo $this->Html->safe($attachment['name']);?>
+                            </td>
+                            <td class="text-end">
+                                <a href="<?php echo $this->base_uri . 'settings/company/emails/deleteattachment/' . $this->Html->safe($attachment['id'] ?? '') . '/';?>"
+                                   class="btn btn-sm btn-danger manage"
+                                   data-id="<?php echo $this->Html->safe($attachment['id'] ?? '');?>"
+                                   title="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.edittemplate.option_delete', true));?>">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php
+            }
+            ?>
+
+            <!-- Compact File Upload Zone -->
+            <div class="file-upload-compact mb-3" id="fileDropZone">
+                <?php $this->Form->fieldFile('attachment[]', ['id' => 'emailFileInput', 'class' => 'drag-drop', 'rel' => $this->_('AppController.dropzone.text', true), 'style' => 'display:none;', 'multiple' => 'multiple']);?>
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-cloud-upload upload-icon"></i>
+                    <div class="flex-grow-1">
+                        <div class="upload-text"><?php $this->_('AdminCompanyEmails.edittemplate.text_drop_files');?></div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('emailFileInput').click()">
+                        <?php $this->_('AdminCompanyEmails.edittemplate.text_browse_files');?>
+                    </button>
+                </div>
+            </div>
+            <div id="fileList" class="mt-3"></div>
+
+            <?php $this->Form->fieldHidden('lang', (isset($vars->lang) ? $vars->lang : null));?>
+
+            <!-- Form Actions -->
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="<?php echo $this->base_uri;?>settings/company/emails/templates/" class="btn btn-secondary"><?php $this->_('AdminCompanyEmails.!cancel.field.cancel');?></a>
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('AdminCompanyEmails.edittemplate.field.edittemplatesubmit', true), ['class' => 'btn btn-primary']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+    <?php
+    $this->Widget->end();
+    ?>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteAttachmentModal" tabindex="-1" aria-labelledby="deleteAttachmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAttachmentModalLabel"><?php $this->_('AdminCompanyEmails.edittemplate.confirm_delete_attachment');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
+                    <div><?php $this->_('AdminCompanyEmails.edittemplate.confirm_delete_attachment');?></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminCompanyEmails.edittemplate.field_cancel');?></button>
+                <button type="button" class="btn btn-primary" id="confirmDeleteBtn"><?php $this->_('AdminCompanyEmails.edittemplate.field_continue');?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php if ($ai_feature_enabled ?? false): ?>
+<!-- AI Email Content Modal -->
+<style>
+    #aiPromptContext.show ~ .collapse-icon,
+    [aria-expanded="true"] .collapse-icon {
+        transform: rotate(90deg);
+    }
+    .collapse-icon {
+        transition: transform 0.2s ease-in-out;
+    }
+    /* Force theme text colors in AI preview to match editor appearance */
+    .ai-email-preview,
+    .ai-email-preview * {
+        color: var(--text-primary) !important;
+    }
+    .ai-email-preview a {
+        color: var(--accent-color) !important;
+    }
+</style>
+<div class="modal fade" id="aiEmailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2 ai-icon active">
+                    <i class="bi bi-stars"></i>
+                    <span id="aiModalTitle"><?php $this->_('AdminCompanyEmails.ai.modal_title');?></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Collapsible Prompt Context -->
+                <div class="mb-3">
+                    <a class="d-flex align-items-center text-decoration-none text-body"
+                       data-bs-toggle="collapse" href="#aiPromptContext"
+                       role="button" aria-expanded="false" aria-controls="aiPromptContext">
+                        <i class="bi bi-chevron-right me-2 collapse-icon"></i>
+                        <span class="fw-bold"><?php $this->_('AdminCompanyEmails.ai.prompt_context_label');?></span>
+                    </a>
+                    <div class="collapse mt-2" id="aiPromptContext">
+                        <div class="alert alert-secondary mb-0">
+                            <div id="aiFullPrompt" class="small"
+                                 style="white-space: pre-wrap; font-family: var(--bs-font-monospace); font-size: 0.8rem; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Instructions -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="aiAdditionalPrompt">
+                        <?php $this->_('AdminCompanyEmails.ai.additional_instructions_label');?>
+                    </label>
+                    <textarea id="aiAdditionalPrompt" class="form-control" rows="2"
+                              placeholder="<?php $this->_('AdminCompanyEmails.ai.additional_instructions_placeholder');?>"></textarea>
+                    <div class="form-text"><?php $this->_('AdminCompanyEmails.ai.additional_instructions_help');?></div>
+                </div>
+
+                <!-- Generated Content Preview -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold"><?php $this->_('AdminCompanyEmails.ai.generated_content_label');?></label>
+                    <div id="aiGeneratedContent" class="border rounded p-3 bg-body-tertiary"></div>
+                </div>
+
+                <!-- Apply Content Checkboxes -->
+                <div id="aiContentCheckboxes" class="mt-3">
+                    <label class="form-label fw-bold"><?php $this->_('AdminCompanyEmails.ai.apply_content_label');?></label>
+                    <div class="form-check d-none" id="aiApplySubjectRow">
+                        <input class="form-check-input" type="checkbox" id="aiApplySubject" checked disabled>
+                        <label class="form-check-label" for="aiApplySubject"><?php $this->_('AdminCompanyEmails.ai.apply_subject');?></label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="aiApplyHtml" checked disabled>
+                        <label class="form-check-label" for="aiApplyHtml"><?php $this->_('AdminCompanyEmails.ai.apply_html');?></label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="aiApplyText" checked disabled>
+                        <label class="form-check-label" for="aiApplyText"><?php $this->_('AdminCompanyEmails.ai.apply_text');?></label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger me-auto" data-bs-dismiss="modal">
+                    <?php $this->_('AdminCompanyEmails.ai.btn_cancel');?>
+                </button>
+                <button type="button" class="btn btn-primary" id="aiGenerateBtn">
+                    <i class="bi bi-stars me-1"></i><?php $this->_('AdminCompanyEmails.ai.generate_button');?>
+                </button>
+                <button type="button" class="btn btn-success d-none" id="aiUseContentBtn">
+                    <i class="bi bi-check-lg me-1"></i><?php $this->_('AdminCompanyEmails.ai.use_content_button');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Restore Snapshot Confirmation Modal -->
+<div class="modal fade" id="restoreSnapshotModal" tabindex="-1" aria-labelledby="restoreSnapshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="restoreSnapshotModalLabel"><?php $this->_('AdminCompanyEmails.edittemplate.field_restore');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
+                    <div><?php $this->_('AdminCompanyEmails.edittemplate.confirm_restore_snapshot');?></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminCompanyEmails.edittemplate.field_cancel');?></button>
+                <button type="button" class="btn btn-primary" id="confirmRestoreSnapshotBtn"><?php $this->_('AdminCompanyEmails.edittemplate.field_continue');?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for snapshot restore -->
+<form id="restoreSnapshotForm" action="<?php echo $this->base_uri . 'settings/company/emails/restoresnapshot/';?>" method="post" style="display: none;">
+    <input type="hidden" name="email_id" id="restoreEmailId" value="">
+    <input type="hidden" name="snapshot_id" id="restoreSnapshotId" value="">
+    <input type="hidden" name="_csrf_token" value="">
+</form>
+
+<script>
+    // Store CKEditor instances by element ID for multi-editor support
+    // Email template data from database
+    var emailTemplateTags = <?php echo json_encode($template->tags ?? []); ?>;
+    var emailGroupId = <?php echo (int)($template->email_group_id ?? 0); ?>;
+
+    // Cache for prompt preview (persists for page lifetime)
+    var cachedPromptPreview = null;
+
+    // Helper to get editor by element ID or textarea element
+    function getEditor(elementOrId) {
+        var element = elementOrId;
+
+        if (typeof elementOrId === 'string') {
+            element = document.getElementById(elementOrId);
+        }
+
+        return element && element.ckeditorInstance ? element.ckeditorInstance : null;
+    }
+
+    // Initialize the editor using Blesta's binder, which attaches the instance to the textarea.
+    blestaBindWysiwygEditor('#ckeditor', {
+        language: '<?php echo substr(Configure::get('Blesta.language'), 0, 2);?>'
+    });
+
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Sync CKEditor content to textarea before form submission
+        const form = document.getElementById('admin_company_emails_edittemplate');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const editor = getEditor('ckeditor');
+                if (editor && typeof editor.getData === 'function') {
+                    const textarea = document.getElementById('ckeditor');
+                    if (textarea) {
+                        textarea.value = blestaDecodeHrefTemplateTags(editor.getData());
+                    }
+                }
+            });
+        }
+
+        // Native drag-and-drop for the file upload zone (Paradigm has no jQuery/Dropzone.js)
+        var dropZone = document.getElementById('fileDropZone');
+        var fileInput = document.getElementById('emailFileInput');
+        var fileListEl = document.getElementById('fileList');
+
+        if (dropZone && fileInput) {
+            ['dragenter', 'dragover'].forEach(function(evt) {
+                dropZone.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('drag-over');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(function(evt) {
+                dropZone.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('drag-over');
+                });
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileList();
+            });
+
+            fileInput.addEventListener('change', function() {
+                updateFileList();
+            });
+
+            function updateFileList() {
+                fileListEl.innerHTML = '';
+                if (!fileInput.files.length) return;
+
+                Array.from(fileInput.files).forEach(function(file) {
+                    var item = document.createElement('div');
+                    item.className = 'd-flex align-items-center gap-2 mb-1 small text-muted';
+
+                    var icon = document.createElement('i');
+                    icon.className = 'bi bi-paperclip';
+                    item.appendChild(icon);
+
+                    var nameSpan = document.createElement('span');
+                    nameSpan.textContent = file.name;
+                    item.appendChild(nameSpan);
+
+                    var sizeSpan = document.createElement('span');
+                    sizeSpan.className = 'text-muted';
+                    sizeSpan.textContent = '(' + (file.size / 1024).toFixed(1) + ' KB)';
+                    item.appendChild(sizeSpan);
+
+                    fileListEl.appendChild(item);
+                });
+            }
+        }
+
+        // Handle attachment deletion with confirmation modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteAttachmentModal'));
+        let deleteUrl = '';
+        let deleteId = '';
+        let deleteRow = null;
+
+        document.querySelectorAll('#attachments a.manage').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                deleteUrl = this.getAttribute('href');
+                deleteId = this.getAttribute('data-id');
+                deleteRow = this.closest('tr');
+                deleteModal.show();
+            });
+        });
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            const csrfToken = document.querySelector('#admin_company_emails_edittemplate input[name=_csrf_token]').value;
+
+            var formData = new URLSearchParams();
+            formData.append('_csrf_token', csrfToken);
+            formData.append('id', deleteId);
+
+            fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData.toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (deleteRow) {
+                    deleteRow.remove();
+
+                    if (document.querySelectorAll('#attachments tbody tr').length < 1) {
+                        document.getElementById('attachments').closest('.table-responsive').style.display = 'none';
+                    }
+                }
+                deleteModal.hide();
+            })
+            .catch(error => {
+                console.error('Error deleting attachment:', error);
+                deleteModal.hide();
+            });
+        });
+
+        // Handle snapshot restore
+        const restoreSnapshotModal = new bootstrap.Modal(document.getElementById('restoreSnapshotModal'));
+        let restoreSnapshotId = '';
+        let restoreEmailId = '';
+
+        document.querySelectorAll('.restoreSnapshot').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                restoreEmailId = this.getAttribute('data-email-id');
+                restoreSnapshotId = this.getAttribute('data-snapshot-id');
+                restoreSnapshotModal.show();
+            });
+        });
+
+        document.getElementById('confirmRestoreSnapshotBtn').addEventListener('click', function() {
+            const form = document.getElementById('restoreSnapshotForm');
+            const csrfToken = document.querySelector('#admin_company_emails_edittemplate input[name=_csrf_token]').value;
+
+            form.querySelector('#restoreEmailId').value = restoreEmailId;
+            form.querySelector('#restoreSnapshotId').value = restoreSnapshotId;
+            form.querySelector('input[name=_csrf_token]').value = csrfToken;
+
+            form.submit();
+        });
+    });
+
+    <?php if ($ai_feature_enabled ?? false): ?>
+    // AI Generation functionality
+    var aiState = {
+        currentTarget: null,      // Name of the field being edited (html or text)
+        currentType: null,        // Type of content (email-html, email-text)
+        currentAction: null,      // 'generate' or 'rewrite'
+        currentLang: null,        // Language code
+        generatedContent: '',     // Combined content
+        generatedHtml: '',        // Generated HTML content
+        generatedText: '',        // Generated text content
+        modal: null               // Bootstrap modal instance
+    };
+
+    // AI button click handler
+    document.querySelectorAll('[data-ai-action]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Store context from data attributes
+            aiState.currentTarget = this.dataset.aiTarget;
+            aiState.currentType = this.dataset.aiType;
+            aiState.currentAction = this.dataset.aiAction;
+            aiState.currentLang = this.dataset.aiLang;
+
+            // Show modal
+            var modalEl = document.getElementById('aiEmailModal');
+            aiState.modal = new bootstrap.Modal(modalEl);
+
+            // Update title based on action
+            document.getElementById('aiModalTitle').textContent =
+                aiState.currentAction === 'generate'
+                    ? '<?php echo addslashes($this->_('AdminCompanyEmails.ai.modal_title_generate', true)); ?>'
+                    : '<?php echo addslashes($this->_('AdminCompanyEmails.ai.modal_title_rewrite', true)); ?>';
+
+            // Build and show the prompt preview
+            updatePromptPreview();
+
+            // Show initial state with instructions
+            document.getElementById('aiGeneratedContent').innerHTML =
+                '<div class="text-center py-4 text-muted"><i class="bi bi-stars d-block mb-2" style="font-size: 2rem;"></i><p class="mb-0"><?php echo addslashes($this->_('AdminCompanyEmails.ai.initial_instructions', true)); ?></p></div>';
+
+            // Reset button states
+            document.getElementById('aiGenerateBtn').classList.remove('d-none');
+            document.getElementById('aiGenerateBtn').disabled = false;
+            document.getElementById('aiGenerateBtn').innerHTML = '<i class="bi bi-stars me-1"></i><?php echo addslashes($this->_('AdminCompanyEmails.ai.generate_button', true)); ?>';
+            document.getElementById('aiUseContentBtn').classList.add('d-none');
+
+            // Reset checkboxes (checked but disabled until content is generated)
+            document.getElementById('aiApplySubject').checked = true;
+            document.getElementById('aiApplySubject').disabled = true;
+            document.getElementById('aiApplySubjectRow').classList.add('d-none');
+            document.getElementById('aiApplyHtml').checked = true;
+            document.getElementById('aiApplyHtml').disabled = true;
+            document.getElementById('aiApplyText').checked = true;
+            document.getElementById('aiApplyText').disabled = true;
+
+            // Clear additional instructions
+            document.getElementById('aiAdditionalPrompt').value = '';
+
+            aiState.modal.show();
+        });
+    });
+
+    // Update prompt preview by fetching from server
+    function updatePromptPreview() {
+        // If we have a cached preview, use it (only loads once per page)
+        if (cachedPromptPreview) {
+            document.getElementById('aiFullPrompt').textContent = cachedPromptPreview;
+            return;
+        }
+
+        var existingContent = '';
+
+        // Get existing content for rewrite (gather both HTML and text)
+        if (aiState.currentAction === 'rewrite') {
+            var parts = [];
+
+            // Get current subject
+            var subjectField = document.getElementById('subject');
+            if (subjectField && subjectField.value.trim()) {
+                parts.push('Current subject: ' + subjectField.value.trim());
+            }
+
+            // Get HTML content
+            var editor = getEditor('ckeditor');
+            var htmlContent = '';
+            if (editor && typeof editor.getData === 'function') {
+                htmlContent = blestaDecodeHrefTemplateTags(editor.getData());
+            } else {
+                var htmlTextarea = document.querySelector('#ckeditor');
+                htmlContent = htmlTextarea ? htmlTextarea.value : '';
+            }
+            if (htmlContent.trim()) {
+                parts.push('Current HTML version:\n' + htmlContent);
+            }
+
+            // Get text content
+            var textTextarea = document.querySelector('#text');
+            var textContent = textTextarea ? textTextarea.value : '';
+            if (textContent.trim()) {
+                parts.push('Current text version:\n' + textContent);
+            }
+
+            existingContent = parts.join('\n\n');
+        }
+
+        // Build the base prompt
+        var additionalPrompt = document.getElementById('aiAdditionalPrompt').value.trim();
+        var basePrompt;
+
+        if (aiState.currentAction === 'rewrite') {
+            basePrompt = 'Rewrite and improve this email content while maintaining the same general information:\n\n' + existingContent;
+        } else {
+            basePrompt = 'Generate professional email content for this email template type.';
+        }
+
+        if (additionalPrompt) {
+            basePrompt += '\n\nAdditional instructions: ' + additionalPrompt;
+        }
+
+        // Get email type from the page title/header
+        var emailType = '<?php echo addslashes($template_name ?? ''); ?>';
+
+        // Build form data for preview request
+        var formData = new URLSearchParams();
+        var csrfToken = document.querySelector('input[name="_csrf_token"]');
+        if (csrfToken) {
+            formData.append('_csrf_token', csrfToken.value);
+        }
+
+        formData.append('prompt', basePrompt);
+        formData.append('email_type', emailType);
+        formData.append('email_group_id', emailGroupId);
+        formData.append('language', aiState.currentLang);
+        formData.append('generate_html', aiState.currentType === 'email-html' ? 'true' : 'false');
+        formData.append('generate_text', aiState.currentType === 'email-text' ? 'true' : 'false');
+        formData.append('tone', 'professional');
+
+        // Show loading state
+        document.getElementById('aiFullPrompt').innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span><?php echo addslashes($this->_('AdminCompanyEmails.ai.prompt_loading', true)); ?></span>';
+
+        // Fetch prompt preview from server
+        fetch('<?php echo $this->Html->safe($this->base_uri . "settings/company/emails/previewEmailPrompt/"); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success && data.full_prompt) {
+                // Cache the preview for the page lifetime
+                cachedPromptPreview = data.full_prompt;
+                document.getElementById('aiFullPrompt').textContent = data.full_prompt;
+            } else {
+                document.getElementById('aiFullPrompt').textContent = data.error || 'Failed to load prompt preview';
+            }
+        })
+        .catch(function(error) {
+            document.getElementById('aiFullPrompt').textContent = 'Error loading prompt: ' + error.message;
+        });
+    }
+
+    // Note: Preview is cached and only loaded once per page load.
+    // Additional instructions don't affect the context preview, so no need to reload it.
+
+    // Generate AI content
+    function generateAiContent() {
+        var existingContent = '';
+
+        // Get existing content for rewrite (gather both HTML and text with labeled sections)
+        if (aiState.currentAction === 'rewrite') {
+            var parts = [];
+
+            // Get current subject
+            var subjectField = document.getElementById('subject');
+            if (subjectField && subjectField.value.trim()) {
+                parts.push('Current subject: ' + subjectField.value.trim());
+            }
+
+            // Get HTML content
+            var editor = getEditor('ckeditor');
+            var htmlContent = '';
+            if (editor && typeof editor.getData === 'function') {
+                htmlContent = blestaDecodeHrefTemplateTags(editor.getData());
+            } else {
+                var htmlTextarea = document.querySelector('#ckeditor');
+                htmlContent = htmlTextarea ? htmlTextarea.value : '';
+            }
+            if (htmlContent.trim()) {
+                parts.push('Current HTML version:\n' + htmlContent);
+            }
+
+            // Get text content
+            var textTextarea = document.querySelector('#text');
+            var textContent = textTextarea ? textTextarea.value : '';
+            if (textContent.trim()) {
+                parts.push('Current text version:\n' + textContent);
+            }
+
+            existingContent = parts.join('\n\n');
+        }
+
+        var formData = new URLSearchParams();
+        // Include CSRF token
+        var csrfToken = document.querySelector('input[name="_csrf_token"]');
+        if (csrfToken) {
+            formData.append('_csrf_token', csrfToken.value);
+        }
+
+        // Build the prompt with optional additional instructions
+        var additionalPrompt = document.getElementById('aiAdditionalPrompt').value.trim();
+        var basePrompt;
+
+        if (aiState.currentAction === 'rewrite') {
+            basePrompt = 'Rewrite and improve this email content while maintaining the same general information:\n\n' + existingContent;
+        } else {
+            basePrompt = 'Generate professional email content for this email template type.';
+        }
+
+        if (additionalPrompt) {
+            basePrompt += '\n\nAdditional instructions: ' + additionalPrompt;
+        }
+
+        // Get email type from database
+        var emailType = '<?php echo addslashes($template_name ?? ''); ?>';
+
+        formData.append('prompt', basePrompt);
+        formData.append('email_type', emailType);
+        formData.append('email_group_id', emailGroupId);
+        formData.append('language', aiState.currentLang);
+        formData.append('generate_html', 'true');
+        formData.append('generate_text', 'true');
+        formData.append('tone', 'professional');
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . "settings/company/emails/generateEmailContent/"); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            // Reset generate button
+            var generateBtn = document.getElementById('aiGenerateBtn');
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i><?php echo addslashes($this->_('AdminCompanyEmails.ai.regenerate_button', true)); ?>';
+
+            if (data.success) {
+                // Store content
+                aiState.generatedHtml = data.html || '';
+                aiState.generatedText = data.text || '';
+                aiState.generatedSubject = data.subject || '';
+                aiState.generatedContent = aiState.generatedHtml || aiState.generatedText;
+
+                // Build preview
+                var previewHtml = '';
+
+                // Subject preview
+                if (aiState.generatedSubject) {
+                    previewHtml += '<div class="mb-3"><strong class="d-block mb-2"><?php echo addslashes($this->_('AdminCompanyEmails.ai.preview_subject', true)); ?></strong><div class="border rounded p-2 bg-body-secondary">' + escapeHtml(aiState.generatedSubject) + '</div></div>';
+                }
+
+                // HTML preview
+                if (aiState.generatedHtml) {
+                    var sanitizedHtml = aiState.generatedHtml;
+                    if (typeof DOMPurify !== 'undefined') {
+                        sanitizedHtml = DOMPurify.sanitize(aiState.generatedHtml, {
+                            ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'table', 'tr', 'td', 'th', 'tbody', 'thead'],
+                            ALLOWED_ATTR: ['href', 'style', 'class']
+                        });
+                    }
+                    previewHtml += '<div class="mb-3"><strong class="d-block mb-2"><?php echo addslashes($this->_('AdminCompanyEmails.ai.preview_html', true)); ?></strong><div class="border rounded p-3 bg-body-secondary ai-email-preview">' + sanitizedHtml + '</div></div>';
+                }
+
+                // Text preview
+                if (aiState.generatedText) {
+                    previewHtml += '<div><strong class="d-block mb-2"><?php echo addslashes($this->_('AdminCompanyEmails.ai.preview_text', true)); ?></strong><pre class="border rounded p-3 bg-body-secondary mb-0" style="white-space: pre-wrap; font-family: inherit;">' + escapeHtml(aiState.generatedText) + '</pre></div>';
+                }
+
+                // Feedback from AI
+                if (data.feedback) {
+                    previewHtml += '<div class="mt-3"><div class="alert alert-info mb-0 small"><i class="bi bi-info-circle me-1"></i>' + escapeHtml(data.feedback) + '</div></div>';
+                }
+
+                document.getElementById('aiGeneratedContent').innerHTML = previewHtml || '<div class="text-muted">No content generated</div>';
+
+                // Enable apply checkboxes
+                if (aiState.generatedSubject) {
+                    document.getElementById('aiApplySubjectRow').classList.remove('d-none');
+                    document.getElementById('aiApplySubject').disabled = false;
+                }
+                document.getElementById('aiApplyHtml').disabled = !aiState.generatedHtml;
+                document.getElementById('aiApplyText').disabled = !aiState.generatedText;
+
+                // Show the Use Content button
+                document.getElementById('aiUseContentBtn').classList.remove('d-none');
+            } else {
+                document.getElementById('aiGeneratedContent').innerHTML =
+                    '<div class="alert alert-danger mb-0">' + escapeHtml(data.error || '<?php echo addslashes($this->_('AdminCompanyEmails.ai.error_generation_failed', true)); ?>') + '</div>';
+            }
+        })
+        .catch(function(error) {
+            // Reset generate button on error
+            var generateBtn = document.getElementById('aiGenerateBtn');
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="bi bi-stars me-1"></i><?php echo addslashes($this->_('AdminCompanyEmails.ai.generate_button', true)); ?>';
+
+            document.getElementById('aiGeneratedContent').innerHTML =
+                '<div class="alert alert-danger mb-0"><?php echo addslashes($this->_('AdminCompanyEmails.ai.error_prefix', true)); ?> ' + escapeHtml(error.message) + '</div>';
+        });
+    }
+
+    // Utility function for HTML escaping
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Use content button — applies selectively based on checkboxes
+    var useContentBtn = document.getElementById('aiUseContentBtn');
+    if (useContentBtn) {
+        useContentBtn.addEventListener('click', function() {
+            if (!aiState.generatedContent) {
+                return;
+            }
+
+            // Apply HTML if checkbox is checked
+            if (document.getElementById('aiApplyHtml').checked && aiState.generatedHtml) {
+                var editor = getEditor('ckeditor');
+
+                if (editor && typeof editor.setData === 'function') {
+                    editor.setData(aiState.generatedHtml);
+                } else {
+                    var htmlTextarea = document.querySelector('#ckeditor');
+                    if (htmlTextarea) {
+                        htmlTextarea.value = aiState.generatedHtml;
+                        htmlTextarea.dispatchEvent(new Event('input'));
+                    }
+                }
+            }
+
+            // Apply text if checkbox is checked
+            if (document.getElementById('aiApplyText').checked && aiState.generatedText) {
+                var textTextarea = document.querySelector('#text');
+                if (textTextarea) {
+                    textTextarea.value = aiState.generatedText;
+                    textTextarea.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // Apply subject if checkbox is checked
+            if (document.getElementById('aiApplySubject').checked && aiState.generatedSubject) {
+                var subjectField = document.getElementById('subject');
+                if (subjectField) {
+                    subjectField.value = aiState.generatedSubject;
+                }
+            }
+
+            // Update rewrite button state
+            updateRewriteButtons();
+
+            aiState.modal.hide();
+        });
+    }
+
+    // Generate button
+    var generateBtn = document.getElementById('aiGenerateBtn');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            // Disable button and show generating state
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span><?php echo addslashes($this->_('AdminCompanyEmails.ai.generating', true)); ?>';
+
+            document.getElementById('aiGeneratedContent').innerHTML =
+                '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted"><?php echo addslashes($this->_('AdminCompanyEmails.ai.generating', true)); ?></p></div>';
+
+            generateAiContent();
+        });
+    }
+
+    // Watch textareas for rewrite button enable/disable
+    // Enable rewrite when either HTML or text editor has content
+    function updateRewriteButtons() {
+        var htmlContent = '';
+        var editor = getEditor('ckeditor');
+        if (editor && typeof editor.getData === 'function') {
+            htmlContent = editor.getData();
+        } else {
+            var htmlTextarea = document.querySelector('#ckeditor');
+            htmlContent = htmlTextarea ? htmlTextarea.value : '';
+        }
+
+        var textTextarea = document.querySelector('#text');
+        var textContent = textTextarea ? textTextarea.value : '';
+
+        var hasContent = htmlContent.trim() || textContent.trim();
+
+        document.querySelectorAll('[data-ai-action="rewrite"]').forEach(function(btn) {
+            btn.disabled = !hasContent;
+        });
+    }
+
+    // Check rewrite buttons periodically and on editor changes
+    setInterval(updateRewriteButtons, 1000);
+
+    // Also check on text textarea input
+    var textTextarea = document.querySelector('#text');
+    if (textTextarea) {
+        textTextarea.addEventListener('input', updateRewriteButtons);
+    }
+
+    // Initial check
+    setTimeout(updateRewriteButtons, 1500);
+    <?php endif; ?>
+</script>

@@ -1,20 +1,21 @@
 {
-  "version": "1.10.0",
-  "name": "TheSSLStore Module",
-  "description": "Sell SSL Certificates using this module.",
-  "authors": [
-    {
-      "name": "TheSSLStore",
-      "url": "https://www.thesslstore.com"
-    }
-  ],
-  "service": {
-    "name_key": "New"
-  },
-  "module": {
-    "row": "Signular Form of Module Row",
-    "rows": "Plural Form of Module Row",
-    "group": "Module Group Name",
-    "row_key": "module_row_field_key"
-  }
+    "version": "2.0.0",
+    "name": "TheSSLStore Module",
+    "description": "Sell SSL Certificates using this module.",
+    "authors": [
+        {
+            "name": "TheSSLStore",
+            "url": "https://www.thesslstore.com"
+        }
+    ],
+    "service": {
+        "name_key": "New"
+    },
+    "module": {
+        "row": "Signular Form of Module Row",
+        "rows": "Plural Form of Module Row",
+        "group": "Module Group Name",
+        "row_key": "module_row_field_key"
+    },
+    "icon": "bi-shield-lock"
 }

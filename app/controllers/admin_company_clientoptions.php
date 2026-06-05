@@ -18,13 +18,7 @@ class AdminCompanyClientoptions extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Clients', 'ClientGroups', 'Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
+        $this->uses(['Clients', 'ClientGroups']);
     }
 
     /**
@@ -408,7 +402,7 @@ class AdminCompanyClientoptions extends AdminController
         $vars = [];
         foreach ($contact_fields_groups as $group_name) {
             ${$group_name} = isset($settings[$group_name])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings[$group_name]))
+                ? safe_unserialize(base64_decode($settings[$group_name]))
                 : [];
             $vars[$group_name] = ${$group_name};
         }

@@ -1,0 +1,41 @@
+<?php /** @var View $this **/ ?>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editItemModalLabel"><?php $this->_('AdminCompanyLookandfeel.navigation.modal_edit_title');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="editItemName" class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_name');?></label>
+                    <input type="text" class="form-control" id="editItemName" placeholder="<?php $this->_('AdminCompanyLookandfeel.navigation.placeholder_name');?>">
+                    <div class="form-text"><?php $this->_('AdminCompanyLookandfeel.navigation.text_name_help');?></div>
+                </div>
+                <div class="mb-3">
+                    <label for="editItemUrl" class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_url');?></label>
+                    <input type="text" class="form-control" id="editItemUrl" placeholder="<?php $this->_('AdminCompanyLookandfeel.navigation.placeholder_url');?>">
+                    <div class="form-text"><?php $this->_('AdminCompanyLookandfeel.navigation.text_url_help');?></div>
+                </div>
+                <div class="mb-3">
+                    <label for="editItemIcon" class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_icon');?></label>
+                    <div class="input-group">
+                        <span class="input-group-text" id="editItemIconPreview"><i class="bi bi-question-circle"></i></span>
+                        <input type="text" class="form-control" id="editItemIcon" placeholder="<?php $this->_('AdminCompanyLookandfeel.navigation.placeholder_icon');?>">
+                    </div>
+                    <div class="form-text"><?php $this->_('AdminCompanyLookandfeel.navigation.text_icon_help');?></div>
+                </div>
+                <input type="hidden" id="editItemActionId" value="">
+                <div id="editItemErrors" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="editItemSubmit">
+                    <i class="bi bi-check-lg me-1"></i><?php $this->_('AdminCompanyLookandfeel.navigation.save_item');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

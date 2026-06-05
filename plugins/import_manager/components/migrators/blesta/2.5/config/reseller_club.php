@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('reseller_club.map', [
     'module' => 'logicboxes',
     'module_row_key' => 'resellerid',

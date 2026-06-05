@@ -1,42 +1,32 @@
+<?php /** @var View $this **/ ?>
 
-    <?php
-    $this->Form->create();
-    ?>
-
-    <div class="pad">
-        <ul>
-            <?php
-            foreach ($whois_fields ?? [] as $name => $field) {
-            ?>
-                <li>
-                    <?php
-                    $this->Form->label($field['label'], 'registrant_' . $name);
-
-                    if ($field['type'] == 'select') {
-                        $options = [];
-                        if (!is_array($field['options'])) {
-                            $options = ${$field['options']} ?? [];
-                        } else {
-                            $options = $field['options'] ?? [];
-                        }
-
-                        $this->Form->fieldSelect('registrant[' . $name . ']', $options, ($vars->registrant[$name] ?? ''), ['id' => 'registrant_' . $name]);
-                    } else {
-                        $this->Form->fieldText('registrant[' . $name . ']', ($vars->registrant[$name] ?? ''), ['id' => 'registrant_' . $name, 'placeholder' => $field['label']]);
-                    }
-                    ?>
-                </li>
-            <?php
-            }
-            ?>
-        </ul>
-    </div>
-
-    <div class="button_row">
+<?php
+$this->Form->create();
+?>
+    <?php foreach ($whois_fields ?? [] as $name => $field) { ?>
+    <div class="mb-3">
         <?php
-        $this->Form->fieldSubmit(null, $this->_('Nominet.tab_whois.field_submit', true), ['class' => 'btn btn-primary float-right']);
+        $this->Form->label($field['label'], 'registrant_' . $name, ['class' => 'form-label']);
+
+        if ($field['type'] == 'select') {
+            $options = [];
+            if (!is_array($field['options'])) {
+                $options = ${$field['options']} ?? [];
+            } else {
+                $options = $field['options'] ?? [];
+            }
+
+            $this->Form->fieldSelect('registrant[' . $name . ']', $options, $vars->registrant[$name] ?? '', ['id' => 'registrant_' . $name, 'class' => 'form-select']);
+        } else {
+            $this->Form->fieldText('registrant[' . $name . ']', $vars->registrant[$name] ?? '', ['id' => 'registrant_' . $name, 'class' => 'form-control', 'placeholder' => $field['label']]);
+        }
         ?>
     </div>
-    <?php
-    $this->Form->end();
-    ?>
+    <?php } ?>
+
+    <div class="d-flex justify-content-end">
+        <?php $this->Form->fieldSubmit(null, $this->_('Nominet.tab_whois.field_submit', true), ['class' => 'btn btn-primary']); ?>
+    </div>
+<?php
+$this->Form->end();
+?>

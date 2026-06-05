@@ -1,5 +1,15 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Blesta\Core\Cache\CacheFactory;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Company management
  *
@@ -11,6 +21,27 @@
  */
 class Companies extends AppModel
 {
+    /**
+     * @var array In-memory cache of company settings keyed by "company_id.key"
+     */
+    private static $settingsCache = [];
+
+    /**
+     * @var array Tracks which company IDs have had all settings bulk-loaded into cache
+     */
+    private static $settingsCacheLoaded = [];
+
+    /**
+     * Clears in-memory and Redis caches for company settings
+     */
+    public static function clearSettingsCache()
+    {
+        self::$settingsCache = [];
+        self::$settingsCacheLoaded = [];
+
+        CacheFactory::get()->deleteGroup('settings:company');
+    }
+
     /**
      * Initialize Companies
      */
@@ -36,7 +67,12 @@ class Companies extends AppModel
     public function add(array $vars)
     {
         // Trigger the Companies.addBefore event
-        extract($this->executeAndParseEvent('Companies.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Companies.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $this->Input->setRules($this->getRules($vars));
 
@@ -62,10 +98,12 @@ class Companies extends AppModel
                     }
 
                     // Set the default admin/client themes
-                    if ($company_setting->key == 'theme_admin' && ($admin_theme = $this->Themes->getDefault('admin'))
+                    if (
+                        $company_setting->key == 'theme_admin' && ($admin_theme = $this->Themes->getDefault('admin'))
                     ) {
                         $company_setting->value = $admin_theme->id;
-                    } elseif ($company_setting->key == 'theme_client'
+                    } elseif (
+                        $company_setting->key == 'theme_client'
                         && ($client_theme = $this->Themes->getDefault('client'))
                     ) {
                         $company_setting->value = $client_theme->id;
@@ -170,6 +208,59 @@ class Companies extends AppModel
 
                         // Insert the email template
                         $this->Record->insert('emails', $emails[$i], $fields);
+                    }
+                }
+
+                // Create new notifications for this company
+                $fields = ['company_id', 'dir', 'type', 'target', 'action'];
+                $notification_actions = $this->Record->select($fields)
+                    ->from('notification_actions')
+                    ->where('company_id', '=', $vars['company_id'])
+                    ->where('type', '=', 'system')
+                    ->fetchAll();
+
+                // Create new notification actions for this company
+                if ($notification_actions) {
+                    foreach ($notification_actions as $notification_action) {
+                        $notification_action = (array) $notification_action;
+
+                        // Set the new company ID
+                        $notification_action['company_id'] = $company_id;
+
+                        // Insert the notification action
+                        $this->Record->insert('notification_actions', $notification_action, $fields);
+                    }
+                }
+
+                // Copy default email history templates to the new company
+                $default_email_snapshots = $this->Record->select(['email_snapshots.*', 'emails.email_group_id'])
+                    ->from('email_snapshots')
+                    ->innerJoin('emails', 'emails.id', '=', 'email_snapshots.email_id', false)
+                    ->where('emails.company_id', '=', $vars['company_id'])
+                    ->where('email_snapshots.date_saved', '=', null)
+                    ->fetchAll();
+
+                // Insert default email history for the new company
+                foreach ($default_email_snapshots as $history) {
+                    // Find the corresponding email_id in the new company
+                    $new_email = $this->Record->select(['id'])
+                        ->from('emails')
+                        ->where('company_id', '=', $company_id)
+                        ->where('email_group_id', '=', $history->email_group_id)
+                        ->where('lang', '=', $history->lang)
+                        ->fetch();
+
+                    if ($new_email) {
+                        $this->Record->insert('email_snapshots', [
+                            'email_id' => $new_email->id,
+                            'lang' => $history->lang,
+                            'from' => $history->from,
+                            'from_name' => $history->from_name,
+                            'subject' => $history->subject,
+                            'text' => $history->text,
+                            'html' => $history->html,
+                            'date_saved' => null
+                        ]);
                     }
                 }
 
@@ -286,7 +377,7 @@ class Companies extends AppModel
 
                 // Trigger the Companies.addAfter event
                 $this->executeAndParseEvent('Companies.addAfter', ['company_id' => $company_id, 'vars' => $vars]);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->rollBack();
                 $this->Record->reset();
                 $this->Input->setErrors(['exception' => ['message' => $e->getMessage()]]);
@@ -311,7 +402,12 @@ class Companies extends AppModel
     public function edit($company_id, array $vars)
     {
         // Trigger the Companies.editBefore event
-        extract($this->executeAndParseEvent('Companies.editBefore', ['company_id' => $company_id, 'vars' => $vars]));
+        $event = $this->executeAndParseEvent('Companies.editBefore', ['company_id' => $company_id, 'vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $vars['company_id'] = $company_id;
 
@@ -341,7 +437,12 @@ class Companies extends AppModel
     public function delete($company_id)
     {
         // Trigger the Companies.deleteBefore event
-        extract($this->executeAndParseEvent('Companies.deleteBefore', ['company_id' => $company_id]));
+        $event = $this->executeAndParseEvent('Companies.deleteBefore', ['company_id' => $company_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $rules = [
             'company_id' => [
@@ -363,6 +464,12 @@ class Companies extends AppModel
 
             $this->Record->from('companies')->
                 where('companies.id', '=', $company_id)->delete();
+
+            // Invalidate cached settings for the deleted company and descendant caches
+            self::clearSettingsCache();
+            ClientGroups::clearSettingsCache();
+            Clients::clearSettingsCache();
+            Staff::clearSettingsCache();
 
             // Trigger the Companies.deleteAfter event
             $this->executeAndParseEvent(
@@ -428,9 +535,14 @@ class Companies extends AppModel
             from('companies')->where('id', '=', $company_id)->fetch();
 
         // Trigger the Companies.get event
-        extract($this->executeAndParseEvent('Companies.get', [
+        $event = $this->executeAndParseEvent('Companies.get', [
             'company' => $company
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $company;
     }
@@ -570,7 +682,7 @@ class Companies extends AppModel
      * @param array $settings Settings to set as key/value pairs
      * @param array $value_keys An array of key values to accept as valid fields
      */
-    public function setSettings($company_id, array $settings, array $value_keys = null)
+    public function setSettings($company_id, array $settings, ?array $value_keys = null)
     {
         if (!empty($value_keys)) {
             $settings = array_intersect_key($settings, array_flip($value_keys));
@@ -637,6 +749,12 @@ class Companies extends AppModel
 
         $this->Record->duplicate('value', '=', $fields['value'])->
             insert('company_settings', $fields);
+
+        // Invalidate cached setting and descendant caches (company settings are inherited by client groups, clients, staff)
+        self::clearSettingsCache();
+        ClientGroups::clearSettingsCache();
+        Clients::clearSettingsCache();
+        Staff::clearSettingsCache();
     }
 
     /**
@@ -653,6 +771,12 @@ class Companies extends AppModel
     {
         $this->Record->from('company_settings')->where('key', '=', $key)->
             where('company_id', '=', $company_id)->delete();
+
+        // Invalidate cached setting and descendant caches (company settings are inherited by client groups, clients, staff)
+        self::clearSettingsCache();
+        ClientGroups::clearSettingsCache();
+        Clients::clearSettingsCache();
+        Staff::clearSettingsCache();
     }
 
     /**
@@ -723,31 +847,39 @@ class Companies extends AppModel
      */
     public function getSetting($company_id, $key)
     {
-
-        // Company Settings
-        $sql1 = $this->Record->select(['key', 'value', 'encrypted', 'inherit'])->
-            select(['?' => 'level'], false)->appendValues(['company'])->
-            from('company_settings')->
-            where('company_id', '=', $company_id)->where('key', '=', $key)->get();
-        $values = $this->Record->values;
-        $this->Record->reset();
-        $this->Record->values = $values;
-
-        // System settings
-        $sql2 = $this->Record->select(['key', 'value', 'encrypted', 'inherit'])->
-            select(['?' => 'level'], false)->appendValues(['system'])->
-            from('settings')->where('key', '=', $key)->where('inherit', '=', '1')->get();
-        $values = $this->Record->values;
-        $this->Record->reset();
-        $this->Record->values = $values;
-
-        $setting = $this->Record->select()->from(['((' . $sql1 . ') UNION (' . $sql2 . '))' => 'temp'])->
-            group('temp.key')->fetch();
-
-        if ($setting && $setting->encrypted) {
-            $setting->value = $this->systemDecrypt($setting->value);
+        // Skip when company_id is not set (e.g. early bootstrap before company is identified)
+        if ($company_id === null) {
+            return false;
         }
-        return $setting;
+
+        // Tier 1: in-memory cache
+        if (isset(self::$settingsCacheLoaded[$company_id])) {
+            return self::$settingsCache[$company_id . '.' . $key] ?? false;
+        }
+
+        // Tier 2: Redis cache
+        $cache = CacheFactory::get();
+        $cached = $cache->read((string) $company_id, 'settings:company');
+        if ($cached !== false) {
+            foreach ($cached as $setting) {
+                self::$settingsCache[$company_id . '.' . $setting->key] = $setting;
+            }
+            self::$settingsCacheLoaded[$company_id] = true;
+
+            return self::$settingsCache[$company_id . '.' . $key] ?? false;
+        }
+
+        // Tier 3: database
+        $allSettings = $this->getSettings($company_id);
+        if (is_array($allSettings)) {
+            foreach ($allSettings as $setting) {
+                self::$settingsCache[$company_id . '.' . $setting->key] = $setting;
+            }
+            $cache->write((string) $company_id, $allSettings, 0, 'settings:company');
+        }
+        self::$settingsCacheLoaded[$company_id] = true;
+
+        return self::$settingsCache[$company_id . '.' . $key] ?? false;
     }
 
     /**
@@ -966,5 +1098,4 @@ class Companies extends AppModel
 
         return $this->Input->validates($vars);
     }
-
 }

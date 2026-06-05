@@ -1,0 +1,106 @@
+<?php /** @var View $this **/ ?>
+
+
+<?php
+if (!(isset($is_ajax) ? $is_ajax : false)) {
+?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+<?php
+}
+$this->Widget->clear();
+$this->Widget->setLinkButtons([
+    [
+        'name' => '',
+        'icon' => 'bi-plus-lg',
+        'attributes' => [
+            'href' => $this->base_uri . 'settings/company/emails/addsignature/',
+            'title' => $this->_('AdminCompanyEmails.signatures.categorylink_newsignature', true)
+        ]
+    ]
+]);
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminCompanyEmails.signatures.boxtitle_signatures', true), ['id' => 'admin_company_emails_signatures'], ($render_section ?? null));
+?>
+            <?php
+            if ((isset($signatures) ? $signatures : false) && ($num_signatures = count($signatures)) > 0) {
+            ?>
+            <div class="table-responsive">
+                <table class="table" id="signatures">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/emails/signatures/?sort=name&order=' . ($sort == 'name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'name' ? ' ' . $order : '');?>">
+                                    <?php $this->_('AdminCompanyEmails.signatures.text_name');?>
+                                    <?php if ($sort == 'name') { ?>
+                                        <i class="bi bi-arrow-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                                    <?php } ?>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/emails/signatures/?sort=text&order=' . ($sort == 'text' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'text' ? ' ' . $order : '');?>">
+                                    <?php $this->_('AdminCompanyEmails.signatures.text_description');?>
+                                    <?php if ($sort == 'text') { ?>
+                                        <i class="bi bi-arrow-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                                    <?php } ?>
+                                </a>
+                            </th>
+                            <th class="text-end" style="width: 1%;"><?php $this->_('AdminCompanyEmails.signatures.text_options');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        for ($i = 0; $i < $num_signatures; $i++) {
+                        ?>
+                        <tr<?php echo ($i % 2 == 1) ? ' class="table-secondary"' : '';?>>
+                            <td>
+                                <a href="<?php echo $this->base_uri . 'settings/company/emails/editsignature/' . (isset($signatures[$i]->id) ? $this->Html->safe($signatures[$i]->id) : null) . '/';?>">
+                                    <?php echo (isset($signatures[$i]->name) ? $this->Html->safe($signatures[$i]->name) : null);?>
+                                </a>
+                            </td>
+                            <td><?php echo (isset($signatures[$i]->text) ? $this->Html->safe($signatures[$i]->text) : null);?></td>
+                            <td class="text-end">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="<?php echo $this->base_uri . 'settings/company/emails/editsignature/' . (isset($signatures[$i]->id) ? $this->Html->safe($signatures[$i]->id) : null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminCompanyEmails.signatures.option_edit');?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <?php
+                                    $this->Form->create($this->base_uri . 'settings/company/emails/deletesignature/', ['class' => 'd-inline']);
+                                    $this->Form->fieldHidden('id', (isset($signatures[$i]->id) ? $this->Html->safe($signatures[$i]->id) : null));
+                                    ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete" data-confirm-message="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.signatures.confirm_delete', true));?>" title="<?php $this->_('AdminCompanyEmails.signatures.option_delete');?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <?php
+                                    $this->Form->end();
+                                    ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php
+            if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+                $this->Widget->footer();
+                $this->Pagination->build();
+            }
+            ?>
+            <?php } else { ?>
+            <div class="card-body text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3 mb-0"><?php $this->_('AdminCompanyEmails.signatures.no_results');?></p>
+            </div>
+            <?php } ?>
+<?php
+$this->Widget->end();
+
+if (!(isset($is_ajax) ? $is_ajax : false)) {
+?>
+</div>
+<?php
+}
+?>

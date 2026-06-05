@@ -1,0 +1,198 @@
+<?php /** @var View $this */ ?>
+
+<?php
+$csrf_bypassed = !empty($embed_codes['csrf_bypassed']);
+$base_url = $embed_codes['base_url'] ?? '';
+?>
+
+<div id="embed_codes_section" class="mb-3" style="display: none;">
+    <a href="#" id="embed_codes_toggle" class="text-decoration-none" data-bs-toggle="collapse" data-bs-target="#embed_codes_content" aria-expanded="false" aria-controls="embed_codes_content">
+        <i class="bi bi-chevron-down"></i> <?php $this->_('AdminForms.embed_codes.heading'); ?>
+    </a>
+    <div id="embed_codes_content" class="collapse mt-3">
+        <div class="border rounded p-3">
+            <?php if (!$csrf_bypassed) { ?>
+            <div class="alert alert-warning d-flex align-items-start" role="alert">
+                <i class="bi bi-shield-exclamation me-2 mt-1"></i>
+                <div class="flex-grow-1">
+                    <strong><?php $this->_('AdminForms.embed_codes.csrf_required'); ?></strong>
+                    <div class="small mt-1">
+                        <?php $this->_('AdminForms.embed_codes.csrf_instructions'); ?>
+                    </div>
+                    <pre class="small mt-2 mb-0 p-2 bg-body-secondary rounded"><code>Configure::set('Blesta.csrf_bypass', ['config::preconfig']);</code></pre>
+                </div>
+            </div>
+            <?php } ?>
+
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                <?php $this->_('AdminForms.embed_codes.description'); ?>
+            </p>
+
+            <div id="embed_no_label" class="text-center text-muted py-4" style="display: none;">
+                <i class="bi bi-pencil fs-3 d-block mb-2"></i>
+                <?php $this->_('AdminForms.embed_codes.label_first'); ?>
+            </div>
+
+            <div id="embed_code_blocks">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0 fw-semibold"><?php $this->_('AdminForms.embed_codes.html_plain'); ?></label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary embed-copy-btn" data-target="embed-plain-value" title="<?php $this->_('AdminForms.embed_codes.copy'); ?>">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div id="embed-plain" class="ace-embed-editor"></div>
+                    <textarea id="embed-plain-value" class="d-none"></textarea>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0 fw-semibold"><?php $this->_('AdminForms.embed_codes.html_bs5'); ?></label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary embed-copy-btn" data-target="embed-bs5-value" title="<?php $this->_('AdminForms.embed_codes.copy'); ?>">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div id="embed-bs5" class="ace-embed-editor"></div>
+                    <textarea id="embed-bs5-value" class="d-none"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.ace-embed-editor {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    min-height: 120px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var formType = document.getElementById('form_type');
+    var section = document.getElementById('embed_codes_section');
+    var labelInput = document.getElementById('form_label');
+    if (!formType || !section) return;
+
+    var baseUrl = <?php echo json_encode($base_url); ?>;
+    var editors = {};
+    var initialized = false;
+
+    var plainTemplate = '<form method="post" action="__ACTION__">\n'
+        + '    <input type="text" name="domain">\n'
+        + '    <button type="submit" name="lookup" value="1">Lookup</button>\n'
+        + '    <button type="submit" name="transfer" value="1">Transfer</button>\n'
+        + '</form>';
+
+    var bs5Template = '<form method="post" action="__ACTION__">\n'
+        + '    <div class="mb-3">\n'
+        + '        <input type="text" name="domain" class="form-control" placeholder="example.com">\n'
+        + '    </div>\n'
+        + '    <button type="submit" name="lookup" value="1" class="btn btn-primary">Lookup</button>\n'
+        + '    <button type="submit" name="transfer" value="1" class="btn btn-outline-secondary">Transfer</button>\n'
+        + '</form>';
+
+    function getAceTheme() {
+        return document.documentElement.getAttribute('data-bs-theme') === 'dark'
+            ? 'ace/theme/tomorrow_night'
+            : 'ace/theme/tomorrow';
+    }
+
+    function initEditor(id) {
+        if (editors[id] || typeof ace === 'undefined') return;
+        if (!document.getElementById(id)) return;
+
+        var editor = ace.edit(id);
+        editor.session.setMode('ace/mode/html');
+        editor.setTheme(getAceTheme());
+        editor.setOptions({
+            fontSize: '13px',
+            showPrintMargin: false,
+            wrap: true,
+            readOnly: true,
+            maxLines: Infinity,
+            highlightActiveLine: false,
+            highlightGutterLine: false
+        });
+        editor.renderer.$cursorLayer.element.style.display = 'none';
+        editors[id] = editor;
+    }
+
+    function initAllEditors() {
+        if (initialized) return;
+        initEditor('embed-plain');
+        initEditor('embed-bs5');
+        initialized = Object.keys(editors).length > 0;
+        if (initialized) refreshCodes();
+    }
+
+    function refreshCodes() {
+        var label = labelInput ? labelInput.value.trim() : '';
+        var hasLabel = label.length > 0;
+
+        var placeholder = document.getElementById('embed_no_label');
+        var blocks = document.getElementById('embed_code_blocks');
+        if (placeholder) placeholder.style.display = hasLabel ? 'none' : '';
+        if (blocks) blocks.style.display = hasLabel ? '' : 'none';
+        if (!hasLabel) return;
+
+        var action = baseUrl + encodeURIComponent(label) + '/';
+        var plain = plainTemplate.replace('__ACTION__', action);
+        var bs5 = bs5Template.replace('__ACTION__', action);
+
+        var plainSrc = document.getElementById('embed-plain-value');
+        var bs5Src = document.getElementById('embed-bs5-value');
+        if (plainSrc) plainSrc.value = plain;
+        if (bs5Src) bs5Src.value = bs5;
+        if (editors['embed-plain']) { editors['embed-plain'].setValue(plain, -1); editors['embed-plain'].clearSelection(); }
+        if (editors['embed-bs5']) { editors['embed-bs5'].setValue(bs5, -1); editors['embed-bs5'].clearSelection(); }
+    }
+
+    function toggleEmbedSection() {
+        var show = formType.value === 'domain';
+        section.style.display = show ? 'block' : 'none';
+        if (show) initAllEditors();
+    }
+
+    toggleEmbedSection();
+    refreshCodes();
+    formType.addEventListener('change', toggleEmbedSection);
+    if (labelInput) labelInput.addEventListener('input', refreshCodes);
+
+    // Initialize editors when the accordion first opens (Ace needs a visible container)
+    var content = document.getElementById('embed_codes_content');
+    if (content) {
+        content.addEventListener('shown.bs.collapse', function() {
+            initAllEditors();
+            Object.values(editors).forEach(function(e) { e.resize(); });
+        });
+    }
+
+    // Keep editor theme in sync with admin light/dark mode
+    new MutationObserver(function() {
+        var theme = getAceTheme();
+        Object.values(editors).forEach(function(e) { e.setTheme(theme); });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.embed-copy-btn');
+        if (!btn) return;
+        e.preventDefault();
+        var source = document.getElementById(btn.dataset.target);
+        if (!source || !navigator.clipboard) return;
+
+        navigator.clipboard.writeText(source.value).then(function() {
+            var icon = btn.querySelector('i');
+            if (!icon) return;
+            icon.classList.remove('bi-clipboard');
+            icon.classList.add('bi-clipboard-check');
+            setTimeout(function() {
+                icon.classList.remove('bi-clipboard-check');
+                icon.classList.add('bi-clipboard');
+            }, 2000);
+        });
+    });
+});
+</script>

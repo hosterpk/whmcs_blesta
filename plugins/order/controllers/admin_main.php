@@ -39,10 +39,10 @@ class AdminMain extends OrderAffiliateController
 
         $this->components(['SettingsCollection']);
 
-        $status = (isset($this->get[0]) ? $this->get[0] : 'pending');
+        $status = ($this->get[0] ?? 'pending');
         $page = (isset($this->get[1]) ? (int)$this->get[1] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'date_added');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
+        $sort = ($this->get['sort'] ?? 'date_added');
+        $order = ($this->get['order'] ?? 'desc');
 
         if (isset($this->get[0])) {
             $status = $this->get[0];
@@ -51,10 +51,10 @@ class AdminMain extends OrderAffiliateController
         // If no page set, fetch counts
         if (!isset($this->get[1])) {
             $status_count = [
-                'pending' => $this->OrderOrders->getListCount('pending'),
-                'accepted' => $this->OrderOrders->getListCount('accepted'),
-                'fraud' => $this->OrderOrders->getListCount('fraud'),
-                'canceled' => $this->OrderOrders->getListCount('canceled'),
+                'pending' => $this->OrderOrders->getListCount('pending') ?? 0,
+                'accepted' => $this->OrderOrders->getListCount('accepted') ?? 0,
+                'fraud' => $this->OrderOrders->getListCount('fraud') ?? 0,
+                'canceled' => $this->OrderOrders->getListCount('canceled') ?? 0,
             ];
             $this->set('status_count', $status_count);
         }
@@ -133,7 +133,7 @@ class AdminMain extends OrderAffiliateController
             $post_filters = $this->post['filters'];
             unset($this->post['filters']);
 
-            foreach($post_filters as $filter => $value) {
+            foreach ($post_filters as $filter => $value) {
                 if (empty($value)) {
                     unset($post_filters[$filter]);
                 }
@@ -152,10 +152,10 @@ class AdminMain extends OrderAffiliateController
         // If no page set, fetch counts
         if (!isset($this->get[2])) {
             $status_count = [
-                'pending' => $this->OrderOrders->getListCount('pending', $order_filters),
-                'accepted' => $this->OrderOrders->getListCount('accepted', $order_filters),
-                'fraud' => $this->OrderOrders->getListCount('fraud', $order_filters),
-                'canceled' => $this->OrderOrders->getListCount('canceled', $order_filters),
+                'pending' => $this->OrderOrders->getListCount('pending', $order_filters) ?? 0,
+                'accepted' => $this->OrderOrders->getListCount('accepted', $order_filters) ?? 0,
+                'fraud' => $this->OrderOrders->getListCount('fraud', $order_filters) ?? 0,
+                'canceled' => $this->OrderOrders->getListCount('canceled', $order_filters) ?? 0,
             ];
             $this->set('status_count', $status_count);
         }
@@ -255,8 +255,10 @@ class AdminMain extends OrderAffiliateController
     public function orderInfo()
     {
         // Ensure a department ID was given
-        if (!$this->isAjax() || !isset($this->get[0]) ||
-            !($order = $this->OrderOrders->get($this->get[0]))) {
+        if (
+            !$this->isAjax() || !isset($this->get[0]) ||
+            !($order = $this->OrderOrders->get($this->get[0]))
+        ) {
             header($this->server_protocol . ' 401 Unauthorized');
             exit();
         }
@@ -284,7 +286,7 @@ class AdminMain extends OrderAffiliateController
 
         $vars = [
             'order' => $order,
-            'applied'=> $this->Transactions->getApplied(null, $order->invoice_id),
+            'applied' => $this->Transactions->getApplied(null, $order->invoice_id),
             'services' => $services,
             'periods' => $periods,
             'transaction_types' => $this->Transactions->transactionTypeNames()
@@ -308,7 +310,7 @@ class AdminMain extends OrderAffiliateController
         }
 
         $this->uses(['Order.OrderOrders']);
-        $status = isset($this->get[0]) ? $this->get[0] : 'pending';
+        $status = $this->get[0] ?? 'pending';
 
         echo $this->OrderOrders->getListCount($status);
         return false;
@@ -407,7 +409,7 @@ class AdminMain extends OrderAffiliateController
         $this->flashMessage('message', Language::_('AdminMain.!success.status_updated', true));
 
         if (isset($this->get['client_id'])) {
-            $this->redirect($this->base_uri . 'clients/view/'. ($this->get['client_id'] ?? ($this->get[0] ?? null)));
+            $this->redirect($this->base_uri . 'clients/view/' . ($this->get['client_id'] ?? ($this->get[0] ?? null)));
         } else {
             $this->redirect($this->base_uri . 'billing/');
         }
@@ -426,7 +428,7 @@ class AdminMain extends OrderAffiliateController
         $this->helpers(['TextParser']);
 
         // Get search criteria
-        $search = (isset($this->get['search']) ? $this->get['search'] : '');
+        $search = ($this->get['search'] ?? '');
         if (isset($this->post['search'])) {
             $search = $this->post['search'];
         }
@@ -437,8 +439,8 @@ class AdminMain extends OrderAffiliateController
         $this->components(['SettingsCollection']);
 
         $page = (isset($this->get['p']) ? (int)$this->get['p'] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'date_added');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
+        $sort = ($this->get['sort'] ?? 'date_added');
+        $order = ($this->get['order'] ?? 'desc');
 
 
         $this->set('sort', $sort);
@@ -548,15 +550,13 @@ class AdminMain extends OrderAffiliateController
             'available_payout',
             $this->getAvailableAffiliatePayout(
                 $affiliate->id,
-                isset($affiliate_settings['withdrawal_currency'])
-                    ? $affiliate_settings['withdrawal_currency']
-                    : 'USD'
+                $affiliate_settings['withdrawal_currency'] ?? 'USD'
             )
         );
         $this->set(
             'referral_link',
             trim($this->base_url, '/')
-                . (isset($this->public_uri) ? $this->public_uri : '/')
+                . ($this->public_uri ?? '/')
                 . 'order/forms/a/' . $affiliate->code
         );
         $this->set('days_active', $days_active);
@@ -607,7 +607,7 @@ class AdminMain extends OrderAffiliateController
 
         foreach ($referrals as $referral) {
             $timestamp = strtotime($this->Date->cast($referral->date_added, 'Y-m-d'));
-            $referrals_stats[$timestamp] = (isset($referrals_stats[$timestamp]) ? $referrals_stats[$timestamp] : 0) + 1;
+            $referrals_stats[$timestamp] = ($referrals_stats[$timestamp] ?? 0) + 1;
         }
 
         // Get affiliate stats for this year
@@ -621,10 +621,10 @@ class AdminMain extends OrderAffiliateController
 
         foreach ($affiliate_stats as $stat) {
             $timestamp = strtotime($this->Date->cast($stat->date, 'Y-m-d'));
-            $visits_stats[$timestamp] = (isset($visits_stats[$timestamp]) ? $visits_stats[$timestamp] : 0)
-                + (isset($stat->visits) ? $stat->visits : 0);
-            $sales_stats[$timestamp] = (isset($sales_stats[$timestamp]) ? $sales_stats[$timestamp] : 0)
-                + (isset($stat->sales) ? $stat->sales : 0);
+            $visits_stats[$timestamp] = ($visits_stats[$timestamp] ?? 0)
+                + ($stat->visits ?? 0);
+            $sales_stats[$timestamp] = ($sales_stats[$timestamp] ?? 0)
+                + ($stat->sales ?? 0);
         }
 
         $statistics = [
@@ -644,7 +644,7 @@ class AdminMain extends OrderAffiliateController
             $year_days = 0;
 
             for ($i = $date_range['start']; $i <= $date_range['end']; $i = $i + $step) {
-                $statistics[$type][$i] = isset($statistics[$type][$i]) ? $statistics[$type][$i] : 0;
+                $statistics[$type][$i] = $statistics[$type][$i] ?? 0;
                 $year_days++;
             }
 

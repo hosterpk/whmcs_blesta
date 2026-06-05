@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cwatch_response.php';
@@ -17,6 +18,8 @@ class CwatchApi
     // The data sent with the last request served by this API
     private $lastRequest = [];
 
+    private $logger;
+
     /**
      * CwatchApi constructor.
      *
@@ -26,11 +29,7 @@ class CwatchApi
      */
     public function __construct($username, $password, $sandbox)
     {
-        if ($sandbox) {
-            $this->apiUrl = 'http://cwatchpartnerportalstaging-env.us-east-1.elasticbeanstalk.com';
-        } else {
-            $this->apiUrl = 'https://partner.cwatch.comodo.com';
-        }
+        $this->apiUrl = $sandbox ? 'http://cwatchpartnerportalstaging-env.us-east-1.elasticbeanstalk.com' : 'https://partner.cwatch.comodo.com';
 
         // Initialize logger
         $logger = $this->getFromContainer('logger');

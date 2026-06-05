@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Discount;
 
 /**
@@ -12,5 +13,4 @@ namespace Blesta\Core\Pricing\Modifier\Type\Discount;
  */
 class Coupon extends AbstractCoupon
 {
-
 }

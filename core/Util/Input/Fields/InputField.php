@@ -1,5 +1,7 @@
 <?php
+
 namespace Blesta\Core\Util\Input\Fields;
+
 use Blesta\Core\Util\Input\Fields\Common\FieldInterface;
 use Blesta\Core\Util\Input\Fields\Common\AbstractField;
 

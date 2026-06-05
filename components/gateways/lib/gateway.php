@@ -184,6 +184,19 @@ abstract class Gateway
     }
 
     /**
+     * Returns the icon class for this extension, if set in config.json
+     *
+     * @return string|null The Bootstrap icon class, or null if not set
+     */
+    public function getIcon()
+    {
+        if (isset($this->config->icon)) {
+            return $this->config->icon;
+        }
+        return null;
+    }
+
+    /**
      * Returns the URL to the signup page for this gateway.
      *
      * @return string The URL to the signup page if one exists, null otherwise

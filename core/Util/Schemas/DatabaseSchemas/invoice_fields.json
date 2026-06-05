@@ -1,0 +1,89 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_group_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "is_lang",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "type",
+            "type": "enum('text','checkbox','select','textarea')",
+            "nullable": false,
+            "key": null,
+            "default": "text",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "values",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive')",
+            "nullable": false,
+            "key": null,
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_group_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_group_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

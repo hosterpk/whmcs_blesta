@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Form Management
  *
@@ -26,7 +27,7 @@ class OrderForms extends OrderModel
     {
         $this->Record = $this->getOrderForm($status);
         return $this->Record->where('company_id', '=', $company_id)->order($order)->
-            limit($this->getPerPage(), (max(1, $page) - 1)*$this->getPerPage())->fetchAll();
+            limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->fetchAll();
     }
 
     /**
@@ -214,22 +215,22 @@ class OrderForms extends OrderModel
         }
 
         $record->innerJoin(
-                'package_group',
-                'package_group.package_group_id',
-                '=',
-                'order_form_groups.package_group_id',
-                false
-            )->
+            'package_group',
+            'package_group.package_group_id',
+            '=',
+            'order_form_groups.package_group_id',
+            false
+        )->
             leftJoin('packages', 'packages.id', '=', 'package_group.package_id', false);
 
         if (array_key_exists('client_id', $query) && $query['client_id']) {
             $record->leftJoin(
-                    'client_packages',
-                    'client_packages.package_id',
-                    '=',
-                    'package_group.package_id',
-                    false
-                );
+                'client_packages',
+                'client_packages.package_id',
+                '=',
+                'package_group.package_id',
+                false
+            );
         }
 
         $record->open()->
@@ -315,8 +316,10 @@ class OrderForms extends OrderModel
         $dh = opendir($order_type_dir);
 
         while (($dir = readdir($dh)) !== false) {
-            if (substr($dir, 0, 1) == '.'
-                || !file_exists($order_type_dir . DS . $dir . DS . 'order_type_' . $dir . '.php')) {
+            if (
+                substr($dir, 0, 1) == '.'
+                || !file_exists($order_type_dir . DS . $dir . DS . 'order_type_' . $dir . '.php')
+            ) {
                 continue;
             }
 
@@ -352,7 +355,7 @@ class OrderForms extends OrderModel
 
         $dh = opendir($templates_dir);
 
-        $i=0;
+        $i = 0;
         while (($dir = readdir($dh)) !== false) {
             if (substr($dir, 0, 1) == '.' || !is_dir($templates_dir . $dir)) {
                 continue;
@@ -461,7 +464,8 @@ class OrderForms extends OrderModel
         if ($this->Input->validates($vars)) {
             $fields = ['company_id', 'label', 'name', 'description', 'template',
                 'template_style', 'type', 'client_group_id', 'manual_review',
-                'allow_coupons', 'require_ssl', 'require_tos', 'tos_url',
+                'allow_coupons', 'require_ssl', 'require_recurring_consent',
+                'require_tos', 'tos_url',
                 'abandoned_cart_first', 'abandoned_cart_second', 'abandoned_cart_third',
                 'abandoned_cart_cancellation', 'inactive_after_cancellation',
                 'require_captcha', 'monthly_breakdown', 'status', 'visibility', 'date_added'
@@ -557,7 +561,8 @@ class OrderForms extends OrderModel
         if ($this->Input->validates($vars)) {
             $fields = ['company_id', 'label', 'name', 'description', 'template',
                 'template_style', 'type', 'client_group_id', 'manual_review',
-                'allow_coupons', 'require_ssl', 'require_tos', 'tos_url',
+                'allow_coupons', 'require_ssl', 'require_recurring_consent',
+                'require_tos', 'tos_url',
                 'abandoned_cart_first', 'abandoned_cart_second', 'abandoned_cart_third',
                 'abandoned_cart_cancellation', 'inactive_after_cancellation',
                 'require_captcha', 'monthly_breakdown', 'status', 'visibility'
@@ -701,8 +706,8 @@ class OrderForms extends OrderModel
             where('order_form_id', '=', $form_id)->fetchAll();
 
         foreach ($meta as &$entry) {
-            $data = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($entry->value);
-            if ($data !== null && $data !== false) {
+            $data = @safe_unserialize($entry->value);
+            if ($data !== false) {
                 $entry->value = $data;
             }
         }
@@ -827,7 +832,7 @@ class OrderForms extends OrderModel
             ],
             'template' => [
                 'supported' => [
-                    'rule' => [[$this, 'validateTemplate'], (isset($vars['type']) ? $vars['type'] : null)],
+                    'rule' => [[$this, 'validateTemplate'], ($vars['type'] ?? null)],
                     'if_set' => $edit,
                     'message' => $this->_('OrderForms.!error.template.supported')
                 ]
@@ -842,7 +847,7 @@ class OrderForms extends OrderModel
             'require_tos' => [
                 'valid' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateTermsRequired'], (isset($vars['tos_url']) ? $vars['tos_url'] : null)],
+                    'rule' => [[$this, 'validateTermsRequired'], ($vars['tos_url'] ?? null)],
                     'message' => $this->_('OrderForms.!error.require_tos.valid')
                 ]
             ],
@@ -903,7 +908,7 @@ class OrderForms extends OrderModel
         ];
 
         if ($edit) {
-            $rules['label']['format']['rule'] = function($label) use ($vars) {
+            $rules['label']['format']['rule'] = function ($label) use ($vars) {
                 if ((bool) preg_match('/^([a-z0-9]+(\-|\_)?)*[a-z0-9]+$/i', $label)) {
                     return true;
                 }
@@ -976,7 +981,7 @@ class OrderForms extends OrderModel
      */
     public function validatePendingOrdersExists($order_form_id)
     {
-        return (boolean)$this->Record->select(['id'])->from('orders')->
+        return (bool)$this->Record->select(['id'])->from('orders')->
             where('order_form_id', '=', $order_form_id)->
             where('status', '=', 'pending')->limit(1)->fetch();
     }
@@ -1010,7 +1015,7 @@ class OrderForms extends OrderModel
             $this->Record->where('order_forms.id', '!=', $order_form_id);
         }
 
-        return !(boolean)$this->Record->fetch();
+        return !(bool)$this->Record->fetch();
     }
 
     /**

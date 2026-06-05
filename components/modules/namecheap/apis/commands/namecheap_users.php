@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Namecheap User Management
  *

@@ -1,4 +1,7 @@
 <?php
+
+namespace Blesta\Components\SessionCart;
+
 use Blesta\Core\Util\Common\Traits\Container;
 use Blesta\Core\Util\Components\Component;
 

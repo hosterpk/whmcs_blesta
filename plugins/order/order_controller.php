@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order System Parent Controller
  *
@@ -27,7 +28,8 @@ class OrderController extends AppController
         $this->orig_structure_view = $this->structure->view;
         $this->structure->view = 'default';
 
-        if (!is_numeric($this->Session->read('blesta_id'))
+        if (
+            !is_numeric($this->Session->read('blesta_id'))
             && ($lanugage_setting = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'language'))
         ) {
             // Set the language for this session if clients are allowed
@@ -74,7 +76,7 @@ class OrderController extends AppController
 
             try {
                 $geo_ip = ['location' => $this->NetGeoIp->getLocation($ip_address)];
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // IP address could not be determined
                 return false;
             }
@@ -114,7 +116,7 @@ class OrderController extends AppController
                 Configure::get('Blesta.company_id'),
                 'cookie_tld'
             );
-            $cookie_tld = isset($cookie_tld->value) ? $cookie_tld->value : 0;
+            $cookie_tld = $cookie_tld->value ?? 0;
 
             // Save the affiliate code on the current session
             $cookie_tld = ($cookie_tld * 24 * 60 * 60);

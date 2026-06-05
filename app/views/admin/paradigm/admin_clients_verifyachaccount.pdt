@@ -1,0 +1,48 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.verifyachaccount.boxtitle_verifyachaccount', true));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+?>
+    <h6 class="form-section-header">
+        <i class="bi bi-bank me-2"></i><?php $this->_('AdminClients.verifyachaccount.heading_deposits');?>
+    </h6>
+
+    <?php
+    if (!empty($verification_form)) {
+        echo $verification_form;
+    } else {
+    ?>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.verifyachaccount.field_firstdeposit', true), 'first_deposit', ['class' => 'form-label']);
+            $this->Form->fieldText('first_deposit', $vars->first_deposit ?? '', ['id' => 'first_deposit', 'class' => 'form-control', 'maxlength' => 2, 'placeholder' => $this->_('ClientAccounts.verifyach.field_firstdeposit', true)]);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.verifyachaccount.field_seconddeposit', true), 'second_deposit', ['class' => 'form-label']);
+            $this->Form->fieldText('second_deposit', $vars->second_deposit ?? '', ['id' => 'second_deposit', 'class' => 'form-control', 'maxlength' => 2, 'placeholder' => $this->_('ClientAccounts.verifyach.field_seconddeposit', true)]);
+            ?>
+        </div>
+    </div>
+    <?php
+    }
+    ?>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/accounts/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.verifyachaccount.field_accountsubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>

@@ -2,7 +2,7 @@
         <?php
         $link_buttons = [
             [
-                'icon' => 'fas fa-plus',
+                'icon' => 'bi bi-plus-lg',
                 'name' => '',
                 'attributes' => [
                     'title' => $this->_('FeedReaderManagePlugin.index.add_feed', true),
@@ -18,41 +18,45 @@
 
         if (($num_feeds = count((isset($feeds) ? $feeds : []))) > 0) {
         ?>
-            <table class="table">
-                <tr class="heading_row">
-                    <td><span><?php $this->_('FeedReaderManagePlugin.index.heading_url');?></span></td>
-                    <td><span><?php $this->_('FeedReaderManagePlugin.index.heading_lastupdated');?></span></td>
-                    <td class="last"><span><?php $this->_('FeedReaderManagePlugin.index.heading_options');?></span></td>
-                </tr>
-                <?php
-                for ($i = 0; $i < $num_feeds; $i++) {
-                ?>
-                <tr class="<?php echo $this->Html->concat(' ', ($i%2 == 1) ? 'odd_row' : '');?>">
-                    <td>
-                        <a href="<?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?>" target="_blank"><?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?></a>
-                    </td>
-                    <td><?php echo $this->Date->cast((isset($feeds[$i]->updated) ? $this->Html->safe($feeds[$i]->updated) : null), 'date_time');?></td>
-                    <td>
-                        <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null) . '&action=refresh');?>"><?php $this->_('FeedReaderManagePlugin.index.option_refresh');?></a>,
-                        <?php
-                        $this->Form->create($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/?action=remove');
-                        $this->Form->fieldHidden('feed_id', (isset($feeds[$i]->id) ? $feeds[$i]->id : null));
-                        ?>
-                        <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null) . '&action=remove');?>" class="manage" rel="<?php $this->_('FeedReaderManagePlugin.index.text_confirm_delete');?>"><?php $this->_('FeedReaderManagePlugin.index.option_remove');?></a>
-                        <?php
-                        $this->Form->end();
-                        ?>
-                    </td>
-                </tr>
-                <?php
-                }
-                ?>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('FeedReaderManagePlugin.index.heading_url');?></th>
+                        <th><?php $this->_('FeedReaderManagePlugin.index.heading_lastupdated');?></th>
+                        <th class="text-end"><?php $this->_('FeedReaderManagePlugin.index.heading_options');?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    for ($i = 0; $i < $num_feeds; $i++) {
+                    ?>
+                    <tr>
+                        <td>
+                            <a href="<?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?>" target="_blank"><?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?></a>
+                        </td>
+                        <td><?php echo $this->Date->cast((isset($feeds[$i]->updated) ? $this->Html->safe($feeds[$i]->updated) : null), 'date_time');?></td>
+                        <td class="text-end">
+                            <?php
+                            $this->Form->create($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/?action=remove');
+                            $this->Form->fieldHidden('feed_id', (isset($feeds[$i]->id) ? $feeds[$i]->id : null));
+                            ?>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null) . '&action=refresh');?>" class="btn btn-sm btn-primary ajax"><?php $this->_('FeedReaderManagePlugin.index.option_refresh');?></a>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null) . '&action=remove');?>" class="btn btn-sm btn-danger manage" rel="<?php $this->_('FeedReaderManagePlugin.index.text_confirm_delete');?>"><?php $this->_('FeedReaderManagePlugin.index.option_remove');?></a>
+                            <?php
+                            $this->Form->end();
+                            ?>
+                        </td>
+                    </tr>
+                    <?php
+                    }
+                    ?>
+                </tbody>
             </table>
         <?php
         } else {
         ?>
-            <div class="empty_section">
-                <div class="empty_box"><?php $this->_('FeedReaderManagePlugin.index.no_feeds');?></div>
+            <div class="text-center p-4">
+                <p class="text-muted mb-0"><?php $this->_('FeedReaderManagePlugin.index.no_feeds');?></p>
             </div>
         <?php
         }

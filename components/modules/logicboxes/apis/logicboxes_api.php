@@ -37,6 +37,10 @@ class LogicboxesApi
      * @var array An array representing the last request made
      */
     private $last_request = ['url' => null, 'args' => null];
+    /**
+     * @var mixed The logger instance
+     */
+    private $logger;
 
     /**
      * Sets the connection details
@@ -84,6 +88,7 @@ class LogicboxesApi
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; Blesta)');
 
         if (Configure::get('Blesta.curl_verify_ssl')) {
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
@@ -146,13 +151,13 @@ class LogicboxesApi
             if (is_array($value)) {
                 foreach ($value as $subkey => $subvalue) {
                     if (is_numeric($subkey)) {
-                        $query[] = rawurlencode($key) . '=' . rawurlencode($subvalue);
+                        $query[] = rawurlencode($key) . '=' . rawurlencode($subvalue ?? '');
                     } else {
-                        $query[] = rawurlencode($key . '[' . $subkey . ']') . '=' . rawurlencode($subvalue);
+                        $query[] = rawurlencode($key . '[' . $subkey . ']') . '=' . rawurlencode($subvalue ?? '');
                     }
                 }
             } else {
-                $query[] = rawurlencode($key) . '=' . rawurlencode($value);
+                $query[] = rawurlencode($key) . '=' . rawurlencode($value ?? '');
             }
         }
         return implode('&', $query);

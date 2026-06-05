@@ -17,7 +17,7 @@
             ?>
             <div class="form-group">
                 <?php
-                if (empty($invoices)) {
+                if (empty($past_due_invoices)) {
                     if ($clients_cancel_options == 'both' || $clients_cancel_options == 'end_of_term') {
                     ?>
                         <div class="radio">

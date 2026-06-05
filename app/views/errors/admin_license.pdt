@@ -1,47 +1,66 @@
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12 p-3">
-            <div class="card">
-                <div class="card-header p-3">
-                    <h3 class="m-0"><i class="fas fa-exclamation-triangle"></i> License Invalid</h3>
-                </div>
-                <div class="card-body">
-                    <?php
-                    if ((isset($errors) ? $errors : null)) {
-                    ?>
-                    <p>The license failed to validate for the following reasons:</p>
-                    <div class="alert alert-danger">
-                        <?php
-                        foreach ($errors as $field => $errors) {
-                            foreach ($errors as $key => $message_text) {
-                            ?>
-                            <p><?php echo (isset($message_text) ? $this->Html->safe($message_text, true) : null);?></p>
-                            <?php
-                            }
-                        }
-                        ?>
-                    </div>
-                    <?php
-                    }
-                    ?>
+<?php /** @var View $this **/ ?>
 
-                    <?php
-                    $this->Form->create(null, ['class' => 'disable-on-submit']);
-                    ?>
-                        <div class="form-group">
-                            <?php
-                            $this->Form->label('License Key ', 'key');
-                            $this->Form->fieldText('key', (isset($vars->key) ? $vars->key : null), ['id' => 'key', 'class' => 'form-control']);
-                            ?>
-                        </div>
-                        <?php
-                        $this->Form->fieldSubmit('update', 'Save', ['class' => 'btn btn-secondary pull-right']);
+<div class="license-container">
+    <div class="license-content">
+        <div class="license-icon">
+            <i class="bi bi-shield-exclamation"></i>
+        </div>
+
+        <h1 class="license-title">License Invalid</h1>
+        <p class="license-subtitle">Your Blesta license could not be validated</p>
+
+        <?php
+        if (($errors ?? null)) {
+            ?>
+        <div class="license-errors">
+            <div class="license-errors-body">
+                <?php
+                foreach ($errors as $field => $errors) {
+                    foreach ($errors as $key => $message_text) {
                         ?>
-                    <?php
-                    $this->Form->end();
-                    ?>
+                <div class="license-error-item">
+                    <i class="bi bi-x-circle"></i>
+                    <span><?php echo (isset($message_text) ? $this->Html->safe($message_text, true) : null);?></span>
                 </div>
+                        <?php
+                    }
+                }
+                ?>
             </div>
+        </div>
+            <?php
+        }
+        ?>
+
+        <div class="license-form-container">
+            <?php
+            $this->Form->create(null, ['class' => 'license-form disable-on-submit']);
+            ?>
+            <div class="license-input-group">
+                <label for="key" class="license-label">
+                    <i class="bi bi-key"></i>
+                    License Key
+                </label>
+                <?php
+                $this->Form->fieldText('key', ($vars->key ?? null), [
+                    'id' => 'key',
+                    'class' => 'license-input',
+                    'placeholder' => 'Enter your license key'
+                ]);
+                ?>
+            </div>
+            <div class="license-actions">
+                <?php
+                $this->Form->fieldSubmit('update', 'Validate License', ['class' => 'license-submit-btn']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+
+        <div class="license-help">
+            <p>Need help? Visit <a href="https://www.blesta.com/about/" target="_blank" rel="noopener">Blesta</a> or check your <a href="https://account.blesta.com/" target="_blank" rel="noopener">client area</a>.</p>
         </div>
     </div>
 </div>

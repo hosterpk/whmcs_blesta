@@ -1,65 +1,61 @@
-<?php
-$html_dir = (in_array($this->_('AppController.lang.dir', true), ['ltr', 'rtl']) ? $this->_('AppController.lang.dir', true) : 'ltr');
-$html_lang = (!empty($language) ? substr($language, 0, 2) : 'en');
-?><!DOCTYPE html>
-<html dir="<?php (print (isset($html_dir) ? $this->Html->safe($html_dir) : null));?>" lang="<?php (print (isset($html_lang) ? $this->Html->safe($html_lang) : null));?>" xml:lang="<?php (print (isset($html_lang) ? $this->Html->safe($html_lang) : null));?>">
+<?php /** @var View $this **/ ?>
+
+<!DOCTYPE html>
+<html lang="<?php echo $this->Html->safe($html_lang ?? 'en');?>" data-theme="dark" dir="<?php echo (in_array($this->_('AppController.lang.dir', true), ['ltr', 'rtl']) ? $this->_('AppController.lang.dir', true) : 'ltr');?>">
     <head>
-        <meta name="referrer" content="never" />
         <meta charset="utf-8">
+        <meta name="referrer" content="never">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="shortcut icon" href="<?php echo $this->view_dir;?>images/favicon.ico" />
+        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/application.min.css">
+        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/admin_login/login.min.css" />
+        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/bootstrap-icons.min.css">
+        <?php if ($this->_('AppController.lang.dir', true) == 'rtl') {
+            ?><link rel="stylesheet" href="<?php echo $this->view_dir;?>css/rtl.css" /><?php
+        } ?>
+
+        <script src="<?php echo $this->Html->safe($this->view_dir . 'javascript/app.min.js');?>"></script>
+
         <title>
             <?php
-            echo (
-                    ($page_title = (
-                            isset($page_title)
-                                ? $page_title
-                                : (str_contains($page_title_lang, '%')
-                                    ? $this->_($page_title_lang, true, $get_params)
-                                    : $this->_($page_title_lang, true)
-                                )
-                        )
-                    )
-                        ? (isset($page_title) ? $this->Html->safe($page_title) : null) . ' | '
-                        : ''
-                )
-                . (isset($system_company->name)
-                    ? $this->Html->safe($system_company->name)
-                    : null);
+            if (!isset($page_title) && isset($page_title_lang)) {
+                $page_title = str_contains($page_title_lang, '%')
+                    ? $this->_($page_title_lang, true, $get_params ?? '')
+                    : $this->_($page_title_lang, true);
+            }
+
+            if (!empty($page_title)) {
+                echo $this->Html->safe($page_title);
+            }
+
+            if (isset($system_company->name)) {
+                echo $this->Html->safe(' | ' . $system_company->name);
+            }
             ?>
         </title>
-        <link rel="shortcut icon" href="<?php echo $this->view_dir;?>images/favicon.ico" />
-        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/application.min.css" />
-        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/font-awesome.min.css" />
-        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/admin_login/login.min.css" type="text/css" media="all" />
-        <?php
-        if (isset($theme_css)) {
-        ?>
-        <link rel="stylesheet" href="<?php (print (isset($theme_css) ? $this->Html->safe($theme_css) : null));?>" type="text/css" media="screen" />
-        <?php
-        }
 
+        <?php
         if (!empty($custom_css)) {
-        ?>
-        <style><?php echo $this->Html->safe($custom_css ?? '');?></style>
-        <?php
-        }
-        
-        if ($this->_('AppController.lang.dir', true) == 'rtl') {
-        ?>
-        <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/rtl.css" type="text/css" media="screen" />
-        <?php
+            ?>
+        <style><?php echo $custom_css;?></style>
+            <?php
         }
         ?>
-        <script src="<?php echo $this->Html->safe($this->view_dir . 'javascript/jquery.min.js');?>"></script>
-        <script src="<?php echo $this->Html->safe($this->view_dir . 'javascript/bootstrap.min.js');?>"></script>
-        <?php echo (isset($head) ? $head : null);?>
+
+        <?php echo ($head ?? null);?>
     </head>
-    <body class="<?php echo $this->Html->safe($css_route_class ?? ''); ?>">
-        <?php echo (isset($body_start) ? $body_start : null);?>
-        <?php echo (isset($content) ? $content : null);?>
+    <body class="<?php echo $this->Html->safe($css_route_class ?? '');?>">
+        <div class="theme-toggle-floating">
+            <button class="btn btn-outline-secondary btn-sm" id="theme-toggle" aria-label="Toggle theme">
+                <i class="bi bi-moon-stars"></i>
+            </button>
+        </div>
+
+        <?php echo ($body_start ?? null);?>
+        <?php echo ($content ?? null);?>
 
         <?php echo $this->Javascript->getFiles('body');?>
         <?php echo $this->Javascript->getInline();?>
-        <?php echo (isset($body_end) ? $body_end : null);?>
+        <?php echo ($body_end ?? null);?>
     </body>
 </html>

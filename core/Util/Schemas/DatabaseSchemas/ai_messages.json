@@ -1,0 +1,115 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "conversation_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "role",
+            "type": "enum('system','user','assistant')",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 9
+        },
+        {
+            "name": "content",
+            "type": "mediumtext",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 16777215
+        },
+        {
+            "name": "prompt_tokens",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "completion_tokens",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "cost",
+            "type": "decimal(10,4)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 4
+        },
+        {
+            "name": "date_created",
+            "type": "datetime",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "conversation_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "conversation_id"
+            ]
+        },
+        {
+            "name": "date_created",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "date_created"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "role",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "role"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

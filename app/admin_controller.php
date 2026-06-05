@@ -23,7 +23,20 @@ class AdminController extends AppController
         // Check if controller requires step up authentication
         $this->requireStepUpAuthentication();
 
-        Language::loadLang([Loader::fromCamelCase(get_class($this))]);
+        Language::loadLang(Loader::fromCamelCase(get_class($this)));
+
+        // Auto-setup settings navigation for company and system settings controllers
+        if (str_starts_with($this->controller, 'admin_company_') ||
+            str_starts_with($this->controller, 'admin_system_')) {
+            Language::loadLang('admin_settings');
+            $this->uses(['Navigation']);
+            $this->set('company_nav', $this->Navigation->getCompany($this->base_uri));
+            $this->set('system_nav', $this->Navigation->getSystem($this->base_uri));
+            // Skip view caching — the active nav item changes with every URL
+            // so a cached entry would never be reused
+            $this->set('_no_cache', true);
+            $this->structure->set('side_bar', ['partials/admin_settings_sidebar', $this->view]);
+        }
     }
 
     /**
@@ -36,6 +49,7 @@ class AdminController extends AppController
             'step_up_access',
             (bool) (time() < (int) $step_up)
         );
+        $this->structure->set('step_up_expires', (int) $step_up);
 
         // Check if step up authentication is enabled
         if (!Configure::get('Blesta.step_up_authentication')) {

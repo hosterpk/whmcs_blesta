@@ -1,4 +1,11 @@
 <?php
+
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use Loader;
+
 /**
  * Service Invoice
  * This is an association between services and the invoices created for adding or renewing them.
@@ -44,6 +51,11 @@ class ServiceInvoices extends AppModel
             $vars['type'] = 'provisioning';
         }
 
+        // Serialize data
+        if (!empty($vars['data']) && !is_scalar($vars['data'])) {
+            $vars['data'] = json_encode($vars['data']);
+        }
+
         // Add service invoice association
         if ($this->Input->validates($vars)) {
             $service = $this->Services->get($vars['service_id']);
@@ -81,16 +93,185 @@ class ServiceInvoices extends AppModel
                 ->delete();
 
             // Ignore duplicate inserts by simply updating the columns of the primary key
-            $fields = ['service_id', 'invoice_id', 'type', 'failed_attempts', 'maximum_attempts', 'date_next_attempt'];
+            $fields = ['service_id', 'invoice_id', 'type', 'data', 'failed_attempts', 'maximum_attempts', 'date_next_attempt'];
             $this->Record->duplicate('service_id', '=', $vars['service_id'])
                 ->duplicate('invoice_id', '=', $vars['invoice_id'])
+                ->duplicate('type', '=', $vars['type'])
                 ->insert('service_invoices', $vars, $fields);
+
+            return $this->Record->lastInsertId();
         }
     }
-    
+
+    /**
+     * Fetches the association between the given service and invoices
+     *
+     * @param int $service_id The ID of the service
+     * @param int $invoice_id The ID of a particular invoice to delete for
+     * @param int $type The type of association to delete for
+     */
+    public function get($service_id, $invoice_id = null, $type = null)
+    {
+        $this->Record->select('service_invoices.*')
+            ->from('service_invoices')
+            ->where('service_id', '=', $service_id);
+
+        if ($invoice_id) {
+            $this->Record->where('invoice_id', '=', $invoice_id);
+        }
+
+        if ($type) {
+            $this->Record->where('type', '=', $type);
+        }
+
+        $service_invoice = $this->Record->order(['id' => 'ASC'])->fetch();
+        if (!empty($service_invoice->data)) {
+            $service_invoice->data = json_decode($service_invoice->data);
+        }
+
+        return $service_invoice;
+    }
+
+    /**
+     * Fetches the association between the given service and invoices
+     *
+     * @param int $service_id The ID of the service
+     * @param int $invoice_id The ID of a particular invoice to delete for
+     * @param int $type The type of association to delete for
+     * @param int $filters A list of parameters to filter by, including:
+     *
+     *   - failed_attempts The number of times the service has been attempted to be renewed, but failed
+     *   - maximum_attempts The maximum number of times the service will be reattempted to be renewed
+     *   - date_next_attempt The date for the next attempt to provision the service, if failed
+     */
+    public function getAll($service_id = null, $invoice_id = null, $type = null, array $filters = [])
+    {
+        $this->Record->select('service_invoices.*')
+            ->from('service_invoices');
+
+        if ($service_id) {
+            $this->Record->where('service_id', '=', $service_id);
+        }
+
+        if ($invoice_id) {
+            $this->Record->where('invoice_id', '=', $invoice_id);
+        }
+
+        if ($type) {
+            $this->Record->where('type', '=', $type);
+        }
+
+        $this->Record = $this->applyFilters($this->Record, $filters);
+
+        $service_invoices = $this->Record->fetchAll();
+        foreach ($service_invoices as &$service_invoice) {
+            if (!empty($service_invoice->data)) {
+                $service_invoice->data = json_decode($service_invoice->data);
+            }
+        }
+
+        return $service_invoices;
+    }
+
+    /**
+     * Returns the number of associations between the given service and invoice
+     *
+     * @param int $service_id The ID of the service
+     * @param int $invoice_id The ID of a particular invoice to delete for
+     * @param int $type The type of association to delete for
+     * @param int $filters A list of parameters to filter by, including:
+     *
+     *   - failed_attempts The number of times the service has been attempted to be renewed, but failed
+     *   - maximum_attempts The maximum number of times the service will be reattempted to be renewed
+     *   - date_next_attempt The date for the next attempt to provision the service, if failed
+     */
+    public function getListCount($service_id = null, $invoice_id = null, $type = null, array $filters = [])
+    {
+        $this->Record->select('service_invoices.*')
+            ->from('service_invoices');
+
+        if ($service_id) {
+            $this->Record->where('service_id', '=', $service_id);
+        }
+
+        if ($invoice_id) {
+            $this->Record->where('invoice_id', '=', $invoice_id);
+        }
+
+        if ($type) {
+            $this->Record->where('type', '=', $type);
+        }
+
+        $this->Record = $this->applyFilters($this->Record, $filters);
+
+        return $this->Record->numResults();
+    }
+
+    /**
+     * Returns the number of associations between the given service and invoice
+     *
+     * @param int $service_id The ID of the service
+     * @param int $invoice_id The ID of a particular invoice to delete for
+     * @param int $type The type of association to delete for
+     * @param int $filters A list of parameters to filter by, including:
+     *
+     *   - failed_attempts The number of times the service has been attempted to be renewed, but failed
+     *   - maximum_attempts The maximum number of times the service will be reattempted to be renewed
+     *   - date_next_attempt The date for the next attempt to provision the service, if failed
+     */
+    public function getList($page = 1, $order_by = ['date_next_attempt' => 'DESC'], $service_id = null, $invoice_id = null, $type = null, array $filters = [])
+    {
+        $this->Record->select('service_invoices.*')
+            ->from('service_invoices');
+
+        if ($service_id) {
+            $this->Record->where('service_id', '=', $service_id);
+        }
+
+        if ($invoice_id) {
+            $this->Record->where('invoice_id', '=', $invoice_id);
+        }
+
+        if ($type) {
+            $this->Record->where('type', '=', $type);
+        }
+
+        $this->Record = $this->applyFilters($this->Record, $filters);
+
+        $service_invoices = $this->Record->order($order_by)->
+            limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->
+            fetchAll();
+
+        foreach ($service_invoices as &$service_invoice) {
+            if (!empty($service_invoice->data)) {
+                $service_invoice->data = json_decode($service_invoice->data);
+            }
+        }
+
+        return $service_invoices;
+    }
+
+    /**
+     * Updates the association between the given service and an invoice
+     *
+     * @param array $vars An array of information including:
+     *
+     *  - failed_attempts The number of times the service has been attempted to be renewed, but failed (optional)
+     *  - maximum_attempts The maximum number of times the service will be reattempted to be renewed (optional)
+     *  - date_next_attempt The date for the next attempt to provision the service, if failed (optional)
+     */
+    public function update($service_id, $invoice_id, $type, array $vars)
+    {
+        $fields = ['failed_attempts', 'maximum_attempts', 'date_next_attempt'];
+        $this->Record->where('service_id', '=', $service_id)
+            ->where('invoice_id', '=', $invoice_id)
+            ->where('type', '=', $type)
+            ->update('service_invoices', $vars, $fields);
+    }
+
     /**
      * Gets a list of service attempt types handled by this model
-     * 
+     *
      * @return array A list of attempt types handled by the model
      */
     public function getAttemptTypes()
@@ -101,6 +282,7 @@ class ServiceInvoices extends AppModel
             'suspension' => $this->_('ServiceInvoices.getattempttypes.suspension'),
             'unsuspension' => $this->_('ServiceInvoices.getattempttypes.unsuspension'),
             'cancelation' => $this->_('ServiceInvoices.getattempttypes.cancelation'),
+            'change' => $this->_('ServiceInvoices.getattempttypes.change'),
         ];
     }
 

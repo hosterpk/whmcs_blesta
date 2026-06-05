@@ -1,0 +1,56 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.addnote.boxtitle_createnote', true));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+?>
+    <div class="row g-3 mb-3">
+        <div class="col-md-12">
+            <?php
+            $this->Form->label($this->_('AdminClients.addnote.field_title', true), 'title', ['class' => 'form-label']);
+            $this->Form->fieldText('title', (isset($vars->title) ? $vars->title : null), ['id' => 'title', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-12">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('stickied', '1', ((isset($vars->stickied) ? $vars->stickied : null) == '1'), ['id' => 'stickied', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminClients.addnote.field_stickied', true), 'stickied', ['class' => 'form-check-label']);
+                ?>
+                <i class="bi bi-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!notes.stickied');?>"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion" id="noteDetailsAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button <?php echo (empty($vars->description) ? 'collapsed' : '');?>" type="button" data-bs-toggle="collapse" data-bs-target="#noteDetailsCollapse" aria-expanded="<?php echo (!empty($vars->description) ? 'true' : 'false');?>" aria-controls="noteDetailsCollapse">
+                    <?php $this->_('AdminClients.addnote.field_description');?>
+                </button>
+            </h2>
+            <div id="noteDetailsCollapse" class="accordion-collapse collapse <?php echo (!empty($vars->description) ? 'show' : '');?>">
+                <div class="accordion-body">
+                    <?php
+                    $this->Form->fieldTextarea('description', (isset($vars->description) ? $vars->description : null), ['id' => 'description', 'class' => 'form-control', 'rows' => '6']);
+                    ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/notes/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.addnote.field_notesubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>

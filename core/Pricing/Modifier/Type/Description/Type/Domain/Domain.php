@@ -20,12 +20,12 @@ class Domain extends AbstractDescription
     /**
      * {@inheritdoc}
      */
-    public function get(array $meta, array $oldMeta = null)
+    public function get(array $meta, ?array $oldMeta = null)
     {
         $description = '';
 
         // Determine the type of meta info we have to work with
-        $type = (isset($meta['_data']['type']) ? $meta['_data']['type'] : null);
+        $type = ($meta['_data']['type'] ?? null);
         switch ($type) {
             case 'service':
                 $description = $this->getService($meta, $oldMeta);
@@ -55,7 +55,7 @@ class Domain extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getService(array $meta, array $oldMeta = null)
+    private function getService(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
         $oldFields = ($oldMeta ? $this->getBaseFields($oldMeta) : []);
@@ -114,7 +114,7 @@ class Domain extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getPackage(array $meta, array $oldMeta = null)
+    private function getPackage(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
         $oldFields = ($oldMeta ? $this->getBaseFields($oldMeta) : []);
@@ -162,7 +162,7 @@ class Domain extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getSetup(array $meta, array $oldMeta = null)
+    private function getSetup(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
         $oldFields = ($oldMeta ? $this->getBaseFields($oldMeta) : []);
@@ -191,7 +191,7 @@ class Domain extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getCancel(array $meta, array $oldMeta = null)
+    private function getCancel(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
         $oldFields = ($oldMeta ? $this->getBaseFields($oldMeta) : []);
@@ -235,7 +235,7 @@ class Domain extends AbstractDescription
         $endDate = null;
 
         if (isset($meta['_data']) && is_array($meta['_data'])) {
-            $state = isset($meta['_data']['state']) ? $meta['_data']['state'] : '';
+            $state = $meta['_data']['state'] ?? '';
             $startDate = isset($meta['_data']['startDate'])
                 ? $this->date->cast($meta['_data']['startDate'], 'date')
                 : null;

@@ -1,93 +1,98 @@
-<?php /** @var View $this */ ?>
+<?php
+/** @var View $this */
+?>
 <div id="dns-records">
-    <div class="title_row first">
-        <h3><?php $this->_('Logicboxes.tab_childnameservers.title'); ?></h3>
-    </div>
-    <div class="pad">
-        <p><?php $this->_('Logicboxes.tab_childnameservers.help_text');?></p>
-    </div>
+    <h6 class="form-section-header"><?php $this->_('Logicboxes.tab_childnameservers.title'); ?></h6>
+    <p class="text-muted mb-3"><?php $this->_('Logicboxes.tab_childnameservers.help_text'); ?></p>
 
     <?php if (count($cns ?? []) > 0) { ?>
-        <table class="table">
-            <thead>
-                <tr class="heading_row">
-                    <td><span><?php $this->_('Logicboxes.tab_childnameservers.cns') ?></span></td>
-                    <td><span><?php $this->_('Logicboxes.tab_childnameservers.ip') ?></span></td>
-                    <td><span><?php $this->_('Logicboxes.tab_childnameservers.actions');?></span></td>
-                </tr>
-            </thead>
-
-            <tbody>
-                <?php foreach ($cns as $i => $ns) { ?>
-                    <tr<?php echo ($i % 2 == 1) ? ' class="odd_row"' : ''?>>
-                        <?php $this->Form->create() ?>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Logicboxes.tab_childnameservers.cns'); ?></th>
+                        <th><?php $this->_('Logicboxes.tab_childnameservers.ip'); ?></th>
+                        <th class="text-end"><?php $this->_('Logicboxes.tab_childnameservers.actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($cns as $i => $ns) { ?>
+                        <tr>
                             <?php
+$this->Form->create();
+?>
+                                <?php
                                 $this->Form->fieldHidden('old-cns', $ns['cns'] ?? null);
                                 $this->Form->fieldHidden('old-ip', implode(',', $ns['ip'] ?? null));
-                            ?>
-                            <td><?php $this->Form->fieldText('cns', $ns['cns'] ?? null, ['class' => 'form-control']) ?></td>
-                            <td><?php $this->Form->fieldText('ip', implode(',', $ns['ip'] ?? null), ['class' => 'form-control']) ?></td>
-                            <td>
-                                <?php 
-                                    $this->Form->fieldButton(
-                                        'action', 
-                                        $this->_('Logicboxes.tab_childnameservers.action_modify', true),
-                                        [
-                                            'class' => 'btn btn-sm btn-info',
-                                            'value' => 'modifyCns',
-                                            'type' => 'submit'
-                                        ]
-                                    );
                                 ?>
-                                <?php 
-                                    $this->Form->fieldButton(
-                                        'action', 
-                                        $this->_('Logicboxes.tab_childnameservers.action_delete', true),
-                                        [
-                                            'class' => 'btn btn-sm btn-danger',
-                                            'value' => 'deleteCns',
-                                            'type' => 'submit'
-                                        ]
-                                    );
-                                ?>
-                            </td>
-                        </tr>
-                    <?php $this->Form->end(); ?>
-                <?php } ?>
-            </tbody>
-        </table>
+                                <td><?php $this->Form->fieldText('cns', $ns['cns'] ?? null, [
+                                    'class' => 'form-control',
+                                ]); ?></td>
+                                <td><?php $this->Form->fieldText('ip', implode(',', $ns['ip'] ?? null), [
+                                    'class' => 'form-control',
+                                ]); ?></td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <?php $this->Form->fieldButton(
+                                            'action',
+                                            '<i class="bi bi-pencil"></i>',
+                                            [
+                                                'class' => 'btn btn-sm btn-outline-secondary',
+                                                'value' => 'modifyCns',
+                                                'type' => 'submit',
+                                                'title' => $this->_('Logicboxes.tab_childnameservers.action_modify', true),
+                                            ],
+                                        ); ?>
+                                        <?php $this->Form->fieldButton(
+                                            'action',
+                                            '<i class="bi bi-trash"></i>',
+                                            [
+                                                'class' => 'btn btn-sm btn-outline-danger',
+                                                'value' => 'deleteCns',
+                                                'type' => 'submit',
+                                                'title' => $this->_('Logicboxes.tab_childnameservers.action_delete', true),
+                                            ],
+                                        ); ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php $this->Form->end(); ?>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
     <?php } else { ?>
-        <div class="empty_section">
-            <div class="empty_box">
-                <?php $this->_('Logicboxes.tab_childnameservers.no_records') ?>
-            </div>
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0"><?php $this->_('Logicboxes.tab_childnameservers.no_records'); ?></p>
         </div>
     <?php } ?>
 
-    <div class="title_row">
-        <h3><?php $this->_('Logicboxes.tab_dnsrecord.title_add') ?></h3>
-    </div>
-    <?php $this->Form->create() ?>
-        <table class="table">
-            <thead>
-                <tr class="heading_row">
-                    <td><?php $this->_('Logicboxes.tab_childnameservers.cns') ?></td>
-                    <td><?php $this->_('Logicboxes.tab_childnameservers.ip') ?></td>
-                    <td><?php $this->_('Logicboxes.tab_childnameservers.action_add') ?></td>
-                </tr>
-            </thead>
-
-            <tbody>
-                <tr>
-                    <td><?php $this->Form->fieldText('cns', null, ['class' => 'form-control']) ?></td>
-                    <td><?php $this->Form->fieldText('ip', null, ['class' => 'form-control']) ?></td>
-                    <td>
-                        <button class="btn btn-sm btn-success small" type="submit" name="action" value="addCns">
-                            <i class="fas fa-edit"></i> <?php $this->_('Logicboxes.tab_childnameservers.action_add') ?>
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    <?php $this->Form->end() ?>
+    <h6 class="form-section-header mt-4"><?php $this->_('Logicboxes.tab_dnsrecord.title_add'); ?></h6>
+    <?php
+$this->Form->create();
+?>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Logicboxes.tab_childnameservers.cns'); ?></th>
+                        <th><?php $this->_('Logicboxes.tab_childnameservers.ip'); ?></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?php $this->Form->fieldText('cns', null, ['class' => 'form-control']); ?></td>
+                        <td><?php $this->Form->fieldText('ip', null, ['class' => 'form-control']); ?></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-primary" type="submit" name="action" value="addCns">
+                                <i class="bi bi-plus-lg"></i> <?php $this->_('Logicboxes.tab_childnameservers.action_add'); ?>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    <?php $this->Form->end(); ?>
 </div>

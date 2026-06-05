@@ -1,0 +1,141 @@
+<?php /** @var View $this **/ ?>
+
+                    <div class="tab-pane fade<?php echo (($theme_type ?? null) == 'client' ? ' show active' : ''); ?>" id="<?php echo ($theme_type ?? null);?>_layout" role="tabpanel">
+                            <!-- Instructions Tip Box -->
+                            <div class="mb-4 p-3" style="background-color: var(--bg-secondary); border-radius: 0.375rem; border-left: 3px solid var(--accent-color);">
+                                <div class="d-flex align-items-start">
+                                    <i class="bi bi-lightbulb me-2" style="font-size: 1.2rem; color: var(--accent-color);"></i>
+                                    <div style="font-size: 0.875rem;">
+                                        <?php $this->_('AdminCompanyLookandfeel.layout.text_cards_note');?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stat Cards Section -->
+                            <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.layout.heading_cards');?></h6>
+                            <div class="layout-stat-grid mb-5" id="<?php echo ($theme_type ?? null);?>_statCardsGrid">
+                                <?php
+                                // Helper function to convert 3-digit hex to 6-digit hex
+                                if (!function_exists('expandHexColor')) {
+                                    function expandHexColor($hex) {
+                                        $hex = ltrim($hex, '#');
+                                        if (strlen($hex) == 3) {
+                                            return '#' . $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+                                        }
+                                        return '#' . $hex;
+                                    }
+                                }
+
+                                $card_index = 0;
+                                foreach (($cards ?? []) as $card) {
+                                    $bg_color = isset($card->background) && $card->background_type == 'color' ? expandHexColor($card->background) : '#007bff';
+                                    $text_color = isset($card->text_color) ? expandHexColor($card->text_color) : '#ffffff';
+                                    $is_html = (isset($card->callback_type) ? $card->callback_type : null) == 'html';
+                                ?>
+                                <div class="layout-stat-card<?php echo $is_html ? ' html-card' : ''; ?>"
+                                     data-card-id="<?php echo $this->Html->safe($card->card_id ?? ''); ?>"
+                                     data-bg-color="<?php echo $this->Html->safe($bg_color); ?>"
+                                     data-text-color="<?php echo $this->Html->safe($text_color); ?>"
+                                     data-default-bg="<?php echo $this->Html->safe($bg_color); ?>"
+                                     data-default-text="<?php echo $this->Html->safe($text_color); ?>"
+                                     style="background-color: <?php echo $this->Html->safe($bg_color); ?>;">
+                                    <?php
+                                    $this->Form->fieldHidden('cards[' . ($card->card_id ?? null) . '][id]', ($card->id ?? null));
+                                    $this->Form->fieldHidden('cards[' . ($card->card_id ?? null) . '][order]', $card_index, ['class' => 'card-order']);
+                                    $this->Form->fieldHidden('cards[' . ($card->card_id ?? null) . '][background_type]', ($card->background_type ?? 'color'));
+                                    ?>
+                                    <input type="checkbox"
+                                           class="form-check-input layout-card-checkbox"
+                                           name="cards[<?php echo $this->Html->safe($card->card_id ?? ''); ?>][enabled]"
+                                           value="1"
+                                           <?php echo (($card->enabled ?? '1') == '1') ? 'checked' : ''; ?>>
+                                    <div class="layout-stat-card-inner" style="color: <?php echo $this->Html->safe($text_color); ?>;">
+                                        <div class="layout-stat-number">0</div>
+                                        <div class="layout-stat-label"><?php echo $this->Html->safe($card->label ?? ''); ?></div>
+                                        <?php if ($is_html) { ?>
+                                        <small class="d-block mt-1 opacity-75"><?php $this->_('AdminCompanyLookandfeel.layout.text_html_generated');?></small>
+                                        <?php } ?>
+                                    </div>
+                                    <?php if (!$is_html) { ?>
+                                    <div class="layout-stat-color-picker" style="display: block;">
+                                        <div class="color-picker-row">
+                                            <label class="form-label mb-1"><?php $this->_('AdminCompanyLookandfeel.layout.field.background_color');?></label>
+                                            <div class="color-picker-input-group">
+                                                <input type="color" class="form-control-color bg-color-picker" value="<?php echo $this->Html->safe($bg_color); ?>">
+                                                <input type="text"
+                                                       class="form-control form-control-sm bg-color-input"
+                                                       name="cards[<?php echo $this->Html->safe($card->card_id ?? ''); ?>][background_color]"
+                                                       value="<?php echo $this->Html->safe($bg_color); ?>">
+                                            </div>
+                                        </div>
+                                        <div class="color-picker-row">
+                                            <label class="form-label mb-1"><?php $this->_('AdminCompanyLookandfeel.layout.field.text_color');?></label>
+                                            <div class="color-picker-input-group">
+                                                <input type="color" class="form-control-color text-color-picker" value="<?php echo $this->Html->safe($text_color); ?>">
+                                                <input type="text"
+                                                       class="form-control form-control-sm text-color-input"
+                                                       name="cards[<?php echo $this->Html->safe($card->card_id ?? ''); ?>][text_color]"
+                                                       value="<?php echo $this->Html->safe($text_color); ?>">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php } ?>
+                                </div>
+                                <?php
+                                    $card_index++;
+                                }
+
+                                // Show placeholder cards if no cards exist
+                                if (empty($cards)) {
+                                ?>
+                                <div class="layout-stat-card placeholder-card">
+                                    <div class="layout-stat-card-inner" style="background-color: #e9ecef; color: #6c757d;">
+                                        <div class="layout-stat-number">0</div>
+                                        <div class="layout-stat-label"><?php $this->_('AdminCompanyLookandfeel.layout.text_no_cards');?></div>
+                                    </div>
+                                </div>
+                                <?php
+                                }
+                                ?>
+                            </div>
+
+                            <!-- Widgets Section -->
+                            <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.layout.heading_widgets');?></h6>
+                            <div class="layout-widgets-list" id="<?php echo ($theme_type ?? null);?>_widgetsList">
+                                <?php
+                                $widget_index = 0;
+                                foreach (($widgets ?? []) as $widget) {
+                                    $widget_name = empty($this->_($widget->name, true)) ? $widget->name : $this->_($widget->name, true);
+                                ?>
+                                <div class="layout-widget-item" data-widget-id="<?php echo $this->Html->safe($widget->widget_id ?? ''); ?>">
+                                    <?php
+                                    $this->Form->fieldHidden('widgets[' . ($widget->widget_id ?? null) . '][id]', ($widget->id ?? null));
+                                    $this->Form->fieldHidden('widgets[' . ($widget->widget_id ?? null) . '][order]', $widget_index, ['class' => 'widget-order']);
+                                    ?>
+                                    <div class="layout-widget-handle">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </div>
+                                    <div class="layout-widget-name"><?php echo $this->Html->safe($widget_name); ?></div>
+                                    <div class="layout-widget-checkbox">
+                                        <input type="checkbox"
+                                               class="form-check-input"
+                                               name="widgets[<?php echo $this->Html->safe($widget->widget_id ?? ''); ?>][enabled]"
+                                               value="1"
+                                               <?php echo (($widget->enabled ?? '0') == '1') ? 'checked' : ''; ?>>
+                                    </div>
+                                </div>
+                                <?php
+                                    $widget_index++;
+                                }
+
+                                // Show placeholder if no widgets
+                                if (empty($widgets)) {
+                                ?>
+                                <div class="layout-widget-item placeholder-widget">
+                                    <div class="layout-widget-name text-muted"><?php $this->_('AdminCompanyLookandfeel.layout.text_no_widgets');?></div>
+                                </div>
+                                <?php
+                                }
+                                ?>
+                            </div>
+                    </div>

@@ -1,0 +1,43 @@
+{
+    "columns": [
+        {
+            "name": "country_alpha2",
+            "type": "char(2)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 2
+        },
+        {
+            "name": "code",
+            "type": "varchar(3)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "country_alpha2",
+                "code"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

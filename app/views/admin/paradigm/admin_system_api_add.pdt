@@ -1,0 +1,65 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminSystemApi.add.boxtitle_add', true), ['id' => 'admin_system_api_add']);
+?>
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+    <div class="mb-3">
+        <label for="company_id" class="form-label">
+            <?php $this->_('AdminSystemApi.add.field_company');?>
+        </label>
+        <?php
+        $this->Form->fieldSelect(
+            'company_id',
+            (isset($companies) ? $companies : null),
+            (isset($vars->company_id) ? $vars->company_id : null),
+            ['id' => 'company_id', 'class' => 'form-select']
+        );
+        ?>
+    </div>
+
+    <div class="mb-3">
+        <label for="user" class="form-label">
+            <?php $this->_('AdminSystemApi.add.field_user');?>
+        </label>
+        <?php
+        $this->Form->fieldText(
+            'user',
+            (isset($vars->user) ? $vars->user : null),
+            ['id' => 'user', 'class' => 'form-control']
+        );
+        ?>
+    </div>
+
+    <div class="mb-3">
+        <label for="notes" class="form-label">
+            <?php $this->_('AdminSystemApi.add.field_notes');?>
+        </label>
+        <?php
+        $this->Form->fieldTextarea(
+            'notes',
+            (isset($vars->notes) ? $vars->notes : null),
+            ['id' => 'notes', 'class' => 'form-control', 'rows' => 4]
+        );
+        ?>
+    </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit(
+            'save',
+            $this->_('AdminSystemApi.add.field_apisubmit', true),
+            ['class' => 'btn btn-primary']
+        );
+        ?>
+    </div>
+    <?php $this->Form->end();?>
+<?php $this->Widget->end(); ?>
+</div>

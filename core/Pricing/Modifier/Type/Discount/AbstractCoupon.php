@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Discount;
 
 use Blesta\Items\Item\ItemInterface;
@@ -145,7 +146,8 @@ abstract class AbstractCoupon implements DiscountInterface
             }
 
             // The package options must meet the coupon requirements
-            if (isset($this->fields->package_options)
+            if (
+                isset($this->fields->package_options)
                 && !empty($this->fields->package_options)
                 && !$this->validatePackageOptionLimitations()
             ) {
@@ -244,9 +246,7 @@ abstract class AbstractCoupon implements DiscountInterface
      */
     private function supportsOptions($options = null)
     {
-        $appliesTo = (isset($this->fields->apply_to_options)
-            ? $this->fields->apply_to_options
-            : '0'
+        $appliesTo = ($this->fields->apply_to_options ?? '0'
         ) == '1';
 
         if (!$appliesTo) {
@@ -266,8 +266,8 @@ abstract class AbstractCoupon implements DiscountInterface
         $limitations = (array)$this->fields->package_option_limitations;
 
         // Get service options from the injected fields
-        $serviceOptions = isset($this->fields->service_options) ? $this->fields->service_options : [];
-        $packageOptions = isset($this->fields->package_options) ? $this->fields->package_options : [];
+        $serviceOptions = $this->fields->service_options ?? [];
+        $packageOptions = $this->fields->package_options ?? [];
 
         $packageOptionsById = [];
         foreach ($packageOptions as $packageOption) {
@@ -324,9 +324,7 @@ abstract class AbstractCoupon implements DiscountInterface
      */
     private function supportsRecurrences()
     {
-        return (isset($this->fields->recurs)
-            ? $this->fields->recurs
-            : '0'
+        return ($this->fields->recurs ?? '0'
         ) == '1';
     }
 
@@ -337,9 +335,7 @@ abstract class AbstractCoupon implements DiscountInterface
      */
     private function supportsRecurLimits()
     {
-        return (isset($this->fields->recur_limits_apply)
-            ? $this->fields->recur_limits_apply
-            : '0'
+        return ($this->fields->recur_limits_apply ?? '0'
         ) == '1';
     }
 
@@ -350,8 +346,8 @@ abstract class AbstractCoupon implements DiscountInterface
      */
     private function quantityReached()
     {
-        $maxQty = (isset($this->fields->max_qty) ? $this->fields->max_qty : 0);
-        $usedQty = (isset($this->fields->used_qty) ? $this->fields->used_qty : 0);
+        $maxQty = ($this->fields->max_qty ?? 0);
+        $usedQty = ($this->fields->used_qty ?? 0);
 
         // Max quantity may be 0 for unlimited uses,
         // otherwise it must be larger than the used quantity to apply

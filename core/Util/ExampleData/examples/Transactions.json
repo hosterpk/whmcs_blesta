@@ -1,0 +1,16 @@
+{
+    "id": 41,
+    "client_id": 73,
+    "amount": "14.0000",
+    "currency": "USD",
+    "type": "other",
+    "transaction_type_id": null,
+    "account_id": null,
+    "gateway_id": null,
+    "transaction_id": "SEED-TXN-1771599597",
+    "parent_transaction_id": null,
+    "reference_id": null,
+    "message": "Seed test payment",
+    "status": "approved",
+    "date_added": "2026-02-20 15:00:00"
+}

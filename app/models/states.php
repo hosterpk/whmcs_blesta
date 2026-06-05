@@ -1,5 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use stdClass;
+
 /**
  * States adhere to ISO 3166-2, and contain the native state/province/territory
  * name. The format of ISO 3166-2 is [ISO 3166-1 alpha2 country code]-[subdivision code].
@@ -139,12 +145,12 @@ class States extends AppModel
                     'message' => $this->_('States.!error.country_alpha2.format')
                 ],
                 'in_use' => [
-                    'rule' => [[$this, 'get'], (isset($vars['code']) ? $vars['code'] : null)],
+                    'rule' => [[$this, 'get'], ($vars['code'] ?? null)],
                     'negate' => true,
                     'message' => $this->_(
                         'States.!error.country_alpha2.in_use',
-                        (isset($vars['country_alpha2']) ? $vars['country_alpha2'] : null),
-                        (isset($vars['code']) ? $vars['code'] : null)
+                        ($vars['country_alpha2'] ?? null),
+                        ($vars['code'] ?? null)
                     )
                 ]
             ],

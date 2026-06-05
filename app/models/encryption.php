@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+
 /**
  * Company Encryption Settings
  *
@@ -55,7 +62,7 @@ class Encryption extends AppModel
                     'rule' => [
                         'compares',
                         '==',
-                        isset($vars['private_key_passphrase']) ? $vars['private_key_passphrase'] : null
+                        $vars['private_key_passphrase'] ?? null
                     ],
                     'message' => $this->_('Encryption.!error.confirm_new_passphrase.matches')
                 ]
@@ -153,7 +160,7 @@ class Encryption extends AppModel
 
         // Fetch the passphrase value
         $pass = $this->SettingsCollection->fetchSetting(null, $company_id, 'private_key_passphrase');
-        $pass = (isset($pass['value']) ? $pass['value'] : null);
+        $pass = ($pass['value'] ?? null);
 
         return (($pass == '' && $pass == $passphrase) || $this->systemHash($passphrase) == $pass);
     }

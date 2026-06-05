@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Module Types Management
  *

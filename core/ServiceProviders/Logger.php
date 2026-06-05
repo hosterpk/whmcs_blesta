@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\ServiceProviders;
 
 use Blesta\Core\ServiceProviders\Common\AbstractServiceProvider;

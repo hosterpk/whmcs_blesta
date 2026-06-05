@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Filters\Common;
 
 /**
@@ -13,5 +14,4 @@ namespace Blesta\Core\Util\Filters\Common;
 #[\AllowDynamicProperties]
 abstract class Filter implements FiltersInterface
 {
-
 }

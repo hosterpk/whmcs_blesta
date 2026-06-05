@@ -75,13 +75,13 @@ class MaxmindV2 implements FraudDetect
     {
         $fields = new ModuleFields();
 
-        $fields->setHtml("
-            <script type=\"text/javascript\">
+        $fields->setHtml('
+            <script type="text/javascript">
                 $(document).ready(function() {
                     $(this).blestaBindToolTips();
                 });
             </script>
-        ");
+        ');
 
         Loader::loadHelpers($this, ['Html']);
 
@@ -91,7 +91,7 @@ class MaxmindV2 implements FraudDetect
             $server->attach(
                 $fields->fieldText(
                     'maxmind_v2_server',
-                    (isset($vars->maxmind_v2_server) ? $vars->maxmind_v2_server : 'minfraud.maxmind.com'),
+                    ($vars->maxmind_v2_server ?? 'minfraud.maxmind.com'),
                     ['id' => 'maxmind_v2_server']
                 )
             )
@@ -101,7 +101,7 @@ class MaxmindV2 implements FraudDetect
         $key = $fields->label(Language::_('MaxmindV2.settings.field_account_id', true), 'maxmind_v2_account_id');
         $fields->setField(
             $key->attach(
-                $fields->fieldText('maxmind_v2_account_id', (isset($vars->maxmind_v2_account_id) ? $vars->maxmind_v2_account_id : null), ['id' => 'maxmind_v2_account_id'])
+                $fields->fieldText('maxmind_v2_account_id', ($vars->maxmind_v2_account_id ?? null), ['id' => 'maxmind_v2_account_id'])
             )
         );
 
@@ -109,7 +109,7 @@ class MaxmindV2 implements FraudDetect
         $key = $fields->label(Language::_('MaxmindV2.settings.field_key', true), 'maxmind_v2_key');
         $fields->setField(
             $key->attach(
-                $fields->fieldText('maxmind_v2_key', (isset($vars->maxmind_v2_key) ? $vars->maxmind_v2_key : null), ['id' => 'maxmind_v2_key'])
+                $fields->fieldText('maxmind_v2_key', ($vars->maxmind_v2_key ?? null), ['id' => 'maxmind_v2_key'])
             )
         );
 
@@ -122,7 +122,7 @@ class MaxmindV2 implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_v2_minfraud_api',
                 'score',
-                (isset($vars->maxmind_v2_minfraud_api) ? $vars->maxmind_v2_minfraud_api : 'score') == 'score',
+                ($vars->maxmind_v2_minfraud_api ?? 'score') == 'score',
                 ['id' => 'maxmind_v2_minfraud_api_score'],
                 $fields->label(Language::_('MaxmindV2.settings.option_score', true), 'maxmind_v2_minfraud_api_score')
             )
@@ -131,7 +131,7 @@ class MaxmindV2 implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_v2_minfraud_api',
                 'insights',
-                (isset($vars->maxmind_v2_minfraud_api) ? $vars->maxmind_v2_minfraud_api : null) == 'insights',
+                ($vars->maxmind_v2_minfraud_api ?? null) == 'insights',
                 ['id' => 'maxmind_v2_minfraud_api_insights'],
                 $fields->label(Language::_('MaxmindV2.settings.option_insights', true), 'maxmind_v2_minfraud_api_insights')
             )
@@ -140,7 +140,7 @@ class MaxmindV2 implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_v2_minfraud_api',
                 'factors',
-                (isset($vars->maxmind_v2_minfraud_api) ? $vars->maxmind_v2_minfraud_api : null) == 'factors',
+                ($vars->maxmind_v2_minfraud_api ?? null) == 'factors',
                 ['id' => 'maxmind_v2_minfraud_api_factors'],
                 $fields->label(Language::_('MaxmindV2.settings.option_factors', true), 'maxmind_v2_minfraud_api_factors')
             )
@@ -156,7 +156,7 @@ class MaxmindV2 implements FraudDetect
             $reject_score->attach(
                 $fields->fieldText(
                     'maxmind_v2_reject_score',
-                    (isset($vars->maxmind_v2_reject_score) ? $vars->maxmind_v2_reject_score : '80'),
+                    ($vars->maxmind_v2_reject_score ?? '80'),
                     ['id' => 'maxmind_v2_reject_score']
                 )
             )
@@ -171,7 +171,7 @@ class MaxmindV2 implements FraudDetect
             $review_score->attach(
                 $fields->fieldText(
                     'maxmind_v2_review_score',
-                    (isset($vars->maxmind_v2_review_score) ? $vars->maxmind_v2_review_score : '10'),
+                    ($vars->maxmind_v2_review_score ?? '10'),
                     ['id' => 'maxmind_v2_review_score']
                 )
             )
@@ -186,7 +186,7 @@ class MaxmindV2 implements FraudDetect
                 $fields->fieldRadio(
                     'maxmind_v2_' . $risk_field,
                     'allow',
-                    (isset($vars->{'maxmind_v2_' . $risk_field}) ? $vars->{'maxmind_v2_' . $risk_field} : 'allow') == 'allow',
+                    ($vars->{'maxmind_v2_' . $risk_field} ?? 'allow') == 'allow',
                     ['id' => 'maxmind_v2_' . $risk_field . '_allow'],
                     $fields->label(Language::_('MaxmindV2.settings.option_allow', true), 'maxmind_v2_' . $risk_field . '_allow')
                 )
@@ -195,7 +195,7 @@ class MaxmindV2 implements FraudDetect
                 $fields->fieldRadio(
                     'maxmind_v2_' . $risk_field,
                     'review',
-                    (isset($vars->{'maxmind_v2_' . $risk_field}) ? $vars->{'maxmind_v2_' . $risk_field} : null) == 'review',
+                    ($vars->{'maxmind_v2_' . $risk_field} ?? null) == 'review',
                     ['id' => 'maxmind_v2_' . $risk_field . '_review'],
                     $fields->label(Language::_('MaxmindV2.settings.option_review', true), 'maxmind_v2_' . $risk_field . '_review')
                 )
@@ -204,7 +204,7 @@ class MaxmindV2 implements FraudDetect
                 $fields->fieldRadio(
                     'maxmind_v2_' . $risk_field,
                     'reject',
-                    (isset($vars->{'maxmind_v2_' . $risk_field}) ? $vars->{'maxmind_v2_' . $risk_field} : null) == 'reject',
+                    ($vars->{'maxmind_v2_' . $risk_field} ?? null) == 'reject',
                     ['id' => 'maxmind_v2_' . $risk_field . '_reject'],
                     $fields->label(Language::_('MaxmindV2.settings.option_reject', true), 'maxmind_v2_' . $risk_field . '_reject')
                 )
@@ -218,7 +218,7 @@ class MaxmindV2 implements FraudDetect
             $fields->fieldRadio(
                 'enable_js',
                 'enable',
-                (isset($vars->enable_js) ? $vars->enable_js : 'enable') == 'enable',
+                ($vars->enable_js ?? 'enable') == 'enable',
                 ['id' => 'enable_js_enable'],
                 $fields->label(Language::_('MaxmindV2.settings.option_enable', true), 'enable_js_enable')
             )
@@ -227,7 +227,7 @@ class MaxmindV2 implements FraudDetect
             $fields->fieldRadio(
                 'enable_js',
                 'disable',
-                (isset($vars->enable_js) ? $vars->enable_js : null) == 'disable',
+                ($vars->enable_js ?? null) == 'disable',
                 ['id' => 'enable_js_disable'],
                 $fields->label(Language::_('MaxmindV2.settings.option_disable', true), 'enable_js_disable')
             )
@@ -379,11 +379,7 @@ class MaxmindV2 implements FraudDetect
 
         if ($this->response) {
             foreach ($this->response->rawResponse as $key => $value) {
-                if (is_scalar($value)) {
-                    $response[$key] = mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
-                } else {
-                    $response[$key] = json_encode($value, JSON_PRETTY_PRINT);
-                }
+                $response[$key] = is_scalar($value) ? mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1') : json_encode($value, JSON_PRETTY_PRINT);
             }
         }
         return $response;

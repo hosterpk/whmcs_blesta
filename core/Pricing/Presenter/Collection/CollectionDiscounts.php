@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Collection;
 
 use Blesta\Pricing\Collection\ItemPriceCollection;
@@ -41,7 +42,7 @@ trait CollectionDiscounts
             }
 
             $discount_items[] = (object)[
-                'id' => (isset($meta['_data']['coupon_id']) ? $meta['_data']['coupon_id'] : null),
+                'id' => ($meta['_data']['coupon_id'] ?? null),
                 'description' => $discount->getDescription(),
                 'amount' => $discount->amount(),
                 'type' => $discount->type(),

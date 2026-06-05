@@ -1,0 +1,18 @@
+[
+    {
+        "id": 18,
+        "service_id": 94,
+        "option_pricing_id": 130,
+        "qty": 1,
+        "value": "50gb",
+        "encrypted": 0
+    },
+    {
+        "id": 19,
+        "service_id": 94,
+        "option_pricing_id": 145,
+        "qty": 1,
+        "value": "enabled",
+        "encrypted": 0
+    }
+]

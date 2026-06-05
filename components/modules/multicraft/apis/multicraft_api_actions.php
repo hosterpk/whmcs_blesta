@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Multicraft API Actions
  *
@@ -29,7 +30,7 @@ class MulticraftApiActions
      * @param MulticraftApi $api An instance of the Multicraft API
      * @param string $url The URL where the API action is being performed (optional)
      */
-    public function __construct(MulticraftApi $api, $url = "")
+    public function __construct(MulticraftApi $api, $url = '')
     {
         $this->api = $api;
         $this->url = $url;
@@ -63,7 +64,7 @@ class MulticraftApiActions
         try {
             $response = call_user_func_array([$this->api, $method], $vars);
             $raw_response = $this->api->rawResponse();
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Error
         }
 
@@ -71,21 +72,21 @@ class MulticraftApiActions
         $success = (isset($response['success']) && $response['success']);
         $masked_params = $vars;
         if (isset($masked_params['login_password'])) {
-            $masked_params['login_password'] = "***";
+            $masked_params['login_password'] = '***';
         }
         // The third parameter to the createUser method is a password
         if (strtolower($method) === 'createuser' && isset($masked_params[2])) {
-            $masked_params[2] = "***";
+            $masked_params[2] = '***';
         }
 
         $this->log(
             [
-                'url' => $this->url . "|" . $method,
+                'url' => $this->url . '|' . $method,
                 'data' => ($masked_params !== null ? serialize($masked_params) : null),
                 'success' => true
             ],
             [
-                'url' => $this->url . "|" . $method,
+                'url' => $this->url . '|' . $method,
                 'data' => serialize($raw_response),
                 'success' => $success
             ]

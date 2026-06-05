@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 /**
@@ -30,6 +31,16 @@ class MulticraftApi
      * @var string
      */
     private $url = '';
+
+    /**
+     * @var string
+     */
+    private $user = '';
+
+    /**
+     * @var mixed
+     */
+    private $logger;
 
     /**
      * @var string
@@ -169,20 +180,12 @@ class MulticraftApi
         $name = '';
         $value = '';
         for ($i = 0; $i < count($argnames); $i++) {
-            if (is_array($argnames[$i])) {
-                $name = $argnames[$i]['name'];
-            } else {
-                $name = $argnames[$i];
-            }
+            $name = is_array($argnames[$i]) ? $argnames[$i]['name'] : $argnames[$i];
 
             if ($i < count($args)) {
                 $value = $args[$i];
-            } else if (is_array($argnames[$i]) && isset($argnames[$i]['default'])) {
-                if ($i >= count($args)) {
-                    $value = $argnames[$i]['default'];
-                } else {
-                    $value = $args[$i];
-                }
+            } elseif (is_array($argnames[$i]) && isset($argnames[$i]['default'])) {
+                $value = $i >= count($args) ? $argnames[$i]['default'] : $args[$i];
             } else {
                 return ['success' => false, 'errors' => ['"' . $function . '()": Not enough arguments (' . count($args) . ')'], 'data' => []];
             }
@@ -225,8 +228,7 @@ class MulticraftApi
             $query .= '&' . urlencode($k) . '=' . urlencode($v);
         }
         $ret = $this->send($url, $query . '&_MulticraftAPIKey=' . hash_hmac('sha256', $str, $this->key));
-        if (@$ret['errors'][0] == 'Invalid API key.') // This is an old panel, use MD5 method instead
-        {
+        if (@$ret['errors'][0] == 'Invalid API key.') { // This is an old panel, use MD5 method instead
             $ret = $this->send($url, $query . '&_MulticraftAPIKey=' . md5($this->key . implode($params)));
         }
 

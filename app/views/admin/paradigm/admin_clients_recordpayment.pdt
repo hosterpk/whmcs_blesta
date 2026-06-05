@@ -1,0 +1,284 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.recordpayment.boxtitle_recordpayment', true), ['id' => 'admin_clients_recordpayment'], (isset($render_section) ? $render_section : null));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+?>
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <?php
+            echo (isset($record_payment_fields) ? $record_payment_fields : null);
+            ?>
+        </div>
+        <div class="col-md-6 amount-field">
+            <?php
+            $this->Form->label($this->_('AdminClients.recordpayment.field_amount', true), 'amount', ['class' => 'form-label']);
+            $this->Form->fieldText('amount', (isset($vars->amount) ? $vars->amount : null), ['id' => 'amount', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6 transaction-id-field">
+            <?php
+            $this->Form->label($this->_('AdminClients.recordpayment.field_transaction_id', true), 'transaction_id', ['class' => 'form-label']);
+            $this->Form->fieldText('transaction_id', (isset($vars->transaction_id) ? $vars->transaction_id : null), ['id' => 'transaction_id', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6 transaction-type-field">
+            <?php
+            $this->Form->label($this->_('AdminClients.recordpayment.field_transactiontype', true), 'transaction_type', ['class' => 'form-label']);
+            $this->Form->fieldSelect('transaction_type', (isset($transaction_types) ? $transaction_types : null), (isset($vars->transaction_type) ? $vars->transaction_type : 'check'), ['id' => 'transaction_type', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6 gateway-field" style="display: none;">
+            <?php
+            $this->Form->label($this->_('AdminClients.recordpayment.field_gateway_id', true), 'gateway_id', ['class' => 'form-label']);
+            $this->Form->fieldHidden('gateway_id', (isset($vars->gateway_id) ? $vars->gateway_id : null), ['id' => 'gateway_id']);
+            ?>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-credit-card"></i></span>
+                <?php
+                $this->Form->fieldSelect('merchant_gw', ['' => $this->_('AdminClients.recordpayment.gateway_none', true)] + $this->Form->collapseObjectArray($merchant_gateways, 'name', 'id'), (isset($vars->gateway_id) ? $vars->gateway_id : null), ['id' => 'merchant_gw', 'class' => 'form-select merchant-gw', 'style' => 'display: none;']);
+                $this->Form->fieldSelect('nonmerchant_gw', ['' => $this->_('AdminClients.recordpayment.gateway_none', true)] + $this->Form->collapseObjectArray($nonmerchant_gateways, 'name', 'id'), (isset($vars->gateway_id) ? $vars->gateway_id : null), ['id' => 'nonmerchant_gw', 'class' => 'form-select nonmerchant-gw', 'style' => 'display: none;']);
+                ?>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.recordpayment.field_currency', true), 'currency', ['class' => 'form-label']);
+            $this->Form->fieldSelect('currency', (isset($currencies) ? $currencies : null), (isset($vars->currency) ? $vars->currency : null), ['id' => 'currency', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.recordpayment.field_status', true), 'status', ['class' => 'form-label']);
+            $this->Form->fieldSelect('status', (isset($statuses) ? $statuses : null), (isset($vars->status) ? $vars->status : 'approved'), ['id' => 'status', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-12">
+            <a class="collapse-trigger" data-bs-toggle="collapse" href="#dateReceivedCollapse" role="button" aria-expanded="false" aria-controls="dateReceivedCollapse">
+                <i class="bi bi-chevron-down"></i>
+                <?php $this->_('AdminClients.recordpayment.text_datereceived');?>
+            </a>
+        </div>
+        <div class="collapse" id="dateReceivedCollapse">
+            <div class="col-md-6">
+                <?php
+                $this->Form->label($this->_('AdminClients.recordpayment.field_datereceived', true), 'date_received', ['class' => 'form-label']);
+                $this->Form->fieldText('date_received', (isset($vars->date_received) ? $vars->date_received : $this->Date->cast(date('c'), 'Y-m-d')), ['id' => 'date_received', 'class' => 'form-control date']);
+                ?>
+            </div>
+        </div>
+    </div>
+
+    <div id="invoices-to-pay">
+        <?php
+        echo (isset($invoice_info) ? $invoice_info : null);
+        ?>
+    </div>
+
+    <div class="email-receipt-section">
+        <div class="form-check">
+            <?php
+            $this->Form->fieldCheckbox('email_receipt', 'true', (isset($vars->email_receipt) ? $vars->email_receipt : null), ['id' => 'email_receipt', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.recordpayment.field_receipt', true), 'email_receipt', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.recordpayment.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var clientId = <?php echo json_encode((isset($client->id) ? $client->id : null));?>;
+    var amountField = document.getElementById('amount');
+    var currencySelect = document.getElementById('currency');
+    var transactionTypeSelect = document.getElementById('transaction_type');
+    var statusSelect = document.getElementById('status');
+    var gatewayField = document.querySelector('.gateway-field');
+    var merchantGw = document.getElementById('merchant_gw');
+    var nonmerchantGw = document.getElementById('nonmerchant_gw');
+    var gatewayId = document.getElementById('gateway_id');
+    var invoicesToPay = document.getElementById('invoices-to-pay');
+    var emailReceiptSection = document.querySelector('.email-receipt-section');
+    var emailReceiptCheckbox = document.getElementById('email_receipt');
+
+    // Set initial gateway visibility
+    setGateway();
+
+    // Amount focus
+    if (amountField) {
+        amountField.focus();
+    }
+
+    // Transaction type change
+    if (transactionTypeSelect) {
+        transactionTypeSelect.addEventListener('change', setGateway);
+    }
+
+    function setGateway() {
+        if (!gatewayField) return;
+
+        var type = transactionTypeSelect ? transactionTypeSelect.value : '';
+
+        // Hide all gateway selects
+        if (merchantGw) merchantGw.style.display = 'none';
+        if (nonmerchantGw) nonmerchantGw.style.display = 'none';
+
+        switch(type) {
+            case 'cc':
+            case 'ach':
+                gatewayField.style.display = '';
+                if (merchantGw) {
+                    merchantGw.style.display = '';
+                    if (gatewayId) gatewayId.value = merchantGw.value;
+                }
+                break;
+            case 'other':
+                gatewayField.style.display = '';
+                if (nonmerchantGw) {
+                    nonmerchantGw.style.display = '';
+                    if (gatewayId) gatewayId.value = nonmerchantGw.value;
+                }
+                break;
+            default:
+                gatewayField.style.display = 'none';
+                if (gatewayId) gatewayId.value = '';
+                break;
+        }
+    }
+
+    // Gateway select changes
+    if (merchantGw) {
+        merchantGw.addEventListener('change', function() {
+            if (gatewayId) gatewayId.value = this.value;
+        });
+    }
+    if (nonmerchantGw) {
+        nonmerchantGw.addEventListener('change', function() {
+            if (gatewayId) gatewayId.value = this.value;
+        });
+    }
+
+    // Currency change
+    if (currencySelect) {
+        currencySelect.addEventListener('change', function() {
+            var form = this.closest('form');
+            var formData = new FormData(form);
+
+            // Update invoices
+            fetch(baseUri + 'clients/makepaymentinvoices/' + clientId + '/', {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (invoicesToPay && data.content) {
+                    invoicesToPay.innerHTML = data.content;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+
+            // Update credit fields
+            fetch(baseUri + 'clients/getrecordcreditfields/' + clientId + '/', {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.content) {
+                    var recordCreditDiv = document.querySelector('#record_payment_fields') || document.querySelector('.record-payment-fields');
+                    if (recordCreditDiv) {
+                        recordCreditDiv.innerHTML = data.content;
+                        setPaymentType();
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    }
+
+    // Status change
+    if (statusSelect) {
+        statusSelect.addEventListener('change', toggleInvoiceAndEmail);
+    }
+
+    function toggleInvoiceAndEmail() {
+        var isApproved = statusSelect && statusSelect.value === 'approved';
+        var isCredit = isPaymentTypeCredit();
+
+        if (invoicesToPay) {
+            invoicesToPay.style.display = isApproved ? '' : 'none';
+            invoicesToPay.querySelectorAll('input').forEach(function(input) {
+                input.disabled = !isApproved;
+            });
+        }
+
+        if (emailReceiptSection) {
+            emailReceiptSection.style.display = (isApproved && !isCredit) ? '' : 'none';
+            if (emailReceiptCheckbox) {
+                emailReceiptCheckbox.disabled = !(isApproved && !isCredit);
+            }
+        }
+    }
+
+    function isPaymentTypeCredit() {
+        return document.querySelector('#payment_type_credit:checked') !== null;
+    }
+
+    function setPaymentType() {
+        var isCredit = isPaymentTypeCredit();
+        var amountFieldParent = amountField ? amountField.closest('.col-md-6') : null;
+        var transactionIdFieldParent = document.querySelector('.transaction-id-field');
+        var transactionTypeFieldParent = document.querySelector('.transaction-type-field');
+
+        if (amountFieldParent) {
+            amountFieldParent.style.display = isCredit ? 'none' : '';
+        }
+        if (transactionIdFieldParent) {
+            transactionIdFieldParent.style.display = isCredit ? 'none' : '';
+        }
+        if (transactionTypeFieldParent) {
+            transactionTypeFieldParent.style.display = isCredit ? 'none' : '';
+        }
+
+        toggleInvoiceAndEmail();
+    }
+
+    // Payment type change delegation
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('payment_type')) {
+            setPaymentType();
+        }
+    });
+
+    // Invoice "all" checkbox handling
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'invoice_id[]' && e.target.value === 'all') {
+            var checkboxes = document.querySelectorAll('input[name="invoice_id[]"]');
+            checkboxes.forEach(function(cb) {
+                cb.checked = e.target.checked;
+            });
+        }
+    });
+
+    // Initial calls
+    setPaymentType();
+    toggleInvoiceAndEmail();
+});
+</script>

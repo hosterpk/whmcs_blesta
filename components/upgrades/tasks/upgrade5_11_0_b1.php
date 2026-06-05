@@ -540,7 +540,7 @@ CSS;
             }
         }
     }
-    
+
     /**
      * Adds the data feed for packages
      *
@@ -577,7 +577,7 @@ CSS;
             }
         }
     }
-    
+
     /**
      * Adds the company settings for Service Provisioning Attempts
      *
@@ -616,7 +616,7 @@ CSS;
             }
         }
     }
-    
+
     /**
      * Adds the company settings for Service attempt Spacing
      *
@@ -646,7 +646,7 @@ CSS;
         } else {
             // Update company settings
             foreach ($companies as $company) {
-                
+
                 foreach ($service_attempt_fields as $field => $value) {
                     $this->Companies->setSetting($company->id, $field, $value);
                 }
@@ -714,7 +714,7 @@ CSS;
             }
         }
     }
-    
+
     /**
      * Updates the client_group_settings.key column to allow longer strings
      *

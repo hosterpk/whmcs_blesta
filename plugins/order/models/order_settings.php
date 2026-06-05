@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Settings
  *
@@ -31,7 +32,7 @@ class OrderSettings extends OrderModel
             fetchAll();
 
         // Decrypt values where necessary
-        for ($i=0; $i<count($settings); $i++) {
+        for ($i = 0; $i < count($settings); $i++) {
             if ($settings[$i]->encrypted) {
                 $settings[$i]->value = $this->systemDecrypt($settings[$i]->value);
             }
@@ -186,7 +187,7 @@ class OrderSettings extends OrderModel
             'embed_code' => [
                 'format' => [
                     'if_set' => true,
-                    'rule' => function($embed_code) {
+                    'rule' => function ($embed_code) {
                         // Verify that the embed code is parseable via H2o
                         try {
                             // Assume the default parsing options (e.g. VARIABLE_START with two braces "{{")
@@ -198,7 +199,7 @@ class OrderSettings extends OrderModel
                             ];
 
                             return false;
-                        } catch (Exception $e) {
+                        } catch (\Throwable $e) {
                             // Don't care about any other exception
                         }
 

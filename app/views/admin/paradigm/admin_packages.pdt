@@ -1,0 +1,315 @@
+<?php
+echo (isset($message) ? $message : null);
+
+// Build tabs for the widget
+$tabs = [
+    [
+        'name' => $this->_('AdminPackages.index.category_active', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['active']) ? $this->Html->safe($status_count['active']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'active'),
+        'attributes' => ['href' => $this->base_uri . 'packages/index/active/']
+    ],
+    [
+        'name' => $this->_('AdminPackages.index.category_restricted', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['restricted']) ? $this->Html->safe($status_count['restricted']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'restricted'),
+        'attributes' => ['href' => $this->base_uri . 'packages/index/restricted/']
+    ],
+    [
+        'name' => $this->_('AdminPackages.index.category_inactive', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['inactive']) ? $this->Html->safe($status_count['inactive']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'inactive'),
+        'attributes' => ['href' => $this->base_uri . 'packages/index/inactive/']
+    ]
+];
+
+// Build link buttons
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminPackages.index.categorylink_createpackage', true),
+            'href' => $this->base_uri . 'packages/add/'
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'packages/index/' . ($status ?? 'active') . '/'), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminPackages.index.boxtitle_packages', true), ['id' => 'admin_packages'], ($render_section ?? null));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+
+if ((isset($packages) ? $packages : false) && ($num_packages = count($packages)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="packages">
+        <thead>
+            <tr>
+                <th style="width: 40px;">
+                    <?php $this->Form->fieldCheckbox('package_ids[]', 'all', ((isset($vars->package_ids[0]) ? $vars->package_ids[0] : null) == 'all'), ['class' => 'form-check-input', 'id' => 'select-all']);?>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'packages/index/' . (isset($status) ? $status : null) . '/?sort=id_code&order=' . ($sort == 'id_code' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminPackages.index.heading_package');?>
+                        <?php if ($sort == 'id_code') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'packages/index/' . (isset($status) ? $status : null) . '/?sort=name&order=' . ($sort == 'name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminPackages.index.heading_name');?>
+                        <?php if ($sort == 'name') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'packages/index/' . (isset($status) ? $status : null) . '/?sort=module_name&order=' . ($sort == 'module_name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminPackages.index.heading_module');?>
+                        <?php if ($sort == 'module_name') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'packages/index/' . (isset($status) ? $status : null) . '/?sort=qty&order=' . ($sort == 'qty' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminPackages.index.heading_qty');?>
+                        <?php if ($sort == 'qty') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th style="width: 150px;"><?php $this->_('AdminPackages.index.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Display all packages
+            for ($i = 0; $i < $num_packages; $i++) {
+            ?>
+            <tr style="cursor: pointer;" data-collapse-row class="package-row" aria-expanded="false">
+                <td>
+                    <?php $this->Form->fieldCheckbox('package_ids[]', (isset($packages[$i]->id) ? $packages[$i]->id : null), in_array((isset($packages[$i]->id) ? $packages[$i]->id : null), (isset($vars->package_ids) ? $vars->package_ids : [])), ['class' => 'form-check-input row-checkbox']);?>
+                </td>
+                <td><?php echo (isset($packages[$i]->id_code) ? $this->Html->safe($packages[$i]->id_code) : null);?></td>
+                <td><?php echo (isset($packages[$i]->name) ? $this->Html->safe($packages[$i]->name) : null);?></td>
+                <td><?php echo (isset($packages[$i]->module_name) ? $this->Html->safe($packages[$i]->module_name) : null);?></td>
+                <td><?php (isset($packages[$i]->qty) ? $packages[$i]->qty : null) == '' ? $this->_('AdminPackages.index.qty_unlimited') : (print (isset($packages[$i]->qty) ? $this->Html->safe($packages[$i]->qty) : null));?></td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo $this->base_uri . 'packages/edit/' . (isset($packages[$i]->id) ? $this->Html->safe($packages[$i]->id) : null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminPackages.index.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="<?php echo $this->base_uri . 'packages/add/' . (isset($packages[$i]->id) ? $this->Html->safe($packages[$i]->id) : null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminPackages.index.option_copy');?>">
+                            <i class="bi bi-copy"></i>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger package-delete-btn"
+                            data-delete-id="<?php echo (isset($packages[$i]->id) ? $this->Html->safe($packages[$i]->id) : null);?>"
+                            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminPackages.index.confirm_delete', true));?>"
+                            title="<?php $this->_('AdminPackages.index.option_delete');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <!-- Expandable Row -->
+            <tr class="collapse">
+                <td colspan="6" style="padding: 0; background-color: var(--bg-secondary);">
+                    <div class="package-pricing-container" data-package-id="<?php echo (isset($packages[$i]->id) ? $this->Html->safe($packages[$i]->id) : null);?>">
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- Bulk Actions Bar -->
+<div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="selected-count" id="selectedCount">0 <?php $this->_('AdminPackages.index.items_selected');?></span>
+        <div class="d-flex gap-2 align-items-center">
+            <?php
+            $this->Form->fieldSelect('action', isset($actions) ? $actions : [], isset($vars->action) ? $vars->action : null, ['class' => 'form-select form-select-sm', 'style' => 'width: 180px;']);
+            $this->Form->fieldSubmit('save', $this->_('AdminPackages.index.field_actionsubmit', true), ['class' => 'btn btn-sm btn-primary']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php
+} else {
+?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminPackages.index.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Form->end();
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+
+// Single delete form outside the widget to avoid any interference
+$this->Form->create($this->base_uri . 'packages/delete/', ['id' => 'delete_package_form']);
+$this->Form->fieldHidden('id', '', ['id' => 'delete_package_id']);
+$this->Form->fieldHidden('redirect_uri', $this->base_uri . 'packages/' . (isset($status) ? $status : 'active') . '/');
+$this->Form->end();
+?>
+
+<script>
+// Update bulk actions bar visibility and count
+function updateBulkActions() {
+    var packagesTable = document.getElementById('packages');
+    var bulkActionsBar = document.getElementById('bulkActionsBar');
+    var selectedCount = document.getElementById('selectedCount');
+
+    if (!packagesTable || !bulkActionsBar) return;
+
+    var checkedBoxes = packagesTable.querySelectorAll('.row-checkbox:checked');
+    if (checkedBoxes.length > 0) {
+        bulkActionsBar.style.display = 'block';
+        selectedCount.textContent = checkedBoxes.length + ' <?php $this->_('AdminPackages.index.items_selected');?>';
+    } else {
+        bulkActionsBar.style.display = 'none';
+    }
+}
+
+// Event delegation for checkboxes - works after AJAX pagination
+document.addEventListener('change', function(e) {
+    var packagesTable = document.getElementById('packages');
+    if (!packagesTable) return;
+
+    // Handle select all checkbox
+    if (e.target.id === 'select-all') {
+        var checkboxes = packagesTable.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = e.target.checked;
+        });
+        updateBulkActions();
+        return;
+    }
+
+    // Handle individual row checkboxes
+    if (e.target.classList.contains('row-checkbox')) {
+        var selectAllCheckbox = document.getElementById('select-all');
+        if (!e.target.checked && selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
+        updateBulkActions();
+    }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateBulkActions();
+});
+
+// Load pricing data when expandable row starts to show (uses Bootstrap collapse event)
+document.addEventListener('show.bs.collapse', function(e) {
+    var expandedRow = e.target;
+    if (!expandedRow.classList.contains('collapse')) return;
+
+    var container = expandedRow.querySelector('.package-pricing-container');
+    if (!container) return;
+
+    var packageId = container.getAttribute('data-package-id');
+
+    // Only load if not already loaded
+    if (!container.hasAttribute('data-loaded')) {
+        fetch('<?php echo $this->base_uri;?>packages/packagepricing/' + packageId, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP error ' + response.status);
+            }
+            return response.text();
+        })
+        .then(function(html) {
+            container.innerHTML = html;
+            container.setAttribute('data-loaded', 'true');
+        })
+        .catch(function(error) {
+            container.innerHTML = '<div class="alert alert-danger m-3">Error loading pricing information.</div>';
+        });
+    }
+});
+
+// Handle package delete buttons with custom modal to avoid bulk form conflict
+document.addEventListener('click', function(e) {
+    var deleteBtn = e.target.closest('.package-delete-btn');
+    if (!deleteBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    var packageId = deleteBtn.getAttribute('data-delete-id');
+    var confirmMessage = deleteBtn.getAttribute('data-confirm-message');
+
+    // Set the package ID in the form
+    document.getElementById('delete_package_id').value = packageId;
+
+    // Create confirmation modal
+    var modalEl = document.createElement('div');
+    modalEl.className = 'modal fade';
+    modalEl.setAttribute('tabindex', '-1');
+    modalEl.innerHTML =
+        '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+                '<div class="modal-header border-0 pb-0">' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="modal-body text-center py-4">' +
+                    '<div class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i></div>' +
+                    '<h5 class="modal-title mb-3">Confirm Delete</h5>' +
+                    '<p class="text-secondary">' + confirmMessage + '</p>' +
+                '</div>' +
+                '<div class="modal-footer border-0 justify-content-center">' +
+                    '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>' +
+                    '<button type="button" class="btn btn-danger btn-confirm">Delete</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.body.appendChild(modalEl);
+    var modal = new bootstrap.Modal(modalEl);
+    var confirmed = false;
+
+    modalEl.querySelector('.btn-confirm').addEventListener('click', function() {
+        confirmed = true;
+        modal.hide();
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function() {
+        modalEl.remove();
+        if (confirmed) {
+            document.getElementById('delete_package_form').submit();
+        }
+    });
+
+    modal.show();
+});
+</script>

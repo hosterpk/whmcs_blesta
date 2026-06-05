@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+
 /**
  * Backup
  *
@@ -56,7 +63,8 @@ class Backup extends AppModel
 
         $file = null;
         // Build the dump if we have a place to send it
-        if ((
+        if (
+            (
                 ($type == 'all' || $type == 'ftp') && isset($settings['ftp_host']) && !empty($settings['ftp_host'])
             ) || (
                 ($type == 'all' || $type == 'amazons3')
@@ -80,7 +88,8 @@ class Backup extends AppModel
             $uploaded = false;
 
             // Attempt to login to test the connection and navigate to the given path. Show success or error
-            if ($this->Net_SFTP->login($settings['ftp_username'], $settings['ftp_password'])
+            if (
+                $this->Net_SFTP->login($settings['ftp_username'], $settings['ftp_password'])
                 && $this->Net_SFTP->chdir($settings['ftp_path'])
             ) {
                 // Upload the file
@@ -96,7 +105,8 @@ class Backup extends AppModel
         }
 
         // Upload the file to Amazon S3
-        if (($type == 'all' || $type == 'amazons3')
+        if (
+            ($type == 'all' || $type == 'amazons3')
             && isset($settings['amazons3_access_key'])
             && !empty($settings['amazons3_access_key'])
         ) {
@@ -106,7 +116,7 @@ class Backup extends AppModel
                     $settings['amazons3_access_key'],
                     $settings['amazons3_secret_key'],
                     true,
-                    isset($settings['amazons3_region']) ? $settings['amazons3_region'] : null
+                    $settings['amazons3_region'] ?? null
                 ]
             );
             $connection = $this->AmazonS3->getBucket($settings['amazons3_bucket'], null, null, 1);
@@ -178,7 +188,7 @@ class Backup extends AppModel
 
         Loader::loadComponents($this, ['SettingsCollection']);
         $temp = $this->SettingsCollection->fetchSystemSetting(null, 'temp_dir');
-        $temp_dir = (isset($temp['value']) ? $temp['value'] : null);
+        $temp_dir = ($temp['value'] ?? null);
 
         $this->Input->setRules($this->getRules());
 
@@ -193,7 +203,7 @@ class Backup extends AppModel
             $file_name = $temp_dir . $file . '.sql';
 
             // Set default port, if port not provided by database profile
-            $db_info['port'] = isset($db_info['port']) ? $db_info['port'] : '3306';
+            $db_info['port'] = $db_info['port'] ?? '3306';
 
             exec(
                 'mysqldump --host=' . escapeshellarg($db_info['host'])

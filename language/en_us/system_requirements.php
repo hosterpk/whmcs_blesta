@@ -15,8 +15,7 @@ $lang['SystemRequirements.!error.extension.minimum'] = "The extension '%1\$s' is
 $lang['SystemRequirements.!error.extension_version.minimum'] = "The extension '%1\$s' is required. Your version: %2\$s."; // %1$s is the name of the extension required. %2$s is the current version
 $lang['SystemRequirements.!error.config_writable.minimum'] = 'The config file (%1$s) and directory (%2$s) must be writable by the webserver.'; // %1$s is the absolute path to the config file, %2$s is the absolute path to the config directory
 $lang['SystemRequirements.!info.ext-ioncube.minimum'] = 'Be sure to apply the necessary hotfix files by overwriting your Blesta files with those from the %1$s directory. Blesta will not be accessible after installation otherwise.'; // %1$s is the name of the hotfix directory
-$lang['SystemRequirements.!error.ext-ioncube-sourceguardian.minimum'] = "The 'SourceGuardian' or 'ioncube loader' extension is required.";
-$lang['SystemRequirements.!info.ext-ioncube-sourceguardian.minimum'] = "The 'SourceGuardian' or 'ioncube loader' extension is required. If using SourceGuardian be sure to apply the necessary hotfix files by overwriting your Blesta files with those from the hotfix-php8 directory. Blesta will not be accessible after installation otherwise."; // %1$s is the name of the hotfix directory
+$lang['SystemRequirements.!error.db_version.minimum'] = 'MySQL version 5.7.7 or MariaDB version 10.2.2 or greater is required. Your version: %1$s.'; // %1$s is the current database version
 
 // Recommended requirements
 $lang['SystemRequirements.!warning.gd.recommended'] = 'The gd extension is recommended for better image support during PDF generation and internal captcha generation.';

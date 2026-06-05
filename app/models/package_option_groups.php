@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Package Option Group management
  *
@@ -488,6 +496,45 @@ class PackageOptionGroups extends AppModel
     }
 
     /**
+     * Adds a single option to a group (for drag-and-drop assignment)
+     *
+     * @param int $option_id The ID of the package option to add
+     * @param int $group_id The ID of the package option group
+     * @return bool True if the option was added, false if it already exists in the group
+     */
+    public function addOptionToGroup($option_id, $group_id)
+    {
+        // Check for duplicate
+        $exists = $this->Record->select(['option_id'])
+            ->from('package_option_group')
+            ->where('option_id', '=', $option_id)
+            ->where('option_group_id', '=', $group_id)
+            ->fetch();
+
+        if ($exists) {
+            return false;
+        }
+
+        // Determine next order value
+        $max_order = $this->Record->select(['MAX(package_option_group.order)' => 'max_order'])
+            ->from('package_option_group')
+            ->where('option_group_id', '=', $group_id)
+            ->fetch();
+
+        $order = 0;
+        if ($max_order && $max_order->max_order !== null) {
+            $order = (int) $max_order->max_order + 1;
+        }
+
+        $this->Record->insert(
+            'package_option_group',
+            ['option_id' => $option_id, 'option_group_id' => $group_id, 'order' => $order]
+        );
+
+        return true;
+    }
+
+    /**
      * Save the package options for the given group in the provided order
      *
      * @param int $option_group_id The ID of the group to order options for
@@ -593,8 +640,8 @@ class PackageOptionGroups extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validatePackage'],
-                        (isset($vars['company_id']) ? $vars['company_id'] : null),
-                        (isset($vars['group_id']) ? $vars['group_id'] : null)
+                        ($vars['company_id'] ?? null),
+                        ($vars['group_id'] ?? null)
                     ],
                     'message' => $this->_('Packages.!error.option_groups[].valid')
                 ]

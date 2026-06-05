@@ -1,0 +1,107 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "staff_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "webhook_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "type",
+            "type": "enum('incoming','outgoing')",
+            "nullable": false,
+            "key": null,
+            "default": "incoming",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "event",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "fields",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "response",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "http_response",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "date_triggered",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_last_retry",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

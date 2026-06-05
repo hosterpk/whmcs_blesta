@@ -1,4 +1,15 @@
 <?php
+
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use Record;
+use stdClass;
+use Throwable;
+
 /**
  * Service management
  *
@@ -59,7 +70,9 @@ class Services extends AppModel
         return $this->getServices(
             array_merge($filters, ['client_id' => $client_id, 'status' => $status]),
             $children,
-            $formatted_filters
+            $formatted_filters,
+            [],
+            true
         )->numResults();
     }
 
@@ -331,7 +344,9 @@ class Services extends AppModel
         $this->Record = $this->getServices(
             array_merge(['client_id' => $client_id, 'status' => $status, 'package_id' => $package_id], $filters),
             $children,
-            $formatted_filters
+            $formatted_filters,
+            [],
+            true
         );
 
         // Return the number of results
@@ -387,7 +402,7 @@ class Services extends AppModel
      */
     public function hasParent($service_id)
     {
-        return (boolean)$this->Record->select()->from('services')->
+        return (bool)$this->Record->select()->from('services')->
             where('parent_service_id', '!=', null)->
             where('id', '=', $service_id)->fetch();
     }
@@ -692,14 +707,14 @@ class Services extends AppModel
 
         // Get all invoices and attached services greater than the given date
         $this->Record->select(
-                [
+            [
                     'temp_services.*',
                     'invoices.id' => 'invoice_id',
                     'service_invoices.failed_attempts',
                     'service_invoices.maximum_attempts',
                     'service_invoices.date_next_attempt'
                 ]
-            )->
+        )->
             from('invoices')->
             innerJoin('invoice_lines', 'invoice_lines.invoice_id', '=', 'invoices.id', false)->
             appendValues($values)->
@@ -823,14 +838,14 @@ class Services extends AppModel
 
         // Get all invoices and attached services greater than the given date
         $this->Record->select(
-                [
+            [
                     'temp_services.*',
                     'invoices.id' => 'invoice_id',
                     'service_invoices.failed_attempts',
                     'service_invoices.maximum_attempts',
                     'service_invoices.date_next_attempt'
                 ]
-            )->
+        )->
             from('invoices')->
             innerJoin('invoice_lines', 'invoice_lines.invoice_id', '=', 'invoices.id', false)->
             appendValues($values)->
@@ -966,14 +981,14 @@ class Services extends AppModel
 
         // Get all pending services that have been paid
         $services = $this->Record->select(
-                [
+            [
                     'temp_services.*',
                     'invoices.id' => 'invoice_id',
                     'service_invoices.failed_attempts',
                     'service_invoices.maximum_attempts',
                     'service_invoices.date_next_attempt'
                 ]
-            )->
+        )->
             appendValues($values)->
             from([$sub_query_sql => 'temp_services'])->
             leftJoin('service_invoices', 'service_invoices.service_id', '=', 'temp_services.id', false)->
@@ -1112,12 +1127,14 @@ class Services extends AppModel
         $services = $this->Record->
             innerJoin('invoice_lines', 'invoice_lines.service_id', '=', 'services.id', false)->
             innerJoin('invoices', 'invoices.id', '=', 'invoice_lines.invoice_id', false)->
-            leftJoin('service_changes', 'service_changes.invoice_id', '=', 'invoices.id', false)->
             on('service_invoices.service_id', '=', 'services.id', false)->
             on('service_invoices.type', '=', 'suspension')->
             leftJoin('service_invoices', 'service_invoices.invoice_id', '=', 'invoices.id', false)->
+            on('pending_changes.type', '=', 'change')->
+            leftJoin(['service_invoices' => 'pending_changes'], 'pending_changes.service_id', '=', 'services.id', false)->
             where('invoices.status', 'in', ['active', 'proforma'])->
-            where('invoices.date_closed', '=', null);
+            where('invoices.date_closed', '=', null)->
+            where('pending_changes.service_id', '=', null);
 
         if (is_null($suspension_date) && !is_null($client_group_id)) {
             if (!isset($this->ClientGroups)) {
@@ -1152,8 +1169,6 @@ class Services extends AppModel
         if (!is_null($suspension_date)) {
             $services = $services->where('invoices.date_due', '<=', $this->dateToUtc($suspension_date));
         }
-
-        $services = $services->where('service_changes.id', '=', null);
 
         if (!is_null($client_group_id)) {
             $services = $services->where('client_groups.id', '=', $client_group_id);
@@ -1466,7 +1481,7 @@ class Services extends AppModel
             // Collect package data
             $service->package = $this->Packages->get($service->package_pricing->package_id);
             // Get the service name from the package
-            $service->name = (isset($service->package->name) ? $service->package->name : '');
+            $service->name = ($service->package->name ?? '');
 
             // Determine the module ID so we can fetch the updated service name from it
             $module_id = false;
@@ -1579,7 +1594,7 @@ class Services extends AppModel
      *  - table => [['column1' => column, 'operator' => operator, 'value' => value], column2 => value]
      * @return Record The partially constructed query Record object
      */
-    private function getServices(array $filters = [], $children = true, array $formatted_filters = [], array $additional_fields = [])
+    private function getServices(array $filters = [], $children = true, array $formatted_filters = [], array $additional_fields = [], $count = false)
     {
         if (!isset($this->ModuleManager)) {
             Loader::loadModels($this, ['ModuleManager']);
@@ -1602,39 +1617,56 @@ class Services extends AppModel
             }
         }
 
-        $fields = [
-            'services.*',
-            'REPLACE(services.id_format, ?, services.id_value)' => 'id_code',
-            'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code',
-            'pricings.term', 'pricings.period', 'package_names.name',
-            'contacts.first_name' => 'client_first_name',
-            'contacts.last_name' => 'client_last_name',
-            'contacts.company' => 'client_company',
-            'contacts.address1' => 'client_address1',
-            'contacts.email' => 'client_email',
-            'packages.prorata_day' => 'package_prorata_day',
-            'packages.id' => 'package_id'
-        ];
+        // Determine whether we can use a simplified count query that skips
+        // joins only needed for display or for specific filters
+        $simple_count = $count
+            && empty($filters['service_meta'])
+            && empty($filters['package_name']);
+
+        $fields = $simple_count ? ['services.*'] : [
+                'services.*',
+                'REPLACE(services.id_format, ?, services.id_value)' => 'id_code',
+                'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code',
+                'pricings.term', 'pricings.period', 'package_names.name',
+                'contacts.first_name' => 'client_first_name',
+                'contacts.last_name' => 'client_last_name',
+                'contacts.company' => 'client_company',
+                'contacts.address1' => 'client_address1',
+                'contacts.email' => 'client_email',
+                'packages.prorata_day' => 'package_prorata_day',
+                'packages.id' => 'package_id'
+            ];
 
         if (!empty($additional_fields)) {
             $fields = array_merge($fields, $additional_fields);
         }
 
-        $this->Record->select($fields)
-            ->appendValues([
-                $this->replacement_keys['services']['ID_VALUE_TAG'],
-                $this->replacement_keys['clients']['ID_VALUE_TAG']
-            ])
-            ->from('services')
-            ->innerJoin('package_pricing', 'package_pricing.id', '=', 'services.pricing_id', false)
-            ->innerJoin('pricings', 'pricings.id', '=', 'package_pricing.pricing_id', false)
-            ->innerJoin('packages', 'packages.id', '=', 'package_pricing.package_id', false)
-            ->on('package_names.lang', '=', Configure::get('Blesta.language'))
-            ->leftJoin('package_names', 'package_names.package_id', '=', 'packages.id', false)
-            ->innerJoin('clients', 'services.client_id', '=', 'clients.id', false)
-            ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false)
-            ->on('contacts.contact_type', '=', 'primary')
-            ->innerJoin('contacts', 'contacts.client_id', '=', 'clients.id', false);
+        $this->Record->select($fields);
+
+        if ($simple_count) {
+            // Simplified count path: skip REPLACE, contacts, package_names
+            $this->Record->from('services')
+                ->innerJoin('package_pricing', 'package_pricing.id', '=', 'services.pricing_id', false)
+                ->innerJoin('pricings', 'pricings.id', '=', 'package_pricing.pricing_id', false)
+                ->innerJoin('packages', 'packages.id', '=', 'package_pricing.package_id', false)
+                ->innerJoin('clients', 'services.client_id', '=', 'clients.id', false)
+                ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false);
+        } else {
+            $this->Record->appendValues([
+                    $this->replacement_keys['services']['ID_VALUE_TAG'] ?? '{num}',
+                    $this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'
+                ])
+                ->from('services')
+                ->innerJoin('package_pricing', 'package_pricing.id', '=', 'services.pricing_id', false)
+                ->innerJoin('pricings', 'pricings.id', '=', 'package_pricing.pricing_id', false)
+                ->innerJoin('packages', 'packages.id', '=', 'package_pricing.package_id', false)
+                ->on('package_names.lang', '=', Configure::get('Blesta.language'))
+                ->leftJoin('package_names', 'package_names.package_id', '=', 'packages.id', false)
+                ->innerJoin('clients', 'services.client_id', '=', 'clients.id', false)
+                ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false)
+                ->on('contacts.contact_type', '=', 'primary')
+                ->innerJoin('contacts', 'contacts.client_id', '=', 'clients.id', false);
+        }
 
         // Filter out child services
         if (!$children) {
@@ -1745,7 +1777,12 @@ class Services extends AppModel
         // Ensure only fetching records for the current company
         $this->Record->where('client_groups.company_id', '=', Configure::get('Blesta.company_id'));
 
-        return $this->Record->group('services.id');
+        // Simple counts don't need GROUP BY — no joins that produce duplicate service rows
+        if (!$simple_count) {
+            $this->Record->group('services.id');
+        }
+
+        return $this->Record;
     }
 
     /**
@@ -1793,7 +1830,7 @@ class Services extends AppModel
             // Set the pricing info to return
             $taxable = (!$tax_exempt && ($service->taxable == '1'));
             $pricing_info = [
-                'package_name' => (isset($service->package->name) ? $service->package->name : ''),
+                'package_name' => ($service->package->name ?? ''),
                 'name' => $service->name,
                 'price' => $service->price,
                 'tax' => $taxable,
@@ -1841,7 +1878,7 @@ class Services extends AppModel
         $fields = ['services.*', 'REPLACE(services.id_format, ?, services.id_value)' => 'id_code'];
 
         $service = $this->Record->select($fields)
-            ->appendValues([$this->replacement_keys['services']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['services']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('services')
             ->where('id', '=', $service_id)
             ->fetch();
@@ -1853,9 +1890,14 @@ class Services extends AppModel
         }
 
         // Trigger the Services.get event
-        extract($this->executeAndParseEvent('Services.get', [
+        $event = $this->executeAndParseEvent('Services.get', [
             'service' => $service
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $service;
     }
@@ -1922,10 +1964,15 @@ class Services extends AppModel
      *  service creation, false to not send any notification (optional, default false)
      * @return int The ID of this service, void if error
      */
-    public function add(array $vars, array $packages = null, $notify = false)
+    public function add(array $vars, ?array $packages = null, $notify = false)
     {
         // Trigger the Services.addBefore event
-        extract($this->executeAndParseEvent('Services.addBefore', compact('vars', 'packages', 'notify')));
+        $event = $this->executeAndParseEvent('Services.addBefore', compact('vars', 'packages', 'notify'));
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Remove config options with 0 quantity
         if (isset($vars['configoptions']) && is_array($vars['configoptions'])) {
@@ -1997,11 +2044,13 @@ class Services extends AppModel
 
                     // Check if module row has been provided as a configurable option
                     $module_row_fields = $this->getConfigurableModuleFields($vars['configoptions']);
-                    if (!empty($module_row_fields['module_row'])
+                    if (
+                        !empty($module_row_fields['module_row'])
                         && $module->getModuleRow($module_row_fields['module_row'])
                     ) {
                         $vars['module_row_id'] = $module_row_fields['module_row'];
-                    } elseif (!empty($module_row_fields['module_group'])
+                    } elseif (
+                        !empty($module_row_fields['module_group'])
                         && ($module_row_id = $module->selectModuleRow($module_row_fields['module_group']))
                     ) {
                         $vars['module_row_id'] = $module_row_id;
@@ -2021,7 +2070,7 @@ class Services extends AppModel
                     // Set module row to that defined for the package if available and the client can't set a module group
                     if ($package->module_row && $package->module_group_client != '1') {
                         $vars['module_row_id'] = $package->module_row;
-                    } else if ($package->module_group_client == '1' && isset($vars['module_group_id'])) {
+                    } elseif ($package->module_group_client == '1' && isset($vars['module_group_id'])) {
                         // Set the module row from the module group set by the client
                         $vars['module_row_id'] = $module->selectModuleRow($vars['module_group_id']);
                     } else {
@@ -2083,7 +2132,8 @@ class Services extends AppModel
                 $vars['id_value'] = $sub_query;
 
                 // Attempt to set cancellation date if package is single term
-                if ($vars['status'] == 'active'
+                if (
+                    $vars['status'] == 'active'
                     && isset($package->single_term)
                     && $package->single_term == 1
                     && !isset($vars['date_canceled'])
@@ -2193,7 +2243,8 @@ class Services extends AppModel
         // Override module row id or module group if provided on a configurable option. On edit only set the field if
         // the config option has changed
         $module_fields = [];
-        if (!empty($formatted_options['module_row_id'])
+        if (
+            !empty($formatted_options['module_row_id'])
             && is_numeric($formatted_options['module_row_id'])
             && (!isset($service_options['module_row_id'])
                 || $service_options['module_row_id'] != $formatted_options['module_row_id']
@@ -2202,7 +2253,8 @@ class Services extends AppModel
             $module_fields['module_row'] = $formatted_options['module_row_id'];
         }
 
-        if (!empty($formatted_options['module_row_group'])
+        if (
+            !empty($formatted_options['module_row_group'])
             && is_numeric($formatted_options['module_row_group'])
             && (!isset($service_options['module_row_group'])
                 || $service_options['module_row_group'] != $formatted_options['module_row_group']
@@ -2264,10 +2316,15 @@ class Services extends AppModel
     public function edit($service_id, array $vars, $bypass_module = false, $notify = false)
     {
         // Trigger the Services.editBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'Services.editBefore',
             compact('service_id', 'vars', 'bypass_module', 'notify')
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Validate whether the service can be updated
         $vars = $this->validateEdit($service_id, $vars, $bypass_module);
@@ -2354,11 +2411,13 @@ class Services extends AppModel
                 $service_provision = $service->status == 'pending'
                     && isset($vars['status'])
                     && $vars['status'] == 'active';
-                if (!empty($module_row_fields['module_row'])
+                if (
+                    !empty($module_row_fields['module_row'])
                     && $module->getModuleRow($module_row_fields['module_row'])
                 ) {
                     $vars['module_row_id'] = $module_row_fields['module_row'];
-                } elseif (!empty($module_row_fields['module_group'])
+                } elseif (
+                    !empty($module_row_fields['module_group'])
                     && $service_provision
                     && ($module_row_id = $module->selectModuleRow($module_row_fields['module_group']))
                 ) {
@@ -2397,7 +2456,8 @@ class Services extends AppModel
             $service_info = null;
 
             // Attempt to change the package via module if pricing has changed
-            if (isset($vars['pricing_id'])
+            if (
+                isset($vars['pricing_id'])
                 && $service->pricing_id != $vars['pricing_id']
                 && $vars['use_module'] == 'true'
             ) {
@@ -2422,7 +2482,8 @@ class Services extends AppModel
 
             // If service is currently pending and status is now "active", call addService on the module
             try {
-                if ($service->status == 'pending'
+                if (
+                    $service->status == 'pending'
                     && isset($vars['status'])
                     && $vars['status'] == 'active'
                 ) {
@@ -2469,7 +2530,7 @@ class Services extends AppModel
 
             // Decrement usage of quantity
             $this->decrementQuantity(
-                isset($vars['qty']) ? $vars['qty'] : 1,
+                $vars['qty'] ?? 1,
                 $vars['pricing_id'],
                 false,
                 $service->qty
@@ -2491,13 +2552,11 @@ class Services extends AppModel
         }
 
         // Attempt to set cancellation date if package is single term
-        if ($service->status == 'pending' && isset($vars['status']) && $vars['status'] == 'active' &&
-            isset($package->single_term) && $package->single_term == 1 && !isset($vars['date_canceled'])) {
-            if (isset($vars['date_renews'])) {
-                $vars['date_canceled'] = $vars['date_renews'];
-            } else {
-                $vars['date_canceled'] = $service->date_renews;
-            }
+        if (
+            $service->status == 'pending' && isset($vars['status']) && $vars['status'] == 'active' &&
+            isset($package->single_term) && $package->single_term == 1 && !isset($vars['date_canceled'])
+        ) {
+            $vars['date_canceled'] = $vars['date_renews'] ?? $service->date_renews;
         }
 
         $fields = [
@@ -2547,7 +2606,8 @@ class Services extends AppModel
 
         // Add the new config options
         foreach ($service_options['add'] as $option_id => $pricing_id) {
-            if (array_key_exists($option_id, $config_options)
+            if (
+                array_key_exists($option_id, $config_options)
                 && ($option_value = $this->PackageOptions->getValue($option_id, $config_options[$option_id]))
                 && ($option = $this->PackageOptions->get($option_id))
             ) {
@@ -2576,7 +2636,8 @@ class Services extends AppModel
             $pricing_id = $temp_pricing['new'];
             $old_pricing_id = $temp_pricing['old'];
 
-            if (array_key_exists($option_id, $config_options)
+            if (
+                array_key_exists($option_id, $config_options)
                 && ($option_value = $this->PackageOptions->getValue($option_id, $config_options[$option_id]))
                 && ($option = $this->PackageOptions->get($option_id))
             ) {
@@ -2680,7 +2741,8 @@ class Services extends AppModel
                 // Option is available to be set
                 if (array_key_exists($option_id, $available_options)) {
                     // If the option is set to the quantity of 0, it should be removed, so skip it
-                    if ($value == 0
+                    if (
+                        $value == 0
                         && ($option = $this->PackageOptions->get($option_id))
                         && $option->type == 'quantity'
                     ) {
@@ -3122,8 +3184,8 @@ class Services extends AppModel
             'module' => $module,
             'service' => $service,
             'client' => $client,
-            'package.email_html' => (isset($service_email_content->html) ? $service_email_content->html : ''),
-            'package.email_text' => (isset($service_email_content->text) ? $service_email_content->text : '')
+            'package.email_html' => ($service_email_content->html ?? ''),
+            'package.email_text' => ($service_email_content->text ?? '')
         ];
 
         $this->Emails->send(
@@ -3169,9 +3231,9 @@ class Services extends AppModel
 
         return [
             'service' => ($service ? $service : null),
-            'package' => (isset($service->package) ? $service->package : null),
-            'parent_service' => (isset($parent_service) ? $parent_service : null),
-            'parent_package' => (isset($parent_service->package) ? $parent_service->package : null)
+            'package' => ($service->package ?? null),
+            'parent_service' => ($parent_service ?? null),
+            'parent_package' => ($parent_service->package ?? null)
         ];
     }
 
@@ -3198,7 +3260,12 @@ class Services extends AppModel
     public function cancel($service_id, array $vars)
     {
         // Trigger the Services.cancelBefore event
-        extract($this->executeAndParseEvent('Services.cancelBefore', compact('service_id', 'vars')));
+        $event = $this->executeAndParseEvent('Services.cancelBefore', compact('service_id', 'vars'));
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         Loader::loadComponents($this, ['SettingsCollection']);
         if (!isset($this->ServiceInvoices)) {
@@ -3250,11 +3317,7 @@ class Services extends AppModel
         if ($this->Input->validates($vars)) {
             extract($this->getRelations($service_id));
 
-            if ($vars['date_canceled'] == 'end_of_term') {
-                $vars['date_canceled'] = $service->date_renews;
-            } else {
-                $vars['date_canceled'] = $this->dateToUtc($vars['date_canceled']);
-            }
+            $vars['date_canceled'] = $vars['date_canceled'] == 'end_of_term' ? $service->date_renews : $this->dateToUtc($vars['date_canceled']);
 
             // If date_canceled is greater than now use module must be false
             if (strtotime($vars['date_canceled']) > time()) {
@@ -3310,22 +3373,20 @@ class Services extends AppModel
             if (isset($vars['status']) && $vars['status'] == 'canceled') {
                 $void_invoice_setting = $this->SettingsCollection->fetchClientSetting(
                     $service->client_id,
-                    (isset($this->Clients) ? $this->Clients : null),
+                    ($this->Clients ?? null),
                     'void_invoice_canceled_service'
                 );
 
-                if ((isset($void_invoice_setting['value']) ? $void_invoice_setting['value'] : null) == 'true') {
+                if (($void_invoice_setting['value'] ?? null) == 'true') {
                     $void_inv_canceled_service_days = $this->SettingsCollection->fetchClientSetting(
                         $service->client_id,
-                        (isset($this->Clients) ? $this->Clients : null),
+                        ($this->Clients ?? null),
                         'void_inv_canceled_service_days'
                     );
 
                     $options = array_intersect_key($vars, array_flip(['reapply_payments']));
                     $options['void_inv_canceled_service_days'] = (
-                        isset($void_inv_canceled_service_days['value'])
-                            ? $void_inv_canceled_service_days['value']
-                            : '0'
+                        $void_inv_canceled_service_days['value'] ?? '0'
                     );
                     $this->voidInvoices($service_id, $options);
                 }
@@ -3336,11 +3397,12 @@ class Services extends AppModel
 
             $send_cancellation_notice = $this->SettingsCollection->fetchClientSetting(
                 $service->client_id,
-                (isset($this->Clients) ? $this->Clients : null),
+                ($this->Clients ?? null),
                 'send_cancellation_notice'
             );
 
-            if ((isset($vars['notify_cancel']) && $vars['notify_cancel'] == 'true')
+            if (
+                (isset($vars['notify_cancel']) && $vars['notify_cancel'] == 'true')
                 || (!isset($vars['notify_cancel']) && $send_cancellation_notice['value'] == 'true')
             ) {
                 if (strtotime($vars['date_canceled']) > time()) {
@@ -3404,7 +3466,8 @@ class Services extends AppModel
     private function addCancelInvoice($service, $date_canceled)
     {
         // Create an invoice regarding this service's cancelation
-        if ($service->package_pricing->period != 'onetime'
+        if (
+            $service->package_pricing->period != 'onetime'
             && $service->package_pricing->cancel_fee > 0
             && $service->date_renews != $date_canceled
         ) {
@@ -3415,11 +3478,7 @@ class Services extends AppModel
             $client_settings = $this->SettingsCollection->fetchClientSettings($service->client_id, $this->Clients);
 
             // Get the pricing info
-            if ($client_settings['default_currency'] != $service->package_pricing->currency) {
-                $pricing_info = $this->getPricingInfo($service->id, $client_settings['default_currency']);
-            } else {
-                $pricing_info = $this->getPricingInfo($service->id);
-            }
+            $pricing_info = $client_settings['default_currency'] != $service->package_pricing->currency ? $this->getPricingInfo($service->id, $client_settings['default_currency']) : $this->getPricingInfo($service->id);
 
             // Create the invoice
             if ($pricing_info) {
@@ -3485,7 +3544,7 @@ class Services extends AppModel
         // Fetch all open invoices for this service
         Loader::loadModels($this, ['Companies', 'Invoices', 'Transactions']);
         $invoices = $this->Invoices->getAllWithService($service->id, $service->client_id, 'open');
-        $void_inv_canceled_service_days = (isset($options['void_inv_canceled_service_days']) ? $options['void_inv_canceled_service_days'] : '0');
+        $void_inv_canceled_service_days = ($options['void_inv_canceled_service_days'] ?? '0');
 
         foreach ($invoices as $invoice) {
             // Skip invoices that are past due a configured number of days. They are not to be voided
@@ -3542,7 +3601,7 @@ class Services extends AppModel
             );
 
             // Void the invoice or remove all of the service's line items from it
-            $notes = (isset($invoice->note_private) ? $invoice->note_private : null);
+            $notes = ($invoice->note_private ?? null);
             $vars = [
                 'note_private' => (empty($notes)
                     ? ''
@@ -3781,7 +3840,12 @@ class Services extends AppModel
             Loader::loadModels($this, ['ServiceInvoices']);
         }
         // Trigger the Services.suspendBefore event
-        extract($this->executeAndParseEvent('Services.suspendBefore', compact('service_id', 'vars')));
+        $event = $this->executeAndParseEvent('Services.suspendBefore', compact('service_id', 'vars'));
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!isset($vars['use_module'])) {
             $vars['use_module'] = 'true';
@@ -3881,7 +3945,12 @@ class Services extends AppModel
             Loader::loadModels($this, ['ServiceInvoices']);
         }
         // Trigger the Services.unsuspendBefore event
-        extract($this->executeAndParseEvent('Services.unsuspendBefore', compact('service_id', 'vars')));
+        $event = $this->executeAndParseEvent('Services.unsuspendBefore', compact('service_id', 'vars'));
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!isset($vars['use_module'])) {
             $vars['use_module'] = 'true';
@@ -3978,7 +4047,12 @@ class Services extends AppModel
         extract($this->getRelations($service_id));
 
         // Trigger the Services.renewBefore event
-        extract($this->executeAndParseEvent('Services.renewBefore', compact('service_id', 'invoice_id')));
+        $event = $this->executeAndParseEvent('Services.renewBefore', compact('service_id', 'invoice_id'));
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!$service) {
             return;
@@ -4110,7 +4184,8 @@ class Services extends AppModel
         );
         $first_attempt_threshold = $first_attempt_threshold->value ?? 0;
 
-        if ($service_invoice->failed_attempts >= $first_attempt_threshold
+        if (
+            $service_invoice->failed_attempts >= $first_attempt_threshold
                 && !empty($first_attempt_threshold)
         ) {
             $first_attempt_spacing = $this->Clients->getSetting(
@@ -4133,7 +4208,8 @@ class Services extends AppModel
         );
         $second_attempt_threshold = $second_attempt_threshold->value ?? 0;
 
-        if ($service_invoice->failed_attempts >= $second_attempt_threshold
+        if (
+            $service_invoice->failed_attempts >= $second_attempt_threshold
             && !empty($second_attempt_threshold)
         ) {
             $second_attempt_spacing = $this->Clients->getSetting(
@@ -4352,14 +4428,14 @@ class Services extends AppModel
                 $serialize = !is_scalar($vars['value']);
                 $vars['serialized'] = (int) $serialize;
                 if ($serialize) {
-                    $vars['value'] = json_encode($vars['value']);
+                    $vars['value'] = serialize($vars['value']);
                 }
             } elseif ($vars['serialized'] == '1') {
                 // Check if the value is already serialized (JSON or PHP serialized)
-                $decoded = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($vars['value']);
+                $decoded = safe_unserialize($vars['value']);
                 if ($decoded === null && $vars['value'] !== 'null') {
                     // If the value is not serialized, do so
-                    $vars['value'] = json_encode($vars['value']);
+                    $vars['value'] = serialize($vars['value']);
                 }
             }
 
@@ -4399,7 +4475,7 @@ class Services extends AppModel
             $serialize = !is_scalar($vars['value']);
             $vars['serialized'] = (int)$serialize;
             if ($serialize) {
-                $vars['value'] = json_encode($vars['value']);
+                $vars['value'] = serialize($vars['value']);
             }
 
             // Encrypt if needed
@@ -4577,9 +4653,11 @@ class Services extends AppModel
 
         foreach ($line_items as $line_item) {
             // Line item must belong to a service, have an amount, and not be a setup fee
-            if (!is_array($line_item) || empty($line_item['service_id']) ||
+            if (
+                !is_array($line_item) || empty($line_item['service_id']) ||
                 (array_key_exists('setup_fee', $line_item) && $line_item['setup_fee']) ||
-                !array_key_exists('amount', $line_item) || !array_key_exists('qty', $line_item)) {
+                !array_key_exists('amount', $line_item) || !array_key_exists('qty', $line_item)
+            ) {
                 continue;
             }
 
@@ -4669,9 +4747,11 @@ class Services extends AppModel
             }
 
             // Skip this service if it has no active coupon or it does not apply to renewing services
-            if (!$service->coupon_id || !isset($coupons[$service->coupon_id]) ||
+            if (
+                !$service->coupon_id || !isset($coupons[$service->coupon_id]) ||
                 $coupons[$service->coupon_id]->status != 'active' ||
-                ($services_renew && $coupons[$service->coupon_id]->recurring != '1')) {
+                ($services_renew && $coupons[$service->coupon_id]->recurring != '1')
+            ) {
                 continue;
             }
 
@@ -4703,7 +4783,8 @@ class Services extends AppModel
                 // Verify that the coupon applies to this term
                 $valid_term = empty($coupons[$service->coupon_id]->terms);
                 foreach ($coupons[$service->coupon_id]->terms as $coupon_term) {
-                    if ($coupon_term->term == $service->package_pricing->term
+                    if (
+                        $coupon_term->term == $service->package_pricing->term
                         && $coupon_term->period == $service->package_pricing->period
                     ) {
                         $valid_term = true;
@@ -4731,9 +4812,11 @@ class Services extends AppModel
                             : $coupons[$service->coupon_id]->used_qty >= $coupons[$service->coupon_id]->max_qty;
 
                         // Coupon must be valid within start/end dates and must not exceed used quantity
-                        if ($now_timestamp >= $this->Date->toTime($coupons[$service->coupon_id]->start_date) &&
+                        if (
+                            $now_timestamp >= $this->Date->toTime($coupons[$service->coupon_id]->start_date) &&
                             $now_timestamp <= $this->Date->toTime($coupons[$service->coupon_id]->end_date) &&
-                            !$coupon_qty_reached) {
+                            !$coupon_qty_reached
+                        ) {
                             $apply_coupon = true;
                         }
                     }
@@ -4775,7 +4858,8 @@ class Services extends AppModel
                 // Calculate the total from each service related to this coupon
                 foreach ($service_ids as $service_id) {
                     // Skip if service is not available or incorrect currency
-                    if (!isset($service_list[$service_id])
+                    if (
+                        !isset($service_list[$service_id])
                         || ($amount->currency != $service_list[$service_id]->package_pricing->currency)
                     ) {
                         continue;
@@ -4789,13 +4873,15 @@ class Services extends AppModel
                     // Replace the options total with the sum of each service option line item amount
                     if (isset($line_item_amounts[$service_id])) {
                         // Set the base service amount and quantity
-                        if (isset($line_item_amounts[$service_id]['before_cutoff']['amount']) ||
-                            isset($line_item_amounts[$service_id]['after_cutoff']['amount'])) {
+                        if (
+                            isset($line_item_amounts[$service_id]['before_cutoff']['amount']) ||
+                            isset($line_item_amounts[$service_id]['after_cutoff']['amount'])
+                        ) {
                             // Sum the before/after cutoff amounts
                             $before_amount = $line_item_amounts[$service_id]['before_cutoff']['amount'];
                             $after_amount = $line_item_amounts[$service_id]['after_cutoff']['amount'];
-                            $service_amount = ($before_amount === null ? 0 : $before_amount)
-                                + ($after_amount === null ? 0 : $after_amount);
+                            $service_amount = ($before_amount ?? 0)
+                                + ($after_amount ?? 0);
 
                             // Before/after cutoff quantity always presumed to be identical
                             $line_item_quantity = $line_item_amounts[$service_id]['before_cutoff']['qty'];
@@ -4912,7 +4998,8 @@ class Services extends AppModel
         foreach ($service_options as $service_option) {
             $package_option = $this->PackageOptions->getByPricingId($service_option->option_pricing_id);
 
-            if ($package_option
+            if (
+                $package_option
                 && property_exists($package_option, 'value')
                 && property_exists($package_option->value, 'pricing')
                 && $package_option->value->pricing
@@ -4922,7 +5009,7 @@ class Services extends AppModel
                     $package_option->value->id,
                     $package_option->value->pricing->term,
                     $package_option->value->pricing->period,
-                    isset($base_pricing_info->currency) ? $base_pricing_info->currency : ''
+                    $base_pricing_info->currency ?? ''
                 );
 
                 // This doesn't consider proration
@@ -4954,7 +5041,8 @@ class Services extends AppModel
 
         // Fetch any coupon that should be applied
         $coupons = [];
-        if (!empty($service->coupon_id) && ($coupon = $this->Coupons->get((int)$service->coupon_id))
+        if (
+            !empty($service->coupon_id) && ($coupon = $this->Coupons->get((int)$service->coupon_id))
             && $coupon->company_id == Configure::get('Blesta.company_id')
         ) {
             // Mark that this coupon is from an existing service
@@ -4973,13 +5061,15 @@ class Services extends AppModel
         ];
 
         // Determine if this is a domain service
-        if ((
+        if (
+            (
             $registrar = $this->ModuleManager->getInstalled([
                 'type' => 'registrar',
                 'company_id' => Configure::get('Blesta.company_id'),
                 'module_id' => $service->package->module_id
             ])
-        )) {
+            )
+        ) {
             $options['item_type'] = 'domain';
         }
 
@@ -5045,11 +5135,13 @@ class Services extends AppModel
                 $package->prorata_day
             );
 
-            if (($dates = $this->Packages->getProrataDates(
-                $pricing_id,
-                date('c'),
-                $service_date_renews
-            ))) {
+            if (
+                ($dates = $this->Packages->getProrataDates(
+                    $pricing_id,
+                    date('c'),
+                    $service_date_renews
+                ))
+            ) {
                 $options['prorateEndDate'] = $dates['end_date'];
             }
         }
@@ -5066,7 +5158,8 @@ class Services extends AppModel
         );
 
         if (isset($vars['parent_service_id'])) {
-            if (($client = $this->Clients->get($client_id))
+            if (
+                ($client = $this->Clients->get($client_id))
                 && ($client_group = $this->ClientGroups->get($client->client_group_id))
                 && ($parent_service = $this->get($vars['parent_service_id']))
                 && $this->canSyncToParent($pricing, $parent_service->package_pricing, $client_group->id)
@@ -5090,25 +5183,31 @@ class Services extends AppModel
         );
 
         // Determine if this is a domain service
-        if ((
+        if (
+            (
             $registrar = $this->ModuleManager->getInstalled([
                 'type' => 'registrar',
                 'company_id' => Configure::get('Blesta.company_id'),
                 'module_id' => $package->module_id
             ])
-        )) {
+            )
+        ) {
             $options['item_type'] = 'domain';
         }
 
         // Fetch any coupon that should be applied
         $coupons = [];
-        if (isset($vars['coupon_id'])
+        if (
+            isset($vars['coupon_id'])
             && ($coupon = $this->Coupons->get((int)$vars['coupon_id']))
             && $coupon->company_id == Configure::get('Blesta.company_id')
         ) {
-            // Mark that this coupon is from an existing service
-            // This allows the pricing system to apply limit_recurring settings correctly
-            $coupon->from_service = '1';
+            // Tag the coupon as bound to an existing service only when the caller
+            // says so; this lets the pricing system honor limit_recurring without
+            // bypassing expiration/quantity checks for new-service orders.
+            if (!empty($vars['from_service'])) {
+                $coupon->from_service = '1';
+            }
             $coupons[] = $coupon;
         }
 
@@ -5225,8 +5324,10 @@ class Services extends AppModel
         foreach ($presenter->items() as $item) {
             // Check if this is a config option with disable_pricing enabled
             $disable_pricing = false;
-            if (isset($item->_data['item_type']) && $item->_data['item_type'] == 'option'
-                && isset($item->_data['option']->disable_pricing) && $item->_data['option']->disable_pricing == 1) {
+            if (
+                isset($item->_data['item_type']) && $item->_data['item_type'] == 'option'
+                && isset($item->_data['option']->disable_pricing) && $item->_data['option']->disable_pricing == 1
+            ) {
                 $disable_pricing = true;
             }
 
@@ -5308,7 +5409,7 @@ class Services extends AppModel
             }
 
             if ($fields[$i]->serialized) {
-                $fields[$i]->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($fields[$i]->value);
+                $fields[$i]->value = safe_unserialize($fields[$i]->value);
             }
         }
 
@@ -5508,7 +5609,7 @@ class Services extends AppModel
                     'message' => $this->_('Services.!error.client_id.exists')
                 ],
                 'allowed' => [
-                    'rule' => [[$this, 'validateAllowed'], isset($vars['pricing_id']) ? $vars['pricing_id'] : null],
+                    'rule' => [[$this, 'validateAllowed'], $vars['pricing_id'] ?? null],
                     'message' => $this->_('Services.!error.client_id.allowed')
                 ]
             ],
@@ -5524,7 +5625,7 @@ class Services extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateCoupon'],
-                        isset($vars['coupon_packages']) ? $vars['coupon_packages'] : null
+                        $vars['coupon_packages'] ?? null
                     ],
                     'message' => $this->_('Services.!error.coupon_id.valid')
                 ]
@@ -5544,7 +5645,7 @@ class Services extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'decrementQuantity'],
-                        isset($vars['pricing_id']) ? $vars['pricing_id'] : null,
+                        $vars['pricing_id'] ?? null,
                         true,
                         $edit && isset($vars['current_qty']) ? $vars['current_qty'] : null
                     ],
@@ -5561,7 +5662,7 @@ class Services extends AppModel
                 'override' => [
                     'rule' => [
                         [$this, 'validateOverrideFields'],
-                        (isset($vars['override_currency']) ? $vars['override_currency'] : null)
+                        ($vars['override_currency'] ?? null)
                     ],
                     'message' => $this->_('Services.!error.override_price.override')
                 ]
@@ -5593,7 +5694,7 @@ class Services extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateDateRenews'],
-                        isset($vars['date_last_renewed']) ? $vars['date_last_renewed'] : null
+                        $vars['date_last_renewed'] ?? null
                     ],
                     'message' => $this->_(
                         'Services.!error.date_renews.valid',
@@ -5653,7 +5754,7 @@ class Services extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateConfigOptions'],
-                        isset($vars['pricing_id']) ? $vars['pricing_id'] : null
+                        $vars['pricing_id'] ?? null
                     ],
                     'message' => $this->_('Services.!error.configoptions.valid')
                 ]
@@ -5701,7 +5802,7 @@ class Services extends AppModel
                 $options = $this->PackageOptions->formatServiceOptions($service->options);
                 $rules['configoptions']['valid']['rule'] = [
                     [$this, 'validateConfigOptions'],
-                    isset($vars['pricing_id']) ? $vars['pricing_id'] : null,
+                    $vars['pricing_id'] ?? null,
                     isset($options['configoptions']) ? (array)$options['configoptions'] : []
                 ];
             }
@@ -5792,7 +5893,8 @@ class Services extends AppModel
 
             // No need to submit a prorata day since a prorated package would not have reached this point
             $service_date_renews = $this->getNextRenewDate(date('c'), $pricing->term, $pricing->period, 'Y-m-d H:i:s');
-            if ($this->Date->format('Y-m-d', $parent_date_renews)
+            if (
+                $this->Date->format('Y-m-d', $parent_date_renews)
                 != $this->Date->format('Y-m-d', $service_date_renews)
             ) {
                 // Return the parent service's renew date
@@ -5896,7 +5998,7 @@ class Services extends AppModel
      * @return array $vars An array of $vars, modified by error checking
      * @see Services::validateService()
      */
-    public function validate(array $vars, array $packages = null)
+    public function validate(array $vars, ?array $packages = null)
     {
         Loader::loadModels($this, ['Packages', 'Clients', 'ClientGroups']);
         if (!isset($this->ModuleManager)) {
@@ -5943,7 +6045,8 @@ class Services extends AppModel
             // already being prorated
             if (isset($vars['parent_service_id']) && isset($vars['client_id'])) {
                 $pricing = $this->getPackagePricing($vars['pricing_id']);
-                if (($client = $this->Clients->get($vars['client_id']))
+                if (
+                    ($client = $this->Clients->get($vars['client_id']))
                     && ($client_group = $this->ClientGroups->get($client->client_group_id))
                     && ($parent_service = $this->get($vars['parent_service_id']))
                     && $this->canSyncToParent($pricing, $parent_service->package_pricing, $client_group->id)
@@ -6144,7 +6247,7 @@ class Services extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateConfigOptions'],
-                        isset($vars['pricing_id']) ? $vars['pricing_id'] : null
+                        $vars['pricing_id'] ?? null
                     ],
                     'message' => $this->_('Services.!error.configoptions.valid')
                 ]
@@ -6272,13 +6375,13 @@ class Services extends AppModel
      *  - An array of package IDs and pricing IDs [packageID => pricingID]
      * @return bool True if the coupon can be applied, false otherwise
      */
-    public function validateCoupon($coupon_id, array $packages = null)
+    public function validateCoupon($coupon_id, ?array $packages = null)
     {
         if (!isset($this->Coupons)) {
             Loader::loadModels($this, ['Coupons']);
         }
 
-        return (boolean)$this->Coupons->getForPackages(null, $coupon_id, $packages);
+        return (bool)$this->Coupons->getForPackages(null, $coupon_id, $packages);
     }
 
     /**
@@ -6361,7 +6464,8 @@ class Services extends AppModel
                 }
 
                 // Cannot change package term when price overrides are set
-                if ($service->override_price !== null
+                if (
+                    $service->override_price !== null
                     || $service->override_currency !== null
                     || $price !== null
                     || $currency !== null
@@ -6386,7 +6490,7 @@ class Services extends AppModel
         if ($pricing_id == null) {
             return true;
         }
-        return (boolean)$this->Record->select(['packages.id'])->from('package_pricing')->
+        return (bool)$this->Record->select(['packages.id'])->from('package_pricing')->
             innerJoin('packages', 'packages.id', '=', 'package_pricing.package_id', false)->
             on('client_packages.client_id', '=', $client_id)->
             leftJoin('client_packages', 'client_packages.package_id', '=', 'packages.id', false)->
@@ -6476,7 +6580,8 @@ class Services extends AppModel
             }
 
             $max_32_bit_integer = 4294967295;
-            if (($result->max != null && $result->max < $value)
+            if (
+                ($result->max != null && $result->max < $value)
                 || ($type == 'quantity' && $value > $max_32_bit_integer)
             ) {
                 return false;
@@ -6487,7 +6592,8 @@ class Services extends AppModel
             }
 
             // Inactive option values are invalid unless they are already a current option value
-            if ($result->status === 'inactive'
+            if (
+                $result->status === 'inactive'
                 && (!array_key_exists($option_id, $current_options) || $current_options[$option_id] != $value)
             ) {
                 return false;
@@ -6513,7 +6619,7 @@ class Services extends AppModel
         }
 
         // Check if quantity can be deductable
-        $consumable = (boolean)$this->Record->select()->from('package_pricing')->
+        $consumable = (bool)$this->Record->select()->from('package_pricing')->
             innerJoin('packages', 'package_pricing.package_id', '=', 'packages.id', false)->
             where('package_pricing.id', '=', $pricing_id)->
             open()->

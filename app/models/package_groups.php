@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use stdClass;
+
 /**
  * Package Group management
  *
@@ -91,7 +98,9 @@ class PackageGroups extends AppModel
                 }
                 usort(
                     $package_group->parents,
-                    function ($groupA, $groupB) { return strcmp($groupA->name, $groupB->name); }
+                    function ($groupA, $groupB) {
+                        return strcmp($groupA->name, $groupB->name);
+                    }
                 );
             }
 
@@ -480,7 +489,8 @@ class PackageGroups extends AppModel
         if (!empty($names)) {
             foreach ($names as $name) {
                 // Skip any that are not provided with enough information
-                if (!isset($name['name'])
+                if (
+                    !isset($name['name'])
                     || !isset($name['lang'])
                     || !is_scalar($name['name'])
                     || !is_scalar($name['lang'])
@@ -511,7 +521,8 @@ class PackageGroups extends AppModel
         if (!empty($descriptions)) {
             foreach ($descriptions as $description) {
                 // Skip any that are not provided with enough information
-                if (!isset($description['lang'])
+                if (
+                    !isset($description['lang'])
                     || (isset($description['description']) && !is_scalar($description['description']))
                     || !is_scalar($description['lang'])
                 ) {
@@ -520,7 +531,7 @@ class PackageGroups extends AppModel
 
                 $description['package_group_id'] = $package_group_id;
                 $fields = ['package_group_id', 'lang', 'description'];
-                $this->Record->duplicate('description', '=', (isset($description['description']) ? $description['description'] : null))
+                $this->Record->duplicate('description', '=', ($description['description'] ?? null))
                     ->insert('package_group_descriptions', $description, $fields);
             }
         }
@@ -645,7 +656,8 @@ class PackageGroups extends AppModel
 
                         // The 'description' and 'lang' keys must exist
                         foreach ($descriptions as $description) {
-                            if (!array_key_exists('lang', $description)
+                            if (
+                                !array_key_exists('lang', $description)
                                 || (array_key_exists('description', $description)
                                     && !is_scalar($description['description'])
                                 )
@@ -694,8 +706,8 @@ class PackageGroups extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateGroupParents'],
-                        (isset($vars['company_id']) ? $vars['company_id'] : null),
-                        (isset($vars['type']) ? $vars['type'] : null)
+                        ($vars['company_id'] ?? null),
+                        ($vars['type'] ?? null)
                     ],
                     'message' => $this->_('PackageGroups.!error.parents.format')
                 ]

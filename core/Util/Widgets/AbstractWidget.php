@@ -1,8 +1,10 @@
 <?php
+
 namespace Blesta\Core\Util\Widgets;
+
 use Blesta\Core\Util\Input\Fields\InputFields;
-use \Html;
-use \Language;
+use Html;
+use Language;
 
 /**
  * Abstract Widget
@@ -129,7 +131,7 @@ abstract class AbstractWidget extends Html
      * @param string $path the web path to the style sheet
      * @param array An array of attributes to set for this element
      */
-    public function setStyleSheet($path, array $attributes = null)
+    public function setStyleSheet($path, ?array $attributes = null)
     {
         $default_attributes = ['media' => 'screen', 'type' => 'text/css', 'rel' => 'stylesheet', 'href' => $path];
         $attributes = array_merge((array)$attributes, $default_attributes);

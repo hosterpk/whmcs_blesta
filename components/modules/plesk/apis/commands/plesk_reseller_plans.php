@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk Reseller Plan management
  *
@@ -97,11 +98,11 @@ class PleskResellerPlans extends PleskPacket
         $this->setContainer($this->base_container . '/get');
 
         // Build filter options
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter, $this->getContainer());
 
         // Set whether to fetch any additional settings
-        $settings = (isset($vars['settings']) ? $vars['settings'] : []);
+        $settings = ($vars['settings'] ?? []);
         if (isset($settings['limits']) && $settings['limits']) {
             $this->insert(['limits' => null], $this->getContainer());
         }

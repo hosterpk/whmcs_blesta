@@ -1,0 +1,19 @@
+{
+    "id": 121,
+    "id_format": "{num}",
+    "id_value": 64,
+    "client_id": 73,
+    "date_billed": "2026-02-20 14:59:59",
+    "date_due": "2026-03-22 00:00:00",
+    "date_closed": "2026-02-20 15:00:00",
+    "date_autodebit": null,
+    "autodebit": 1,
+    "status": "active",
+    "subtotal": "14.0000",
+    "total": "14.0000",
+    "paid": "14.0000",
+    "previous_due": "0.0000",
+    "currency": "USD",
+    "note_public": null,
+    "note_private": null
+}

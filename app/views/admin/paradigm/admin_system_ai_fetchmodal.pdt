@@ -1,0 +1,95 @@
+<p class="text-muted"><?php $this->_('AdminSystemAi.modal.text_subtitle');?></p>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    <?php $this->_('AdminSystemAi.modal.text_info');?>
+</div>
+
+<form id="blestaAuthForm">
+    <div class="mb-3">
+        <label for="blestaUsername" class="form-label"><?php $this->_('AdminSystemAi.modal.field.username');?></label>
+        <input type="text"
+               class="form-control"
+               id="blestaUsername"
+               name="username"
+               placeholder="<?php $this->_('AdminSystemAi.modal.field.username_placeholder');?>"
+               required
+               autofocus>
+    </div>
+
+    <div id="authStatusMessage"></div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <?php $this->_('AdminSystemAi.modal.button.cancel');?>
+        </button>
+        <button type="submit" class="btn btn-primary" id="authenticateBtn">
+            <i class="bi bi-key me-1"></i><?php $this->_('AdminSystemAi.modal.button.authenticate');?>
+        </button>
+    </div>
+</form>
+
+<script type="text/javascript">
+(function() {
+    var form = document.getElementById('blestaAuthForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var usernameInput = document.getElementById('blestaUsername');
+        var username = usernameInput ? usernameInput.value.trim() : '';
+        var statusArea = document.getElementById('authStatusMessage');
+        var submitBtn = document.getElementById('authenticateBtn');
+
+        statusArea.innerHTML = '';
+
+        if (!username) {
+            statusArea.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-2"></i><?php echo addslashes($this->_('AdminSystemAi.!error.username_required', true));?></div>';
+            return false;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><?php echo addslashes($this->_('AdminSystemAi.modal.text_authenticating', true));?>';
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/system/ai/fetchapikey/');?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'username=' + encodeURIComponent(username) + '&_csrf_token=<?php echo $this->Form->getCsrfToken();?>'
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(response) {
+            if (response.success) {
+                statusArea.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><strong><?php echo addslashes($this->_('AdminSystemAi.!success.api_key_fetched', true));?></strong></div>';
+
+                // Dispatch custom event with API key data
+                var modalElement = document.getElementById('fetchApiKeyModal');
+                if (modalElement && response.data && response.data.api_key) {
+                    var event = new CustomEvent('apiKeyFetched', {
+                        detail: {
+                            api_key: response.data.api_key,
+                            uuid: response.data.uuid,
+                            balance: response.data.balance,
+                            service_id: response.data.service_id
+                        }
+                    });
+                    modalElement.dispatchEvent(event);
+                }
+            } else {
+                statusArea.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle me-2"></i>' + response.error + '</div>';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-key me-1"></i><?php echo addslashes($this->_('AdminSystemAi.modal.button.authenticate', true));?>';
+            }
+        })
+        .catch(function(error) {
+            statusArea.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle me-2"></i><?php echo addslashes($this->_('AdminSystemAi.!error.request_failed', true));?></div>';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-key me-1"></i><?php echo addslashes($this->_('AdminSystemAi.modal.button.authenticate', true));?>';
+        });
+
+        return false;
+    });
+})();
+</script>

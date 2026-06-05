@@ -1,0 +1,29 @@
+[
+    {
+        "id": 178,
+        "invoice_id": 121,
+        "service_id": 94,
+        "description": "Seed Basic Monthly - (Feb 20, 2026 - Mar 20, 2026)",
+        "qty": "1.0000",
+        "amount": "10.0000",
+        "order": 1
+    },
+    {
+        "id": 179,
+        "invoice_id": 121,
+        "service_id": null,
+        "description": "Setup Fee",
+        "qty": "1.0000",
+        "amount": "25.0000",
+        "order": 2
+    },
+    {
+        "id": 180,
+        "invoice_id": 121,
+        "service_id": 95,
+        "description": "Additional Service - (Feb 20, 2026 - Mar 20, 2026)",
+        "qty": "2.0000",
+        "amount": "5.0000",
+        "order": 3
+    }
+]

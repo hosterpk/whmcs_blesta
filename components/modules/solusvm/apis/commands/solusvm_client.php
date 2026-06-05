@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SolusVM Client Management
  *

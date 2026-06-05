@@ -8,9 +8,15 @@
         </tr>
         <tr>
             <td></td>
-            <td><?php echo (isset($service_fields->virtfusion_ip) ? $this->Html->safe($service_fields->virtfusion_ip) : null); ?></td>
-            <td><?php echo (isset($service_fields->{'virtfusion-base_ips'}) ? $this->Html->safe($service_fields->{'virtfusion-base_ips'}) : null); ?></td>
-            <td><?php echo (isset($service_fields->{'additional_num_ips'}) ? $this->Html->safe($service_fields->{'additional_num_ips'}) : null); ?></td>
+            <td><?php echo isset($service_fields->virtfusion_ip)
+                ? $this->Html->safe($service_fields->virtfusion_ip)
+                : null; ?></td>
+            <td><?php echo isset($service_fields->{'virtfusion-base_ips'})
+                ? $this->Html->safe($service_fields->{'virtfusion-base_ips'})
+                : null; ?></td>
+            <td><?php echo isset($service_fields->{'additional_num_ips'})
+                ? $this->Html->safe($service_fields->{'additional_num_ips'})
+                : null; ?></td>
         </tr>
     </table>
 </div>

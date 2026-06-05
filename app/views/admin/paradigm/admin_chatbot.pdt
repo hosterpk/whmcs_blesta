@@ -1,0 +1,150 @@
+<?php
+$access = ($access ?? 'not_configured');
+?>
+
+<?php if ($access === 'not_configured') { ?>
+<div class="chatbot-error-state">
+    <div class="error-content">
+        <div class="chatbot-empty-icon"><i class="bi bi-stars"></i></div>
+        <h3><?php $this->_('AdminChatbot.index.not_configured_title');?></h3>
+        <p><?php $this->_('AdminChatbot.index.not_configured_text');?></p>
+        <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/system/ai/');?>" class="btn btn-primary">
+            <?php $this->_('AdminChatbot.index.btn_configure');?>
+        </a>
+    </div>
+</div>
+
+<?php } elseif ($access === 'no_permission') { ?>
+<div class="chatbot-error-state">
+    <div class="error-content chat-empty-icon-warning">
+        <i class="bi bi-shield-lock"></i>
+        <h3><?php $this->_('AdminChatbot.index.no_permission_title');?></h3>
+        <p><?php $this->_('AdminChatbot.index.no_permission_text');?></p>
+        <a href="<?php echo $this->Html->safe($this->base_uri);?>" class="btn btn-secondary">
+            <?php $this->_('AdminChatbot.index.btn_go_back');?>
+        </a>
+    </div>
+</div>
+
+<?php } else { ?>
+<div class="chatbot-page" id="chatbot">
+    <!-- Chat Header -->
+    <div class="chatbot-header" id="chat-header">
+        <div class="chatbot-header-left">
+            <h5 class="chatbot-title" id="chat-title"><?php $this->_('AdminChatbot.index.default_title');?></h5>
+        </div>
+        <div class="chatbot-header-right">
+            <select class="form-select form-select-sm" id="model-selector">
+                <?php foreach (($models ?? []) as $model) { ?>
+                <option value="<?php echo $this->Html->safe($model['id']);?>"
+                        data-context="<?php echo $this->Html->safe($model['context_length']);?>"
+                        <?php echo ($model['id'] === ($default_model ?? '')) ? 'selected' : '';?>>
+                    <?php echo $this->Html->safe($model['name']);?>
+                </option>
+                <?php } ?>
+            </select>
+            <button class="btn btn-sm btn-outline-danger" id="btn-delete-chat" title="<?php $this->_('AdminChatbot.index.btn_delete');?>" style="display:none;">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chatbot-messages" id="chat-messages">
+        <!-- Empty state -->
+        <div class="chatbot-empty-state" id="chat-empty-state">
+            <div class="chatbot-empty-icon">
+                <i class="bi bi-stars"></i>
+            </div>
+            <h4><?php $this->_('AdminChatbot.index.empty_title');?></h4>
+            <p class="text-muted"><?php $this->_('AdminChatbot.index.empty_subtitle');?></p>
+            <div class="chatbot-suggestions">
+                <button class="chatbot-suggestion-card" data-suggestion="<?php $this->_('AdminChatbot.index.suggestion_billing_text');?>" data-context="<?php echo $this->Html->safe($this->_('AdminChatbot.index.suggestion_billing_context', true));?>">
+                    <span class="chatbot-suggestion-title"><i class="bi bi-receipt"></i> <?php $this->_('AdminChatbot.index.suggestion_billing_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_billing_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-context-key="custom_report" data-context-label="<?php $this->_('AdminChatbot.index.suggestion_custom_report_title');?>" data-context-placeholder="<?php $this->_('AdminChatbot.index.suggestion_custom_report_placeholder');?>">
+                    <span class="chatbot-card-badge"><?php $this->_('AdminChatbot.index.card_badge_prompt_mode');?></span>
+                    <span class="chatbot-suggestion-title"><i class="bi bi-file-earmark-bar-graph"></i> <?php $this->_('AdminChatbot.index.suggestion_custom_report_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_custom_report_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-suggestion="<?php $this->_('AdminChatbot.index.suggestion_modules_text');?>" data-context="<?php echo $this->Html->safe($this->_('AdminChatbot.index.suggestion_modules_context', true));?>">
+                    <span class="chatbot-suggestion-title"><i class="bi bi-box-seam"></i> <?php $this->_('AdminChatbot.index.suggestion_modules_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_modules_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-context-key="plugin_dev" data-context-label="<?php $this->_('AdminChatbot.index.suggestion_plugin_dev_title');?>" data-context-placeholder="<?php $this->_('AdminChatbot.index.suggestion_plugin_dev_placeholder');?>">
+                    <span class="chatbot-card-badge"><?php $this->_('AdminChatbot.index.card_badge_prompt_mode');?></span>
+                    <span class="chatbot-suggestion-title"><i class="bi bi-code-square"></i> <?php $this->_('AdminChatbot.index.suggestion_plugin_dev_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_plugin_dev_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-suggestion="<?php $this->_('AdminChatbot.index.suggestion_automation_text');?>" data-context="<?php echo $this->Html->safe($this->_('AdminChatbot.index.suggestion_automation_context', true));?>">
+                    <span class="chatbot-suggestion-title"><i class="bi bi-robot"></i> <?php $this->_('AdminChatbot.index.suggestion_automation_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_automation_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-context-key="api_query" data-context-label="<?php $this->_('AdminChatbot.index.suggestion_api_query_title');?>" data-context-placeholder="<?php $this->_('AdminChatbot.index.suggestion_api_query_placeholder');?>">
+                    <span class="chatbot-card-badge"><?php $this->_('AdminChatbot.index.card_badge_prompt_mode');?></span>
+                    <span class="chatbot-suggestion-title"><i class="bi bi-braces"></i> <?php $this->_('AdminChatbot.index.suggestion_api_query_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_api_query_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-suggestion="<?php $this->_('AdminChatbot.index.suggestion_clients_text');?>" data-context="<?php echo $this->Html->safe($this->_('AdminChatbot.index.suggestion_clients_context', true));?>">
+                    <span class="chatbot-suggestion-title"><i class="bi bi-people"></i> <?php $this->_('AdminChatbot.index.suggestion_clients_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_clients_text');?></span>
+                </button>
+                <button class="chatbot-suggestion-card" data-suggestion="<?php $this->_('AdminChatbot.index.suggestion_security_text');?>" data-context="<?php echo $this->Html->safe($this->_('AdminChatbot.index.suggestion_security_context', true));?>">
+                    <span class="chatbot-suggestion-title"><i class="bi bi-shield-check"></i> <?php $this->_('AdminChatbot.index.suggestion_security_title');?></span>
+                    <span class="chatbot-suggestion-text"><?php $this->_('AdminChatbot.index.suggestion_security_text');?></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Typing indicator -->
+        <div class="chatbot-typing" id="typing-indicator" style="display:none;">
+            <div class="chatbot-msg-bubble ai">
+                <div class="chatbot-typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chatbot-input" id="chat-input-area">
+        <div class="chatbot-context-pill" id="context-pill" style="display:none;">
+            <i class="bi bi-database"></i>
+            <span id="context-pill-label"></span>
+            <button type="button" class="context-pill-dismiss" title="<?php $this->_('AdminChatbot.index.context_pill_dismiss');?>">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <div class="chatbot-input-wrapper">
+            <textarea class="form-control" id="chat-input" rows="1"
+                      placeholder="<?php $this->_('AdminChatbot.index.input_placeholder');?>"></textarea>
+            <button class="btn btn-primary chatbot-btn-send" id="btn-send" disabled>
+                <i class="bi bi-send-fill"></i>
+                <span><?php $this->_('AdminChatbot.index.btn_send');?></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    var chatbotConfig = {
+        csrfToken: <?php echo json_encode($csrf_token ?? '');?>,
+        baseUri: <?php echo json_encode($this->Html->safe($this->base_uri));?>,
+        staffInitials: <?php echo json_encode($staff_initials ?? '');?>,
+        defaultModel: <?php echo json_encode($default_model ?? '');?>,
+        conversations: <?php echo json_encode($conversations ?? []);?>,
+        models: <?php echo json_encode($models ?? []);?>,
+        confirmDelete: <?php echo json_encode($this->_('AdminChatbot.index.confirm_delete', true));?>,
+        timezone: <?php echo json_encode($timezone ?? 'UTC');?>,
+        defaultTitle: <?php echo json_encode($this->_('AdminChatbot.index.default_title', true));?>,
+        hasMore: <?php echo json_encode($has_more ?? false);?>,
+        truncatedNotice: <?php echo json_encode($this->_('AdminChatbot.index.truncated_notice', true));?>,
+        lang: {
+            show_all_conversations: <?php echo json_encode($this->_('AdminChatbot.index.show_all_conversations', true));?>,
+            show_chatbot_only: <?php echo json_encode($this->_('AdminChatbot.index.show_chatbot_only', true));?>
+        }
+    };
+</script>
+<script src="<?php echo $this->view_dir;?>javascript/chatbot.js"></script>
+<?php } ?>

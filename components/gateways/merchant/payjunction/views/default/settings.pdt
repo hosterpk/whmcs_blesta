@@ -1,31 +1,43 @@
 
-	<ul>
-		<li>
-			<?php
-            $this->Form->label($this->_('PayJunction.user_name', true), 'user_name');
-            $this->Form->fieldText('user_name', (isset($meta['user_name']) ? $meta['user_name'] : null), ['id'=>'user_name']);
-            ?>
-			<span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('PayJunction.user_name_note');?></div></span>
-		</li>
-		<li>
-			<?php
-            $this->Form->label($this->_('PayJunction.password', true), 'password');
-            $this->Form->fieldText('password', (isset($meta['password']) ? $meta['password'] : null), ['id'=>'password']);
-            ?>
-			<span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('PayJunction.password_note');?></div></span>
-		</li>		
-		<li>
-			<?php
-            $this->Form->label($this->_('PayJunction.api_key', true), 'api_key');
-            $this->Form->fieldText('api_key', (isset($meta['api_key']) ? $meta['api_key'] : null), ['id'=>'api_key']);
-            ?>
-			<span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('PayJunction.api_key_note');?></div></span>
-		</li>
-		<li>
-			<?php
-            $this->Form->fieldCheckbox('test_mode', 'true', ((isset($meta['test_mode']) ? $meta['test_mode'] : 'false') == 'true'), ['id'=>'test_mode']);
-            $this->Form->label($this->_('PayJunction.test_mode', true), 'test_mode', ['class'=>'inline']);
-            ?>
-			<span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('PayJunction.test_mode_note');?></div></span>
-		</li>
-	</ul>
+<div class="mb-3">
+    <label for="user_name" class="form-label">
+        <?php $this->_('PayJunction.user_name'); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('PayJunction.user_name_note', true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText('user_name', (isset($meta['user_name']) ? $meta['user_name'] : null), ['id' => 'user_name', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <label for="password" class="form-label">
+        <?php $this->_('PayJunction.password'); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('PayJunction.password_note', true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText('password', (isset($meta['password']) ? $meta['password'] : null), ['id' => 'password', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <label for="api_key" class="form-label">
+        <?php $this->_('PayJunction.api_key'); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('PayJunction.api_key_note', true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText('api_key', (isset($meta['api_key']) ? $meta['api_key'] : null), ['id' => 'api_key', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <div class="form-check">
+        <?php
+        $this->Form->fieldCheckbox('test_mode', 'true', ((isset($meta['test_mode']) ? $meta['test_mode'] : 'false') == 'true'), ['id' => 'test_mode', 'class' => 'form-check-input']);
+        ?>
+        <label for="test_mode" class="form-check-label">
+            <?php $this->_('PayJunction.test_mode'); ?>
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('PayJunction.test_mode_note', true)); ?>"></i>
+        </label>
+    </div>
+</div>

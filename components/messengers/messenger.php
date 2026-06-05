@@ -207,6 +207,19 @@ abstract class Messenger
     }
 
     /**
+     * Returns the icon class for this extension, if set in config.json
+     *
+     * @return string|null The Bootstrap icon class, or null if not set
+     */
+    public function getIcon()
+    {
+        if (isset($this->config->icon)) {
+            return $this->config->icon;
+        }
+        return null;
+    }
+
+    /**
      * Sets the messenger to be used for any subsequent requests
      *
      * @param stdClass $messenger A stdClass object representing the messenger

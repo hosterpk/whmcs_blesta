@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('namesilo.map', [
     'module' => 'namesilo',
     'module_row_key' => 'user',

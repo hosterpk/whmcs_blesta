@@ -40,29 +40,44 @@ class EmailParser
      * @return array An array of email addresses
      */
     public function getAddress(MimeMailParser $email, $header)
-{
-    $addresses = [];
+    {
+        $addresses = [];
 
-    // Normalize header name to lowercase
-    $header_lower = strtolower($header);
+        // Normalize header name to lowercase
+        $header_lower = strtolower($header);
 
-    // Try the parser's getHeader() first
-    $value = $email->getHeader($header);
+        // Try the parser's getHeader() first
+        $value = $email->getHeader($header);
 
-    // Fallback to part headers if needed
-    if (empty($value) && isset($email->parts[1]['headers'][$header_lower])) {
-        $value = $email->parts[1]['headers'][$header_lower];
+        // Fallback to part headers if needed
+        if (empty($value) && isset($email->parts[1]['headers'][$header_lower])) {
+            $value = $email->parts[1]['headers'][$header_lower];
+        }
+
+        if (empty($value)) {
+            return $addresses;
+        }
+
+        // Use RFC 5322 structural parsing instead of regex to prevent
+        // sender spoofing via display-name tricks (e.g. From: "<alice@co.com>" <attacker@evil.com>)
+        $parsed = mailparse_rfc822_parse_addresses($value);
+
+        foreach ($parsed as $entry) {
+            // Skip RFC 5322 group syntax entries
+            if (!empty($entry['is_group'])) {
+                continue;
+            }
+
+            // Only accept structurally-parsed addr-spec; never the display-name
+            if (empty($entry['address']) || strpos($entry['address'], '@') === false) {
+                continue;
+            }
+
+            $addresses[] = strtolower(trim($entry['address']));
+        }
+
+        return array_values(array_unique($addresses));
     }
-
-    // Extract all email addresses
-    preg_match_all("/[\._a-zA-Z0-9-]+@[\._a-zA-Z0-9-]+/i", $value, $matches);
-
-    foreach ($matches[0] as $match) {
-        $addresses[] = $match;
-    }
-
-    return array_unique($addresses);
-}
 
     /**
      * Fetches the text of an email, converts HTML to plain-text if no

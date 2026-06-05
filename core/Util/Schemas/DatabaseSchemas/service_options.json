@@ -1,0 +1,90 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "service_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "option_pricing_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "qty",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "value",
+            "type": "mediumtext",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 16777215
+        },
+        {
+            "name": "encrypted",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "option_pricing_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "option_pricing_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "service_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "service_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -1,0 +1,148 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminClients.notes.categorylink_create', true),
+            'href' => $this->base_uri . 'clients/addnote/' . ($client->id ?? null) . '/'
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.notes.boxtitle_notes', true), ['id' => 'admin_clients_notes'], ($render_section ?? null));
+
+if (($notes ?? false) && ($num_notes = count($notes)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="notes_table">
+        <thead>
+            <tr>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/notes/' . ($client->id ?? null) . '/?sort=title&order=' . ($sort == 'title' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.notes.heading_title');?>
+                        <?php if ($sort == 'title') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/notes/' . ($client->id ?? null) . '/?sort=date_updated&order=' . ($sort == 'date_updated' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.notes.heading_dateupdated');?>
+                        <?php if ($sort == 'date_updated') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th class="text-end" style="width: 100px;"><?php $this->_('AdminClients.notes.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php for ($i = 0; $i < $num_notes; $i++) { ?>
+            <tr class="note-row" style="cursor: pointer;" aria-expanded="false">
+                <td><?php echo $this->Html->safe($notes[$i]->title ?? null);?></td>
+                <td><?php echo $this->Date->cast($notes[$i]->date_updated);?></td>
+                <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                        <a href="<?php echo $this->base_uri . 'clients/editnote/' . ($notes[$i]->client_id ?? null) . '/' . ($notes[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.notes.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <?php
+                        $this->Form->create($this->base_uri . 'clients/deletenote/' . ($notes[$i]->client_id ?? null) . '/' . ($notes[$i]->id ?? null) . '/', ['class' => 'd-inline']);
+                        ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminClients.notes.confirm_delete', true));?>"
+                            title="<?php $this->_('AdminClients.notes.option_delete');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php $this->Form->end();?>
+                    </div>
+                </td>
+            </tr>
+            <tr class="collapse-row" style="display: none;">
+                <td colspan="3" style="padding: 0; background-color: var(--bg-secondary);">
+                    <div style="padding: 1rem 1.5rem;">
+                        <div class="d-flex flex-wrap gap-4 mb-2">
+                            <div>
+                                <small class="text-muted d-block"><?php $this->_('AdminClients.notes.heading_staff');?></small>
+                                <span>
+                                    <?php
+                                    if ($notes[$i]->staff_id ?? null) {
+                                        echo $this->Html->concat(' ', ($notes[$i]->staff_first_name ?? null), ($notes[$i]->staff_last_name ?? null));
+                                    } else {
+                                        $this->_('AdminClients.notes.by_system');
+                                    }
+                                    ?>
+                                </span>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block"><?php $this->_('AdminClients.notes.heading_dateadded');?></small>
+                                <span><?php echo $this->Date->cast($notes[$i]->date_added);?></span>
+                            </div>
+                        </div>
+                        <?php if (!empty($notes[$i]->description)) { ?>
+                        <div class="mt-3 pt-3" style="border-top: 1px solid var(--border-color);">
+                            <?php echo nl2br($this->Html->safe($notes[$i]->description ?? ''));?>
+                        </div>
+                        <?php } ?>
+                    </div>
+                </td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+<?php
+    if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        $this->Widget->footer();
+        $this->Pagination->build();
+    }
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-journal" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.notes.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Widget->end();
+?>
+
+<script>
+(function() {
+    // Use event delegation on widget container (persists through AJAX updates)
+    var widget = document.getElementById('admin_clients_notes');
+    if (!widget) return;
+
+    widget.addEventListener('click', function(e) {
+        // Handle expandable rows
+        var row = e.target.closest('.note-row');
+        if (row) {
+            // Ignore clicks on interactive elements
+            if (e.target.closest('a, button, input, select, textarea')) return;
+
+            var collapseRow = row.nextElementSibling;
+            if (collapseRow && collapseRow.classList.contains('collapse-row')) {
+                var isExpanded = collapseRow.style.display !== 'none';
+
+                // Close other open rows
+                widget.querySelectorAll('.collapse-row').forEach(function(otherRow) {
+                    if (otherRow !== collapseRow) {
+                        otherRow.style.display = 'none';
+                        var prevRow = otherRow.previousElementSibling;
+                        if (prevRow) prevRow.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                // Toggle current row
+                collapseRow.style.display = isExpanded ? 'none' : 'table-row';
+                row.setAttribute('aria-expanded', !isExpanded);
+            }
+        }
+
+    });
+})();
+</script>

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\GeoIp;
 
 use GeoIp2\Database\Reader;

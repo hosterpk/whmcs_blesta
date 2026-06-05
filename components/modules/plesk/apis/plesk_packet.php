@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Abstract class that all Plesk API commands must extend
  *
@@ -52,7 +53,7 @@ abstract class PleskPacket
     private function init()
     {
         $str = '<packet' . (empty($this->api_version) ? '' : ' version="' . $this->api_version . '"') . ' />';
-        $xml =<<<XML
+        $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 {$str}
 XML;
@@ -104,7 +105,7 @@ XML;
             foreach ($element as $xml_element) {
                 $child = $this->buildElements($elements, $xml_element);
             }
-            return (isset($child) ? $child : null);
+            return ($child ?? null);
         }
         return null;
     }

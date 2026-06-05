@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Events\Common\EventInterface;
 
 /**
@@ -15,7 +16,7 @@ class OrderTypeDomain extends OrderType
     /**
      * @var string The authors of this order type
      */
-    private static $authors = [['name'=>'Phillips Data, Inc.','url'=>'http://www.blesta.com']];
+    private static $authors = [['name' => 'Phillips Data, Inc.','url' => 'http://www.blesta.com']];
 
     /**
      * Construct
@@ -156,7 +157,7 @@ class OrderTypeDomain extends OrderType
         $rules = [
             'template' => [
                 'valid' => [
-                    'rule' => [[$this, 'validateTemplate'], isset($vars['groups']) ? $vars['groups'] : null],
+                    'rule' => [[$this, 'validateTemplate'], $vars['groups'] ?? null],
                     'message' => Language::_('OrderTypeDomain.!error.template.valid', true)
                 ]
             ],
@@ -218,7 +219,7 @@ class OrderTypeDomain extends OrderType
         // Check that the domain assigned to the pricing matches an available tld on the pricing package
         return !isset($item['domain']) || !isset($item['pricing_id']) || $this->validateDomainPricing($item['domain'], $item['pricing_id']);
     }
-    
+
     /**
      * Ensures that all the data submitted for items is valid
      *
@@ -565,7 +566,8 @@ class OrderTypeDomain extends OrderType
         );
         $meta = $this->formatMeta($this->order_form->meta);
 
-        if (!empty($spotlight_tlds)
+        if (
+            !empty($spotlight_tlds)
             && $domains_package_group
             && $meta['domain_group'] == $domains_package_group->value
         ) {
@@ -593,7 +595,8 @@ class OrderTypeDomain extends OrderType
         foreach ($tlds_pricing as $tld => $packages) {
             $package_id = $packages[0]->id ?? null;
 
-            if ((is_null($package_id)
+            if (
+                (is_null($package_id)
                     || !(array_key_exists($tld, $spotlight_tlds ?? []) || ($get['getAllTlds'] ?? false)))
                 && $domains_package_group
                 && $meta['domain_group'] == $domains_package_group->value
@@ -631,14 +634,14 @@ class OrderTypeDomain extends OrderType
                 }
             }
         }
-        
+
         // Make a list of package group names that are eligible for free domain bundling
         $bundle_package_group_names = [];
         foreach ($this->order_form->meta['package_groups'] ?? [] as $bundle_group_id) {
             $package_group = $this->PackageGroups->get($bundle_group_id);
             $bundle_package_group_names[] = $package_group->name;
         }
-        
+
         $this->view->base_uri = $get['base_uri'];
         $this->view->set('order_form', $this->order_form);
         $this->view->set('domains', $domains);
@@ -665,7 +668,7 @@ class OrderTypeDomain extends OrderType
                         strtotime(Configure::get('Blesta.cache_length')) - time(),
                         Configure::get('Blesta.company_id') . DS . 'plugins' . DS . 'order' . DS
                     );
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Write to cache failed, so disable caching
                     Configure::set('Caching.on', false);
                 }
@@ -747,8 +750,10 @@ class OrderTypeDomain extends OrderType
         $params = $event->getParams();
         $meta = $this->formatMeta($this->order_form->meta);
 
-        if ($params['item'] && $params['item']['group_id'] == $meta['domain_group']
-            && isset($params['item']['domain'])) {
+        if (
+            $params['item'] && $params['item']['group_id'] == $meta['domain_group']
+            && isset($params['item']['domain'])
+        ) {
             $this->cart->setData('domain', $params['item']['domain']);
         }
     }
@@ -872,9 +877,9 @@ class OrderTypeDomain extends OrderType
     private function getSld($domain)
     {
         $domain = preg_replace('/^www\./i', '', $domain);
-        preg_match("/^(.*?)\.(.*)/i", $domain, $matches);
+        preg_match('/^(.*?)\.(.*)/i', $domain, $matches);
 
-        return isset($matches[1]) ? $matches[1] : $domain;
+        return $matches[1] ?? $domain;
     }
 
     /**
@@ -886,9 +891,9 @@ class OrderTypeDomain extends OrderType
     private function getTld($domain)
     {
         $sld = $this->getSld($domain);
-        preg_match("/" . $sld . "(.*)/i", $domain, $matches);
+        preg_match('/' . $sld . '(.*)/i', $domain, $matches);
 
-        return isset($matches[1]) ? $matches[1] : $domain;
+        return $matches[1] ?? $domain;
     }
 
     /**

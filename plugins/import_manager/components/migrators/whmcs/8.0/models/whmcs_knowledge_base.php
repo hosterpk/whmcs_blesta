@@ -1,4 +1,5 @@
 <?php
+
 /**
  * WHMCS Knowledge Base
  *

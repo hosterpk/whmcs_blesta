@@ -1,0 +1,363 @@
+
+<?php echo (isset($left_nav) ? $left_nav : null);?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php $this->Form->create(null, ['id' => 'staff', 'class' => 'disable-on-submit']);?>
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemStaff.edit.boxtitle_editstaff', true), ['id' => 'admin_system_staff_edit']);
+    ?>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.edit.heading_contact');?></h6>
+
+            <div class="mb-3">
+                <label for="first_name" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_firstname');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'first_name',
+                    (isset($vars->first_name) ? $vars->first_name : null),
+                    ['id' => 'first_name', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="last_name" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_lastname');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'last_name',
+                    (isset($vars->last_name) ? $vars->last_name : null),
+                    ['id' => 'last_name', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_email');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'email',
+                    (isset($vars->email) ? $vars->email : null),
+                    ['id' => 'email', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="number_mobile" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_numbermobile');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'number_mobile',
+                    (isset($vars->number_mobile) ? $vars->number_mobile : null),
+                    ['id' => 'number_mobile', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.edit.heading_authentication');?></h6>
+
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_username');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'username',
+                    (isset($vars->username) ? $vars->username : null),
+                    ['id' => 'username', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="new_password" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_password');?>
+                </label>
+                <?php $this->Form->fieldPassword('new_password', ['id' => 'new_password', 'class' => 'form-control']);?>
+            </div>
+
+            <div class="mb-3">
+                <label for="confirm_password" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_confirmpass');?>
+                </label>
+                <?php $this->Form->fieldPassword('confirm_password', ['id' => 'confirm_password', 'class' => 'form-control']);?>
+            </div>
+
+            <div class="mb-3">
+                <label for="recovery_email" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_recovery_email');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'recovery_email',
+                    (isset($vars->recovery_email) ? $vars->recovery_email : null),
+                    ['id' => 'recovery_email', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="two_factor_mode" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_twofactormode');?>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'two_factor_mode',
+                    (isset($two_factor_modes) ? $two_factor_modes : null),
+                    (isset($vars->two_factor_mode) ? $vars->two_factor_mode : null),
+                    ['id' => 'two_factor_mode', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div id="factor_key" class="mb-3" style="display:none;">
+                <div class="mb-3">
+                    <img id="two_factor_qr" src="<?php echo (new chillerlan\QRCode\QRCode)->render($this->Html->safe('otpauth://totp/' . urlencode((isset($vars->username) ? $vars->username : null)) . '?secret=' . (isset($vars->two_factor_key_base32) ? $vars->two_factor_key_base32 : null) . '&issuer=Blesta'));?>" alt="" class="img-fluid" style="max-width: 200px;" />
+                </div>
+                <label for="two_factor_key" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_twofactorkey');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'two_factor_key',
+                    (isset($vars->two_factor_key) ? $vars->two_factor_key : null),
+                    ['id' => 'two_factor_key', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div id="factor_pin" class="mb-3" style="display:none;">
+                <label for="two_factor_pin" class="form-label">
+                    <?php $this->_('AdminSystemStaff.edit.field_twofactorpin');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'two_factor_pin',
+                    (isset($vars->two_factor_pin) ? $vars->two_factor_pin : null),
+                    ['id' => 'two_factor_pin', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.edit.heading_groups');?></h6>
+
+            <div class="dual-select-container mb-4">
+                <div class="dual-select-panel">
+                    <label class="form-label"><?php $this->_('AdminSystemStaff.edit.text_membergroups');?></label>
+                    <div class="dual-select-dropzone">
+                        <div class="drag-list" id="assigned_groups">
+                            <?php
+                            if (!empty($vars->groups)) {
+                                foreach ($vars->groups as $group_id => $group_name) {
+                            ?>
+                            <div class="drag-item" data-value="<?php echo $this->Html->safe($group_id);?>" draggable="true"><?php echo $this->Html->safe($group_name);?></div>
+                            <?php
+                                }
+                            }
+                            ?>
+                        </div>
+                    </div>
+                    <?php $this->Form->fieldMultiSelect('groups[]', (isset($vars->groups) ? array_keys($vars->groups) : null), [], ['id' => 'assigned', 'style' => 'display:none;']);?>
+                </div>
+
+                <div class="dual-select-controls">
+                    <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move_left" title="<?php $this->_('AdminSystemStaff.edit.text_membergroups');?>">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move_right" title="<?php $this->_('AdminSystemStaff.edit.text_availablegroups');?>">
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+
+                <div class="dual-select-panel">
+                    <label class="form-label"><?php $this->_('AdminSystemStaff.edit.text_availablegroups');?></label>
+                    <div class="dual-select-dropzone">
+                        <div class="drag-list" id="available_groups">
+                            <?php
+                            if (!empty($groups)) {
+                                foreach ($groups as $group_id => $group_name) {
+                            ?>
+                            <div class="drag-item" data-value="<?php echo $this->Html->safe($group_id);?>" draggable="true"><?php echo $this->Html->safe($group_name);?></div>
+                            <?php
+                                }
+                            }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit(
+                'save',
+                $this->_('AdminSystemStaff.edit.field_editsubmit', true),
+                ['class' => 'btn btn-primary']
+            );
+            ?>
+        </div>
+
+    <?php
+    $this->Widget->end();
+    $this->Form->end();
+    ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const staffForm = document.getElementById('staff');
+    const twoFactorMode = document.getElementById('two_factor_mode');
+
+    // Drag & Drop Functionality for Groups
+    const assignedGroupsList = document.getElementById('assigned_groups');
+    const availableGroupsList = document.getElementById('available_groups');
+    const moveLeftBtn = document.querySelector('.move_left');
+    const moveRightBtn = document.querySelector('.move_right');
+    const hiddenSelect = document.getElementById('assigned');
+
+    let draggedItem = null;
+
+    function setupDragItems() {
+        document.querySelectorAll('#assigned_groups .drag-item, #available_groups .drag-item').forEach(item => {
+            // Click to select
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (e.ctrlKey || e.metaKey) {
+                    this.classList.toggle('selected');
+                } else {
+                    document.querySelectorAll('.drag-item').forEach(i => i.classList.remove('selected'));
+                    this.classList.add('selected');
+                }
+            });
+
+            // Drag events
+            item.addEventListener('dragstart', function(e) {
+                draggedItem = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.textContent);
+            });
+
+            item.addEventListener('dragend', function(e) {
+                this.classList.remove('dragging');
+                document.querySelectorAll('.drag-list').forEach(l => l.classList.remove('drag-over'));
+            });
+        });
+
+        // Setup drop zones
+        [assignedGroupsList, availableGroupsList].forEach(list => {
+            if (!list) return;
+
+            list.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+
+            list.addEventListener('dragleave', function(e) {
+                if (!this.contains(e.relatedTarget)) {
+                    this.classList.remove('drag-over');
+                }
+            });
+
+            list.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+
+                if (draggedItem && draggedItem.parentNode !== this) {
+                    this.appendChild(draggedItem);
+                    draggedItem.classList.remove('selected');
+                    draggedItem = null;
+                }
+            });
+        });
+    }
+
+    setupDragItems();
+
+    // Arrow button functionality
+    moveLeftBtn?.addEventListener('click', function() {
+        const selectedItems = availableGroupsList.querySelectorAll('.drag-item.selected');
+        if (selectedItems.length > 0) {
+            selectedItems.forEach(item => {
+                assignedGroupsList.appendChild(item);
+                item.classList.remove('selected');
+            });
+        }
+    });
+
+    moveRightBtn?.addEventListener('click', function() {
+        const selectedItems = assignedGroupsList.querySelectorAll('.drag-item.selected');
+        if (selectedItems.length > 0) {
+            selectedItems.forEach(item => {
+                availableGroupsList.appendChild(item);
+                item.classList.remove('selected');
+            });
+        }
+    });
+
+    // Clear selection when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.drag-item')) {
+            document.querySelectorAll('.drag-item.selected').forEach(item => item.classList.remove('selected'));
+        }
+    });
+
+    // Update hidden select on form submit
+    if (staffForm) {
+        staffForm.addEventListener('submit', function() {
+            const items = assignedGroupsList.querySelectorAll('.drag-item');
+
+            // Clear existing options
+            hiddenSelect.innerHTML = '';
+
+            // Add all assigned groups as selected options
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.getAttribute('data-value');
+                option.selected = true;
+                hiddenSelect.appendChild(option);
+            });
+        });
+    }
+
+    // Two-factor mode visibility
+    function hideTwoFactorModes() {
+        const factorKey = document.getElementById('factor_key');
+        const factorPin = document.getElementById('factor_pin');
+        const qrCode = document.getElementById('two_factor_qr');
+
+        switch(twoFactorMode.value) {
+            case 'motp':
+                factorPin.style.display = 'block';
+                factorKey.style.display = 'block';
+                if (qrCode) qrCode.style.display = 'none';
+                break;
+            case 'totp':
+                factorKey.style.display = 'block';
+                factorPin.style.display = 'none';
+                if (qrCode) qrCode.style.display = 'block';
+                break;
+            case 'none':
+            default:
+                factorKey.style.display = 'none';
+                factorPin.style.display = 'none';
+                break;
+        }
+    }
+
+    if (twoFactorMode) {
+        hideTwoFactorModes();
+        twoFactorMode.addEventListener('change', hideTwoFactorModes);
+    }
+});
+</script>

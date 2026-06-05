@@ -1,4 +1,5 @@
 <?php
+
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'realtime_register_response.php';
 
 /**
@@ -62,11 +63,7 @@ class RealtimeRegisterApi
      */
     public function apiRequest(string $route, array $body = [], string $method = 'GET')
     {
-        if ($this->sandbox) {
-            $url = rtrim($this->api_url['sandbox'], '/') . '/' . ltrim($route, '/');
-        } else {
-            $url = rtrim($this->api_url['live'], '/') . '/' . ltrim($route, '/');
-        }
+        $url = $this->sandbox ? rtrim($this->api_url['sandbox'], '/') . '/' . ltrim($route, '/') : rtrim($this->api_url['live'], '/') . '/' . ltrim($route, '/');
 
         $ch = curl_init();
 

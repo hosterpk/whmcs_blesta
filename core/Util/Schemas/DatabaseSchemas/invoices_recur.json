@@ -1,0 +1,126 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "term",
+            "type": "smallint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 5,
+            "scale": 0
+        },
+        {
+            "name": "period",
+            "type": "enum('day','week','month','year')",
+            "nullable": false,
+            "key": null,
+            "default": "month",
+            "extra": null,
+            "max_length": 5
+        },
+        {
+            "name": "duration",
+            "type": "smallint",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 5,
+            "scale": 0
+        },
+        {
+            "name": "currency",
+            "type": "char(3)",
+            "nullable": false,
+            "key": null,
+            "default": "USD",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "autodebit",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "date_renews",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_last_renewed",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "note_public",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "note_private",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id",
+                "date_renews"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Format\Type\Tax;
 
 use Blesta\Core\Pricing\Presenter\Format\Type\Item\AbstractItemCreator;

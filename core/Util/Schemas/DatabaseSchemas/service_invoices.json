@@ -1,0 +1,73 @@
+{
+    "columns": [
+        {
+            "name": "invoice_id",
+            "type": "int",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "service_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "type",
+            "type": "enum('provisioning','renewal','suspension','unsuspension','cancelation')",
+            "nullable": false,
+            "key": null,
+            "default": "renewal",
+            "extra": null,
+            "max_length": 12
+        },
+        {
+            "name": "failed_attempts",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "maximum_attempts",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "date_next_attempt",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "service_id",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "service_id",
+                "invoice_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

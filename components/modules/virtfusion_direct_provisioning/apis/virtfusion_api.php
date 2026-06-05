@@ -2,7 +2,6 @@
 
 class VirtfusionApi
 {
-
     private $api_token;
     private $hostname;
 
@@ -21,7 +20,7 @@ class VirtfusionApi
     {
         return $this->submit(ltrim($query, '/'));
     }
-    
+
     public function submit($command, $type = 'GET', array $args = [])
     {
         $url = 'https://' . $this->hostname . ':' . $this->port . '/api/v1/' . $command;

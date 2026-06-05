@@ -7,7 +7,7 @@ Enhance is a next-gen shared hosting control panel.
 1. You can install the module via composer:
 
     ```
-    composer require parent_repository/enhance
+    composer require blesta/enhance
     ```
 
 2. OR upload the source code to a /components/modules/enhance/ directory within

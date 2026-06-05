@@ -27,6 +27,7 @@ $lang['GoGetSSL.description'] = 'GoGetSSL has been serving SSL certificates sinc
 $lang['GoGetSSL.module_row'] = 'GoGetSSL Reseller';
 $lang['GoGetSSL.module_row_plural'] = 'Resellers';
 
+$lang['Gogetssl.back_to_manage'] = 'Back';
 
 // Module management
 $lang['GoGetSSL.add_module_row'] = 'Add Reseller';

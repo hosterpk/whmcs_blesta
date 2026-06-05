@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('paypal.map', [
     'gateway' => 'paypal_payments_standard',
     'type' => 'nonmerchant',

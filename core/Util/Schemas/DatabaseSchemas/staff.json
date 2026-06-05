@@ -1,0 +1,97 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "first_name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "last_name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "email",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "email_mobile",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "number_mobile",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive')",
+            "nullable": false,
+            "key": null,
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "user_id",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "user_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

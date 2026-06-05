@@ -1,6 +1,9 @@
 <?php
 
 $lang['CWatch.name'] = 'CWatch';
+
+$lang['Cwatch.back_to_manage'] = 'Back';
+
 $lang['CWatch.description'] = 'A protection tool for your website, web servers and web applications against the increasing sophistication of hacker threats.';
 $lang['CWatch.module_row.name'] = 'API Account';
 $lang['CWatch.module_row_plural.name'] = 'API Accounts';

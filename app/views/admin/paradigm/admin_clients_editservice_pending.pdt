@@ -1,0 +1,90 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo (isset($form) ? $form : null);
+
+$this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'pending_service']);
+$this->Form->fieldHidden('status', (isset($service->status) ? $service->status : null) == 'in_review' ? 'in_review' : 'active');
+
+if (isset($input_html) && ($module_field_html = $input_html->generate(null, $this->view))) {
+?>
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.addservice_addon.module_heading', false, (isset($module_name) ? $module_name : null));?>
+</h6>
+<div class="mb-4">
+    <?php echo $module_field_html;?>
+</div>
+<?php } ?>
+<div class="package-options"></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="form-check">
+            <?php
+            $this->Form->fieldCheckbox('notify_order', 'true', (isset($vars->notify_order) ? $vars->notify_order : 'true') == 'true', ['id' => 'notify_order', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.editservice.field_notify_order', true), 'notify_order', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-check">
+            <?php
+            $useModuleDisabled = ((isset($service->status) ? $service->status : null) == 'in_review') ? ['disabled' => 'disabled'] : [];
+            $this->Form->fieldCheckbox('use_module', 'true', ((isset($vars->use_module) ? $vars->use_module : 'true') == 'true' || (isset($service->status) ? $service->status : null) == 'pending'), array_merge(['id' => 'use_module_module', 'class' => 'form-check-input'], $useModuleDisabled));
+            $this->Form->label($this->_('AdminClients.editservice.field_use_module', true), 'use_module_module', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php
+$this->Form->fieldHidden('disable_option_logic', 'true', ['id' => 'disable_option_logic']);
+?>
+
+<?php
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var serviceId = <?php echo json_encode((isset($service->id) ? $service->id : null));?>;
+    var pricingId = <?php echo json_encode((isset($service->pricing_id) ? $this->Html->safe($service->pricing_id) : null));?>;
+    var packageOptions = document.querySelector('.package-options');
+
+    function fetchPackageOptions() {
+        if (pricingId && packageOptions) {
+            var form = packageOptions.closest('form');
+            var fields = form.querySelectorAll('[name^="configoptions"]');
+            var params = new URLSearchParams();
+            fields.forEach(function(field) {
+                if (field.type === 'checkbox' && !field.checked) return;
+                params.append(field.name, field.value);
+            });
+            params.set('disable_option_logic', 'true');
+            params.set('service_id', serviceId);
+
+            fetch(baseUri + 'clients/packageoptions/' + pricingId + '?' + params.toString(), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.text())
+            .then(text => {
+                if (!packageOptions) return;
+
+                try { text = JSON.parse(text); } catch(e) { /* use raw text */ }
+                packageOptions.innerHTML = text || '';
+                packageOptions.querySelectorAll('script').forEach(function(oldScript) {
+                    var newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(function(attr) {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+
+    fetchPackageOptions();
+})();
+</script>

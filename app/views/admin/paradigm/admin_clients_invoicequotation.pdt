@@ -1,0 +1,134 @@
+<?php /** @var View $this **/ ?>
+
+<?php echo (isset($message) ? $message : null); ?>
+
+<?php
+$this->Form->create();
+?>
+<div class="mb-3">
+    <?php
+    $this->Form->fieldRadio('invoice', 'single', ($vars->invoice ?? 'single') == 'single', ['id' => 'invoice_single', 'class' => 'invoice inline me-2']);
+    $this->Form->label($this->_('AdminClients.invoicequotation.field_invoice_single', true), 'invoice_single', ['class' => 'me-3']);
+    $this->Form->fieldRadio('invoice', 'two', ($vars->invoice ?? 'single') == 'two', ['id' => 'invoice_two', 'class' => 'invoice inline me-2']);
+    $this->Form->label($this->_('AdminClients.invoicequotation.field_invoice_two', true), 'invoice_two', ['class' => 'me-3']);
+    ?>
+</div>
+<div class="mb-3">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.invoicequotation.field_first_due_date', true), 'first_due_date', ['class' => 'form-label two-invoices']);
+            $this->Form->label($this->_('AdminClients.invoicequotation.field_due_date', true), 'first_due_date', ['class' => 'form-label single-invoice']);
+            $this->Form->fieldText('first_due_date', ($vars->first_due_date ?? $this->Date->format('Y-m-d')), ['id' => 'first_due_date', 'class' => 'form-control date']);
+            ?>
+        </div>
+        <div class="col-md-6 two-invoices">
+            <?php
+            $this->Form->label($this->_('AdminClients.invoicequotation.field_percentage_due', true), 'percentage_due', ['class' => 'form-label']);
+            $this->Form->fieldText('percentage_due', ($vars->percentage_due ?? 50), ['id' => 'percentage_due', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+</div>
+<div class="mb-3 two-invoices" style="display: none">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.invoicequotation.field_second_due_date', true), 'second_due_date', ['class' => 'form-label']);
+            $this->Form->fieldText('second_due_date', ($vars->second_due_date ?? $this->Date->format('Y-m-d')), ['id' => 'second_due_date', 'class' => 'form-control date']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.invoicequotation.field_percentage_due', true), null, ['class' => 'form-label']);
+            $this->Form->fieldText('percentage_due_remaining', 0, ['id' => 'percentage_due_remaining', 'class' => 'form-control', 'disabled' => 'disabled']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+(function () {
+    function init() {
+        // Initialize date pickers
+        if (typeof blestaBindDatePicker === 'function') {
+            blestaBindDatePicker();
+        }
+
+        var invoiceRadios = document.querySelectorAll('input[name="invoice"]');
+        var percentageInput = document.getElementById('percentage_due');
+        var secondDateInput = document.getElementById('second_due_date');
+        var twoInvoiceElements = document.querySelectorAll('.two-invoices');
+        var singleInvoiceElements = document.querySelectorAll('.single-invoice');
+
+        function updateInvoiceDisplay() {
+            var checkedValue = document.querySelector('input[name="invoice"]:checked').value;
+
+            if (checkedValue === 'single') {
+                if (percentageInput) percentageInput.value = 100;
+                if (secondDateInput) secondDateInput.disabled = true;
+                twoInvoiceElements.forEach(function(el) { el.style.display = 'none'; });
+                singleInvoiceElements.forEach(function(el) { el.style.display = 'block'; });
+            } else {
+                if (percentageInput) percentageInput.value = <?php echo $vars->percentage_due ?? 50;?>;
+                if (secondDateInput) secondDateInput.disabled = false;
+                twoInvoiceElements.forEach(function(el) { el.style.display = 'block'; });
+                singleInvoiceElements.forEach(function(el) { el.style.display = 'none'; });
+                if (percentageInput) {
+                    var event = new Event('keyup');
+                    percentageInput.dispatchEvent(event);
+                }
+            }
+        }
+
+        // Set initial state
+        var initialValue = document.querySelector('input[name="invoice"]:checked');
+        if (initialValue && initialValue.value === 'single') {
+            if (percentageInput) percentageInput.value = 100;
+            if (secondDateInput) secondDateInput.disabled = true;
+            twoInvoiceElements.forEach(function(el) { el.style.display = 'none'; });
+        }
+
+        // Handle radio button changes
+        invoiceRadios.forEach(function(radio) {
+            radio.addEventListener('change', updateInvoiceDisplay);
+        });
+
+        // Handle percentage input changes
+        if (percentageInput) {
+            percentageInput.addEventListener('keyup', function() {
+                var percentage = parseInt(this.value) || 0;
+
+                if (percentage > 100) {
+                    percentage = 100;
+                    this.value = percentage;
+                }
+
+                if (percentage <= 0) {
+                    percentage = 1;
+                    this.value = percentage;
+                }
+
+                var remainingInput = document.getElementById('percentage_due_remaining');
+                if (remainingInput) {
+                    remainingInput.value = 100 - percentage;
+                }
+
+                if (secondDateInput) {
+                    secondDateInput.disabled = (percentage === 100);
+                }
+            });
+        }
+    }
+
+    // Support both direct page load and dynamic injection via AJAX
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>

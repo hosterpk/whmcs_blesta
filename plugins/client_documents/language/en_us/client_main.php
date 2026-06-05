@@ -7,5 +7,5 @@ $lang['ClientMain.index.no_results'] = "There are no documents available for dow
 $lang['ClientMain.index.heading_name'] = "Name";
 $lang['ClientMain.index.heading_description'] = "Description";
 $lang['ClientMain.index.heading_date_added'] = "Date Added";
-$lang['ClientMain.index.heading_options'] = "Options";
+$lang['ClientMain.index.heading_options'] = "Actions";
 $lang['ClientMain.index.option_download'] = "Download";

@@ -1,0 +1,104 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "by_user_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "ip_address",
+            "type": "varchar(45)",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 45
+        },
+        {
+            "name": "change",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "date_changed",
+            "type": "datetime",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "by_user_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "by_user_id",
+                "ip_address"
+            ]
+        },
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id"
+            ]
+        },
+        {
+            "name": "date_changed",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "date_changed"
+            ]
+        },
+        {
+            "name": "ip_address",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "ip_address"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -1,0 +1,71 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "email",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "permissions",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "token",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "status",
+            "type": "enum('accepted','pending','invalid')",
+            "nullable": false,
+            "key": null,
+            "default": "invalid",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events;
 
 /**
@@ -19,7 +20,7 @@ class EventFactory
      * @param array $params An array of parameters to be held by this event (optional)
      * @return \Blesta\Core\Util\Events\Event
      */
-    public function event($name, array $params = null)
+    public function event($name, ?array $params = null)
     {
         return new Event($name, $params);
     }

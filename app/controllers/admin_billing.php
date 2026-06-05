@@ -28,13 +28,6 @@ class AdminBilling extends AppController
 
         Language::loadLang(['admin_billing']);
 
-        // Set date picker
-        $calendar_begins = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'date_format');
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
-        $this->Javascript->setInline(
-            'Date.firstDayOfWeek=' . ($calendar_begins && $calendar_begins->value == 'sunday' ? 0 : 1) . ';'
-        );
     }
 
     /**
@@ -42,55 +35,12 @@ class AdminBilling extends AppController
      */
     public function index()
     {
-        $this->uses(['Invoices', 'Staff']);
-        $this->components(['SettingsCollection']);
-        $layout = $this->Staff->getSetting(
-            $this->Session->read('blesta_staff_id'),
-            'billing_layout',
-            $this->company_id
-        );
-        $layout = ($layout ? $layout->value : 'layout1');
-
-        // Check whether a passphrase is required or not for batch processing
-        $temp = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'private_key_passphrase');
-        $passphrase_required = (isset($temp['value']) && $temp['value'] != '');
-        unset($temp);
-
-        // Set all action items
-        $actions = [
-            'printqueue' => [
-                'enabled' => false,
-                'value' => $this->Invoices->getStatusCount(null, 'to_print')
-            ],
-            'batch' => [
-                'enabled' => false,
-                'value' => $this->Invoices->getStatusCount(null, 'to_autodebit')
+        // Set icon bar icons
+        $this->structure->set('icon_bar', [
+            'bottom' => [
+                ['href' => '#widget-management', 'icon' => 'bi bi-grid-1x2']
             ]
-        ];
-
-        // Set whether to show the actions
-        $show_actions = false;
-        foreach ($actions as $key => &$item) {
-            if ($item['value'] > 0) {
-                // Batch requires passphrase set
-                if ($key == 'batch' && ($passphrase_required == 1)) {
-                    $item['enabled'] = true;
-                    $show_actions = true;
-                } else {
-                    $item['enabled'] = true;
-                    $show_actions = true;
-                }
-            }
-        }
-
-        $action_items = [
-            'show_actions' => $show_actions,
-            'actions' => $actions
-        ];
-
-        // Set the layout
-        $this->set('content', $this->partial('admin_billing_' . $layout));
-        $this->set('action_items', $action_items);
+        ]);
     }
 
     /**
@@ -139,7 +89,9 @@ class AdminBilling extends AppController
         } else {
             // Get invoices for the company
             $invoices = $this->Invoices->getList(null, $status, $page, [$sort => $order], $post_filters);
-            $total_results = $this->Invoices->getListCount(null, $status, $post_filters);
+
+            // Reuse the status count already computed above instead of re-querying
+            $total_results = $status_count[$status] ?? $this->Invoices->getListCount(null, $status, $post_filters);
         }
 
         // Set the input field filters for the widget
@@ -344,7 +296,9 @@ class AdminBilling extends AppController
 
         // Get transactions for this client
         $transactions = $this->Transactions->getList(null, $status, $page, [$sort => $order], $post_filters);
-        $total_results = $this->Transactions->getListCount(null, $status, $post_filters);
+
+        // Reuse the status count already computed above instead of re-querying
+        $total_results = $status_count[$status] ?? $this->Transactions->getListCount(null, $status, $post_filters);
 
         // Set the input field filters for the widget
         $transaction_filters = new TransactionFilters();
@@ -669,7 +623,8 @@ class AdminBilling extends AppController
         $this->set('negate_order', ($order == 'asc' ? 'desc' : 'asc'));
         $this->set('actions', $actions);
 
-        $total_results = $this->Services->getListCount(null, $status, false, null, $filters);
+        // Reuse the status count already computed above instead of re-querying
+        $total_results = $status_count[$status] ?? $this->Services->getListCount(null, $status, false, null, $filters);
 
         // Set language for periods
         $periods = $this->Packages->getPricingPeriods();
@@ -841,58 +796,6 @@ class AdminBilling extends AppController
     }
 
     /**
-     * Renders a box to select the dashboard layout to use, and sets it
-     */
-    public function updateDashboard()
-    {
-        $billing_layout = null;
-        $billing_layouts = ['layout1', 'layout2', 'layout3', 'layout4'];
-
-        // Get the new dashboard layout if given
-        if (isset($this->get[0]) && in_array($this->get[0], $billing_layouts)) {
-            $billing_layout = $this->get[0];
-        }
-
-        $this->uses(['Staff']);
-        // Ensure a valid staff member is set
-        if (!($staff = $this->Staff->get($this->Session->read('blesta_staff_id'), $this->company_id))) {
-            $this->redirect($this->base_uri . 'billing/');
-        }
-
-        // Update dashboard layout
-        if ($billing_layout != null) {
-            // Update the billing dashboard layout
-            $this->Staff->setSetting($staff->id, 'billing_layout', $billing_layout);
-
-            // Redirect to billing dashboard
-            $this->redirect($this->base_uri . 'billing/');
-        }
-
-        // Retrieve the current layout
-        $current_layout = $this->Staff->getSetting($staff->id, 'billing_layout', $this->company_id);
-
-        // Set the default dashboard layout if one doesn't exist
-        if (!$current_layout) {
-            $current_layout = $billing_layouts[0];
-        } else {
-            $current_layout = $current_layout->value;
-        }
-
-        // Set all of the billing layouts
-        $layouts = [];
-        foreach ($billing_layouts as $layout) {
-            $layouts[] = (object) [
-                'name' => $layout,
-                'selected' => ($layout == $current_layout) ? true : false
-            ];
-        }
-
-        $this->set('layouts', $layouts);
-        echo $this->view->fetch('admin_billing_updatedashboard');
-        return false;
-    }
-
-    /**
      * Enable/Disable widgets from appearing on the dashboard
      */
     public function manageWidgets()
@@ -906,61 +809,54 @@ class AdminBilling extends AppController
         );
 
         if (!empty($this->post)) {
-            if (array_key_exists('widgets_on', $this->post) && is_array($this->post['widgets_on'])) {
-                // If a widget isn't displayed it must be disabled
-                foreach ($active_widgets as $key => $widget) {
-                    if (!in_array($key, $this->post['widgets_on'])) {
-                        $active_widgets[$key]['disabled'] = true;
-                    }
-                }
-
-                // Set all widgets to be displayed
-                foreach ($this->post['widgets_on'] as $key) {
-                    if (!isset($active_widgets[$key])) {
-                        $active_widgets[$key] = ['open' => true, 'section' => 'section1'];
-                    } else {
-                        unset($active_widgets[$key]['disabled']);
-                    }
-                }
-
-                // Update this staff member's billing widgets for this company
-                $this->Staff->saveBillingWidgetsState(
-                    $this->Session->read('blesta_staff_id'),
-                    $this->company_id,
-                    $active_widgets
-                );
+            $widgets_on = $this->post['widgets_on'] ?? [];
+            if (!is_array($widgets_on)) {
+                $widgets_on = [];
             }
+
+            // If a widget isn't displayed it must be disabled
+            foreach ($active_widgets as $key => $widget) {
+                if (!in_array($key, $widgets_on)) {
+                    $active_widgets[$key]['disabled'] = true;
+                }
+            }
+
+            // Set all widgets to be displayed
+            foreach ($widgets_on as $key) {
+                if (!isset($active_widgets[$key])) {
+                    $active_widgets[$key] = ['open' => true, 'section' => 'section1'];
+                } else {
+                    unset($active_widgets[$key]['disabled']);
+                }
+            }
+
+            // Update this staff member's billing widgets for this company
+            $this->Staff->saveBillingWidgetsState(
+                $this->Session->read('blesta_staff_id'),
+                $this->company_id,
+                $active_widgets
+            );
 
             return false;
         }
 
         // Get all widgets installed for this location
         $installed_widgets = $this->Actions->getAll(
-            ['company_id' => $this->company_id, 'location' => 'widget_staff_billing', 'enabled' => 1],
-            true
+            ['company_id' => $this->company_id, 'location' => 'widget_staff_billing', 'enabled' => 1]
         );
-
-        $available_widgets = [];
-        foreach ($installed_widgets as $widget) {
+        foreach ($installed_widgets as &$widget) {
+            $plugin = $this->PluginManager->get($widget->plugin_id, true);
             $key = $this->PluginManager->systemHash(
                 str_replace(['/', '?', '=', '&', '#'], '_', trim($widget->url, '/'))
             );
-            $available_widgets[$key] = $this->PluginManager->get($widget->plugin_id, true);
+
+            $widget->key = $key;
+            $widget->active = !((bool) ($active_widgets[$key]['disabled'] ?? false));
+            $widget->icon = $plugin->icon;
+            $widget->description = $plugin->description;
         }
 
-        // Move all currently displayed widgets from available to displayed
-        $displayed_widgets = [];
-        foreach ($active_widgets as $key => $widget) {
-            if (isset($available_widgets[$key]) && !(isset($widget['disabled']) && $widget['disabled'])) {
-                $displayed_widgets[$key] = $available_widgets[$key];
-                unset($available_widgets[$key]);
-            }
-        }
-
-        // All widgets available and not displayed
-        $this->set('available_widgets', $available_widgets);
-        // All widgets available and displayed
-        $this->set('displayed_widgets', $displayed_widgets);
+        $this->set('installed_widgets', $installed_widgets);
 
         echo $this->view->fetch('admin_billing_managewidgets');
         return false;

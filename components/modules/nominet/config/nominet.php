@@ -1,4 +1,5 @@
 <?php
+
 // Welcome Email templates
 Configure::set('Nominet.email_templates', [
     'en_us' => [

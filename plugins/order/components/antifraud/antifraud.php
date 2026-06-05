@@ -1,4 +1,5 @@
 <?php
+
 Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'fraud_detect.php');
 
 /**

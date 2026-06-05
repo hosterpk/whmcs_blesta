@@ -1,0 +1,295 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <!-- Info Banner -->
+    <div class="alert alert-info d-flex align-items-start mb-3" role="alert">
+        <i class="bi bi-info-circle me-3" style="font-size: 1.5rem;"></i>
+        <div>
+            <strong><?php $this->_('AdminCompanyLookandfeel.layout.info_title');?></strong>
+            <p class="mb-0 mt-2"><?php $this->_('AdminCompanyLookandfeel.layout.info_description');?></p>
+        </div>
+    </div>
+
+    <!-- Layout Settings Card -->
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyLookandfeel.layout.box_title', true), ['id' => 'admin_company_lookandfeel_layout']);
+    ?>
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <?php echo (isset($layout_admin) ? $layout_admin : null);?>
+            <?php echo (isset($layout_client) ? $layout_client : null);?>
+        </div>
+
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="resetLayout">
+                <i class="bi bi-arrow-counterclockwise me-1"></i><?php $this->_('AdminCompanyLookandfeel.layout.text_reset');?>
+            </button>
+            <?php
+            $this->Form->fieldSubmit(
+                'save',
+                $this->_('AdminCompanyLookandfeel.layout.text_submit', true),
+                ['class' => 'btn btn-primary']
+            );
+            ?>
+        </div>
+    <?php
+    $this->Widget->end();
+    ?>
+    <?php $this->Form->end();?>
+</div>
+
+<script>
+// Layout page JavaScript - vanilla JavaScript only
+document.addEventListener('DOMContentLoaded', function() {
+    // Helper function to convert RGB to Hex
+    function rgbToHex(rgb) {
+        if (!rgb) return '#000000';
+
+        // Check if already hex
+        if (rgb.indexOf('#') === 0) {
+            return rgb;
+        }
+
+        const result = rgb.match(/\d+/g);
+        if (!result || result.length < 3) return '#000000';
+
+        const r = parseInt(result[0]);
+        const g = parseInt(result[1]);
+        const b = parseInt(result[2]);
+
+        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    // Initialize Sortable for stat cards
+    if (typeof Sortable !== 'undefined') {
+        const statCardsGrids = document.querySelectorAll('.layout-stat-grid');
+        statCardsGrids.forEach(function(grid) {
+            new Sortable(grid, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function() {
+                    updateCardOrder(grid);
+                }
+            });
+        });
+
+        // Initialize Sortable for widgets
+        const widgetLists = document.querySelectorAll('.layout-widgets-list');
+        widgetLists.forEach(function(list) {
+            new Sortable(list, {
+                animation: 150,
+                handle: '.layout-widget-handle',
+                ghostClass: 'sortable-ghost',
+                onEnd: function() {
+                    updateWidgetOrder(list);
+                }
+            });
+        });
+    }
+
+    // Update card order hidden fields
+    function updateCardOrder(grid) {
+        const cards = grid.querySelectorAll('.layout-stat-card');
+        cards.forEach(function(card, index) {
+            const orderInput = card.querySelector('input[name$="[order]"]');
+            if (orderInput) {
+                orderInput.value = index;
+            }
+        });
+    }
+
+    // Update widget order hidden fields
+    function updateWidgetOrder(list) {
+        const widgets = list.querySelectorAll('.layout-widget-item');
+        widgets.forEach(function(widget, index) {
+            const orderInput = widget.querySelector('input[name$="[order]"]');
+            if (orderInput) {
+                orderInput.value = index;
+            }
+        });
+    }
+
+    // Function to attach card click handlers
+    function attachCardClickHandlers() {
+        document.querySelectorAll('.layout-stat-card').forEach(function(card) {
+            // Remove any existing click handler to avoid duplicates
+            card.removeEventListener('click', cardClickHandler);
+            card.addEventListener('click', cardClickHandler);
+        });
+    }
+
+    // Card click handler function
+    function cardClickHandler(e) {
+        // Don't trigger if clicking checkbox or color picker inputs
+        if (e.target.type === 'checkbox' || e.target.type === 'color' || e.target.type === 'text' || e.target.closest('.layout-stat-color-picker')) {
+            return;
+        }
+
+        const card = this;
+
+        // Check if this card allows color customization (not HTML type)
+        if (card.classList.contains('html-card')) {
+            return;
+        }
+
+        // Toggle show-picker class
+        const isVisible = card.classList.contains('show-picker');
+
+        // Hide all other color pickers first
+        document.querySelectorAll('.layout-stat-card').forEach(function(otherCard) {
+            otherCard.classList.remove('show-picker');
+        });
+
+        // Toggle this card's picker
+        if (!isVisible) {
+            card.classList.add('show-picker');
+        }
+    }
+
+    // Prevent checkbox clicks from bubbling to card
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('layout-card-checkbox')) {
+            e.stopPropagation();
+        }
+    });
+
+    // Attach handlers on load
+    attachCardClickHandlers();
+
+    // Re-attach handlers when tab is shown (for dynamically loaded content)
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function() {
+            setTimeout(function() {
+                attachCardClickHandlers();
+                attachColorSyncHandlers();
+            }, 100);
+        });
+    });
+
+    // Close color picker when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.layout-stat-card')) {
+            document.querySelectorAll('.layout-stat-card').forEach(function(card) {
+                card.classList.remove('show-picker');
+            });
+        }
+    });
+
+    // Function to sync color picker with text input and update card colors
+    function attachColorSyncHandlers() {
+        document.querySelectorAll('.layout-stat-card').forEach(function(card) {
+            const bgColorPicker = card.querySelector('.bg-color-picker');
+            const bgColorInput = card.querySelector('.bg-color-input');
+            const textColorPicker = card.querySelector('.text-color-picker');
+            const textColorInput = card.querySelector('.text-color-input');
+            const cardInner = card.querySelector('.layout-stat-card-inner');
+
+            // Only attach handlers if not already attached
+            if (bgColorPicker && bgColorInput && !bgColorPicker.dataset.handlersAttached) {
+                bgColorPicker.dataset.handlersAttached = 'true';
+                bgColorInput.dataset.handlersAttached = 'true';
+
+                bgColorPicker.addEventListener('input', function() {
+                    bgColorInput.value = this.value.toUpperCase();
+                    card.style.backgroundColor = this.value;
+                });
+
+                bgColorInput.addEventListener('input', function() {
+                    const color = this.value;
+                    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                        bgColorPicker.value = color;
+                        card.style.backgroundColor = color;
+                    }
+                });
+
+                bgColorInput.addEventListener('change', function() {
+                    const color = this.value;
+                    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                        bgColorPicker.value = color;
+                        card.style.backgroundColor = color;
+                    }
+                });
+            }
+
+            if (textColorPicker && textColorInput && !textColorPicker.dataset.handlersAttached) {
+                textColorPicker.dataset.handlersAttached = 'true';
+                textColorInput.dataset.handlersAttached = 'true';
+
+                textColorPicker.addEventListener('input', function() {
+                    textColorInput.value = this.value.toUpperCase();
+                    if (cardInner) cardInner.style.color = this.value;
+                });
+
+                textColorInput.addEventListener('input', function() {
+                    const color = this.value;
+                    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                        textColorPicker.value = color;
+                        if (cardInner) cardInner.style.color = color;
+                    }
+                });
+
+                textColorInput.addEventListener('change', function() {
+                    const color = this.value;
+                    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                        textColorPicker.value = color;
+                        if (cardInner) cardInner.style.color = color;
+                    }
+                });
+            }
+        });
+    }
+
+    // Attach handlers on load
+    attachColorSyncHandlers();
+
+    // Reset layout button
+    const resetBtn = document.getElementById('resetLayout');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            if (confirm('<?php $this->_('AdminCompanyLookandfeel.layout.confirm_reset');?>')) {
+                // Reset all checkboxes to checked
+                document.querySelectorAll('.layout-card-checkbox, .layout-widget-item input[type="checkbox"]').forEach(function(checkbox) {
+                    checkbox.checked = true;
+                });
+
+                // Reset card colors to defaults
+                document.querySelectorAll('.layout-stat-card').forEach(function(card) {
+                    const defaultBg = card.getAttribute('data-default-bg');
+                    const defaultText = card.getAttribute('data-default-text');
+
+                    if (defaultBg) {
+                        const bgPicker = card.querySelector('.bg-color-picker');
+                        const bgInput = card.querySelector('.bg-color-input');
+
+                        if (bgPicker) bgPicker.value = defaultBg;
+                        if (bgInput) bgInput.value = defaultBg;
+                        card.style.backgroundColor = defaultBg;
+                    }
+
+                    if (defaultText) {
+                        const textPicker = card.querySelector('.text-color-picker');
+                        const textInput = card.querySelector('.text-color-input');
+                        const cardInner = card.querySelector('.layout-stat-card-inner');
+
+                        if (textPicker) textPicker.value = defaultText;
+                        if (textInput) textInput.value = defaultText;
+                        if (cardInner) cardInner.style.color = defaultText;
+                    }
+                });
+            }
+        });
+    }
+
+    // Set active tab to client by default
+    const clientTab = document.getElementById('client_layout_tab');
+    if (clientTab) {
+        const tab = new bootstrap.Tab(clientTab);
+        tab.show();
+    }
+});
+</script>

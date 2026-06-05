@@ -1,0 +1,56 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+if (!empty($notes)) {
+?>
+<article class="card sticky-note-box mb-3">
+    <div class="card-body">
+        <ul class="list-unstyled mb-0">
+            <?php
+            $num_notes = count($notes);
+            $numberNotesToShow = (isset($number_notes_to_show) ? $this->Html->safe($number_notes_to_show) : null);
+            for ($i = 0; $i < min($numberNotesToShow, $num_notes); $i++) {
+            ?>
+            <li class="sticky-note-item py-1 border-bottom">
+                <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editnote/' . (isset($notes[$i]->client_id) ? $notes[$i]->client_id : null) . '/' . (isset($notes[$i]->id) ? $notes[$i]->id : null) . '/');?>" class="text-decoration-none">
+                    <?php echo $this->Date->cast((isset($notes[$i]->date_updated) ? $this->Html->safe($notes[$i]->date_updated) : null)) . $this->_('AdminClients.stickynotes.date_separator', true) . ' ' . (isset($notes[$i]->title) ? $this->Html->safe($notes[$i]->title) : null);?>
+                </a>
+                <span class="unstick-button float-end" style="visibility: hidden;">
+                    <i class="bi bi-pin-fill text-warning"></i>
+                    <a href="<?php echo $this->base_uri . 'clients/stickynotes/' . (isset($notes[$i]->client_id) ? $this->Html->safe($notes[$i]->client_id) : null) . '/' . (isset($notes[$i]->id) ? $this->Html->safe($notes[$i]->id) : null) . '/';?>" class="unstick-link text-decoration-none ms-1">
+                        <?php $this->_('AdminClients.stickynotes.text_unstick');?>
+                    </a>
+                </span>
+            </li>
+            <?php } ?>
+        </ul>
+        <?php
+        if ($num_notes > $numberNotesToShow) {
+        ?>
+        <ul class="list-unstyled mb-0 more-sticky-notes" style="display: <?php echo ((isset($show_more) ? $this->Html->safe($show_more) : null) == 'true') ? '' : 'none;?>';?>">
+            <?php
+            for ($i = $numberNotesToShow; $i < $num_notes; $i++) {
+            ?>
+            <li class="sticky-note-item py-1 border-bottom">
+                <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editnote/' . (isset($notes[$i]->client_id) ? $notes[$i]->client_id : null) . '/' . (isset($notes[$i]->id) ? $notes[$i]->id : null) . '/');?>" class="text-decoration-none">
+                    <?php echo $this->Date->cast((isset($notes[$i]->date_updated) ? $this->Html->safe($notes[$i]->date_updated) : null)) . $this->_('AdminClients.stickynotes.date_separator', true) . ' ' . (isset($notes[$i]->title) ? $this->Html->safe($notes[$i]->title) : null);?>
+                </a>
+                <span class="unstick-button float-end" style="visibility: hidden;">
+                    <i class="bi bi-pin-fill text-warning"></i>
+                    <a href="<?php echo $this->base_uri . 'clients/stickynotes/' . (isset($notes[$i]->client_id) ? $this->Html->safe($notes[$i]->client_id) : null) . '/' . (isset($notes[$i]->id) ? $this->Html->safe($notes[$i]->id) : null) . '/';?>" class="unstick-link text-decoration-none ms-1">
+                        <?php $this->_('AdminClients.stickynotes.text_unstick');?>
+                    </a>
+                </span>
+            </li>
+            <?php } ?>
+        </ul>
+        <div class="text-center mt-2">
+            <a href="#" id="moreStickyNotes" class="text-decoration-none">
+                <i class="bi bi-caret-<?php echo ((isset($show_more) ? $this->Html->safe($show_more) : null) == 'true') ? 'up' : 'down';?>"></i>
+                <span class="toggle-text"><?php $this->_('AdminClients.stickynotes.text_' . (((isset($show_more) ? $this->Html->safe($show_more) : null) == 'true') ? 'less' : 'more'));?></span>
+            </a>
+        </div>
+        <?php } ?>
+    </div>
+</article>
+<?php } ?>

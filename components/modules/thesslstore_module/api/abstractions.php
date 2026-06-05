@@ -19,9 +19,12 @@ class baserequest
    	}
 }
 
+#[\AllowDynamicProperties]
 class baseresponse
 {
     public $AuthResponse;
+    public $isError = false;
+    public $Message;
     public function __construct()
     {
         $this->AuthResponse = new apiresponse();
@@ -41,6 +44,7 @@ class curlresponse
 
 /* Common class across request/response */
 
+#[\AllowDynamicProperties]
 class apiresponse
 {
    public $isError = false;

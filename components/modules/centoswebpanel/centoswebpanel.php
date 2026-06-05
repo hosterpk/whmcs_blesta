@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * CentOS WebPanel Module.
  *
@@ -108,7 +110,7 @@ class Centoswebpanel extends Module
         $package->attach(
             $fields->fieldText(
                 'meta[package]',
-                (isset($vars->meta['package']) ? $vars->meta['package'] : null),
+                ($vars->meta['package'] ?? null),
                 ['id' => 'centoswebpanel_package']
             )
         );
@@ -121,7 +123,7 @@ class Centoswebpanel extends Module
         $inode->attach(
             $fields->fieldText(
                 'meta[inode]',
-                (isset($vars->meta['inode']) ? $vars->meta['inode'] : null),
+                ($vars->meta['inode'] ?? null),
                 ['id' => 'centoswebpanel_inode']
             )
         );
@@ -134,7 +136,7 @@ class Centoswebpanel extends Module
         $nofile->attach(
             $fields->fieldText(
                 'meta[nofile]',
-                (isset($vars->meta['nofile']) ? $vars->meta['nofile'] : null),
+                ($vars->meta['nofile'] ?? null),
                 ['id' => 'centoswebpanel_nofile']
             )
         );
@@ -147,7 +149,7 @@ class Centoswebpanel extends Module
         $nproc->attach(
             $fields->fieldText(
                 'meta[nproc]',
-                (isset($vars->meta['nproc']) ? $vars->meta['nproc'] : null),
+                ($vars->meta['nproc'] ?? null),
                 ['id' => 'centoswebpanel_nproc']
             )
         );
@@ -275,6 +277,14 @@ class Centoswebpanel extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -307,6 +317,14 @@ class Centoswebpanel extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -428,7 +446,7 @@ class Centoswebpanel extends Module
         $domain->attach(
             $fields->fieldText(
                 'centoswebpanel_domain',
-                (isset($vars->centoswebpanel_domain) ? $vars->centoswebpanel_domain : null),
+                ($vars->centoswebpanel_domain ?? null),
                 ['id' => 'centoswebpanel_domain']
             )
         );
@@ -444,7 +462,7 @@ class Centoswebpanel extends Module
         $username->attach(
             $fields->fieldText(
                 'centoswebpanel_username',
-                (isset($vars->centoswebpanel_username) ? $vars->centoswebpanel_username : null),
+                ($vars->centoswebpanel_username ?? null),
                 ['id' => 'centoswebpanel_username']
             )
         );
@@ -463,7 +481,7 @@ class Centoswebpanel extends Module
         $password->attach(
             $fields->fieldPassword(
                 'centoswebpanel_password',
-                ['id' => 'centoswebpanel_password', 'value' => (isset($vars->centoswebpanel_password) ? $vars->centoswebpanel_password : null)]
+                ['id' => 'centoswebpanel_password', 'value' => ($vars->centoswebpanel_password ?? null)]
             )
         );
         // Add tooltip
@@ -495,7 +513,7 @@ class Centoswebpanel extends Module
         $domain->attach(
             $fields->fieldText(
                 'centoswebpanel_domain',
-                (isset($vars->centoswebpanel_domain) ? $vars->centoswebpanel_domain : ($vars->domain ?? null)),
+                ($vars->centoswebpanel_domain ?? ($vars->domain ?? null)),
                 ['id' => 'centoswebpanel_domain']
             )
         );
@@ -525,7 +543,7 @@ class Centoswebpanel extends Module
         $domain->attach(
             $fields->fieldText(
                 'centoswebpanel_domain',
-                (isset($vars->centoswebpanel_domain) ? $vars->centoswebpanel_domain : null),
+                ($vars->centoswebpanel_domain ?? null),
                 ['id' => 'centoswebpanel_domain']
             )
         );
@@ -544,7 +562,7 @@ class Centoswebpanel extends Module
         $username->attach(
             $fields->fieldText(
                 'centoswebpanel_username',
-                (isset($vars->centoswebpanel_username) ? $vars->centoswebpanel_username : null),
+                ($vars->centoswebpanel_username ?? null),
                 ['id' => 'centoswebpanel_username']
             )
         );
@@ -563,7 +581,7 @@ class Centoswebpanel extends Module
         $password->attach(
             $fields->fieldPassword(
                 'centoswebpanel_password',
-                ['id' => 'centoswebpanel_password', 'value' => (isset($vars->centoswebpanel_password) ? $vars->centoswebpanel_password : null)]
+                ['id' => 'centoswebpanel_password', 'value' => ($vars->centoswebpanel_password ?? null)]
             )
         );
         // Set the label as a field
@@ -1171,11 +1189,7 @@ class Centoswebpanel extends Module
         // Update account count
         $count = (int) $vars->account_count;
 
-        if ($increase) {
-            $vars->account_count = $count + 1;
-        } else {
-            $vars->account_count = $count - 1;
-        }
+        $vars->account_count = $increase ? $count + 1 : $count - 1;
 
         if ($vars->account_count < 0) {
             $vars->account_count = 0;
@@ -1214,7 +1228,7 @@ class Centoswebpanel extends Module
             if ($success) {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
         }
 
@@ -1298,10 +1312,10 @@ class Centoswebpanel extends Module
     private function getFieldsFromInput(array $vars, $package)
     {
         $fields = [
-            'domain' => isset($vars['centoswebpanel_domain']) ? $vars['centoswebpanel_domain'] : null,
-            'user' => isset($vars['centoswebpanel_username']) ? $vars['centoswebpanel_username'] : null,
-            'pass' => isset($vars['centoswebpanel_password']) ? $vars['centoswebpanel_password'] : null,
-            'email' => isset($vars['centoswebpanel_email']) ? $vars['centoswebpanel_email'] : null,
+            'domain' => $vars['centoswebpanel_domain'] ?? null,
+            'user' => $vars['centoswebpanel_username'] ?? null,
+            'pass' => $vars['centoswebpanel_password'] ?? null,
+            'email' => $vars['centoswebpanel_email'] ?? null,
             'package' => $package->meta->package,
             'inode' => $package->meta->inode,
             'limit_nofile' => $package->meta->nofile,
@@ -1410,9 +1424,9 @@ class Centoswebpanel extends Module
                 'valid_connection' => [
                     'rule' => [
                         [$this, 'validateConnection'],
-                        isset($vars['host_name']) ? $vars['host_name'] : '',
-                        isset($vars['port']) ? $vars['port'] : '',
-                        isset($vars['use_ssl']) ? $vars['use_ssl'] : true,
+                        $vars['host_name'] ?? '',
+                        $vars['port'] ?? '',
+                        $vars['use_ssl'] ?? true,
                     ],
                     'message' => Language::_('Centoswebpanel.!error.remote_api_key_valid_connection', true)
                 ]

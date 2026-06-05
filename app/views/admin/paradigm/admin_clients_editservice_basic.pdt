@@ -1,0 +1,905 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+if (!empty($service->parent)) {
+?>
+<h6 class="form-section-header"><?php $this->_('AdminClients.editservice.service_parent');?></h6>
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <span class="text-muted"><?php $this->_('AdminClients.editservice.text_label');?></span>
+                <div><?php (print (isset($service->parent->name) ? $this->Html->safe($service->parent->name) : null));?></div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editservice/' . (isset($service->parent->client_id) ? $service->parent->client_id : null) . '/' . (isset($service->parent->id) ? $service->parent->id : null) . '/');?>" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right me-1"></i><?php $this->_('AdminClients.editservice.text_manage_parent');?>
+                </a>
+            </div>
+        </div>
+        <div class="row g-3 mt-2">
+            <div class="col-12">
+                <span class="text-muted"><?php $this->_('AdminClients.editservice.text_package_name');?></span>
+                <div><?php (print (isset($service->parent->package->name) ? $this->Html->safe($service->parent->package->name) : null));?></div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php
+}
+?>
+
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+$this->Form->fieldHidden('section', 'information');
+?>
+
+<!-- Service Information Section -->
+<h6 class="form-section-header"><?php $this->_('AdminClients.editservice.service_heading');?></h6>
+
+<!-- Package Info Bar -->
+<div class="service-info-bar mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <h6 class="mb-1"><?php (print (isset($service->package->name) ? $this->Html->safe($service->package->name) : null));?></h6>
+            <div class="text-muted"><?php (print (isset($service->name) ? $this->Html->safe($service->name) : null));?></div>
+        </div>
+        <?php
+        $statusClass = 'secondary';
+        $statusIcon = 'bi-circle';
+        if (isset($service->status) && $service->status == 'active') {
+            $statusClass = 'success';
+            $statusIcon = 'bi-check-circle';
+        } elseif (isset($service->status) && $service->status == 'suspended') {
+            $statusClass = 'warning';
+            $statusIcon = 'bi-pause-circle';
+        } elseif (isset($service->status) && $service->status == 'canceled') {
+            $statusClass = 'danger';
+            $statusIcon = 'bi-x-circle';
+        }
+        ?>
+        <span class="badge bg-<?php echo $statusClass; ?>">
+            <i class="bi <?php echo $statusIcon; ?> me-1"></i><?php echo $this->Html->safe((isset($statuses[$service->status]) ? $statuses[$service->status] : null));?>
+        </span>
+    </div>
+</div>
+
+<!-- Service Details - Read-only Info -->
+<div class="service-info-details-container mb-4">
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_qty');?></label>
+            <div class="form-control-plaintext"><?php (print (isset($service->qty) ? $this->Html->safe($service->qty) : null));?></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_term');?></label>
+            <div class="form-control-plaintext">
+            <?php
+            if ((isset($service->package_pricing->period) ? $service->package_pricing->period : null) == 'onetime') {
+                (print (isset($periods[$service->package_pricing->period]) ? $this->Html->safe($periods[$service->package_pricing->period]) : null));
+            } else {
+                $term = (isset($service->package_pricing->term) ? $this->Html->safe($service->package_pricing->term) : null);
+                echo $this->Html->safe($this->Html->concat(' ', $term, ($term == 1 ? (isset($periods[$service->package_pricing->period]) ? $periods[$service->package_pricing->period] : null) : (isset($periods[$service->package_pricing->period . '_plural']) ? $periods[$service->package_pricing->period . '_plural'] : null))));
+            }
+            ?>
+            </div>
+        </div>
+        <?php
+        if ((isset($service->package_pricing->period) ? $service->package_pricing->period : null) != 'onetime') {
+        ?>
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_renewal_price');?></label>
+            <div class="form-control-plaintext"><?php echo $this->CurrencyFormat->format((isset($service->renewal_price) ? $service->renewal_price : null), (isset($service->override_currency) ? $service->override_currency : (isset($service->package_pricing->currency) ? $service->package_pricing->currency : null)));?></div>
+        </div>
+        <?php
+        }
+        ?>
+    </div>
+
+    <!-- Date Timeline -->
+    <div class="row g-3 mb-0">
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_date_added');?></label>
+            <div class="form-control-plaintext"><?php echo (!empty($service->date_added) ? $this->Date->cast($service->date_added) : '');?></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_date_renews');?></label>
+            <div class="form-control-plaintext">
+            <?php
+            $date_renews_text = (!empty($service->date_renews) ? $this->Date->cast($service->date_renews) : $this->_('AdminClients.services.text_never', true));
+            echo $date_renews_text;
+
+            if ($service->date_paid_through && $service->date_paid_through != $service->date_renews) {
+            ?>
+                <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!tooltip.text_date_paid_through', false, !empty($service->date_paid_through) ? $this->Date->cast($service->date_paid_through) : $date_renews_text);?>"></i>
+            <?php
+            }
+            ?>
+            </div>
+        </div>
+        <?php
+        if (!empty($service->date_last_renewed)) {
+        ?>
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_date_last_renewed');?></label>
+            <div class="form-control-plaintext"><?php echo $this->Date->cast($service->date_last_renewed);?></div>
+        </div>
+        <?php
+        }
+        ?>
+    </div>
+
+    <?php
+    if (!empty($service->date_suspended) || !empty($service->date_canceled)) {
+    ?>
+    <div class="row g-3 mt-3">
+        <?php
+        if (!empty($service->date_suspended)) {
+        ?>
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_date_suspended');?></label>
+            <div class="form-control-plaintext"><?php echo $this->Date->cast($service->date_suspended);?></div>
+        </div>
+        <?php
+        }
+        if (!empty($service->date_canceled)) {
+        ?>
+        <div class="col-md-4">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_date_canceled');?></label>
+            <div class="form-control-plaintext"><?php echo $this->Date->cast($service->date_canceled);?></div>
+        </div>
+        <?php
+        }
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+
+    <?php
+    // Display the coupon that should apply when the service renews
+    if ((isset($recurring_coupon) ? $recurring_coupon : null)) {
+    ?>
+    <div class="row g-3 mt-3">
+        <div class="col-12">
+            <label class="form-label text-muted small mb-1"><?php $this->_('AdminClients.editservice.text_recurring_coupon');?></label>
+            <div class="form-control-plaintext">
+                <span class="badge bg-info">
+                <?php
+                if ((isset($recurring_coupon->recurring_amount->type) ? $recurring_coupon->recurring_amount->type : null) == 'percent') {
+                    $this->_('AdminClients.editservice.text_coupon_percent', false, $this->Html->safe((isset($recurring_coupon->code) ? $recurring_coupon->code : null)), $this->CurrencyFormat->cast((isset($recurring_coupon->recurring_amount->amount) ? $recurring_coupon->recurring_amount->amount : null), (isset($recurring_coupon->recurring_amount->currency) ? $recurring_coupon->recurring_amount->currency : null)));
+                } else {
+                    $this->_('AdminClients.editservice.text_coupon_amount', false, $this->Html->safe((isset($recurring_coupon->code) ? $recurring_coupon->code : null)), $this->CurrencyFormat->format((isset($recurring_coupon->recurring_amount->amount) ? $recurring_coupon->recurring_amount->amount : null), (isset($recurring_coupon->recurring_amount->currency) ? $recurring_coupon->recurring_amount->currency : null)));
+                }
+                ?>
+                </span>
+            </div>
+        </div>
+    </div>
+    <?php
+    }
+    ?>
+</div>
+
+<?php
+if ((isset($service->status) ? $service->status : null) != 'canceled' && !empty($module_row_fields)) {
+?>
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <?php
+        $this->Form->label((isset($module_row_name) ? $module_row_name : null), 'module_row_id', ['class' => 'form-label']);
+        ?>
+        <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!tooltip.module_row_id');?>"></i>
+        <?php
+        $this->Form->fieldSelect('module_row_id', (isset($module_row_fields) ? $module_row_fields : []), (isset($vars->module_row_id) ? $vars->module_row_id : null), ['id' => 'module_row_id', 'class' => 'form-select']);
+        ?>
+    </div>
+</div>
+<?php
+}
+?>
+
+<?php
+if ((isset($service->status) ? $service->status : null) != 'canceled' && !empty($module_row_fields)) {
+?>
+<div class="d-flex justify-content-end mb-4">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.editservice.field_module_save', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+}
+$this->Form->end();
+?>
+
+<?php
+$this->Form->create(null, ['id' => 'service_actions', 'class' => 'disable-on-submit']);
+$this->Form->fieldHidden('section', 'action');
+$this->Form->fieldHidden('action', '', ['id' => 'action_hidden']);
+?>
+
+<!-- Actions Section -->
+<h6 class="form-section-header"><?php $this->_('AdminClients.editservice.action_heading');?></h6>
+
+<?php
+// Icon map for action buttons
+$action_icons = [
+    'suspend' => 'bi-pause-circle',
+    'unsuspend' => 'bi-play-circle',
+    'cancel' => 'bi-x-circle',
+    'schedule_cancel' => 'bi-calendar-x',
+    'change_renew' => 'bi-calendar-check',
+    'update_coupon' => 'bi-ticket-perforated',
+    'uncancel' => 'bi-arrow-counterclockwise',
+];
+
+// Filter out the empty '' placeholder entry from $actions
+$action_buttons = array_filter((isset($actions) ? $actions : []), function($key) {
+    return $key !== '';
+}, ARRAY_FILTER_USE_KEY);
+?>
+
+<?php if (!empty($action_buttons)) { ?>
+<!-- Action Button Group -->
+<div class="btn-group action-button-group mb-3" role="group" aria-label="<?php $this->_('AdminClients.editservice.action_heading');?>">
+    <?php foreach ($action_buttons as $key => $label) { ?>
+    <button type="button" class="btn btn-outline-secondary" data-action="<?php echo $this->Html->safe($key);?>">
+        <i class="bi <?php echo isset($action_icons[$key]) ? $action_icons[$key] : 'bi-gear';?> me-2"></i><?php echo $this->Html->safe($label);?>
+    </button>
+    <?php } ?>
+</div>
+
+<!-- Expandable Action Form Container -->
+<div class="action-form-container mb-3">
+    <!-- Empty State -->
+    <div class="action-empty-state" id="action-empty">
+        <div class="text-center py-5">
+            <i class="bi bi-hand-index" style="font-size: 3rem; color: var(--text-secondary);"></i>
+            <p class="text-muted mt-3 mb-0"><?php $this->_('AdminClients.editservice.action_empty_state');?></p>
+        </div>
+    </div>
+
+    <?php
+    if ((isset($service->status) ? $service->status : null) != 'canceled') {
+    ?>
+    <!-- Suspend Form -->
+    <div class="action-form" data-action-form="suspend" style="display:none;">
+        <div class="mb-3">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.action.field_suspension_reason', true), 'suspension_reason', ['class' => 'form-label']);
+            $this->Form->fieldTextArea('suspension_reason', (isset($vars->suspension_reason) ? $vars->suspension_reason : null), ['id' => 'suspension_reason', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+
+    <!-- Unsuspend Form -->
+    <div class="action-form" data-action-form="unsuspend" style="display:none;">
+    </div>
+
+    <!-- Cancel Form -->
+    <div class="action-form" data-action-form="cancel" style="display:none;">
+        <?php
+        if (!empty($service->children)) {
+        ?>
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <?php $this->_('AdminClients.editservice.text_children');?>
+        </div>
+        <?php
+        }
+        ?>
+
+        <div class="form-check mb-2">
+            <?php $this->Form->fieldCheckbox('notify_cancel', 'true', (isset($vars->notify_cancel) ? $vars->notify_cancel : 'true') === 'true', ['id' => 'notify_cancel_cancel', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.editservice.action.field_notify_cancel', true), 'notify_cancel_cancel', ['class' => 'form-check-label']);?>
+            <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!tooltip.notify_cancel');?>"></i>
+        </div>
+
+        <div class="mb-3">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.action.field_cancellation_reason', true), 'cancellation_reason_cancel', ['class' => 'form-label']);
+            $this->Form->fieldTextArea('cancellation_reason', (isset($vars->cancellation_reason) ? $vars->cancellation_reason : null), ['id' => 'cancellation_reason_cancel', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+
+    <!-- Schedule Cancel Form -->
+    <div class="action-form" data-action-form="schedule_cancel" style="display:none;">
+        <div class="mb-3">
+            <div class="form-check mb-2">
+                <?php
+                $disabled_field = [];
+                if (!$service->date_renews) {
+                    $disabled_field = ['disabled' => 'disabled'];
+                }
+
+                $this->Form->fieldRadio('cancel', 'term', ($service->date_renews && (isset($vars->cancel) ? $vars->cancel : null) == 'term'), array_merge(['id' => 'action_cancel_term', 'class' => 'form-check-input'], $disabled_field));
+
+                if ($service->date_renews) {
+                    $this->Form->label($this->_('AdminClients.editservice.action.field_cancel_term_date', true, $this->Date->cast((isset($service->date_renews) ? $service->date_renews : null), 'date')), 'action_cancel_term', ['class' => 'form-check-label ms-2']);
+                } else {
+                    $this->Form->label($this->_('AdminClients.editservice.action.field_cancel_term', true), 'action_cancel_term', ['class' => 'form-check-label ms-2']);
+                }
+                ?>
+            </div>
+            <div class="form-check mb-2">
+                <?php
+                $this->Form->fieldRadio('cancel', 'date', ((isset($vars->cancel) ? $vars->cancel : null) == 'date'), ['id' => 'action_cancel_date', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminClients.editservice.action.field_cancel_date', true), 'action_cancel_date', ['class' => 'form-check-label ms-2']);
+                $this->Form->fieldText('date_canceled', (isset($vars->date_canceled) ? $vars->date_canceled : null), ['class' => 'form-control form-control-sm d-inline-block w-auto ms-2', 'id' => 'date_canceled', 'type' => 'date']);
+                ?>
+            </div>
+            <div class="form-check">
+                <?php
+                $this->Form->fieldRadio('cancel', 'none', !isset($vars->cancel) || (isset($vars->cancel) ? $vars->cancel : null) == 'none', ['id' => 'action_cancel_none', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminClients.editservice.action.field_cancel_none', true), 'action_cancel_none', ['class' => 'form-check-label ms-2']);
+                ?>
+            </div>
+        </div>
+
+        <div class="form-check mb-2">
+            <?php $this->Form->fieldCheckbox('notify_cancel', 'true', (isset($vars->notify_cancel) ? $vars->notify_cancel : 'true') === 'true', ['id' => 'notify_cancel_schedule', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.editservice.action.field_notify_cancel', true), 'notify_cancel_schedule', ['class' => 'form-check-label']);?>
+            <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!tooltip.notify_cancel');?>"></i>
+        </div>
+
+        <div class="mb-3">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.action.field_cancellation_reason', true), 'cancellation_reason_schedule', ['class' => 'form-label']);
+            $this->Form->fieldTextArea('cancellation_reason', (isset($vars->cancellation_reason) ? $vars->cancellation_reason : null), ['id' => 'cancellation_reason_schedule', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+
+    <!-- Change Renew Date Form -->
+    <div class="action-form" data-action-form="change_renew" style="display:none;">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <?php
+                $this->Form->label($this->_('AdminClients.editservice.action.field_date_renews', true), 'renew_date', ['class' => 'form-label']);
+                $this->Form->fieldText('date_renews', (isset($vars->date_renews) ? $vars->date_renews : $this->Date->cast($service->date_renews, 'Y-m-d')), ['class' => 'form-control', 'id' => 'renew_date', 'type' => 'date']);
+                ?>
+            </div>
+        </div>
+        <div class="form-check mb-3">
+            <?php
+            $this->Form->fieldCheckbox('prorate', 'true', (isset($vars->prorate) ? $vars->prorate : 'true') == 'true', ['id' => 'prorate_renew', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.editservice.field_prorate', true), 'prorate_renew', ['class' => 'form-check-label']);
+            ?>
+            <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.editservice.tooltip_prorate_renewal');?>"></i>
+        </div>
+
+        <div class="d-flex justify-content-end" id="service-action-totals"></div>
+    </div>
+
+    <!-- Update Coupon Form -->
+    <div class="action-form" data-action-form="update_coupon" style="display:none;">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <?php
+                $this->Form->label($this->_('AdminClients.editservice.action.field_coupon_code', true), 'coupon_code_update', ['class' => 'form-label']);
+                ?>
+                <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.editservice.tooltip_coupon_code');?>"></i>
+                <?php
+                $this->Form->fieldText('coupon_code_update', (isset($vars->coupon_code_update) ? $vars->coupon_code_update : null), ['id' => 'coupon_code_update', 'class' => 'form-control']);
+                ?>
+            </div>
+        </div>
+    </div>
+
+    <?php
+    } else {
+    ?>
+    <!-- Uncancel Form -->
+    <div class="action-form" data-action-form="uncancel" style="display:none;">
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <?php $this->_('AdminClients.editservice.text_uncancel');?>
+        </div>
+
+        <?php
+        // Show module fields
+        if (isset($input_html) && ($module_field_html = $input_html->generate(null, $this->view))) {
+            echo $module_field_html;
+        }
+        ?>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <?php $this->Form->label($this->_('AdminClients.editservice.field_invoice_method', true), null, ['class' => 'form-label']);?>
+
+                <div class="form-check">
+                    <?php $this->Form->fieldRadio('invoice_method', 'create', !isset($vars->invoice_method) || (isset($vars->invoice_method) ? $vars->invoice_method : null) == 'create', ['id' => 'invoice_method_create', 'class' => 'form-check-input']);?>
+                    <?php $this->Form->label($this->_('AdminClients.editservice.field_invoice_method_create', true), 'invoice_method_create', ['class' => 'form-check-label']);?>
+                </div>
+
+                <?php
+                if (count((isset($invoices) ? $invoices : [])) > 0) {
+                    ?>
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldRadio('invoice_method', 'append', (isset($vars->invoice_method) ? $vars->invoice_method : null) == 'append', ['id' => 'invoice_method_append', 'class' => 'form-check-input']);
+                        $this->Form->label($this->_('AdminClients.editservice.field_invoice_method_append', true), 'invoice_method_append', ['class' => 'form-check-label']);
+                        $this->Form->fieldSelect('invoice_id', $invoices, (isset($vars->invoice_id) ? $vars->invoice_id : null), ['class' => 'd-inline-block w-auto ms-2']);
+                        ?>
+                    </div>
+                    <?php
+                }
+                ?>
+
+                <div class="form-check">
+                    <?php $this->Form->fieldRadio('invoice_method', 'none', (isset($vars->invoice_method) ? $vars->invoice_method : null) == 'none', ['id' => 'invoice_method_none', 'class' => 'form-check-input']);?>
+                    <?php $this->Form->label($this->_('AdminClients.editservice.field_invoice_method_dont', true), 'invoice_method_none', ['class' => 'form-check-label']);?>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <?php $this->Form->label($this->_('AdminClients.editservice.field_term', true), 'pricing_id', ['class' => 'form-label']);?>
+                <?php $this->Form->fieldSelect('pricing_id', ['' => $this->_('AppController.select.please', true)] + (array)(isset($terms) ? $terms : null), (isset($vars->pricing_id) ? $vars->pricing_id : null), ['id' => 'pricing_id', 'class' => 'form-select']);?>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <?php $this->Form->label($this->_('AdminClients.editservice.field_status', true), 'status', ['class' => 'form-label']);?>
+                <?php $this->Form->fieldSelect('status', $statuses ?? [], (isset($vars->status) ? $vars->status : null), ['id' => 'status', 'class' => 'form-select']);?>
+            </div>
+
+            <?php
+            // Module row selector
+            if (!empty($module_row_fields)) {
+            ?>
+            <div class="col-md-6">
+                <?php $this->Form->label((isset($module_row_name) ? $module_row_name : null), 'module_row_id', ['class' => 'form-label']);?>
+                <?php $this->Form->fieldSelect('module_row_id', (array)(isset($module_row_fields) ? $module_row_fields : []), (isset($vars->module_row_id) ? $vars->module_row_id : null), ['id' => 'module_row_id', 'class' => 'form-select']);?>
+            </div>
+            <?php
+            }
+            ?>
+        </div>
+
+        <div class="form-check mb-3">
+            <?php $this->Form->fieldCheckbox('notify_order', 'true', (isset($vars->notify_order) ? $vars->notify_order : 'true') === 'true', ['id' => 'notify_order', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.editservice.field_notify_order', true), 'notify_order', ['class' => 'form-check-label']);?>
+        </div>
+    </div>
+    <?php
+    }
+    ?>
+
+    <!-- Use Module checkbox + Save (shared across actions) -->
+    <div id="use-module-container" style="display: none;">
+        <div class="form-check mb-3">
+            <?php
+            $this->Form->fieldCheckbox('use_module', 'true', (isset($vars->use_module) ? $vars->use_module : 'true') == ($service->status == 'canceled' ? 'false' : 'true'), ['id' => 'use_module_action', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.editservice.field_use_module', true), 'use_module_action', ['class' => 'form-check-label']);
+            ?>
+        </div>
+        <div class="d-flex justify-content-end gap-2" id="action-save">
+            <button type="button" class="btn btn-outline-secondary action-cancel-btn"><?php $this->_('AppController.modal.btn_cancel');?></button>
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminClients.editservice.field_module_save', true), ['class' => 'btn btn-primary']);?>
+        </div>
+        <div class="d-flex justify-content-end gap-2 d-none" id="cancel-confirm-save">
+            <button type="button" class="btn btn-outline-secondary action-cancel-btn"><?php $this->_('AppController.modal.btn_cancel');?></button>
+            <button type="button" class="btn btn-danger modal-confirm-delete"
+                data-confirm-message="<?php echo $this->Html->safe($this->_('AdminClients.editservice.confirm_cancel', true));?>"
+                data-form="service_actions">
+                <?php $this->_('AdminClients.editservice.field_cancel_service');?>
+            </button>
+        </div>
+    </div>
+</div>
+<?php } ?>
+
+<?php
+$this->Form->end();
+?>
+
+<?php
+if ((isset($service->status) ? $service->status : null) != 'canceled') {
+    $this->Form->create(null, ['id' => 'service_changes', 'class' => 'disable-on-submit']);
+    $this->Form->fieldHidden('section', 'package');
+?>
+
+<!-- Package/Upgrade Section -->
+<h6 class="form-section-header"><?php $this->_('AdminClients.editservice.package_heading');?></h6>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <?php
+        $this->Form->label($this->_('AdminClients.editservice.package.field_pricing', true), 'pricing_id', ['class' => 'form-label']);
+        $this->Form->fieldSelect('pricing_id', $terms, (isset($vars->pricing_id) ? $vars->pricing_id : null), ['id' => 'pricing_id', 'class' => 'form-select']);
+        ?>
+    </div>
+</div>
+
+<div class="form-check mb-3">
+    <?php
+    $this->Form->fieldCheckbox('price_override', 'true', (isset($vars->price_override) ? $vars->price_override : null) == 'true', ['id' => 'price_override', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminClients.editservice.field_price_override', true), 'price_override', ['class' => 'form-check-label']);
+    ?>
+</div>
+
+<div id="override-price-fields" style="display: none;">
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.field_override_price', true), 'override_price', ['class' => 'form-label']);
+            $this->Form->fieldText('override_price', (isset($vars->override_price) ? $vars->override_price : null), ['id' => 'override_price', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-3">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.field_override_currency', true), 'override_currency', ['class' => 'form-label']);
+            $this->Form->fieldSelect('override_currency', $this->Form->collapseObjectArray((isset($currencies) ? $currencies : []), 'code', 'code'), (isset($vars->override_currency) ? $vars->override_currency : null), ['id' => 'override_currency', 'class' => 'form-select']);
+            ?>
+        </div>
+    </div>
+</div>
+
+<!-- Coupon Section -->
+<div class="upgrade-coupon-section">
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.field_current_coupon_code', true), 'current_coupon_code', ['class' => 'form-label']);
+            $this->Form->fieldText('current_coupon_code', (isset($service->coupon_code) ? $service->coupon_code : null), ['disabled' => 'disabled', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.editservice.field_new_coupon_code', true), 'coupon_code', ['class' => 'form-label']);
+            ?>
+            <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.editservice.tooltip_coupon_code');?>"></i>
+            <?php
+            $this->Form->fieldText('coupon_code', (isset($vars->coupon_code) ? $vars->coupon_code : null), ['id' => 'coupon_code', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+</div>
+
+<!-- Module-Rendered Fields -->
+<?php
+// Show module fields
+if (isset($input_html) && ($module_field_html = $input_html->generate(null, $this->view))) {
+?>
+<div class="module-rendered-section mb-3">
+<?php
+echo $module_field_html;
+?>
+</div>
+<?php
+}
+?>
+
+<div class="package-options">
+    <?php
+    if (isset($vars->configoptions)) {
+        foreach ($vars->configoptions as $key => $value) {
+            $this->Form->fieldHidden('configoptions[' . $key . ']', $value);
+        }
+    }
+    ?>
+</div>
+
+<div class="form-check mb-2">
+    <?php
+    $this->Form->fieldCheckbox('prorate', 'true', (isset($vars->prorate) ? $vars->prorate : 'true') == 'true', ['id' => 'prorate_upgrade', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminClients.editservice.field_prorate', true), 'prorate_upgrade', ['class' => 'form-check-label']);
+    ?>
+    <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.editservice.tooltip_prorate');?>"></i>
+</div>
+
+<div class="form-check mb-2">
+    <?php
+    $this->Form->fieldCheckbox('use_module', 'true', (isset($vars->use_module) ? $vars->use_module : 'true') == 'true', ['id' => 'use_module_package', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminClients.editservice.field_use_module', true), 'use_module_package', ['class' => 'form-check-label']);
+    ?>
+</div>
+
+<div class="form-check">
+    <?php
+    $this->Form->fieldCheckbox('disable_option_logic', 'true', (isset($vars->disable_option_logic) ? $vars->disable_option_logic : 'true') == 'true', ['id' => 'disable_option_logic', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminClients.editservice.field_disable_option_logic', true), 'disable_option_logic', ['class' => 'form-check-label']);
+    ?>
+    <i class="bi bi-info-circle text-secondary ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.editservice.tooltip_disable_option_logic');?>"></i>
+</div>
+
+<div class="d-flex justify-content-end" id="service-change-totals"></div>
+
+<div class="d-flex justify-content-end mt-3">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.editservice.field_module_save', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+    $this->Form->end();
+}
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var serviceId = <?php echo json_encode((isset($service->id) ? $service->id : null));?>;
+    var clientId = <?php echo json_encode((isset($service->client_id) ? $service->client_id : null));?>;
+
+    // Action button group toggle
+    var actionButtons = document.querySelectorAll('.action-button-group [data-action]');
+    var actionForms = document.querySelectorAll('.action-form[data-action-form]');
+    var actionEmptyState = document.getElementById('action-empty');
+    var actionHidden = document.getElementById('action_hidden');
+    var useModuleAction = document.getElementById('use_module_action');
+    var useModuleContainer = document.getElementById('use-module-container');
+    var actionSave = document.getElementById('action-save');
+    var cancelConfirmSave = document.getElementById('cancel-confirm-save');
+    // Actions that disable use_module
+    var disableModuleActions = { 'change_renew': true, 'update_coupon': true };
+    // Actions that force use_module checked + disabled
+    var forceModuleActions = { 'schedule_cancel': true };
+
+    function resetActionForms() {
+        actionForms.forEach(function(form) { form.style.display = 'none'; });
+        if (actionEmptyState) actionEmptyState.style.display = 'block';
+        if (useModuleContainer) useModuleContainer.style.display = 'none';
+        if (cancelConfirmSave) cancelConfirmSave.classList.add('d-none');
+        if (actionSave) actionSave.classList.remove('d-none');
+        actionButtons.forEach(function(btn) { btn.classList.remove('active'); });
+        if (actionHidden) actionHidden.value = '';
+        if (useModuleAction) {
+            useModuleAction.disabled = false;
+            useModuleAction.checked = true;
+        }
+    }
+
+    function showActionForm(action, button) {
+        resetActionForms();
+        var form = document.querySelector('[data-action-form="' + action + '"]');
+        if (form) {
+            form.style.display = 'block';
+            if (actionEmptyState) actionEmptyState.style.display = 'none';
+            if (button) button.classList.add('active');
+            if (actionHidden) actionHidden.value = action;
+
+            // Show use_module checkbox
+            if (useModuleContainer) useModuleContainer.style.display = 'block';
+
+            // Handle use_module state per action
+            if (useModuleAction) {
+                if (disableModuleActions[action]) {
+                    useModuleAction.checked = false;
+                    useModuleAction.disabled = true;
+                } else if (forceModuleActions[action]) {
+                    useModuleAction.checked = true;
+                    useModuleAction.disabled = true;
+                } else {
+                    useModuleAction.disabled = false;
+                }
+            }
+
+            // Show confirmation save for cancel, standard save for others
+            if (action === 'cancel') {
+                if (actionSave) actionSave.classList.add('d-none');
+                if (cancelConfirmSave) cancelConfirmSave.classList.remove('d-none');
+            }
+
+            // Trigger totals update for change_renew
+            if (action === 'change_renew') {
+                updateActionTotals();
+            }
+        }
+    }
+
+    actionButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            var action = this.getAttribute('data-action');
+            showActionForm(action, this);
+        });
+    });
+
+    document.querySelectorAll('.action-cancel-btn').forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            resetActionForms();
+        });
+    });
+
+    // Price override toggle
+    var priceOverride = document.getElementById('price_override');
+    var overridePriceFields = document.getElementById('override-price-fields');
+    var pricingId = document.getElementById('pricing_id');
+    var prorateUpgrade = document.getElementById('prorate_upgrade');
+    var prorateRenew = document.getElementById('prorate_renew');
+    var renewDate = document.getElementById('renew_date');
+
+    // Initialize
+    showPriceOverrideFields();
+
+    if (priceOverride) {
+        priceOverride.addEventListener('change', function() {
+            showPriceOverrideFields();
+            showUpgradeProration();
+        });
+    }
+
+    function showPriceOverrideFields() {
+        if (!priceOverride || !overridePriceFields || !pricingId) return;
+
+        if (priceOverride.checked) {
+            overridePriceFields.style.display = 'block';
+            pricingId.disabled = true;
+        } else {
+            overridePriceFields.style.display = 'none';
+            pricingId.disabled = false;
+        }
+    }
+
+    function showUpgradeProration() {
+        if (!prorateUpgrade || !priceOverride) return;
+
+        if (priceOverride.checked) {
+            prorateUpgrade.checked = false;
+            prorateUpgrade.disabled = true;
+        } else {
+            prorateUpgrade.disabled = false;
+        }
+    }
+
+    // Action totals update (change_renew)
+    if (renewDate) {
+        renewDate.addEventListener('change', function() {
+            if (actionHidden && actionHidden.value === 'change_renew') {
+                updateActionTotals();
+            }
+        });
+    }
+    if (prorateRenew) {
+        prorateRenew.addEventListener('change', function() {
+            if (actionHidden && actionHidden.value === 'change_renew') {
+                updateActionTotals();
+            }
+        });
+    }
+
+    function updateActionTotals() {
+        var form = document.getElementById('service_actions');
+        if (!form) return;
+        var formData = new FormData(form);
+        fetch(baseUri + 'clients_service/updatetotals/' + clientId + '/' + serviceId + '/', {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var totalsEl = document.getElementById('service-action-totals');
+            if (totalsEl) totalsEl.innerHTML = data || '';
+        })
+        .catch(function(error) { console.error('Error updating action totals:', error); });
+    }
+
+    // Package options
+    packageOptions();
+    if (pricingId) {
+        pricingId.addEventListener('change', function() {
+            packageOptions();
+        });
+    }
+    var disableOptionLogic = document.getElementById('disable_option_logic');
+    if (disableOptionLogic) {
+        disableOptionLogic.addEventListener('change', function() {
+            packageOptions();
+        });
+    }
+
+    function packageOptions() {
+        var pricingIdVal = pricingId ? pricingId.value : '';
+        if (pricingIdVal) {
+            var container = document.querySelector('.package_options');
+            if (!container) {
+                container = document.querySelector('.package-options');
+            }
+            if (!container) return;
+
+            var parentForm = container.closest('form');
+            if (!parentForm) return;
+
+            // Serialize configoptions and disable_option_logic as URL query params
+            // (controller reads from $this->get, not $this->post)
+            var fields = parentForm.querySelectorAll(
+                '[name^="configoptions"],[name="disable_option_logic"]'
+            );
+            var params = 'service_id=' + encodeURIComponent(serviceId);
+            fields.forEach(function(field) {
+                if (field.type === 'checkbox' && !field.checked) return;
+                params += '&' + encodeURIComponent(field.name)
+                    + '=' + encodeURIComponent(field.value);
+            });
+
+            fetch(baseUri + 'clients/packageoptions/' + pricingIdVal + '?' + params, {
+                method: 'GET',
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(function(response) { return response.text(); })
+            .then(function(text) {
+                if (!text) return;
+                try { text = JSON.parse(text); } catch(e) { /* use raw text */ }
+                container.innerHTML = text;
+                container.querySelectorAll('script').forEach(function(oldScript) {
+                    var newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(function(attr) {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+                initTooltips();
+                updateTotals();
+            })
+            .catch(function(error) { console.error('Error fetching package options:', error); });
+        }
+    }
+
+    // Service changes totals update
+    var serviceChangesForm = document.getElementById('service_changes');
+    if (serviceChangesForm) {
+        serviceChangesForm.addEventListener('change', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                updateTotals();
+            }
+        });
+
+        serviceChangesForm.addEventListener('submit', function(e) {
+            var pricingIdEl = document.getElementById('pricing_id');
+            if (pricingIdEl && pricingIdEl.disabled) {
+                pricingIdEl.disabled = false;
+            }
+            return true;
+        });
+    }
+
+    function updateTotals() {
+        var form = document.getElementById('service_changes');
+        if (!form) return;
+
+        var pricingIdEl = document.getElementById('pricing_id');
+        var wasDisabled = pricingIdEl && pricingIdEl.disabled;
+        if (wasDisabled) {
+            pricingIdEl.disabled = false;
+        }
+
+        var formData = new FormData(form);
+
+        if (wasDisabled) {
+            pricingIdEl.disabled = true;
+        }
+
+        fetch(baseUri + 'clients_service/updatetotals/' + clientId + '/' + serviceId + '/', {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var totalsEl = document.getElementById('service-change-totals');
+            if (totalsEl) totalsEl.innerHTML = data || '';
+        })
+        .catch(function(error) { console.error('Error updating totals:', error); });
+    }
+
+    // Initialize Bootstrap tooltips & popovers
+    initTooltips();
+
+    function initTooltips() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl);
+        });
+    }
+})();
+</script>

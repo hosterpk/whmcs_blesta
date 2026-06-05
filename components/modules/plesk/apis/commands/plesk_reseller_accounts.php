@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk Reseller Account management
  *
@@ -100,7 +101,7 @@ class PleskResellerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/add');
 
         // Build gen_info section
-        $vars['status'] = (isset($vars['status']) ? $vars['status'] : '0');
+        $vars['status'] = ($vars['status'] ?? '0');
         $this->buildGenInfo($vars, $this->getContainer());
 
         #
@@ -137,7 +138,7 @@ class PleskResellerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/del');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         return $this->api->submit($this->fetch(), $this->getContainer());
@@ -168,14 +169,14 @@ class PleskResellerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/get');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Include any reseller information/stats
         $this->insert(['dataset' => ['gen_info' => null, 'stat' => null]], $this->getContainer());
 
         // Always fetch general information
-        $vars['settings'] = (isset($vars['settings']) ? $vars['settings'] : []);
+        $vars['settings'] = ($vars['settings'] ?? []);
         $vars['settings'] = array_merge($vars['settings'], ['gen_info' => true]);
 
         // Set any of the settings to fetch
@@ -233,12 +234,12 @@ class PleskResellerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/set');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Build gen_info section into the values section
         $this->insert(['values' => null], $this->getContainer());
-        $general = (isset($vars['general']) ? $vars['general'] : []);
+        $general = ($vars['general'] ?? []);
         $this->buildGenInfo($general, $this->getContainer() . '/values');
 
         #
@@ -270,7 +271,7 @@ class PleskResellerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/switch-subscription');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Set the plan

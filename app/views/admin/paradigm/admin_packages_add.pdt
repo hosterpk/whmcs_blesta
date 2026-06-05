@@ -1,0 +1,2139 @@
+<?php
+echo (isset($message) ? $message : null);
+
+$this->Form->create(null, ['id' => 'add_package', 'class' => 'disable-on-submit']);
+?>
+
+<!-- New Package Form -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminPackages.add.boxtitle_newpackage');?></h5>
+    </div>
+    <div class="card-body">
+        <!-- Step Tabs -->
+        <ul class="nav nav-tabs-steps" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-basic" type="button" role="tab" id="step-1-tab">
+                    <span class="step-icon">1</span>
+                    <span><?php $this->_('AdminPackages.add.tab_basic');?><span class="step-required">*</span></span>
+                </button>
+            </li>
+            <div class="step-line" id="line-1"></div>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-module" type="button" role="tab" id="step-2-tab">
+                    <span class="step-icon">2</span>
+                    <span><?php $this->_('AdminPackages.add.tab_module');?></span>
+                </button>
+            </li>
+            <div class="step-line" id="line-2"></div>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-email" type="button" role="tab" id="step-3-tab">
+                    <span class="step-icon">3</span>
+                    <span><?php $this->_('AdminPackages.add.tab_email');?></span>
+                </button>
+            </li>
+            <div class="step-line" id="line-3"></div>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-options" type="button" role="tab" id="step-4-tab">
+                    <span class="step-icon">4</span>
+                    <span><?php $this->_('AdminPackages.add.tab_options');?></span>
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Basic Tab -->
+            <div class="tab-pane fade show active" id="tab-basic" role="tabpanel">
+                <h6 class="form-section-header"><?php $this->_('AdminPackages.add.heading_basic');?></h6>
+
+                <!-- Language Tabs -->
+                <ul class="nav nav-tabs-connected" role="tablist">
+                    <?php
+                    foreach ($languages as $i => $lang) {
+                        $is_first = ($i === 0);
+                    ?>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link<?php echo $is_first ? ' active' : '';?>"
+                                data-bs-toggle="tab"
+                                data-bs-target="#lang-<?php echo $this->Html->safe($lang->code);?>"
+                                type="button"
+                                role="tab">
+                            <?php echo $this->Html->safe($lang->name);?>
+                        </button>
+                    </li>
+                    <?php
+                    }
+                    ?>
+                </ul>
+
+                <!-- Language Tab Content -->
+                <div class="tab-content tab-content-connected mb-3">
+                    <?php
+                    foreach ($languages as $i => $lang) {
+                        $found = false;
+                        foreach ((array)(isset($vars->names) ? $vars->names : null) as $name) {
+                            if ((isset($name->lang) ? $name->lang : null) == $lang->code) {
+                                $found = true;
+                                break;
+                            }
+                        }
+
+                        $show_description = false;
+                        $current_text_description = false;
+                        foreach ((array)(isset($vars->descriptions) ? $vars->descriptions : null) as $description) {
+                            if ((isset($description->lang) ? $description->lang : null) == $lang->code) {
+                                if (!empty($description->text) || !empty($description->html)) {
+                                    $show_description = true;
+                                    $current_text_description = !empty($description->html);
+                                }
+                                break;
+                            }
+                        }
+                        $is_first = ($i === 0);
+                    ?>
+                    <div class="tab-pane fade<?php echo $is_first ? ' show active' : '';?>" id="lang-<?php echo $this->Html->safe($lang->code);?>" role="tabpanel">
+                        <!-- Package Name -->
+                        <div class="mb-3">
+                            <?php
+                            $this->Form->label($this->_('AdminPackages.add.field_packagename', true), 'name_' . (isset($lang->code) ? $lang->code : null), ['class' => 'form-label']);
+                            $this->Form->fieldHidden('names[' . $i . '][lang]', (isset($lang->code) ? $lang->code : null));
+                            $this->Form->fieldText('names[' . $i . '][name]', $found ? (isset($name->name) ? $name->name : null) : null, ['id' => 'name_' . (isset($lang->code) ? $lang->code : null), 'class' => 'form-control']);
+                            ?>
+                        </div>
+
+                        <!-- Description (Collapsible) -->
+                        <div class="mb-3">
+                            <p class="mb-2">
+                                <a class="collapse-trigger" data-bs-toggle="collapse" href="#collapseDescription-<?php echo $this->Html->safe($lang->code);?>" role="button" aria-expanded="<?php echo $show_description ? 'true' : 'false';?>">
+                                    <i class="bi bi-chevron-<?php echo $show_description ? 'up' : 'down';?>"></i>
+                                    <?php $this->_('AdminPackages.add.field_description');?>
+                                </a>
+                            </p>
+                            <div class="collapse<?php echo $show_description ? ' show' : '';?>" id="collapseDescription-<?php echo $this->Html->safe($lang->code);?>">
+                                <div class="collapse-content">
+                                    <?php
+                                    $this->Form->fieldHidden('descriptions[' . $i . '][lang]', (isset($lang->code) ? $lang->code : null));
+                                    ?>
+
+                                    <!-- HTML/Text Tabs -->
+                                    <ul class="nav nav-tabs mb-3" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link<?php echo $current_text_description ? ' active' : '';?>"
+                                                    data-bs-toggle="tab"
+                                                    data-bs-target="#desc-html-<?php echo $this->Html->safe($lang->code);?>"
+                                                    type="button"
+                                                    role="tab">
+                                                <?php $this->_('AdminPackages.add.field_description_html');?>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link<?php echo !$current_text_description ? ' active' : '';?>"
+                                                    data-bs-toggle="tab"
+                                                    data-bs-target="#desc-text-<?php echo $this->Html->safe($lang->code);?>"
+                                                    type="button"
+                                                    role="tab">
+                                                <?php $this->_('AdminPackages.add.field_description_text');?>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade<?php echo $current_text_description ? ' show active' : '';?>" id="desc-html-<?php echo $this->Html->safe($lang->code);?>" role="tabpanel">
+                                            <?php $this->Form->fieldTextarea('descriptions[' . $i . '][html]', (isset($description->html) ? $description->html : null), ['class' => 'form-control wysiwyg', 'rows' => 6]);?>
+                                            <?php if ($ai_feature_enabled ?? false): ?>
+                                            <div class="ai-assist-buttons mt-2">
+                                                <button class="btn btn-sm btn-outline-primary ai-response-alert-btn ai-icon active" type="button"
+                                                        data-ai-action="generate"
+                                                        data-ai-target="descriptions[<?php echo $i; ?>][html]"
+                                                        data-ai-type="description-html"
+                                                        data-ai-lang="<?php echo $this->Html->safe($lang->code); ?>">
+                                                    <i class="bi bi-stars me-1"></i><?php $this->_('AdminPackages.ai.generate_button');?>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary ai-regenerate-btn ai-icon active" type="button"
+                                                        data-ai-action="rewrite"
+                                                        data-ai-target="descriptions[<?php echo $i; ?>][html]"
+                                                        data-ai-type="description-html"
+                                                        data-ai-lang="<?php echo $this->Html->safe($lang->code); ?>"
+                                                        disabled>
+                                                    <i class="bi bi-arrow-repeat me-1"></i><?php $this->_('AdminPackages.ai.rewrite_button');?>
+                                                </button>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="tab-pane fade<?php echo !$current_text_description ? ' show active' : '';?>" id="desc-text-<?php echo $this->Html->safe($lang->code);?>" role="tabpanel">
+                                            <?php $this->Form->fieldTextarea('descriptions[' . $i . '][text]', (isset($description->text) ? $description->text : null), ['class' => 'form-control', 'data-markdown-editor' => '', 'rows' => 6]);?>
+                                            <?php if ($ai_feature_enabled ?? false): ?>
+                                            <div class="ai-assist-buttons mt-2">
+                                                <button class="btn btn-sm btn-outline-primary ai-response-alert-btn ai-icon active" type="button"
+                                                        data-ai-action="generate"
+                                                        data-ai-target="descriptions[<?php echo $i; ?>][text]"
+                                                        data-ai-type="description-text"
+                                                        data-ai-lang="<?php echo $this->Html->safe($lang->code); ?>">
+                                                    <i class="bi bi-stars me-1"></i><?php $this->_('AdminPackages.ai.generate_button');?>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary ai-regenerate-btn ai-icon active" type="button"
+                                                        data-ai-action="rewrite"
+                                                        data-ai-target="descriptions[<?php echo $i; ?>][text]"
+                                                        data-ai-type="description-text"
+                                                        data-ai-lang="<?php echo $this->Html->safe($lang->code); ?>"
+                                                        disabled>
+                                                    <i class="bi bi-arrow-repeat me-1"></i><?php $this->_('AdminPackages.ai.rewrite_button');?>
+                                                </button>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                </div>
+
+                <!-- Status -->
+                <div class="mb-3">
+                    <label class="form-label d-block"><?php $this->_('AdminPackages.add.field_status');?></label>
+                    <div class="btn-group" role="group">
+                        <?php
+                        $selected_status = (isset($vars->status) ? $vars->status : 'active');
+                        foreach ((isset($status) ? $status : []) as $status_value => $status_label) {
+                            $btn_class = 'btn-outline-primary';
+                            if ($status_value == 'active') {
+                                $btn_class = 'btn-outline-success';
+                            } elseif ($status_value == 'inactive') {
+                                $btn_class = 'btn-outline-secondary';
+                            } elseif ($status_value == 'restricted') {
+                                $btn_class = 'btn-outline-warning';
+                            }
+
+                            $is_checked = ($selected_status == $status_value);
+                        ?>
+                        <input type="radio" class="btn-check" name="status" id="status-<?php echo $this->Html->safe($status_value);?>" value="<?php echo $this->Html->safe($status_value);?>"<?php echo $is_checked ? ' checked' : '';?>>
+                        <label class="btn <?php echo $this->Html->safe($btn_class);?>" for="status-<?php echo $this->Html->safe($status_value);?>">
+                            <?php echo $this->Html->safe($status_label);?>
+                        </label>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+
+                <!-- Quantity Available -->
+                <div class="mb-3">
+                    <label class="form-label d-flex align-items-center">
+                        <?php $this->_('AdminPackages.add.field_qty');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-trigger="hover focus"
+                                data-bs-content="<?php $this->_('AdminPackages.!tooltip.client_qty');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <div class="d-flex gap-3 align-items-center">
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldRadio('qty_unlimited', 'true', (isset($vars->qty) ? $vars->qty : null) == '', ['id' => 'qty_unlimited', 'class' => 'form-check-input']);
+                            $this->Form->label($this->_('AdminPackages.add.field_qty_unlimited', true), 'qty_unlimited', ['class' => 'form-check-label']);
+                            ?>
+                        </div>
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldRadio('qty_unlimited', 'false', (isset($vars->qty) ? $vars->qty : null) != '', ['id' => 'qty_limited', 'class' => 'form-check-input']);
+                            $this->Form->label($this->_('AdminPackages.add.field_qty_unlimited', true), 'qty_limited', ['class' => 'form-check-label']);
+                            ?>
+                        </div>
+                        <?php
+                        $this->Form->fieldText('qty', (isset($vars->qty) ? $vars->qty : null), ['id' => 'qty', 'class' => 'form-control', 'style' => 'width: 150px;', 'placeholder' => '0']);
+                        ?>
+                    </div>
+                </div>
+
+                <!-- Client Limit -->
+                <div class="mb-3">
+                    <label class="form-label d-flex align-items-center">
+                        <?php $this->_('AdminPackages.add.field_client_qty');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-trigger="hover focus"
+                                data-bs-content="<?php $this->_('AdminPackages.!tooltip.client_qty');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <div class="d-flex gap-3 align-items-center">
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldRadio('client_qty_unlimited', 'true', (isset($vars->client_qty) ? $vars->client_qty : null) == '', ['id' => 'client_qty_unlimited', 'class' => 'form-check-input']);
+                            $this->Form->label($this->_('AdminPackages.add.field_client_qty_unlimited', true), 'client_qty_unlimited', ['class' => 'form-check-label']);
+                            ?>
+                        </div>
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldRadio('client_qty_unlimited', 'false', (isset($vars->client_qty) ? $vars->client_qty : null) != '', ['id' => 'client_qty_limited', 'class' => 'form-check-input']);
+                            $this->Form->label($this->_('AdminPackages.add.field_client_qty_unlimited', true), 'client_qty_limited', ['class' => 'form-check-label']);
+                            ?>
+                        </div>
+                        <?php
+                        $this->Form->fieldText('client_qty', (isset($vars->client_qty) ? $vars->client_qty : null), ['id' => 'client_qty', 'class' => 'form-control', 'style' => 'width: 150px;', 'placeholder' => '0']);
+                        ?>
+                    </div>
+                </div>
+
+                <!-- Checkboxes -->
+                <div class="mb-3">
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox('override_price', '1', ((isset($vars->override_price) ? $vars->override_price : '0') == '1'), ['id' => 'override_price', 'class' => 'form-check-input']);
+                        ?>
+                        <label class="form-check-label d-flex align-items-center" for="override_price">
+                            <?php $this->_('AdminPackages.add.field_override_price');?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                    data-bs-toggle="popover"
+                                    data-bs-placement="top"
+                                    data-bs-trigger="hover focus"
+                                    data-bs-content="<?php $this->_('AdminPackages.!tooltip.override_price');?>">
+                                <i class="bi bi-info-circle text-secondary"></i>
+                            </button>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox('upgrades_use_renewal', '1', ((isset($vars->upgrades_use_renewal) ? $vars->upgrades_use_renewal : '1') == '1'), ['id' => 'upgrades_use_renewal', 'class' => 'form-check-input']);
+                        ?>
+                        <label class="form-check-label d-flex align-items-center" for="upgrades_use_renewal">
+                            <?php $this->_('AdminPackages.add.field_upgrades_use_renewal');?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                    data-bs-toggle="popover"
+                                    data-bs-placement="top"
+                                    data-bs-trigger="hover focus"
+                                    data-bs-content="<?php $this->_('AdminPackages.!tooltip.upgrades_use_renewal');?>">
+                                <i class="bi bi-info-circle text-secondary"></i>
+                            </button>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pricing Section -->
+                <h6 class="form-section-header"><?php $this->_('AdminPackages.add.heading_pricing');?></h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-bordered price_table">
+                        <thead>
+                            <tr>
+                                <th><?php $this->_('AdminPackages.add.text_term');?></th>
+                                <th><?php $this->_('AdminPackages.add.text_period');?></th>
+                                <th><?php $this->_('AdminPackages.add.text_currency');?></th>
+                                <th><?php $this->_('AdminPackages.add.text_price');?></th>
+                                <th>
+                                    <?php $this->_('AdminPackages.add.text_price_renews');?>
+                                    <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                            data-bs-toggle="popover"
+                                            data-bs-placement="top"
+                                            data-bs-trigger="hover focus"
+                                            data-bs-content="<?php $this->_('AdminPackages.!tooltip.price_renews');?>">
+                                        <i class="bi bi-info-circle text-secondary"></i>
+                                    </button>
+                                </th>
+                                <th><?php $this->_('AdminPackages.add.text_setup');?></th>
+                                <th><?php $this->_('AdminPackages.add.text_cancellation');?></th>
+                                <th style="width: 80px;"><?php $this->_('AdminPackages.add.text_default');?></th>
+                                <th style="width: 100px;"><?php $this->_('AdminPackages.add.text_options');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                        $rows = 1;
+                        if ((isset($vars->pricing['term']) ? $vars->pricing['term'] : false)) {
+                            $rows = count($vars->pricing['term']);
+                        }
+                        for ($i = 0; $i < $rows; $i++) {
+                            // Set the term, but not if onetime
+                            $term = (isset($vars->pricing['term'][$i]) ? $vars->pricing['term'][$i] : null);
+                            $disabled = [];
+                            if ((isset($vars->pricing['period'][$i]) ? $vars->pricing['period'][$i] : null) == 'onetime') {
+                                $term = '';
+                                $disabled = ['disabled' => 'disabled'];
+                            }
+
+                            $renewal_price_enabled = (
+                                isset($vars->pricing['price_enable_renews'][$i])
+                                    ? $vars->pricing['price_enable_renews'][$i]
+                                    : ((isset($vars->pricing['price_renews'][$i]) ? $vars->pricing['price_renews'][$i] : null)
+                                            == (isset($vars->pricing['price'][$i]) ? $vars->pricing['price'][$i] : null)
+                                        || (isset($vars->pricing['price_renews'][$i]) ? $vars->pricing['price_renews'][$i] : null)
+                                            === null
+                                        ? '0'
+                                        : '1')
+                            ) == '1' && (isset($vars->pricing['period'][$i]) ? $vars->pricing['period'][$i] : null) != 'onetime';
+                        ?>
+                            <tr class="price_row">
+                                <td>
+                                    <?php
+                                    $this->Form->fieldText('pricing[term][]', (isset($vars->pricing['term'][$i]) ? $vars->pricing['term'][$i] : null), array_merge(['class' => 'form-control form-control-sm term'], $disabled));
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldSelect('pricing[period][]', (isset($periods) ? $periods : null), (isset($vars->pricing['period'][$i]) ? $vars->pricing['period'][$i] : 'month'), ['class' => 'form-select form-select-sm period']);?>
+                                </td>
+                                <td>
+                                    <?php (!empty($currencies) ? $this->Form->fieldSelect('pricing[currency][]', (isset($currencies) ? $currencies : null), (isset($vars->pricing['currency'][$i]) ? $vars->pricing['currency'][$i] : null), ['class' => 'form-select form-select-sm']) : (print (isset($default_currency) ? $this->Html->safe($default_currency) : null)));?>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldText('pricing[price][]', $this->CurrencyFormat->format((isset($vars->pricing['price'][$i]) ? $vars->pricing['price'][$i] : null), (isset($vars->pricing['currency'][$i]) ? $vars->pricing['currency'][$i] : null), ['prefix' => false,'suffix' => false,'with_separator' => false,'code' => false,'decimals' => 4]), ['class' => 'form-control form-control-sm']);?>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-text">
+                                            <?php
+                                            $this->Form->fieldCheckbox('pricing[price_enable_renews][]', '1', $renewal_price_enabled, array_merge(['class' => 'form-check-input mt-0 price_enable_renews'], $disabled));
+                                            ?>
+                                        </div>
+                                        <?php $this->Form->fieldText('pricing[price_renews][]', $this->CurrencyFormat->format((isset($vars->pricing['price_renews'][$i]) ? $vars->pricing['price_renews'][$i] : null), (isset($vars->pricing['currency'][$i]) ? $vars->pricing['currency'][$i] : null), ['prefix' => false,'suffix' => false,'with_separator' => false,'code' => false,'decimals' => 4]), array_merge(['class' => 'form-control price_renews'], $disabled));?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldText('pricing[setup_fee][]', $this->CurrencyFormat->format((isset($vars->pricing['setup_fee'][$i]) ? $vars->pricing['setup_fee'][$i] : null), (isset($vars->pricing['currency'][$i]) ? $vars->pricing['currency'][$i] : null), ['prefix' => false,'suffix' => false,'with_separator' => false,'code' => false,'decimals' => 4]), ['class' => 'form-control form-control-sm']);?>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldText('pricing[cancel_fee][]', $this->CurrencyFormat->format((isset($vars->pricing['cancel_fee'][$i]) ? $vars->pricing['cancel_fee'][$i] : null), (isset($vars->pricing['currency'][$i]) ? $vars->pricing['currency'][$i] : null), ['prefix' => false,'suffix' => false,'with_separator' => false,'code' => false,'decimals' => 4]), ['class' => 'form-control form-control-sm']);?>
+                                </td>
+                                <td class="text-center">
+                                    <?php $this->Form->fieldCheckbox('pricing[default][]', '1', (isset($vars->pricing['default'][$i]) ? $vars->pricing['default'][$i] : null) == '1', ['class' => 'form-check-input']);?>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 price_row_remove"><?php $this->_('AdminPackages.add.text_remove');?></button>
+                                </td>
+                            </tr>
+                        <?php
+                        }
+                        ?>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mb-3 price_row_add">
+                    <i class="bi bi-plus-lg me-1"></i><?php $this->_('AdminPackages.add.categorylink_addprice');?>
+                </button>
+
+                <!-- Pricing Options -->
+                <div class="mb-3">
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox('taxable', '1', ((isset($vars->taxable) ? $vars->taxable : '0') == '1'), ['id' => 'taxable', 'class' => 'form-check-input']);
+                        $this->Form->label($this->_('AdminPackages.add.field_taxable', true), 'taxable', ['class' => 'form-check-label']);
+                        ?>
+                    </div>
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox('single_term', '1', ((isset($vars->single_term) ? $vars->single_term : '0') == '1'), ['id' => 'single_term', 'class' => 'form-check-input']);
+                        ?>
+                        <label class="form-check-label d-flex align-items-center" for="single_term">
+                            <?php $this->_('AdminPackages.add.field_single_term');?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                    data-bs-toggle="popover"
+                                    data-bs-placement="top"
+                                    data-bs-trigger="hover focus"
+                                    data-bs-content="<?php $this->_('AdminPackages.!tooltip.single_term');?>">
+                                <i class="bi bi-info-circle text-secondary"></i>
+                            </button>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox('prorata', '1', ((isset($vars->prorata) ? $vars->prorata : null) == '1'), ['id' => 'prorata', 'class' => 'form-check-input']);
+                        ?>
+                        <label class="form-check-label d-flex align-items-center" for="prorata">
+                            <?php $this->_('AdminPackages.add.field_prorata');?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                    data-bs-toggle="popover"
+                                    data-bs-placement="top"
+                                    data-bs-trigger="hover focus"
+                                    data-bs-content="<?php $this->_('AdminPackages.!tooltip.prorata');?>">
+                                <i class="bi bi-info-circle text-secondary"></i>
+                            </button>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pro rata Options (hidden by default) -->
+                <div id="prorata_options" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label d-flex align-items-center" for="prorata_day">
+                            <?php $this->_('AdminPackages.add.field_prorata_day');?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                    data-bs-toggle="popover"
+                                    data-bs-placement="top"
+                                    data-bs-trigger="hover focus"
+                                    data-bs-content="<?php $this->_('AdminPackages.!tooltip.prorata_day');?>">
+                                <i class="bi bi-info-circle text-secondary"></i>
+                            </button>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect('prorata_day', (isset($prorata_days) ? $prorata_days : []), (isset($vars->prorata_day) ? $vars->prorata_day : null), ['id' => 'prorata_day', 'class' => 'form-select']);
+                        ?>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label d-flex align-items-center" for="prorata_cutoff">
+                            <?php $this->_('AdminPackages.add.field_prorata_cutoff');?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                    data-bs-toggle="popover"
+                                    data-bs-placement="top"
+                                    data-bs-trigger="hover focus"
+                                    data-bs-content="<?php $this->_('AdminPackages.!tooltip.prorata_cutoff');?>">
+                                <i class="bi bi-info-circle text-secondary"></i>
+                            </button>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect('prorata_cutoff', ['' => Language::_('AdminPackages.add.text_none', true)] + (isset($prorata_days) ? $prorata_days : []), (isset($vars->prorata_cutoff) ? $vars->prorata_cutoff : 15), ['id' => 'prorata_cutoff', 'class' => 'form-select']);
+                        ?>
+                    </div>
+                </div>
+
+                <!-- Group Membership -->
+                <h6 class="form-section-header"><?php $this->_('AdminPackages.add.heading_groups');?></h6>
+                <p class="form-section-subtitle"><?php $this->_('AdminPackages.add.text_group');?></p>
+
+                <div class="mb-3">
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldRadio('select_group_type', 'existing', ((isset($vars->select_group_type) ? $vars->select_group_type : 'existing') == 'existing'), ['id' => 'select_group_type', 'class' => 'form-check-input select_group_type']);
+                        $this->Form->label($this->_('AdminPackages.add.field_select_group_type', true), 'select_group_type', ['class' => 'form-check-label']);
+                        ?>
+                    </div>
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldRadio('select_group_type', 'new', ((isset($vars->select_group_type) ? $vars->select_group_type : null) == 'new' || empty($package_groups)), ['id' => 'select_group_type_new', 'class' => 'form-check-input select_group_type']);
+                        $this->Form->label($this->_('AdminPackages.add.field_select_group_type_new', true), 'select_group_type_new', ['class' => 'form-check-label']);
+                        ?>
+                    </div>
+                </div>
+
+                <div id="groupSelectionContainer">
+                    <div class="dual-select-container" data-group="package-groups">
+                        <div class="dual-select-panel">
+                            <label class="form-label"><?php $this->_('AdminPackages.add.text_membergroups');?></label>
+                            <div class="dual-select-dropzone">
+                                <div class="drag-list" id="assigned_groups">
+                                    <?php
+                                    foreach ((isset($vars->groups) ? $vars->groups : []) as $id => $group) {
+                                    ?>
+                                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($group);?></div>
+                                    <?php
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dual-select-controls">
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left" title="<?php $this->_('AdminPackages.add.text_membergroups');?>">
+                                <i class="bi bi-arrow-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right" title="<?php $this->_('AdminPackages.add.text_availablegroups');?>">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+
+                        <div class="dual-select-panel">
+                            <label class="form-label"><?php $this->_('AdminPackages.add.text_availablegroups');?></label>
+                            <div class="dual-select-dropzone">
+                                <div class="drag-list" id="available_groups">
+                                    <?php
+                                    foreach ((isset($package_groups) ? $package_groups : []) as $id => $group) {
+                                    ?>
+                                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($group);?></div>
+                                    <?php
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Group Creation Section -->
+                <div id="add_package_group" style="display: none;">
+                    <!-- Language Tabs -->
+                    <ul class="nav nav-tabs-connected mt-3" role="tablist">
+                        <?php
+                        foreach ($languages as $i => $lang) {
+                            $is_first = ($i === 0);
+                        ?>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link<?php echo $is_first ? ' active' : '';?>"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#group-lang-<?php echo $this->Html->safe($lang->code);?>"
+                                    type="button"
+                                    role="tab">
+                                <?php echo $this->Html->safe($lang->name);?>
+                            </button>
+                        </li>
+                        <?php
+                        }
+                        ?>
+                    </ul>
+
+                    <!-- Language Tab Content -->
+                    <div class="tab-content tab-content-connected mb-3">
+                        <?php
+                        foreach ($languages as $i => $lang) {
+                            $found = false;
+                            foreach ((isset($vars->group_names) ? $vars->group_names : []) as $group_name) {
+                                if ((isset($group_name->lang) ? $group_name->lang : null) == $lang->code) {
+                                    $found = true;
+                                    break;
+                                }
+                            }
+                            $is_first = ($i === 0);
+                        ?>
+                        <div class="tab-pane fade<?php echo $is_first ? ' show active' : '';?>" id="group-lang-<?php echo $this->Html->safe($lang->code);?>" role="tabpanel">
+                            <?php
+                            $this->Form->fieldHidden('group_names[' . $i . '][lang]', (isset($lang->code) ? $lang->code : null));
+                            $this->Form->fieldText('group_names[' . $i . '][name]', $found ? (isset($group_name->name) ? $group_name->name : null) : null, ['class' => 'form-control', 'placeholder' => $this->_('AdminPackages.add.text_group_name', true)]);
+                            ?>
+                        </div>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module Tab -->
+            <div class="tab-pane fade" id="tab-module" role="tabpanel">
+                <h6 class="form-section-header"><?php $this->_('AdminPackages.add.heading_module');?></h6>
+
+                <!-- Module Selector -->
+                <div class="mb-3">
+                    <?php
+                    $this->Form->label($this->_('AdminPackages.add.field_module', true), 'module_id', ['class' => 'form-label']);
+                    ?>
+                    <div class="input-group">
+                        <?php
+                        $this->Form->fieldSelect('module_id', ['' => $this->_('AppController.select.please', true)] + (isset($modules) ? $modules : []), (isset($vars->module_id) ? $vars->module_id : (isset($none_module_id) ? $none_module_id : null)), ['id' => 'module_id', 'class' => 'form-select']);
+                        ?>
+                        <button type="button" class="btn btn-outline-secondary" id="refresh_modules">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/modules/available');?>" target="_blank">
+                        <?php $this->_('AdminPackages.add.text_install_modules');?> <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+
+                <!-- Module Options Container -->
+                <div id="module_options" class="module_option_fields">
+                    <?php
+                    $this->Form->fieldHidden('module_row', ($vars->module_row ?? 0), ['id' => 'module_row']);
+                    $this->Form->fieldHidden('module_group', ($vars->module_group ?? null), ['id' => 'module_group']);
+                    $this->Form->fieldHidden('module_group_client', ($vars->module_group_client ?? null), ['id' => 'module_group_client']);
+
+                    if (!empty($vars->module_groups) && is_array($vars->module_groups)) {
+                        foreach ($vars->module_groups as $module_group) {
+                            $this->Form->fieldHidden('module_groups[]', $module_group, ['id' => 'module_groups_' . $module_group]);
+                        }
+                    }
+                    ?>
+                </div>
+
+                <?php
+                // Display the plugins if any are available
+                if (!empty($vars->plugins) || !empty($plugins)) {
+                ?>
+                <h6 class="form-section-header mt-4"><?php $this->_('AdminPackages.add.heading_plugins');?></h6>
+                <div id="plugins">
+                    <div class="dual-select-container" data-group="plugins">
+                        <div class="dual-select-panel">
+                            <label class="form-label d-flex align-items-center">
+                                <?php $this->_('AdminPackages.add.text_assigned_plugins');?>
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                        data-bs-toggle="popover"
+                                        data-bs-placement="top"
+                                        data-bs-trigger="hover focus"
+                                        data-bs-content="<?php $this->_('AdminPackages.!tooltip.assigned_plugins');?>">
+                                    <i class="bi bi-info-circle text-secondary"></i>
+                                </button>
+                            </label>
+                            <div class="dual-select-dropzone">
+                                <div class="drag-list" id="assigned_plugins">
+                                    <?php
+                                    foreach ((isset($vars->plugins) ? $vars->plugins : []) as $id => $plugin) {
+                                    ?>
+                                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($plugin);?></div>
+                                    <?php
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dual-select-controls">
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left" title="<?php $this->_('AdminPackages.add.text_assigned_plugins');?>">
+                                <i class="bi bi-arrow-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right" title="<?php $this->_('AdminPackages.add.text_available_plugins');?>">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+
+                        <div class="dual-select-panel">
+                            <label class="form-label"><?php $this->_('AdminPackages.add.text_available_plugins');?></label>
+                            <div class="dual-select-dropzone">
+                                <div class="drag-list" id="available_plugins">
+                                    <?php
+                                    foreach ((isset($plugins) ? $plugins : []) as $id => $plugin) {
+                                    ?>
+                                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($plugin);?></div>
+                                    <?php
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php
+                }
+                ?>
+
+                <h6 class="form-section-header mt-4"><?php $this->_('AdminPackages.add.heading_provisioning');?></h6>
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox('manual_activation', '1', ((isset($vars->manual_activation) ? $vars->manual_activation : '0') == '1'), ['id' => 'manual_activation', 'class' => 'form-check-input']);
+                    ?>
+                    <label class="form-check-label d-flex align-items-center" for="manual_activation">
+                        <?php $this->_('AdminPackages.add.field_manual_activation');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-2"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-trigger="hover focus"
+                                data-bs-content="<?php $this->_('AdminPackages.!tooltip.manual_activation');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Welcome Email Tab -->
+            <div class="tab-pane fade" id="tab-email" role="tabpanel">
+                <h6 class="form-section-header"><?php $this->_('AdminPackages.add.heading_email');?></h6>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary load_sample_email">
+                        <?php $this->_('AdminPackages.add.categorylink_loademail');?>
+                    </button>
+                </div>
+
+                <!-- Tags Section -->
+                <div class="alert alert-info mb-3">
+                    <h6 class="alert-heading mb-2"><i class="bi bi-tags me-2"></i><?php $this->_('AdminPackages.add.text_tags');?></h6>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <?php echo (isset($module_email_tags) ? $module_email_tags : null);?>
+                        <span id="module_email_tags"></span>
+                    </div>
+                </div>
+
+                <!-- Language Tabs -->
+                <ul class="nav nav-tabs-connected" role="tablist">
+                    <?php
+                    foreach ($languages as $i => $lang) {
+                        $is_first = ($i === 0);
+                    ?>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link<?php echo $is_first ? ' active' : '';?>"
+                                data-bs-toggle="tab"
+                                data-bs-target="#email-lang-<?php echo $this->Html->safe($lang->code);?>"
+                                type="button"
+                                role="tab">
+                            <?php echo $this->Html->safe($lang->name);?>
+                        </button>
+                    </li>
+                    <?php
+                    }
+                    ?>
+                </ul>
+
+                <!-- Language Tab Content -->
+                <div class="tab-content tab-content-connected">
+                    <?php
+                    foreach ($languages as $i => $lang) {
+                        $found = false;
+                        foreach ((array)(isset($vars->email_content) ? $vars->email_content : null) as $email_data) {
+                            if ((isset($email_data->lang) ? $email_data->lang : null) == $lang->code) {
+                                $found = true;
+                                break;
+                            }
+                        }
+                        $is_first = ($i === 0);
+                    ?>
+                    <div class="tab-pane fade<?php echo $is_first ? ' show active' : '';?>" id="email-lang-<?php echo $this->Html->safe($lang->code);?>" role="tabpanel">
+                        <?php
+                        $this->Form->fieldHidden('email_content[' . $i . '][lang]', (isset($lang->code) ? $lang->code : null));
+                        ?>
+                        <!-- HTML/Text Tabs -->
+                        <ul class="nav nav-tabs mb-3" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#email-<?php echo $this->Html->safe($lang->code);?>-html" type="button" role="tab">
+                                    <?php $this->_('AdminPackages.add.field_description_html');?>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#email-<?php echo $this->Html->safe($lang->code);?>-text" type="button" role="tab">
+                                    <?php $this->_('AdminPackages.add.field_description_text');?>
+                                </button>
+                            </li>
+                        </ul>
+                        <?php if ($ai_feature_enabled ?? false): ?>
+                        <div class="ai-assist-buttons mb-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary ai-response-alert-btn ai-icon active" type="button"
+                                    data-ai-action="generate"
+                                    data-ai-target="email_content[<?php echo $i; ?>][html]"
+                                    data-ai-type="email-both"
+                                    data-ai-lang="<?php echo $this->Html->safe($lang->code); ?>">
+                                <i class="bi bi-stars me-1"></i><?php $this->_('AdminPackages.ai.generate_button');?>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary ai-regenerate-btn ai-icon active" type="button"
+                                    data-ai-action="rewrite"
+                                    data-ai-target="email_content[<?php echo $i; ?>][html]"
+                                    data-ai-type="email-both"
+                                    data-ai-lang="<?php echo $this->Html->safe($lang->code); ?>"
+                                    disabled>
+                                <i class="bi bi-arrow-repeat me-1"></i><?php $this->_('AdminPackages.ai.rewrite_button');?>
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active email_content_html" id="email-<?php echo $this->Html->safe($lang->code);?>-html" role="tabpanel">
+                                <?php $this->Form->fieldTextarea('email_content[' . $i . '][html]', $found ? (isset($email_data->html) ? $email_data->html : null) : null, ['class' => 'form-control wysiwyg', 'rows' => 12]);?>
+                            </div>
+                            <div class="tab-pane fade email_content_text" id="email-<?php echo $this->Html->safe($lang->code);?>-text" role="tabpanel">
+                                <?php $this->Form->fieldTextarea('email_content[' . $i . '][text]', $found ? (isset($email_data->text) ? $email_data->text : null) : null, ['class' => 'form-control', 'data-markdown-editor' => '', 'rows' => 12]);?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                </div>
+            </div>
+
+            <!-- Configurable Options Tab -->
+            <div class="tab-pane fade" id="tab-options" role="tabpanel">
+                <h6 class="form-section-header"><?php $this->_('AdminPackages.add.heading_options');?></h6>
+
+                <div class="dual-select-container" data-group="option-groups">
+                    <div class="dual-select-panel">
+                        <label class="form-label"><?php $this->_('AdminPackages.add.text_membergroups');?></label>
+                        <div class="dual-select-dropzone">
+                            <div class="drag-list" id="option_groups">
+                                <?php
+                                foreach ((isset($vars->option_groups) ? $vars->option_groups : []) as $id => $group) {
+                                ?>
+                                <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($group);?></div>
+                                <?php
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dual-select-controls">
+                        <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left" title="<?php $this->_('AdminPackages.add.text_membergroups');?>">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right" title="<?php $this->_('AdminPackages.add.text_availablegroups');?>">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="dual-select-panel">
+                        <label class="form-label"><?php $this->_('AdminPackages.add.text_availablegroups');?></label>
+                        <div class="dual-select-dropzone">
+                            <div class="drag-list" id="available_option_groups">
+                                <?php
+                                foreach ($package_option_groups as $id => $group) {
+                                ?>
+                                <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($group);?></div>
+                                <?php
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back();"><?php $this->_('AppController.modal.text_close');?></button>
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminPackages.add.field_packagesubmit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+    </div>
+</div>
+
+<?php
+$this->Form->end();
+?>
+
+<?php if ($ai_feature_enabled ?? false): ?>
+<style>
+    #aiPromptContext.show ~ .collapse-icon,
+    [aria-expanded="true"] .collapse-icon {
+        transform: rotate(90deg);
+    }
+    .collapse-icon {
+        transition: transform 0.2s ease-in-out;
+    }
+</style>
+<!-- AI Package Content Modal -->
+<div class="modal fade" id="aiPackageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2 ai-icon active">
+                    <i class="bi bi-stars"></i>
+                    <span id="aiModalTitle"><?php $this->_('AdminPackages.ai.modal_title');?></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <a class="d-flex align-items-center text-decoration-none text-body" data-bs-toggle="collapse" href="#aiPromptContext" role="button" aria-expanded="false" aria-controls="aiPromptContext">
+                        <i class="bi bi-chevron-right me-2 collapse-icon"></i>
+                        <span class="fw-bold"><?php $this->_('AdminPackages.ai.prompt_context_label');?></span>
+                    </a>
+                    <div class="collapse mt-2" id="aiPromptContext">
+                        <div class="alert alert-secondary mb-0">
+                            <div id="aiFullPrompt" class="small" style="white-space: pre-wrap; font-family: var(--bs-font-monospace); font-size: 0.8rem; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="aiAdditionalPrompt"><?php $this->_('AdminPackages.ai.additional_instructions_label');?></label>
+                    <textarea id="aiAdditionalPrompt" class="form-control" rows="2" placeholder="<?php $this->_('AdminPackages.ai.additional_instructions_placeholder');?>"></textarea>
+                    <div class="form-text"><?php $this->_('AdminPackages.ai.additional_instructions_help');?></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold"><?php $this->_('AdminPackages.ai.generated_content_label');?></label>
+                    <div id="aiGeneratedContent" class="border rounded p-3 bg-body-tertiary"></div>
+                </div>
+
+                <!-- Apply Content Checkboxes (shown only for email content) -->
+                <div id="aiContentCheckboxes" class="mt-3 d-none">
+                    <label class="form-label fw-bold"><?php $this->_('AdminPackages.ai.apply_content_label');?></label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="aiApplyHtml" checked disabled>
+                        <label class="form-check-label" for="aiApplyHtml"><?php $this->_('AdminPackages.ai.apply_html');?></label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="aiApplyText" checked disabled>
+                        <label class="form-check-label" for="aiApplyText"><?php $this->_('AdminPackages.ai.apply_text');?></label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminPackages.ai.btn_cancel');?></button>
+                <button type="button" class="btn btn-primary" id="aiGenerateBtn">
+                    <i class="bi bi-stars me-1"></i><?php $this->_('AdminPackages.ai.generate_button');?>
+                </button>
+                <button type="button" class="btn btn-success d-none" id="aiUseContentBtn">
+                    <i class="bi bi-check-lg me-1"></i><?php $this->_('AdminPackages.ai.use_content_button');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+
+    // Show/hide package group type
+    function showPackageGroupType(value) {
+        if (value == 'new') {
+            var groupSelection = document.getElementById('groupSelectionContainer');
+            var addPackageGroup = document.getElementById('add_package_group');
+            if (groupSelection) groupSelection.style.display = 'none';
+            if (addPackageGroup) addPackageGroup.style.display = 'block';
+        } else {
+            var groupSelection = document.getElementById('groupSelectionContainer');
+            var addPackageGroup = document.getElementById('add_package_group');
+            if (addPackageGroup) addPackageGroup.style.display = 'none';
+            if (groupSelection) groupSelection.style.display = 'block';
+        }
+    }
+
+    var checkedGroupType = document.querySelector('.select_group_type:checked');
+    if (checkedGroupType) {
+        showPackageGroupType(checkedGroupType.value);
+    }
+    document.querySelectorAll('.select_group_type').forEach(function(el) {
+        el.addEventListener('change', function() {
+            showPackageGroupType(this.value);
+        });
+    });
+
+    // Quantity field focus handlers
+    var qty = document.getElementById('qty');
+    if (qty) {
+        qty.addEventListener('focus', function() {
+            var qtyLimited = document.getElementById('qty_limited');
+            if (qtyLimited) qtyLimited.checked = true;
+        });
+    }
+
+    var clientQty = document.getElementById('client_qty');
+    if (clientQty) {
+        clientQty.addEventListener('focus', function() {
+            var clientQtyLimited = document.getElementById('client_qty_limited');
+            if (clientQtyLimited) clientQtyLimited.checked = true;
+        });
+    }
+
+    // Pro rata options visibility
+    function showProrataOptions() {
+        var prorata = document.getElementById('prorata');
+        var prorataOptions = document.getElementById('prorata_options');
+        if (prorata && prorataOptions) {
+            if (prorata.checked) {
+                prorataOptions.style.display = 'block';
+            } else {
+                prorataOptions.style.display = 'none';
+            }
+        }
+    }
+
+    showProrataOptions();
+    var prorata = document.getElementById('prorata');
+    if (prorata) {
+        prorata.addEventListener('change', showProrataOptions);
+    }
+
+    // Price row management
+    function updatePriceRows() {
+        var i = 0;
+        document.querySelectorAll('tr.price_row').forEach(function(row) {
+            if (i++ % 2 == 1) {
+                row.classList.add('table-secondary');
+            } else {
+                row.classList.remove('table-secondary');
+            }
+        });
+    }
+
+    updatePriceRows();
+
+    // Add/Remove price row logic via event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.price_row_add')) {
+            var firstRow = document.querySelector('tr.price_row');
+            if (!firstRow) return;
+            var newRow = firstRow.cloneNode(true);
+            
+            // Remove input text/hidden and textarea data
+            newRow.querySelectorAll('input[type="text"], input[type="hidden"], textarea').forEach(function(el) {
+                el.value = '';
+                el.disabled = false;
+            });
+            // Remove checkbox/radio data
+            newRow.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(el) {
+                el.checked = false;
+            });
+
+            // Remove pricing ID
+            newRow.querySelectorAll('input.pricing_id').forEach(function(el) {
+                el.remove();
+            });
+
+            // Set the first row's currency/period
+            var currencySelect = firstRow.querySelector('select[name="pricing[currency][]"]');
+            var periodSelect = firstRow.querySelector('select[name="pricing[period][]"]');
+            var currency = currencySelect ? currencySelect.value : null;
+            var period = periodSelect ? periodSelect.value : null;
+            
+            if (period) {
+                var newPeriodOption = newRow.querySelector('select[name="pricing[period][]"] option[value="' + period + '"]');
+                if (newPeriodOption) newPeriodOption.selected = true;
+            }
+            if (currency) {
+                var newCurrencyOption = newRow.querySelector('select[name="pricing[currency][]"] option[value="' + currency + '"]');
+                if (newCurrencyOption) newCurrencyOption.selected = true;
+            }
+
+            // Disable the term if it's one time
+            if (period == 'onetime') {
+                newRow.querySelectorAll('input.term').forEach(function(el) { el.disabled = true; });
+                newRow.querySelectorAll('input.price_enable_renews').forEach(function(el) { el.disabled = true; });
+            }
+
+            // Disable renewal price
+            newRow.querySelectorAll('input.price_renews').forEach(function(el) { el.disabled = true; });
+            newRow.querySelectorAll('input.price_enable_renews').forEach(function(el) { el.value = '1'; });
+
+            // Set value to default checkboxes
+            newRow.querySelectorAll('input[name="pricing[default][]"]').forEach(function(el) { el.value = '1'; });
+
+            var allRows = document.querySelectorAll('tr.price_row');
+            var lastRow = allRows[allRows.length - 1];
+            lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
+            
+            updatePriceRows();
+            if (typeof updateDefaultCheckboxes === 'function') updateDefaultCheckboxes();
+            e.preventDefault();
+        }
+
+        if (e.target.closest('.price_row_remove')) {
+            var rows = document.querySelectorAll('tr.price_row');
+            if (rows.length > 1) {
+                var tr = e.target.closest('tr');
+                // Keep ID, remove everything else
+                var pricingId = tr.querySelector('input.pricing_id');
+                if (pricingId) {
+                    var lastRow = rows[rows.length - 1];
+                    lastRow.parentNode.insertBefore(pricingId, lastRow.nextSibling);
+                }
+                tr.remove();
+            }
+            updatePriceRows();
+            if (typeof updateDefaultCheckboxes === 'function') updateDefaultCheckboxes();
+            e.preventDefault();
+        }
+    });
+
+    // Period change handler
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('.price_row select.period')) {
+            var row = e.target.closest('.price_row');
+            if (e.target.value == 'onetime') {
+                var term = row.querySelector('input.term');
+                if (term) {
+                    term.disabled = true;
+                    term.value = '';
+                }
+
+                var enableRenews = row.querySelector('input.price_enable_renews');
+                if (enableRenews) {
+                    enableRenews.disabled = true;
+                    enableRenews.checked = false;
+                }
+
+                var priceRenews = row.querySelector('input.price_renews');
+                if (priceRenews) {
+                    priceRenews.disabled = true;
+                    priceRenews.value = '';
+                }
+            } else {
+                var term = row.querySelector('input.term');
+                if (term) term.disabled = false;
+                
+                var enableRenews = row.querySelector('input.price_enable_renews');
+                if (enableRenews) enableRenews.disabled = false;
+
+                var priceRenews = row.querySelector('input.price_renews');
+                var price = row.querySelector('input[name="pricing[price][]"]');
+                if (priceRenews && price) {
+                    priceRenews.value = price.value;
+                }
+            }
+        }
+    });
+
+    // Renewal price checkbox handler
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('.price_enable_renews')) {
+            var row = e.target.closest('tr.price_row');
+            var priceRenews = row.querySelector('.price_renews');
+            
+            if (e.target.checked) {
+                if (priceRenews) priceRenews.disabled = false;
+            } else {
+                var period = row.querySelector('.period');
+                if (period && period.value != 'onetime') {
+                    var price = row.querySelector('input[name="pricing[price][]"]');
+                    if (priceRenews && price) priceRenews.value = price.value;
+                }
+                if (priceRenews) priceRenews.disabled = true;
+            }
+        }
+    });
+
+    // Initialize unchecked renewal prices
+    document.querySelectorAll('.price_enable_renews:not(:checked)').forEach(function(el) {
+        var row = el.closest('tr.price_row');
+        var priceRenews = row.querySelector('.price_renews');
+        var period = row.querySelector('.period');
+        
+        if (period && period.value != 'onetime') {
+            var price = row.querySelector('input[name="pricing[price][]"]');
+            if (priceRenews && price) priceRenews.value = price.value;
+        } else {
+            if (priceRenews) priceRenews.value = '';
+        }
+        if (priceRenews) priceRenews.disabled = true;
+    });
+
+    // Make sure the value of the renewal field matches that of the price field
+    function updateRenewalPrice(e) {
+        if (e.target.matches('input[name="pricing[price][]"]')) {
+            var row = e.target.closest('tr.price_row');
+            var enableRenews = row.querySelector('.price_enable_renews');
+            var period = row.querySelector('.period');
+            
+            if (enableRenews && !enableRenews.checked && period && period.value != 'onetime') {
+                var priceRenews = row.querySelector('.price_renews');
+                if (priceRenews) priceRenews.value = e.target.value;
+            }
+        }
+    }
+    document.addEventListener('change', updateRenewalPrice);
+    document.addEventListener('keyup', updateRenewalPrice);
+
+    // Module management
+    function fetchModuleOptions() {
+        var form = document.getElementById('module_id') ? document.getElementById('module_id').closest('form') : null;
+        if (!form) return;
+        
+        var formDataStr = new URLSearchParams(new FormData(form)).toString();
+        
+        // Set meta values on initial load
+        var metaData = form.querySelectorAll('input[name^="meta"]');
+        var meta_values = '&<?php echo http_build_query(['meta' => (isset($vars->meta) ? $vars->meta : [])]); ?>';
+        if (metaData.length > 0)
+            meta_values = '';
+
+        var formData = formDataStr + meta_values;
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'packages/moduleoptions/'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            if (data) {
+                var moduleOptions = document.getElementById('module_options');
+                if (moduleOptions) {
+                    moduleOptions.innerHTML = data.module_options;
+                    // Execute scripts from fetched content (innerHTML doesn't execute <script> tags)
+                    moduleOptions.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                }
+
+                var moduleEmailTags = document.getElementById('module_email_tags');
+                if (moduleEmailTags) moduleEmailTags.innerHTML = data.module_email_tags;
+
+                if (typeof data.module_template == 'undefined' || data.module_template.length == 0) {
+                    document.querySelectorAll('.load_sample_email').forEach(function(el) { el.style.display = 'none'; });
+                } else {
+                    document.querySelectorAll('.load_sample_email').forEach(function(el) { el.style.display = 'inline-block'; });
+                }
+
+                // Initialize Bootstrap tooltips
+                var tooltipTriggerList = document.querySelectorAll('#module_options [data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+                    new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        })
+        .catch(function(error) {
+            console.error('Error fetching module options:', error);
+            var moduleOptions = document.getElementById('module_options');
+            if (moduleOptions) moduleOptions.innerHTML = '<div class="alert alert-danger">Error loading module options: ' + error.message + '</div>';
+        });
+    }
+
+    // Fetch module email template
+    function fetchModuleEmailTemplate() {
+        var form = document.getElementById('module_id') ? document.getElementById('module_id').closest('form') : null;
+        if (!form) return;
+        
+        var formDataStr = new URLSearchParams(new FormData(form)).toString();
+
+        // Set meta values on initial load
+        var metaData = form.querySelectorAll('input[name^="meta"]');
+        var meta_values = '&<?php echo http_build_query(['meta' => (isset($vars->meta) ? $vars->meta : [])]); ?>';
+        if (metaData.length > 0)
+            meta_values = '';
+
+        var formData = formDataStr + meta_values;
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'packages/moduleoptions/'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data && data.module_template) {
+                Object.keys(data.module_template).forEach(function(lang_code) {
+                    var template = data.module_template[lang_code];
+                    
+                    var htmlTextarea = document.querySelector('#email-' + lang_code + '-html textarea');
+                    if (htmlTextarea) htmlTextarea.value = template.html;
+                    
+                    var textTextarea = document.querySelector('#email-' + lang_code + '-text textarea');
+                    if (textTextarea) textTextarea.value = template.text;
+
+                    var ck_editor = document.querySelector('#email-' + lang_code + '-html .ck-editor__editable');
+                    if (ck_editor && ck_editor.ckeditorInstance) {
+                        ck_editor.ckeditorInstance.setData(template.html);
+                    }
+                });
+            }
+        })
+        .catch(function(error) { console.error('Error fetching module email template:', error); });
+    }
+
+    // Fetch modules list
+    function fetchModules() {
+        var moduleIdEl = document.getElementById('module_id');
+        var module_id = moduleIdEl ? moduleIdEl.value : '';
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'packages/getmodules/'); ?>', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data && moduleIdEl) {
+                // Remove all existing items
+                while (moduleIdEl.options.length > 0) {
+                    moduleIdEl.remove(0);
+                }
+
+                // Sort object by value
+                var sortedData = Object.keys(data)
+                    .map(function(key) { return { key: key, value: data[key] }; })
+                    .sort(function(a, b) { return a.value.localeCompare(b.value); });
+
+                // Append all new items
+                sortedData.forEach(function(item) {
+                    var option = document.createElement("option");
+                    option.text = item.value;
+                    option.value = item.key;
+                    moduleIdEl.add(option);
+                });
+
+                moduleIdEl.value = module_id;
+            }
+        })
+        .catch(function(error) { console.error('Error fetching modules:', error); });
+    }
+
+    // Onload fetch module options
+    fetchModuleOptions();
+
+    // On change fetch module options
+    var moduleIdEl = document.getElementById('module_id');
+    if (moduleIdEl) {
+        moduleIdEl.addEventListener('change', function() {
+            var moduleRow = document.getElementById('module_row');
+            if (moduleRow) moduleRow.remove();
+            var moduleGroup = document.getElementById('module_group');
+            if (moduleGroup) moduleGroup.remove();
+            fetchModuleOptions();
+        });
+    }
+
+    // Update module options when the server or group changes
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'module_group' || e.target.id === 'module_row') {
+            fetchModuleOptions();
+        }
+    });
+
+    // Update module list
+    var refreshModulesEl = document.getElementById('refresh_modules');
+    if (refreshModulesEl) {
+        refreshModulesEl.addEventListener('click', function(e) {
+            fetchModules();
+            e.preventDefault();
+        });
+    }
+
+    // Set the module email template as the email content
+    document.querySelectorAll('.load_sample_email').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            var confirmMsg = '<?php echo addslashes($this->_('AdminPackages.add.text_confirm_load_email', true)); ?>';
+            if (document.getElementById('edit_package')) {
+                confirmMsg = '<?php echo addslashes($this->_('AdminPackages.edit.text_confirm_load_email', true)); ?>';
+            }
+            if (confirm(confirmMsg)) {
+                document.querySelectorAll('.email_content_html textarea, .email_content_text textarea').forEach(function(textarea) {
+                    textarea.value = '';
+                });
+
+                fetchModuleEmailTemplate();
+            }
+            e.preventDefault();
+        });
+    });
+
+    // Dual-select drag and drop functionality
+    (function() {
+        let draggedItem = null;
+
+        function setupDualSelect(container) {
+            const leftList = container.querySelector('.dual-select-panel:first-child .drag-list');
+            const rightList = container.querySelector('.dual-select-panel:last-child .drag-list');
+            const moveLeftBtn = container.querySelector('.move-left');
+            const moveRightBtn = container.querySelector('.move-right');
+
+            if (!leftList || !rightList) return;
+
+            // Setup drag items
+            function setupDragItems() {
+                container.querySelectorAll('.drag-item').forEach(item => {
+                    // Click to select
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (e.ctrlKey || e.metaKey) {
+                            this.classList.toggle('selected');
+                        } else {
+                            container.querySelectorAll('.drag-item').forEach(i => i.classList.remove('selected'));
+                            this.classList.add('selected');
+                        }
+                    });
+
+                    // Double-click to move
+                    item.addEventListener('dblclick', function(e) {
+                        e.stopPropagation();
+                        const currentList = this.closest('.drag-list');
+                        const targetList = currentList === leftList ? rightList : leftList;
+                        targetList.appendChild(this);
+                        this.classList.remove('selected');
+                    });
+
+                    // Drag events
+                    item.addEventListener('dragstart', function(e) {
+                        draggedItem = this;
+                        this.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', this.textContent);
+                    });
+
+                    item.addEventListener('dragend', function() {
+                        this.classList.remove('dragging');
+                        container.querySelectorAll('.drag-list').forEach(l => l.classList.remove('drag-over'));
+                    });
+                });
+            }
+
+            // Setup drop zones
+            [leftList, rightList].forEach(list => {
+                list.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+
+                list.addEventListener('dragleave', function(e) {
+                    if (!this.contains(e.relatedTarget)) {
+                        this.classList.remove('drag-over');
+                    }
+                });
+
+                list.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    if (draggedItem && draggedItem.parentNode !== this) {
+                        this.appendChild(draggedItem);
+                        draggedItem.classList.remove('selected');
+                        draggedItem = null;
+                    }
+                });
+            });
+
+            // Arrow button functionality
+            moveLeftBtn?.addEventListener('click', function() {
+                const selectedItems = rightList.querySelectorAll('.drag-item.selected');
+                selectedItems.forEach(item => {
+                    leftList.appendChild(item);
+                    item.classList.remove('selected');
+                });
+            });
+
+            moveRightBtn?.addEventListener('click', function() {
+                const selectedItems = leftList.querySelectorAll('.drag-item.selected');
+                selectedItems.forEach(item => {
+                    rightList.appendChild(item);
+                    item.classList.remove('selected');
+                });
+            });
+
+            setupDragItems();
+        }
+
+        // Initialize all dual-select containers
+        document.querySelectorAll('.dual-select-container').forEach(setupDualSelect);
+
+        // Clear selection when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.drag-item')) {
+                document.querySelectorAll('.drag-item.selected').forEach(item => item.classList.remove('selected'));
+            }
+        });
+
+        // Before form submit, create hidden inputs for selected values
+        document.getElementById('add_package')?.addEventListener('submit', function() {
+            // Package groups
+            const assignedGroups = document.getElementById('assigned_groups');
+            if (assignedGroups) {
+                assignedGroups.querySelectorAll('input[name="groups[]"]').forEach(i => i.remove());
+                assignedGroups.querySelectorAll('.drag-item').forEach(item => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'groups[]';
+                    input.value = item.dataset.value;
+                    assignedGroups.appendChild(input);
+                });
+            }
+
+            // Plugins
+            const assignedPlugins = document.getElementById('assigned_plugins');
+            if (assignedPlugins) {
+                assignedPlugins.querySelectorAll('input[name="plugins[]"]').forEach(i => i.remove());
+                assignedPlugins.querySelectorAll('.drag-item').forEach(item => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'plugins[]';
+                    input.value = item.dataset.value;
+                    assignedPlugins.appendChild(input);
+                });
+            }
+
+            // Option groups
+            const optionGroups = document.getElementById('option_groups');
+            if (optionGroups) {
+                optionGroups.querySelectorAll('input[name="option_groups[]"]').forEach(i => i.remove());
+                optionGroups.querySelectorAll('.drag-item').forEach(item => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'option_groups[]';
+                    input.value = item.dataset.value;
+                    optionGroups.appendChild(input);
+                });
+            }
+        });
+    })();
+
+    // Disable other default checkboxes for the same currency
+    function updateDefaultCheckboxes() {
+        // Set an array with all the currencies with a default pricing selected
+        var selected_currencies = [];
+        document.querySelectorAll('.price_table .price_row').forEach(function(row) {
+            var checkbox = row.querySelector('input[name="pricing[default][]"]');
+            if (checkbox && checkbox.checked) {
+                var currencySelect = row.querySelector('select[name="pricing[currency][]"]');
+                if (currencySelect) {
+                    selected_currencies.push(currencySelect.value);
+                }
+            }
+        });
+
+        // Disable all other checkboxes for currencies with one selected already
+        document.querySelectorAll('input[name="pricing[default][]"]').forEach(function(checkbox) {
+            checkbox.disabled = false;
+        });
+        document.querySelectorAll('input[type="hidden"][name="pricing[default][]"]').forEach(function(hidden) {
+            hidden.remove();
+        });
+
+        for (var i = 0; i < selected_currencies.length; ++i) {
+            document.querySelectorAll('input[name="pricing[default][]"]').forEach(function(checkbox) {
+                var row = checkbox.closest('tr');
+                var currencySelect = row ? row.querySelector('select[name="pricing[currency][]"]') : null;
+                
+                if (currencySelect && currencySelect.value == selected_currencies[i]) {
+                    if (!checkbox.checked) {
+                        checkbox.disabled = true;
+                        var hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'pricing[default][]';
+                        hidden.value = '';
+                        checkbox.parentNode.appendChild(hidden);
+                    }
+                }
+            });
+        }
+    }
+
+    updateDefaultCheckboxes();
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('select[name="pricing[currency][]"]')) {
+            updateDefaultCheckboxes();
+        }
+    });
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('input[name="pricing[default][]"]')) {
+            updateDefaultCheckboxes();
+        }
+    });
+
+    // Associate pricings with the correct fields
+    function updatePricingOrder() {
+        // Set proper indices
+        var row = 0;
+        document.querySelectorAll('table.price_table tr.price_row').forEach(function(tr) {
+            tr.querySelectorAll('input').forEach(function(input) {
+                input.name = input.name.replace('[]', '[' + row + ']');
+            });
+            row++;
+        });
+    }
+
+    // Form submission handler
+    var packageForm = document.getElementById('add_package') || document.getElementById('edit_package');
+    if (packageForm) {
+        packageForm.addEventListener('submit', function() {
+            // Associate the order of prices with fields
+            updatePricingOrder();
+
+            document.querySelectorAll('#assigned option, #assigned_plugins option').forEach(function(opt) {
+                opt.selected = true;
+            });
+
+            // Enable fields so that they can be submitted
+            document.querySelectorAll('input.term, input.price_renews, input.price_enable_renews').forEach(function(input) {
+                input.disabled = false;
+            });
+            
+            document.querySelectorAll('input.price_enable_renews:not(:checked)').forEach(function(input) {
+                input.value = '0';
+                input.checked = true;
+            });
+        });
+    }
+
+    // CKEditor initialization for wysiwyg textareas
+    var editorOptions = {language: '<?php echo substr(Configure::get('Blesta.language'), 0, 2);?>'};
+
+    function initCKEditorOnTextarea(textarea) {
+        if (!textarea || textarea.ckeditorInstance) {
+            return; // Already initialized
+        }
+
+        blestaBindWysiwygEditor(textarea, editorOptions);
+    }
+
+    // Initialize CKEditor on all visible wysiwyg textareas
+    function initAllWysiwygEditors() {
+        document.querySelectorAll('textarea.wysiwyg').forEach(function(textarea) {
+            // Only initialize if textarea is visible and not already initialized
+            if (!textarea.ckeditorInstance && textarea.offsetParent !== null) {
+                initCKEditorOnTextarea(textarea);
+            }
+        });
+    }
+
+    // Initialize on page load
+    initAllWysiwygEditors();
+
+    // Re-initialize when collapse is shown
+    document.querySelectorAll('.collapse').forEach(function(collapseEl) {
+        collapseEl.addEventListener('shown.bs.collapse', function() {
+            var textareas = this.querySelectorAll('textarea.wysiwyg');
+            textareas.forEach(function(textarea) {
+                if (!textarea.ckeditorInstance) {
+                    initCKEditorOnTextarea(textarea);
+                }
+            });
+        });
+    });
+
+    // Re-initialize when tab is shown
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tabEl) {
+        tabEl.addEventListener('shown.bs.tab', function(event) {
+            var targetId = event.target.getAttribute('data-bs-target');
+            if (targetId) {
+                var targetPane = document.querySelector(targetId);
+                if (targetPane) {
+                    var textareas = targetPane.querySelectorAll('textarea.wysiwyg');
+                    textareas.forEach(function(textarea) {
+                        if (!textarea.ckeditorInstance) {
+                            initCKEditorOnTextarea(textarea);
+                        }
+                    });
+                }
+            }
+        });
+    });
+
+    // Before form submit, write decoded CKEditor data back to each
+    // email_content[*][html] textarea so the encoded tags don't persist.
+    document.getElementById('add_package')?.addEventListener('submit', function() {
+        document.querySelectorAll('textarea[name^="email_content["][name$="[html]"]').forEach(function(ta) {
+            if (ta.ckeditorInstance && typeof ta.ckeditorInstance.getData === 'function') {
+                ta.value = blestaDecodeHrefTemplateTags(ta.ckeditorInstance.getData());
+            }
+        });
+    });
+
+    <?php if ($ai_feature_enabled ?? false): ?>
+    // AI Generation functionality
+    var aiState = {
+        currentTarget: null,
+        currentType: null,
+        currentAction: null,
+        currentLang: null,
+        generatedContent: '',
+        generatedHtml: '',
+        generatedText: '',
+        modal: null
+    };
+
+    // AI button click handler
+    document.querySelectorAll('[data-ai-action]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            aiState.currentTarget = this.dataset.aiTarget;
+            aiState.currentType = this.dataset.aiType;
+            aiState.currentAction = this.dataset.aiAction;
+            aiState.currentLang = this.dataset.aiLang;
+
+            // Show modal
+            var modalEl = document.getElementById('aiPackageModal');
+            aiState.modal = new bootstrap.Modal(modalEl);
+
+            // Update title
+            document.getElementById('aiModalTitle').textContent =
+                aiState.currentAction === 'generate'
+                    ? '<?php echo addslashes($this->_('AdminPackages.ai.modal_title_generate', true)); ?>'
+                    : '<?php echo addslashes($this->_('AdminPackages.ai.modal_title_rewrite', true)); ?>';
+
+            // Build and show the prompt preview
+            updatePromptPreview();
+
+            // Show initial state with instructions
+            document.getElementById('aiGeneratedContent').innerHTML =
+                '<div class="text-center py-4 text-muted"><i class="bi bi-stars d-block mb-2" style="font-size: 2rem;"></i><p class="mb-0"><?php echo addslashes($this->_('AdminPackages.ai.initial_instructions', true)); ?></p></div>';
+
+            // Reset button states
+            document.getElementById('aiGenerateBtn').classList.remove('d-none');
+            document.getElementById('aiGenerateBtn').disabled = false;
+            document.getElementById('aiGenerateBtn').innerHTML = '<i class="bi bi-stars me-1"></i><?php echo addslashes($this->_('AdminPackages.ai.generate_button', true)); ?>';
+            document.getElementById('aiUseContentBtn').classList.add('d-none');
+
+            // Show/hide checkboxes for email content
+            var isEmailContent = aiState.currentType.startsWith('email-');
+            var checkboxes = document.getElementById('aiContentCheckboxes');
+            if (isEmailContent) {
+                checkboxes.classList.remove('d-none');
+                document.getElementById('aiApplyHtml').checked = true;
+                document.getElementById('aiApplyHtml').disabled = true;
+                document.getElementById('aiApplyText').checked = true;
+                document.getElementById('aiApplyText').disabled = true;
+            } else {
+                checkboxes.classList.add('d-none');
+            }
+
+            // Clear additional instructions
+            document.getElementById('aiAdditionalPrompt').value = '';
+
+            aiState.modal.show();
+        });
+    });
+
+    // Gather existing content for rewrite (shared between preview and generate)
+    function getExistingContent() {
+        var isEmailContent = aiState.currentType.startsWith('email-');
+
+        if (isEmailContent) {
+            var targetName = aiState.currentTarget;
+            var baseFieldMatch = targetName.match(/^(.+)\[(html|text)\]$/);
+            var baseFieldName = baseFieldMatch ? baseFieldMatch[1] : targetName.replace(/\[html\]$/, '').replace(/\[text\]$/, '');
+
+            var parts = [];
+            var htmlTextarea = document.querySelector('[name="' + baseFieldName + '[html]"]');
+            if (htmlTextarea) {
+                var htmlContent = htmlTextarea.ckeditorInstance
+                    ? blestaDecodeHrefTemplateTags(htmlTextarea.ckeditorInstance.getData())
+                    : htmlTextarea.value;
+                if (htmlContent.trim()) {
+                    parts.push('Current HTML version:\n' + htmlContent);
+                }
+            }
+            var textTextarea = document.querySelector('[name="' + baseFieldName + '[text]"]');
+            if (textTextarea) {
+                var toastUiContainer = textTextarea.nextElementSibling;
+                var textContent = (toastUiContainer && toastUiContainer._editor)
+                    ? toastUiContainer._editor.getMarkdown()
+                    : textTextarea.value;
+                if (textContent.trim()) {
+                    parts.push('Current text version:\n' + textContent);
+                }
+            }
+            return parts.join('\n\n');
+        } else {
+            var textarea = document.querySelector('[name="' + aiState.currentTarget + '"]');
+            if (textarea) {
+                return textarea.ckeditorInstance
+                    ? textarea.ckeditorInstance.getData()
+                    : textarea.value;
+            }
+            return '';
+        }
+    }
+
+    // Update prompt preview by fetching from server
+    function updatePromptPreview() {
+        var nameField = document.querySelector('input[name^="names"][name$="[name]"]');
+        var moduleSelect = document.getElementById('module_id');
+        var isEmailContent = aiState.currentType.startsWith('email-');
+        var existingContent = '';
+
+        if (aiState.currentAction === 'rewrite') {
+            existingContent = getExistingContent();
+        }
+
+        // Build the base prompt same as generateAiContent does
+        var additionalPrompt = document.getElementById('aiAdditionalPrompt').value.trim();
+        var basePrompt;
+
+        if (aiState.currentAction === 'rewrite') {
+            basePrompt = 'Rewrite and improve this content while maintaining the same general information:\n\n' + existingContent;
+        } else if (isEmailContent) {
+            basePrompt = 'Generate a professional welcome email for this product/service package that welcomes the customer and provides helpful information about their new service';
+        } else {
+            basePrompt = 'Generate a professional description for this product/service package';
+        }
+
+        if (additionalPrompt) {
+            basePrompt += '\n\nAdditional instructions: ' + additionalPrompt;
+        }
+
+        // Build form data for preview request
+        var formData = new URLSearchParams();
+        var csrfToken = document.querySelector('input[name="_csrf_token"]');
+        if (csrfToken) {
+            formData.append('_csrf_token', csrfToken.value);
+        }
+
+        formData.append('prompt', basePrompt);
+        formData.append('package_name', nameField ? nameField.value : '');
+        formData.append('module_name', moduleSelect ? moduleSelect.options[moduleSelect.selectedIndex].text : '');
+        formData.append('language', aiState.currentLang);
+        if (isEmailContent) {
+            formData.append('generate_html', 'true');
+            formData.append('generate_text', 'true');
+        } else {
+            formData.append('generate_html', aiState.currentType.includes('html') ? 'true' : 'false');
+            formData.append('generate_text', !aiState.currentType.includes('html') ? 'true' : 'false');
+        }
+        formData.append('tone', 'professional');
+        formData.append('content_type', isEmailContent ? 'email' : 'description');
+
+        // Add email tags if applicable
+        if (isEmailContent) {
+            var tagsAlert = document.querySelector('#tab-email .alert-info .d-flex.flex-wrap');
+            if (tagsAlert) {
+                formData.append('email_tags', tagsAlert.textContent.trim());
+            }
+        }
+
+        // Show loading state
+        document.getElementById('aiFullPrompt').innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span><?php echo addslashes($this->_('AdminPackages.ai.prompt_loading', true)); ?></span>';
+
+        // Fetch prompt preview from server
+        fetch('<?php echo $this->Html->safe($this->base_uri . "packages/previewPrompt/"); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success && data.full_prompt) {
+                document.getElementById('aiFullPrompt').textContent = data.full_prompt;
+            } else {
+                document.getElementById('aiFullPrompt').textContent = data.error || 'Failed to load prompt preview';
+            }
+        })
+        .catch(function(error) {
+            document.getElementById('aiFullPrompt').textContent = 'Error loading prompt: ' + error.message;
+        });
+    }
+
+    // Debounce function for input handling
+    var promptPreviewTimeout = null;
+    function debouncedUpdatePromptPreview() {
+        if (promptPreviewTimeout) {
+            clearTimeout(promptPreviewTimeout);
+        }
+        promptPreviewTimeout = setTimeout(updatePromptPreview, 500);
+    }
+
+    // Listen for changes to additional instructions to update preview
+    document.getElementById('aiAdditionalPrompt').addEventListener('input', debouncedUpdatePromptPreview);
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function generateAiContent() {
+        var nameField = document.querySelector('input[name^="names"][name$="[name]"]');
+        var moduleSelect = document.getElementById('module_id');
+        var existingContent = '';
+
+        // Determine if this is email content
+        var isEmailContent = aiState.currentType.startsWith('email-');
+
+        // Get existing content for rewrite
+        if (aiState.currentAction === 'rewrite') {
+            existingContent = getExistingContent();
+        }
+
+        var formData = new URLSearchParams();
+        // Include CSRF token
+        var csrfToken = document.querySelector('input[name="_csrf_token"]');
+        if (csrfToken) {
+            formData.append('_csrf_token', csrfToken.value);
+        }
+
+        // Build the prompt with optional additional instructions
+        var additionalPrompt = document.getElementById('aiAdditionalPrompt').value.trim();
+        var basePrompt;
+
+        if (aiState.currentAction === 'rewrite') {
+            basePrompt = 'Rewrite and improve this content while maintaining the same general information:\n\n' + existingContent;
+        } else if (isEmailContent) {
+            basePrompt = 'Generate a professional welcome email for this product/service package that welcomes the customer and provides helpful information about their new service';
+        } else {
+            basePrompt = 'Generate a professional description for this product/service package';
+        }
+
+        if (additionalPrompt) {
+            basePrompt += '\n\nAdditional instructions: ' + additionalPrompt;
+        }
+
+        formData.append('prompt', basePrompt);
+        formData.append('package_name', nameField ? nameField.value : '');
+        formData.append('module_name', moduleSelect ? moduleSelect.options[moduleSelect.selectedIndex].text : '');
+        formData.append('language', aiState.currentLang);
+
+        // For email content, always generate both HTML and text; for descriptions, use the type
+        if (isEmailContent) {
+            formData.append('generate_html', 'true');
+            formData.append('generate_text', 'true');
+        } else {
+            formData.append('generate_html', aiState.currentType.includes('html') ? 'true' : 'false');
+            formData.append('generate_text', !aiState.currentType.includes('html') ? 'true' : 'false');
+        }
+        formData.append('tone', 'professional');
+
+        // Add email tags if generating email content
+        if (isEmailContent) {
+            var emailTagsContainer = document.getElementById('module_email_tags');
+            var emailTags = emailTagsContainer ? emailTagsContainer.textContent.trim() : '';
+            // Also get any tags from the info alert
+            var tagsAlert = document.querySelector('#tab-email .alert-info .d-flex.flex-wrap');
+            if (tagsAlert) {
+                emailTags = tagsAlert.textContent.trim();
+            }
+            formData.append('email_tags', emailTags);
+        }
+
+        // Use appropriate endpoint based on content type
+        var endpoint = isEmailContent
+            ? '<?php echo $this->Html->safe($this->base_uri . "packages/generateEmail/"); ?>'
+            : '<?php echo $this->Html->safe($this->base_uri . "packages/generateDescription/"); ?>';
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            // Update the full prompt in the collapsible section
+            if (data.full_prompt) {
+                document.getElementById('aiFullPrompt').textContent = data.full_prompt;
+            }
+
+            // Reset generate button
+            var generateBtn = document.getElementById('aiGenerateBtn');
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i><?php echo addslashes($this->_('AdminPackages.ai.regenerate_button', true)); ?>';
+
+            if (data.success) {
+                // Store both HTML and text content
+                aiState.generatedHtml = data.html || '';
+                aiState.generatedText = data.text || '';
+                aiState.generatedContent = aiState.generatedHtml || aiState.generatedText;
+
+                // Build preview showing both versions
+                var previewHtml = '';
+                if (data.feedback) {
+                    previewHtml += '<div class="alert alert-info mb-3"><i class="bi bi-info-circle me-2"></i>' + escapeHtml(data.feedback) + '</div>';
+                }
+                if (aiState.generatedHtml) {
+                    previewHtml += '<div class="mb-3"><strong class="d-block mb-2"><?php echo addslashes($this->_('AdminPackages.ai.preview_html', true)); ?></strong><div class="border rounded p-3 bg-body-secondary">' + aiState.generatedHtml + '</div></div>';
+                }
+                if (aiState.generatedText) {
+                    previewHtml += '<div><strong class="d-block mb-2"><?php echo addslashes($this->_('AdminPackages.ai.preview_text', true)); ?></strong><pre class="border rounded p-3 bg-body-secondary mb-0" style="white-space: pre-wrap; font-family: inherit;">' + escapeHtml(aiState.generatedText) + '</pre></div>';
+                }
+                document.getElementById('aiGeneratedContent').innerHTML = previewHtml || '<div class="text-muted">No content generated</div>';
+
+                // Enable apply checkboxes for email content
+                if (isEmailContent) {
+                    document.getElementById('aiApplyHtml').disabled = !aiState.generatedHtml;
+                    document.getElementById('aiApplyText').disabled = !aiState.generatedText;
+                }
+
+                // Show the Use Content button
+                document.getElementById('aiUseContentBtn').classList.remove('d-none');
+            } else {
+                document.getElementById('aiGeneratedContent').innerHTML =
+                    '<div class="alert alert-danger mb-0">' + escapeHtml(data.error || '<?php echo addslashes($this->_('AdminPackages.ai.error_generation_failed', true)); ?>') + '</div>';
+            }
+        })
+        .catch(function(error) {
+            // Reset generate button on error
+            var generateBtn = document.getElementById('aiGenerateBtn');
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="bi bi-stars me-1"></i><?php echo addslashes($this->_('AdminPackages.ai.generate_button', true)); ?>';
+
+            document.getElementById('aiGeneratedContent').innerHTML =
+                '<div class="alert alert-danger mb-0"><?php echo addslashes($this->_('AdminPackages.ai.error_prefix', true)); ?> ' + escapeHtml(error.message) + '</div>';
+        });
+    }
+
+    // Use content button — applies selectively based on checkboxes for email content
+    var useContentBtn = document.getElementById('aiUseContentBtn');
+    if (useContentBtn) {
+        useContentBtn.addEventListener('click', function() {
+            if (!aiState.generatedContent) return;
+
+            // Determine the base field name (e.g., "descriptions[0]" from "descriptions[0][html]")
+            var targetName = aiState.currentTarget;
+            var baseFieldMatch = targetName.match(/^(.+)\[(html|text)\]$/);
+            var baseFieldName = baseFieldMatch ? baseFieldMatch[1] : targetName.replace(/\[html\]$/, '').replace(/\[text\]$/, '');
+
+            var isEmailContent = aiState.currentType.startsWith('email-');
+
+            // Check if we should apply HTML (always for descriptions, checkbox for emails)
+            var applyHtml = !isEmailContent || document.getElementById('aiApplyHtml').checked;
+            var applyText = !isEmailContent || document.getElementById('aiApplyText').checked;
+
+            // Set HTML content
+            if (applyHtml && aiState.generatedHtml) {
+                var htmlTextarea = document.querySelector('[name="' + baseFieldName + '[html]"]');
+                if (htmlTextarea) {
+                    var htmlContent = isEmailContent ? blestaDecodeHrefTemplateTags(aiState.generatedHtml) : aiState.generatedHtml;
+                    if (htmlTextarea.ckeditorInstance) {
+                        htmlTextarea.ckeditorInstance.setData(htmlContent);
+                    } else {
+                        htmlTextarea.value = htmlContent;
+                    }
+                    htmlTextarea.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // Set text/markdown content
+            if (applyText && aiState.generatedText) {
+                var textTextarea = document.querySelector('[name="' + baseFieldName + '[text]"]');
+                if (textTextarea) {
+                    var toastUiContainer = textTextarea.nextElementSibling;
+                    if (toastUiContainer && toastUiContainer._editor) {
+                        toastUiContainer._editor.setMarkdown(aiState.generatedText);
+                    } else {
+                        textTextarea.value = aiState.generatedText;
+                    }
+                    textTextarea.dispatchEvent(new Event('input'));
+                }
+            }
+
+            aiState.modal.hide();
+        });
+    }
+
+    // Generate button
+    var generateBtn = document.getElementById('aiGenerateBtn');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            // Disable button and show generating state
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span><?php echo addslashes($this->_('AdminPackages.ai.generating', true)); ?>';
+
+            document.getElementById('aiGeneratedContent').innerHTML =
+                '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted"><?php echo addslashes($this->_('AdminPackages.ai.generating', true)); ?></p></div>';
+
+            generateAiContent();
+        });
+    }
+
+    // Watch textareas for rewrite button enable/disable
+    function updateRewriteButtons() {
+        document.querySelectorAll('[data-ai-action="rewrite"]').forEach(function(btn) {
+            var isEmailBtn = (btn.dataset.aiType || '').startsWith('email-');
+            var targetName = btn.dataset.aiTarget;
+
+            if (isEmailBtn) {
+                // For email buttons, enable when either HTML or text has content
+                var baseFieldMatch = targetName.match(/^(.+)\[(html|text)\]$/);
+                var baseFieldName = baseFieldMatch ? baseFieldMatch[1] : targetName.replace(/\[html\]$/, '').replace(/\[text\]$/, '');
+
+                var hasContent = false;
+                var htmlTextarea = document.querySelector('[name="' + baseFieldName + '[html]"]');
+                if (htmlTextarea) {
+                    var htmlContent = htmlTextarea.ckeditorInstance
+                        ? htmlTextarea.ckeditorInstance.getData()
+                        : htmlTextarea.value;
+                    if (htmlContent.trim()) hasContent = true;
+                }
+                if (!hasContent) {
+                    var textTextarea = document.querySelector('[name="' + baseFieldName + '[text]"]');
+                    if (textTextarea && textTextarea.value.trim()) hasContent = true;
+                }
+                btn.disabled = !hasContent;
+            } else {
+                // For description buttons, check the single target
+                var textarea = document.querySelector('[name="' + targetName + '"]');
+                if (textarea) {
+                    var content = textarea.ckeditorInstance
+                        ? textarea.ckeditorInstance.getData()
+                        : textarea.value;
+                    btn.disabled = !content.trim();
+                }
+            }
+        });
+    }
+
+    // Check rewrite buttons periodically
+    setInterval(updateRewriteButtons, 1000);
+    <?php endif; ?>
+});
+</script>

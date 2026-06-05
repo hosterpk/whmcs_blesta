@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'solusvm_response.php';
@@ -38,6 +39,11 @@ class SolusvmApi
      * @var array An array representing the last request made
      */
     private $last_request = ['url' => null, 'args' => null];
+
+    /**
+     * @var Blesta\Core\ServiceProviders\Logger Container logger
+     */
+    private $logger;
 
     /**
      * Sets the connection details

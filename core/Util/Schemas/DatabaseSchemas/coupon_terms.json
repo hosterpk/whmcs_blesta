@@ -1,0 +1,64 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "coupon_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "term",
+            "type": "smallint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 5,
+            "scale": 0
+        },
+        {
+            "name": "period",
+            "type": "enum('day','week','month','year','onetime')",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 7
+        }
+    ],
+    "indexes": [
+        {
+            "name": "coupon_id",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "coupon_id",
+                "period",
+                "term"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -47,14 +47,16 @@ class AdminMain extends ReassignPricingController
             ? (int)$this->get[1]
             : 1
         );
-        $sort = (isset($this->get['sort'])
-            ? $this->get['sort']
-            : 'date_added'
-        );
-        $order = (isset($this->get['order'])
-            ? $this->get['order']
-            : 'desc'
-        );
+        $sort = ($this->get['sort'] ?? 'date_added');
+        $order = ($this->get['order'] ?? 'desc');
+
+        // Set icon bar icons
+        $this->structure->set('icon_bar', [
+            'bottom' => [
+                ['href' => $this->base_uri . 'clients/view/' . ($this->client->id ?? null), 'icon' => 'bi bi-person']
+            ]
+        ]);
+
 
         // Fetch the services
         $services = $this->Services->getList($this->client->id, $status, $page, [$sort => $order]);

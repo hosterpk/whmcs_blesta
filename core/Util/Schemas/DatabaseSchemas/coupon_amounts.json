@@ -1,0 +1,54 @@
+{
+    "columns": [
+        {
+            "name": "coupon_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "currency",
+            "type": "char(3)",
+            "nullable": false,
+            "key": "PRI",
+            "default": "USD",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "amount",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "type",
+            "type": "enum('amount','percent')",
+            "nullable": false,
+            "key": null,
+            "default": "percent",
+            "extra": null,
+            "max_length": 7
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "coupon_id",
+                "currency"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

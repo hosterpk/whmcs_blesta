@@ -1,0 +1,42 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "alias",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        }
+    ],
+    "indexes": [
+        {
+            "name": "alias",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "alias"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

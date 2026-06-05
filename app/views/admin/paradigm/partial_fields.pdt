@@ -1,0 +1,174 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+if (!empty($fields) || !empty($html)) {
+?>
+<div class="generated_fields_div">
+    <?php
+    if (!empty($fields)) {
+        // Set any hidden fields
+        foreach (($fields ?? []) as $index => $field) {
+            foreach ($field->fields as $input) {
+                if ($input->type == 'fieldHidden') {
+                    call_user_func_array([$this->Form, $input->type], $input->params);
+                    unset($fields[$index]);
+                    continue 2;
+                }
+            }
+        }
+
+    ?>
+    <?php
+    foreach (($fields ?? []) as $field) {
+    ?>
+    <div class="mb-3">
+        <?php
+        // Determine all field tooltips
+        $tooltips = [];
+        foreach ($field->fields as $input) {
+            // Collect all tooltips to be displayed for the field
+            if ($input->type == 'tooltip') {
+                $tooltips[] = $input;
+            }
+        }
+
+        // Draw the primary label/field
+        // Add form-label class for labels
+        $label_params = (array)$field->params;
+        if ($field->type == 'label') {
+            if (!isset($label_params['attributes'])) {
+                $label_params['attributes'] = [];
+            }
+            if (!isset($label_params['attributes']['class'])) {
+                $label_params['attributes']['class'] = 'form-label';
+            } else {
+                $label_params['attributes']['class'] .= ' form-label';
+            }
+        }
+
+        call_user_func_array(
+            [$this->Form, $field->type],
+            $label_params
+        );
+
+        // Check if any inputs are checkbox/radio (tooltip should appear after secondary label)
+        $has_check_fields = false;
+        foreach ($field->fields as $input) {
+            if (in_array($input->type, ['fieldCheckbox', 'fieldRadio'])) {
+                $has_check_fields = true;
+                break;
+            }
+        }
+
+        // For non-checkbox/radio fields, render tooltip icons after the primary label
+        if (!$has_check_fields) {
+            foreach ($tooltips as $tooltip) {
+                $tooltip_message = isset($tooltip->params['message']) ? $this->Html->safe($tooltip->params['message']) : '';
+                echo '<i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="' . $tooltip_message . '"></i>';
+            }
+            $tooltips = [];
+        }
+
+        // Draw each form field associated with this label
+        foreach ($field->fields as $input) {
+            // Collect all tooltips to be displayed at the end
+            if ($input->type == 'tooltip') {
+                continue;
+            }
+
+            // Add Bootstrap 5 form classes to inputs
+            $input_params = (array)$input->params;
+            if (in_array($input->type, ['fieldText', 'fieldPassword', 'fieldTextarea', 'fieldSelect'])) {
+                if (!isset($input_params['attributes'])) {
+                    $input_params['attributes'] = [];
+                }
+                if (!isset($input_params['attributes']['class'])) {
+                    $input_params['attributes']['class'] = ($input->type == 'fieldSelect' ? 'form-select' : 'form-control');
+                } else {
+                    $class = ($input->type == 'fieldSelect' ? 'form-select' : 'form-control');
+                    if (!str_contains($input_params['attributes']['class'], $class)) {
+                        $input_params['attributes']['class'] .= ' ' . $class;
+                    }
+                }
+            } elseif (in_array($input->type, ['fieldCheckbox', 'fieldRadio'])) {
+                // Wrap checkbox/radio in form-check div
+                if (!isset($input_params['attributes'])) {
+                    $input_params['attributes'] = [];
+                }
+                if (!isset($input_params['attributes']['class'])) {
+                    $input_params['attributes']['class'] = 'form-check-input';
+                } else {
+                    if (!str_contains($input_params['attributes']['class'], 'form-check-input')) {
+                        $input_params['attributes']['class'] .= ' form-check-input';
+                    }
+                }
+            }
+
+            // Display the form input field
+            call_user_func_array(
+                [$this->Form, $input->type],
+                $input_params
+            );
+
+            // Draw the form field's secondary label if checkbox or radio item
+            if (isset($input->label)) {
+                $label_class = 'form-check-label';
+                if (isset($input->label->params['attributes']['class'])) {
+                    if (is_array($input->label->params['attributes']['class'])) {
+                        $input->label->params['attributes']['class'][] = $label_class;
+                    } else {
+                        $input->label->params['attributes']['class'] .= ' ' . $label_class;
+                    }
+                } else {
+                    $input->label->params['attributes']['class'] = $label_class;
+                }
+
+                call_user_func_array([$this->Form, 'label'], $input->label->params);
+
+                // Render tooltip icons after the secondary label for checkbox/radio fields
+                foreach ($tooltips as $tooltip) {
+                    $tooltip_message = isset($tooltip->params['message']) ? $this->Html->safe($tooltip->params['message']) : '';
+                    echo '<i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="' . $tooltip_message . '"></i>';
+                }
+                $tooltips = [];
+            }
+        }
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+    <?php
+    }
+    ?>
+    <?php echo ($html ?? null);?>
+</div>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips for dynamically loaded fields
+        const tooltipTriggerList = document.querySelectorAll('.generated_fields_div [data-bs-toggle="tooltip"]');
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Handle quantity sliders - vanilla JavaScript (no jQuery)
+        document.querySelectorAll('input[data-type="quantity"]').forEach(function(input) {
+            const dataMin = input.getAttribute('data-min');
+            const dataMax = input.getAttribute('data-max');
+
+            if (dataMin !== '' && dataMin !== null && dataMax !== '' && dataMax !== null) {
+                const min = parseInt(dataMin);
+                const max = parseInt(dataMax);
+                const dataStep = input.getAttribute('data-step');
+                const step = (dataStep === '' || dataStep === null) ? 1 : parseInt(dataStep);
+
+                input.setAttribute('type', 'number');
+                input.setAttribute('min', min);
+                input.setAttribute('max', max);
+                input.setAttribute('step', step);
+                input.classList.add('form-control');
+            }
+        });
+    });
+</script>
+<?php
+}
+?>

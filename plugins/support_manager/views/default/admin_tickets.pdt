@@ -2,16 +2,16 @@
         echo (isset($message) ? $message : null);
 
         $links = [
-            ['name' => $this->_('AdminTickets.index.category_open', true) . ' <span>(' . (isset($status_count['open']) ? $this->Html->safe($status_count['open']) : null) . ')</span>', 'current' => ((isset($status) ? $status : null) == 'open' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/open/', 'class' => 'ajax']],
-            ['name' => $this->_('AdminTickets.index.category_awaiting_reply', true) . ' <span>(' . (isset($status_count['awaiting_reply']) ? $this->Html->safe($status_count['awaiting_reply']) : null) . ')</span>', 'current' => ((isset($status) ? $status : null) == 'awaiting_reply' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/awaiting_reply/', 'class' => 'ajax']],
-            ['name' => $this->_('AdminTickets.index.category_in_progress', true) . ' <span>(' . (isset($status_count['in_progress']) ? $this->Html->safe($status_count['in_progress']) : null) . ')</span>', 'current' => ((isset($status) ? $status : null) == 'in_progress' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/in_progress/', 'class' => 'ajax']],
-            ['name' => $this->_('AdminTickets.index.category_on_hold', true) . ' <span>(' . (isset($status_count['on_hold']) ? $this->Html->safe($status_count['on_hold']) : null) . ')</span>', 'current' => ((isset($status) ? $status : null) == 'on_hold' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/on_hold/', 'class' => 'ajax']],
-            ['name' => $this->_('AdminTickets.index.category_closed', true) . ' <span>(' . (isset($status_count['closed']) ? $this->Html->safe($status_count['closed']) : null) . ')</span>', 'current' => ((isset($status) ? $status : null) == 'closed' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/closed/', 'class' => 'ajax']],
-            ['name' => $this->_('AdminTickets.index.category_trash', true) . ' <span>(' . (isset($status_count['trash']) ? $this->Html->safe($status_count['trash']) : null) . ')</span>', 'current' => ((isset($status) ? $status : null) == 'trash' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/trash/', 'class' => 'ajax']]
+            ['name' => $this->_('AdminTickets.index.category_open', true) . ' <span class="badge bg-secondary ms-2">' . (isset($status_count['open']) ? $this->Html->safe($status_count['open']) : '0') . '</span>', 'current' => ((isset($status) ? $status : null) == 'open' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/open/', 'class' => 'ajax']],
+            ['name' => $this->_('AdminTickets.index.category_awaiting_reply', true) . ' <span class="badge bg-secondary ms-2">' . (isset($status_count['awaiting_reply']) ? $this->Html->safe($status_count['awaiting_reply']) : '0') . '</span>', 'current' => ((isset($status) ? $status : null) == 'awaiting_reply' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/awaiting_reply/', 'class' => 'ajax']],
+            ['name' => $this->_('AdminTickets.index.category_in_progress', true) . ' <span class="badge bg-secondary ms-2">' . (isset($status_count['in_progress']) ? $this->Html->safe($status_count['in_progress']) : '0') . '</span>', 'current' => ((isset($status) ? $status : null) == 'in_progress' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/in_progress/', 'class' => 'ajax']],
+            ['name' => $this->_('AdminTickets.index.category_on_hold', true) . ' <span class="badge bg-secondary ms-2">' . (isset($status_count['on_hold']) ? $this->Html->safe($status_count['on_hold']) : '0') . '</span>', 'current' => ((isset($status) ? $status : null) == 'on_hold' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/on_hold/', 'class' => 'ajax']],
+            ['name' => $this->_('AdminTickets.index.category_closed', true) . ' <span class="badge bg-secondary ms-2">' . (isset($status_count['closed']) ? $this->Html->safe($status_count['closed']) : '0') . '</span>', 'current' => ((isset($status) ? $status : null) == 'closed' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/closed/', 'class' => 'ajax']],
+            ['name' => $this->_('AdminTickets.index.category_trash', true) . ' <span class="badge bg-secondary ms-2">' . (isset($status_count['trash']) ? $this->Html->safe($status_count['trash']) : '0') . '</span>', 'current' => ((isset($status) ? $status : null) == 'trash' ? true : false), 'attributes' => ['href' => $this->base_uri . 'plugin/support_manager/admin_tickets/index/trash/', 'class' => 'ajax']]
         ];
         $link_buttons = [
             [
-                'icon' => 'fas fa-plus',
+                'icon' => 'bi bi-plus-lg',
                 'name' => '',
                 'attributes' => [
                     'title' => $this->_('AdminTickets.index.categorylink_createticket', true),
@@ -21,46 +21,46 @@
         ];
 
         $this->Widget->clear();
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'support_manager_styles']);
+        $this->Widget->setStyleSheet($this->view_dir . 'css/support.css', ['id' => 'support_manager_styles']);
         $this->Widget->setLinks($links);
+        $this->Widget->setNavStyle('nav-tabs-custom');
         $this->Widget->setLinkButtons($link_buttons);
-        $this->Widget->setFilters($filters, $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : 'open') . '/'), !empty($filter_vars));
-        $this->Widget->setAjaxFiltering();
-        $this->Widget->setWidgetButton('full_screen');
+        $this->Widget->setWidgetButton(['class' => 'full_screen', 'title' => $this->_('AdminTickets.index.text_fullscreen', true)]);
+        $this->Widget->setBodyWrapper(false);
         $this->Widget->create($this->_('AdminTickets.index.boxtitle_tickets', true), ['id'=>'admin_tickets'], (isset($render_section) ? $render_section : null));
         $this->Form->create($this->base_uri . 'plugin/support_manager/admin_tickets/action/', ['id' => 'tickets']);
         $this->Form->fieldHidden('current_status', (isset($status) ? $status : null));
 
         if ((isset($tickets) ? $tickets : false) && ($num_tickets = count($tickets)) > 0) {
         ?>
-        <table class="table" id="ticket_list">
-            <tr class="heading_row">
-                <td><?php $this->Form->fieldCheckbox('tickets[]', 'all', false, ['id' => 'tickets_all', 'class' => 'tickets']);?></td>
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=code&order=' . ($sort == 'code' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'code' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_code');?></a></span></td>
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=contact_first_name&order=' . ($sort == 'contact_first_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'contact_first_name' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_client');?></a></span></td>
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=priority&order=' . ($sort == 'priority' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'priority' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_priority');?></a></span></td>
+        <div class="table-responsive">
+        <table class="table table-hover mb-0" id="ticket_list">
+            <thead>
+            <tr>
+                <th style="width: 40px;"><?php $this->Form->fieldCheckbox('tickets[]', 'all', false, ['id' => 'tickets_all', 'class' => 'form-check-input tickets']);?></th>
+                <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=code&order=' . ($sort == 'code' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'code' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_code');?><?php if ($sort == 'code') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
+                <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=contact_first_name&order=' . ($sort == 'contact_first_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'contact_first_name' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_client');?><?php if ($sort == 'contact_first_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
+                <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=priority&order=' . ($sort == 'priority' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'priority' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_priority');?><?php if ($sort == 'priority') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
                 <?php
                 if (($status ?? null) == 'closed') {
                 ?>
-                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=rating&order=' . ($sort == 'rating' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'rating' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_rating');?></a></span></td>
+                    <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=rating&order=' . ($sort == 'rating' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'rating' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_rating');?><?php if ($sort == 'rating') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
                 <?php
                 }
                 ?>
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=department_name&order=' . ($sort == 'department_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'department_name' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_department_name');?></a></span></td>
-                <td><?php $this->_('AdminTickets.index.heading_summary');?></td>
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=assigned_staff_first_name&order=' . ($sort == 'assigned_staff_first_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'assigned_staff_first_name' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_assigned_staff');?></a></span></td>
-                <td class="last"><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=last_reply_date&order=' . ($sort == 'last_reply_date' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'last_reply_date' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_last_reply_date');?></a></span></td>
+                <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=department_name&order=' . ($sort == 'department_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'department_name' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_department_name');?><?php if ($sort == 'department_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
+                <th><?php $this->_('AdminTickets.index.heading_summary');?></th>
+                <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=assigned_staff_first_name&order=' . ($sort == 'assigned_staff_first_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'assigned_staff_first_name' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_assigned_staff');?><?php if ($sort == 'assigned_staff_first_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
+                <th><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : null) . '/?sort=last_reply_date&order=' . ($sort == 'last_reply_date' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'last_reply_date' ? ' ' . $order : '');?>"><?php $this->_('AdminTickets.index.heading_last_reply_date');?><?php if ($sort == 'last_reply_date') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?></a></th>
             </tr>
+            </thead>
+            <tbody>
             <?php
             // Display all tickets
-            $i = 0;
             foreach ($tickets as $ticket) {
-                $highlight = ((isset($ticket->staff_id) ? $ticket->staff_id : null) == (isset($staff_id) ? $staff_id : null));
-                $odd_row = ($i++%2 == 1);
-                $tr_class = $this->Html->concat(' ', ($highlight ? 'highlight' : ''), ($odd_row ? 'odd_row' : ''));
             ?>
-            <tr<?php echo (!empty($tr_class) ? ' class="' . $tr_class . '"' : '');?>>
-                <td><?php $this->Form->fieldCheckbox('tickets[]', (isset($ticket->id) ? $ticket->id : null), false, ['class' => 'tickets']);?></td>
+            <tr<?php echo (!empty($ticket->staff_id) && $ticket->staff_id == (isset($staff_id) ? $staff_id : null) ? ' class="highlight"' : '');?>>
+                <td><?php $this->Form->fieldCheckbox('tickets[]', (isset($ticket->id) ? $ticket->id : null), false, ['class' => 'form-check-input tickets']);?></td>
                 <td><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/reply/' . (isset($ticket->id) ? $ticket->id : null) . '/');?>"><?php echo (isset($ticket->code) ? $this->Html->safe($ticket->code) : null);?></a></td>
                 <?php
                 if (!empty($ticket->contact_first_name) || !empty($ticket->contact_last_name) || !empty($ticket->contact_company)) {
@@ -77,26 +77,40 @@
                 <?php
                 }
                 ?>
-                <td><?php echo (isset($priorities[$ticket->priority]) ? $priorities[$ticket->priority] : null);?></td>
+                <td>
+                <?php
+                $priority_classes = [
+                    'emergency' => 'bg-danger',
+                    'critical' => 'bg-warning text-dark',
+                    'high' => 'bg-info text-dark',
+                    'medium' => 'bg-primary',
+                    'low' => 'bg-secondary'
+                ];
+                $badge_class = $priority_classes[$ticket->priority] ?? 'bg-secondary';
+                ?>
+                <span class="badge <?php echo $badge_class; ?>"><?php echo (isset($priorities[$ticket->priority]) ? $priorities[$ticket->priority] : null);?></span>
+                </td>
                 <?php
                 if (($status ?? null) == 'closed') {
                 ?>
                     <td>
+                        <div class="ticket-rating-stars">
                         <?php
                         $rating = (int) ($ticket->rating ?? 0);
                         $max_rating = 5;
                         for ($i = 1; $i <= $rating; $i++) {
                             $max_rating--;
                         ?>
-                            <i class="fas fa-star text-warning"></i>
+                            <i class="bi bi-star-fill ticket-rating-star filled"></i>
                         <?php
                         }
                         for ($i = 1; $i <= $max_rating; $i++) {
                         ?>
-                            <i class="far fa-star text-black-50"></i>
+                            <i class="bi bi-star ticket-rating-star"></i>
                         <?php
                         }
                         ?>
+                        </div>
                     </td>
                 <?php
                 }
@@ -117,7 +131,7 @@
                 }
                 ?>
                 </td>
-                <td class="last">
+                <td>
                     <?php
                     echo (isset($ticket->last_reply_time) ? $this->Html->safe($ticket->last_reply_time) : null);
                     ?>
@@ -136,7 +150,7 @@
                     }
 
                     if ((isset($ticket->last_reply_by) ? $ticket->last_reply_by : null) == 'system') {
-                        $this->_('AdminTickets.reply.system');
+                        echo !empty($ai_assistant_name) ? $this->Html->safe($ai_assistant_name) : $this->_('AdminTickets.reply.system', true);
                     } elseif ((isset($ticket->last_reply_by) ? $ticket->last_reply_by : null) == 'client' || (isset($ticket->last_reply_by) ? $ticket->last_reply_by : null) == 'staff') {
                         echo $this->Html->concat(' ', (isset($ticket->last_reply_first_name) ? $this->Html->safe($ticket->last_reply_first_name) : null), (isset($ticket->last_reply_last_name) ? $this->Html->safe($ticket->last_reply_last_name) : null));
                     } else {
@@ -153,53 +167,67 @@
             </tr>
             <?php
             }
-            unset($i);
             ?>
+            </tbody>
         </table>
-        <div id="ticket_actions" style="display:none;">
-            <div class="left">
-                <span><?php $this->_('AdminTickets.index.text_with_selected');?></span>
-                <?php $this->Form->fieldSelect('action', (isset($ticket_actions) ? $ticket_actions : []), 'update_status', ['id' => 'ticket_action']);?>
-                <div class="with_ticket ticket_action" style="display:none;">
-                    <span><?php $this->_('AdminTickets.index.text_into_ticket');?></span>
-                    <?php
-                    $this->Form->fieldText('ticket_number', '', ['id' => 'ticket_number', 'class' => 'medium', 'placeholder' => $this->_('AdminTickets.index.ticket_number_placeholder', true)]);
-                    $this->Form->fieldHidden('ticket_id', '', ['id' => 'ticket_id']);
-                    ?>
-                    <div id="no_tickets" style="display:none;">
-                        <div><?php $this->_('AdminTickets.index.text_no_tickets');?></div>
+        </div>
+        <div class="bulk-actions-bar" id="ticket_actions" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="selected-count" id="selectedCount"><?php $this->_('AdminTickets.index.text_with_selected');?></span>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <?php $this->Form->fieldSelect('action', (isset($ticket_actions) ? $ticket_actions : []), 'update_status', ['id' => 'ticket_action', 'class' => 'form-select form-select-sm', 'style' => 'width: auto;']);?>
+                    <div class="with_ticket ticket_action" style="display:none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary small"><?php $this->_('AdminTickets.index.text_into_ticket');?></span>
+                            <?php
+                            $this->Form->fieldText('ticket_number', '', ['id' => 'ticket_number', 'class' => 'form-control form-control-sm', 'style' => 'width: 150px;', 'placeholder' => $this->_('AdminTickets.index.ticket_number_placeholder', true)]);
+                            $this->Form->fieldHidden('ticket_id', '', ['id' => 'ticket_id']);
+                            ?>
+                        </div>
+                        <div id="no_tickets" class="text-danger small mt-1" style="display:none;">
+                            <?php $this->_('AdminTickets.index.text_no_tickets');?>
+                        </div>
                     </div>
-                </div>
-                <div class="update_status ticket_action" style="display:none;">
-                    <span><?php $this->_('AdminTickets.index.text_to_status');?></span>
-                    <?php
-                    $this->Form->fieldSelect('status', (isset($ticket_statuses) ? $ticket_statuses : []), '', ['class' => 'medium']);
-                    ?>
-                </div>
-                <div class="reassign ticket_action" style="display:none;">
-                    <span><?php $this->_('AdminTickets.index.text_to_client');?></span>
-                    <?php
-                    $this->Form->fieldText('client', '', ['id' => 'client', 'class' => 'medium', 'placeholder' => $this->_('Admintickets.add.client_placeholder', true)]);
-                    $this->Form->fieldHidden('client_id', '', ['id' => 'client_id']);
-                    ?>
-                    <div id="no_clients" style="display:none;">
-                        <div><?php $this->_('AdminTickets.add.text_no_clients');?></div>
+                    <div class="update_status ticket_action" style="display:none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary small"><?php $this->_('AdminTickets.index.text_to_status');?></span>
+                            <?php
+                            $this->Form->fieldSelect('status', (isset($ticket_statuses) ? $ticket_statuses : []), '', ['class' => 'form-select form-select-sm', 'style' => 'width: auto;']);
+                            ?>
+                        </div>
                     </div>
+                    <div class="reassign ticket_action" style="display:none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary small"><?php $this->_('AdminTickets.index.text_to_client');?></span>
+                            <?php
+                            $this->Form->fieldText('client', '', ['id' => 'client', 'class' => 'form-control form-control-sm', 'style' => 'width: 150px;', 'placeholder' => $this->_('Admintickets.add.client_placeholder', true)]);
+                            $this->Form->fieldHidden('client_id', '', ['id' => 'client_id']);
+                            ?>
+                        </div>
+                        <div id="no_clients" class="text-danger small mt-1" style="display:none;">
+                            <?php $this->_('AdminTickets.add.text_no_clients');?>
+                        </div>
+                    </div>
+                    <?php
+                    $this->Form->fieldSubmit('save', $this->_('AdminTickets.index.field_actionsubmit', true), ['class' => 'btn btn-sm btn-primary']);
+                    ?>
                 </div>
             </div>
-            <?php
-            $this->Form->fieldSubmit('save', $this->_('AdminTickets.index.field_actionsubmit', true), ['class' => 'btn btn-primary float-right']);
-            ?>
         </div>
         <?php
-            // Set pagination
-            $this->Pagination->build();
+            // Set pagination in card-footer
+            if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        ?>
+        <div class="card-footer">
+            <?php $this->Pagination->build(); ?>
+        </div>
+        <?php
+            }
         } else {
         ?>
-        <div class="empty_section">
-            <div class="empty_box">
-                <?php $this->_('AdminTickets.index.no_results');?>
-            </div>
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0"><?php $this->_('AdminTickets.index.no_results');?></p>
         </div>
         <?php
         }
@@ -207,133 +235,369 @@
         $this->Form->end();
         ?>
         <script type="text/javascript">
-            $(document).ready(function() {
+            document.addEventListener('DOMContentLoaded', function() {
+                // Fullscreen toggle functionality
+                var fullscreenBtn = document.querySelector('#admin_tickets .widget-controls a.full_screen');
+                if (fullscreenBtn) {
+                    // Add icon if not present
+                    if (!fullscreenBtn.querySelector('i')) {
+                        fullscreenBtn.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>';
+                    }
+
+                    // Toggle fullscreen function
+                    var toggleFullscreen = function(btn) {
+                        var card = btn.closest('.card, section.card');
+                        var icon = btn.querySelector('i');
+
+                        if (card) {
+                            var isFullscreen = card.classList.contains('fullscreen-mode');
+
+                            if (isFullscreen) {
+                                // Exit fullscreen
+                                card.classList.remove('fullscreen-mode');
+                                if (icon) {
+                                    icon.classList.remove('bi-fullscreen-exit');
+                                    icon.classList.add('bi-arrows-fullscreen');
+                                }
+                                btn.setAttribute('title', '<?php echo $this->Html->safe($this->_('AdminTickets.index.text_fullscreen', true)); ?>');
+                            } else {
+                                // Enter fullscreen
+                                card.classList.add('fullscreen-mode');
+                                if (icon) {
+                                    icon.classList.remove('bi-arrows-fullscreen');
+                                    icon.classList.add('bi-fullscreen-exit');
+                                }
+                                btn.setAttribute('title', '<?php echo $this->Html->safe($this->_('AdminTickets.index.text_exit_fullscreen', true)); ?>');
+                            }
+                        }
+                    };
+
+                    // Add click handler for fullscreen toggle
+                    fullscreenBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        toggleFullscreen(this);
+                    });
+
+                    // ESC key to exit fullscreen
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape') {
+                            var card = fullscreenBtn.closest('.card, section.card');
+                            if (card && card.classList.contains('fullscreen-mode')) {
+                                toggleFullscreen(fullscreenBtn);
+                            }
+                        }
+                    });
+                }
+
                 // Clear old interval before ever starting a new one
-                if (support_manager_ticket_time) {
-                    clearInterval(support_manager_ticket_time);
+                if (window.support_manager_ticket_time) {
+                    clearInterval(window.support_manager_ticket_time);
                 }
 
                 <?php
                 if ((isset($page) ? $page : null) == '1' && (isset($sort) ? $sort : null) == 'last_reply_date') {
                 ?>
                 // Refresh
-                support_manager_ticket_time = startUpdateTimer();
+                window.support_manager_ticket_time = startUpdateTimer();
                 <?php
                 }
                 ?>
 
-                $('#tickets .ajax').click(function () {
-                    stopUpdateTimer(support_manager_ticket_time);
+                // Stop refresh timer when clicking ajax links
+                document.querySelectorAll('#tickets .ajax').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        stopUpdateTimer(window.support_manager_ticket_time);
+                    });
                 });
 
-                $('.tickets').change(function() {
-                    if ($(this).val() == 'all') {
-                        if ($('#tickets_all').prop('checked'))
-                            $('.tickets').prop('checked', true);
-                        else
-                            $('.tickets').prop('checked', false);
-                    }
+                // Checkbox select all functionality using event delegation
+                // This ensures handlers work for AJAX-loaded content
+                var widget = document.getElementById('admin_tickets');
+                if (widget && !widget._ticketCheckboxHandlerBound) {
+                    widget._ticketCheckboxHandlerBound = true;
+                    widget.addEventListener('change', function(e) {
+                        if (!e.target.classList.contains('tickets')) return;
 
-                    if ($('.tickets:checked').length > 0) {
-                        stopUpdateTimer(support_manager_ticket_time);
-                        $('#ticket_actions').show();
-                    }
-                    else {
-                        if (support_manager_ticket_time) {
-                            clearInterval(support_manager_ticket_time);
-                            startUpdateTimer();
+                        var ticketsAll = document.getElementById('tickets_all');
+                        var ticketActions = document.getElementById('ticket_actions');
+
+                        if (e.target.value === 'all') {
+                            var isChecked = ticketsAll.checked;
+                            document.querySelectorAll('.tickets').forEach(function(cb) {
+                                cb.checked = isChecked;
+                            });
                         }
-                        $('#ticket_actions').hide();
-                    }
-                });
 
+                        var checkedCount = document.querySelectorAll('.tickets:checked').length;
+                        // Subtract 1 if "select all" is checked (it's included in the count)
+                        if (ticketsAll && ticketsAll.checked) checkedCount--;
+
+                        if (checkedCount > 0) {
+                            stopUpdateTimer(window.support_manager_ticket_time);
+                            if (ticketActions) {
+                                ticketActions.style.display = 'block';
+                                setTicketAction(); // Initialize action fields when bar becomes visible
+                                initTicketAutocomplete(); // Initialize autocomplete for merge/reassign fields
+                            }
+                        } else {
+                            if (window.support_manager_ticket_time) {
+                                clearInterval(window.support_manager_ticket_time);
+                                window.support_manager_ticket_time = startUpdateTimer();
+                            }
+                            if (ticketActions) ticketActions.style.display = 'none';
+                        }
+                    });
+                }
+
+                // Ticket action select handler using event delegation
                 setTicketAction();
-                $('#ticket_action').change(function() {
-                    setTicketAction();
-                });
+                if (widget && !widget._ticketActionHandlerBound) {
+                    widget._ticketActionHandlerBound = true;
+                    widget.addEventListener('change', function(e) {
+                        if (e.target.id === 'ticket_action') {
+                            setTicketAction();
+                        }
+                    });
+                }
 
-                $('#ticket_actions #ticket_number').autocomplete({
-                    minLength: 3,
-                    appendTo: ".with_ticket",
-                    position: { my: "left bottom", at: "left top"},
-                    source: function(request, response) {
-                        $(document).blestaRequest('POST', '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/searchbycode/');?>',
-                            { _csrf_token: $('#tickets').find('input[name=_csrf_token]').val(), search: request.term},
-                            function(data) {
-                                if (data && data.tickets) {
-                                    // Build the response to show
-                                    var tickets = new Array();
-                                    for (var id in data.tickets)
-                                        tickets.push({label:data.tickets[id], value:data.tickets[id], id:id});
-                                    response(tickets);
-
-                                    // No results
-                                    if (tickets.length == 0)
-                                        $('#no_tickets').show();
-                                    else
-                                        $('#no_tickets').hide();
-                                }
-                            },
-                            null,
-                            {dataType:'json'}
-                        );
-                    },
-                    select: function(event, ui) {
-                        $('#ticket_id').val(ui.item.id);
-                    }
-                });
-
-                $('#ticket_actions #client').autocomplete({
-                    minLength: 3,
-                    appendTo: ".reassign",
-                    position: { my: "left bottom", at: "left top"},
-                    source: function(request, response) {
-                        $(document).blestaRequest('POST', '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/getclients/');?>',
-                            { _csrf_token: $('#tickets').find('input[name=_csrf_token]').val(), search: request.term},
-                            function(data) {
-                                if (data && data.clients) {
-                                    // Build the response to show
-                                    var clients = new Array();
-                                    for (var id in data.clients)
-                                        clients.push({label:data.clients[id], value:data.clients[id], id:id});
-                                    response(clients);
-
-                                    // No results
-                                    if (clients.length == 0)
-                                        $('#no_clients').show();
-                                    else
-                                        $('#no_clients').hide();
-                                }
-                            },
-                            null,
-                            {dataType:'json'}
-                        );
-                    },
-                    select: function(event, ui) {
-                        $('#client_id').val(ui.item.id);
-                    }
-                });
+                // Initialize autocomplete widgets
+                initTicketAutocomplete();
             });
+
+            // Autocomplete initialization function (called on load and after AJAX updates)
+            function initTicketAutocomplete() {
+                var ticketNumberField = document.getElementById('ticket_number');
+                var clientField = document.getElementById('client');
+                var csrfToken = document.querySelector('#tickets input[name=_csrf_token]');
+
+                // Use jQuery UI autocomplete if available, otherwise use vanilla JS
+                if (typeof $ !== 'undefined' && $.fn.autocomplete) {
+                    var $ticketNumberField = $('#ticket_actions #ticket_number');
+                    var $clientField = $('#ticket_actions #client');
+
+                    if ($ticketNumberField.length && !$ticketNumberField.data('ui-autocomplete')) {
+                        $ticketNumberField.autocomplete({
+                            minLength: 3,
+                            appendTo: ".with_ticket",
+                            position: { my: "left bottom", at: "left top"},
+                            source: function(request, response) {
+                                $(document).blestaRequest('POST', '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/searchbycode/');?>',
+                                    { _csrf_token: $('#tickets').find('input[name=_csrf_token]').val(), search: request.term},
+                                    function(data) {
+                                        if (data && data.tickets) {
+                                            var tickets = [];
+                                            for (var id in data.tickets)
+                                                tickets.push({label:data.tickets[id], value:data.tickets[id], id:id});
+                                            response(tickets);
+
+                                            if (tickets.length === 0)
+                                                document.getElementById('no_tickets').style.display = 'block';
+                                            else
+                                                document.getElementById('no_tickets').style.display = 'none';
+                                        }
+                                    },
+                                    null,
+                                    {dataType:'json'}
+                                );
+                            },
+                            select: function(event, ui) {
+                                document.getElementById('ticket_id').value = ui.item.id;
+                            }
+                        });
+                    }
+
+                    if ($clientField.length && !$clientField.data('ui-autocomplete')) {
+                        $clientField.autocomplete({
+                            minLength: 3,
+                            appendTo: ".reassign",
+                            position: { my: "left bottom", at: "left top"},
+                            source: function(request, response) {
+                                $(document).blestaRequest('POST', '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/getclients/');?>',
+                                    { _csrf_token: $('#tickets').find('input[name=_csrf_token]').val(), search: request.term},
+                                    function(data) {
+                                        if (data && data.clients) {
+                                            var clients = [];
+                                            for (var id in data.clients)
+                                                clients.push({label:data.clients[id], value:data.clients[id], id:id});
+                                            response(clients);
+
+                                            if (clients.length === 0)
+                                                document.getElementById('no_clients').style.display = 'block';
+                                            else
+                                                document.getElementById('no_clients').style.display = 'none';
+                                        }
+                                    },
+                                    null,
+                                    {dataType:'json'}
+                                );
+                            },
+                            select: function(event, ui) {
+                                document.getElementById('client_id').value = ui.item.id;
+                            }
+                        });
+                    }
+                } else {
+                    // Vanilla JS autocomplete fallback
+                    if (ticketNumberField && !ticketNumberField._autocompleteInit) {
+                        ticketNumberField._autocompleteInit = true;
+                        setupVanillaAutocomplete(ticketNumberField, {
+                            minLength: 3,
+                            container: document.querySelector('.with_ticket'),
+                            noResultsEl: document.getElementById('no_tickets'),
+                            hiddenField: document.getElementById('ticket_id'),
+                            searchUrl: '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/searchbycode/');?>',
+                            csrfToken: csrfToken ? csrfToken.value : '',
+                            dataKey: 'tickets'
+                        });
+                    }
+
+                    if (clientField && !clientField._autocompleteInit) {
+                        clientField._autocompleteInit = true;
+                        setupVanillaAutocomplete(clientField, {
+                            minLength: 3,
+                            container: document.querySelector('.reassign'),
+                            noResultsEl: document.getElementById('no_clients'),
+                            hiddenField: document.getElementById('client_id'),
+                            searchUrl: '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/getclients/');?>',
+                            csrfToken: csrfToken ? csrfToken.value : '',
+                            dataKey: 'clients'
+                        });
+                    }
+                }
+            }
+
+            // Vanilla JS autocomplete implementation
+            function setupVanillaAutocomplete(input, options) {
+                var dropdown = document.createElement('ul');
+                dropdown.className = 'autocomplete-dropdown position-absolute';
+
+                // Insert dropdown after input
+                input.parentNode.style.position = 'relative';
+                input.parentNode.appendChild(dropdown);
+
+                var debounceTimer;
+                input.addEventListener('input', function() {
+                    var term = this.value.trim();
+                    clearTimeout(debounceTimer);
+
+                    if (term.length < options.minLength) {
+                        dropdown.style.display = 'none';
+                        if (options.noResultsEl) options.noResultsEl.style.display = 'none';
+                        return;
+                    }
+
+                    debounceTimer = setTimeout(function() {
+                        var formData = new FormData();
+                        formData.append('_csrf_token', options.csrfToken);
+                        formData.append('search', term);
+
+                        fetch(options.searchUrl, {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(function(response) { return response.json(); })
+                        .then(function(data) {
+                            dropdown.innerHTML = '';
+                            var items = data[options.dataKey] || {};
+                            var hasResults = false;
+
+                            for (var id in items) {
+                                hasResults = true;
+                                var li = document.createElement('li');
+                                li.textContent = items[id];
+                                li.dataset.id = id;
+                                li.dataset.value = items[id];
+                                dropdown.appendChild(li);
+                            }
+
+                            if (hasResults) {
+                                dropdown.style.display = 'block';
+                                if (options.noResultsEl) options.noResultsEl.style.display = 'none';
+                            } else {
+                                dropdown.style.display = 'none';
+                                if (options.noResultsEl) options.noResultsEl.style.display = 'block';
+                            }
+                        })
+                        .catch(function() {
+                            dropdown.style.display = 'none';
+                        });
+                    }, 300);
+                });
+
+                // Handle selection
+                dropdown.addEventListener('click', function(e) {
+                    var li = e.target.closest('li');
+                    if (li) {
+                        input.value = li.dataset.value;
+                        if (options.hiddenField) options.hiddenField.value = li.dataset.id;
+                        dropdown.style.display = 'none';
+                    }
+                });
+
+                // Hide dropdown on outside click
+                document.addEventListener('click', function(e) {
+                    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+
+                // Keyboard navigation
+                input.addEventListener('keydown', function(e) {
+                    var items = dropdown.querySelectorAll('li');
+                    var active = dropdown.querySelector('li.active');
+                    var index = active ? Array.from(items).indexOf(active) : -1;
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (active) active.classList.remove('active');
+                        index = (index + 1) % items.length;
+                        if (items[index]) items[index].classList.add('active');
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (active) active.classList.remove('active');
+                        index = index <= 0 ? items.length - 1 : index - 1;
+                        if (items[index]) items[index].classList.add('active');
+                    } else if (e.key === 'Enter' && active) {
+                        e.preventDefault();
+                        active.click();
+                    } else if (e.key === 'Escape') {
+                        dropdown.style.display = 'none';
+                    }
+                });
+            }
 
             function startUpdateTimer() {
                 return setTimeout(function() {
-                    var filter_vars = null;
-
-                    if ($('.widget_filter_form').is(':visible')) {
-                        filter_vars = $('.widget_filter_form').serialize();
+                    // Don't refresh if tickets are selected for bulk action
+                    if (document.querySelectorAll('.tickets:checked').length > 0) {
+                        return;
                     }
 
-                    $(this).blestaRequest("POST", '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : 'open') . '/');?>', filter_vars,
-                        // Success response
+                    var filterData = getTicketFilterData();
+                    var widgetUrl = getActiveTicketStatusUrl();
+
+                    blestaRequest("POST", widgetUrl, filterData,
                         function(data) {
+                            // Don't update DOM if user selected tickets while request was in flight
+                            if (document.querySelectorAll('.tickets:checked').length > 0) {
+                                return;
+                            }
+
+                            var adminTickets = document.getElementById('admin_tickets');
                             if (data.replacer == null) {
-                                $("#admin_tickets").html(data.content);
-                                $("#admin_tickets").blestaBindToolTips();
+                                adminTickets.innerHTML = data.content;
+                            } else {
+                                var replacer = adminTickets.querySelector(data.replacer);
+                                if (replacer) {
+                                    replacer.innerHTML = data.content;
+                                }
                             }
-                            else {
-                                $(data.replacer, $("#admin_tickets")).html(data.content);
-                                $(data.replacer, $("#admin_tickets")).blestaBindToolTips();
-                            }
+                            // Reinitialize components after AJAX update
+                            setTicketAction();
+                            initTicketAutocomplete();
+                            // Restart the timer for the next refresh cycle
+                            window.support_manager_ticket_time = startUpdateTimer();
                         },
                         null,
                         {dataType: 'json'}
@@ -346,29 +610,36 @@
             }
 
             function setTicketAction() {
-                $('.ticket_action').hide();
+                document.querySelectorAll('.ticket_action').forEach(function(el) {
+                    el.style.display = 'none';
+                });
 
                 var action = "<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/')?>";
-                switch ($('#ticket_action').val()) {
+                var ticketActionSelect = document.getElementById('ticket_action');
+                var actionValue = ticketActionSelect ? ticketActionSelect.value : '';
+
+                switch (actionValue) {
                     case "merge":
-                        $('.with_ticket').show();
+                        document.querySelector('.with_ticket').style.display = 'block';
                         action += 'action/';
                         break;
                     case "update_status":
-                        $('.update_status').show();
+                        document.querySelector('.update_status').style.display = 'block';
                         action += 'action/';
                         break;
                     case "reassign":
-                        $('.reassign').show();
+                        document.querySelector('.reassign').style.display = 'block';
                         action += 'action/';
                         break;
                     case 'delete':
                         action += 'delete/';
+                        break;
                     default:
                         break;
                 }
 
-                $('#tickets').prop('action', action);
+                var ticketsForm = document.getElementById('tickets');
+                if (ticketsForm) ticketsForm.action = action;
             }
         </script>
         <?php
@@ -380,7 +651,88 @@
             // Create global ticket_time interval so we can clear before starting a new one
             var support_manager_ticket_time;
 
-            $("#admin_tickets").blestaBindGuiEvents();
+            // Bind GUI events using Blesta's core functionality if available
+            if (typeof $ !== 'undefined' && $.fn.blestaBindGuiEvents) {
+                $("#admin_tickets").blestaBindGuiEvents();
+            }
+
+            // Reinitialize components after AJAX tab switching
+            if (typeof $ !== 'undefined') {
+                $(document).on('ajaxComplete', function(event, xhr, settings) {
+                    // Only handle AJAX requests targeting the admin_tickets widget
+                    if (settings.url && settings.url.indexOf('plugin/support_manager/admin_tickets') !== -1) {
+                        setTimeout(function() {
+                            setTicketAction();
+                            initTicketAutocomplete();
+                        }, 100);
+                    }
+                });
+            }
+
+            // Sidebar filter handling via event delegation
+            // (sidebar renders after main content in the DOM)
+            document.addEventListener('submit', function(e) {
+                if (e.target.id === 'ticket_filters') {
+                    e.preventDefault();
+                    applyTicketFilters();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('#clear_filters')) {
+                    var form = document.getElementById('ticket_filters');
+                    if (form) {
+                        form.querySelectorAll('input[type="text"]').forEach(function(el) { el.value = ''; });
+                        form.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
+                        applyTicketFilters();
+                    }
+                }
+            });
+
+            function getTicketFilterData() {
+                var filterForm = document.getElementById('ticket_filters');
+                var data = filterForm ? Object.fromEntries(new FormData(filterForm)) : {};
+
+                // Include CSRF token from the tickets form
+                var csrfInput = document.querySelector('#tickets input[name="_csrf_token"]');
+                if (csrfInput) {
+                    data['_csrf_token'] = csrfInput.value;
+                }
+
+                return data;
+            }
+
+            function getActiveTicketStatusUrl() {
+                // Read the current active tab URL to handle tab switches
+                var activeTab = document.querySelector('#admin_tickets .nav-tabs-custom .nav-link.active, #admin_tickets .nav-tabs-custom li a[class*="active"]');
+                if (activeTab && activeTab.href) {
+                    return activeTab.href;
+                }
+                return '<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_tickets/index/' . (isset($status) ? $status : 'open') . '/');?>';
+            }
+
+            function applyTicketFilters() {
+                var filterData = getTicketFilterData();
+                var widgetUrl = getActiveTicketStatusUrl();
+
+                blestaRequest('POST', widgetUrl, filterData,
+                    function(data) {
+                        var adminTickets = document.getElementById('admin_tickets');
+                        if (data.replacer == null) {
+                            adminTickets.innerHTML = data.content;
+                        } else {
+                            var replacer = adminTickets.querySelector(data.replacer);
+                            if (replacer) {
+                                replacer.innerHTML = data.content;
+                            }
+                        }
+                        setTicketAction();
+                        initTicketAutocomplete();
+                    },
+                    null,
+                    {dataType: 'json'}
+                );
+            }
         </script>
         <?php
         }

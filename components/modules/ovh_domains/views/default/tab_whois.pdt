@@ -1,45 +1,35 @@
+<?php /** @var View $this **/ ?>
 
-    <?php
-    $this->Form->create();
-    ?>
-    <div class="title_row first">
-        <h3><?php $this->_('OvhDomains.tab_whois.heading');?></h3>
-    </div>
+<h6 class="form-section-header"><?php $this->_('OvhDomains.tab_whois.heading'); ?></h6>
 
-    <div class="pad">
-        <ul>
-            <?php
-            foreach ($whois_fields ?? [] as $name => $field) {
-            ?>
-            <li>
-                <?php
-                $this->Form->label($field['label'], $name);
+<?php
+$this->Form->create();
+?>
 
-                if ($field['type'] == 'select') {
-                    $options = [];
-                    if (!is_array($field['options'])) {
-                        $options = ${$field['options']} ?? [];
-                    } else {
-                        $options = $field['options'] ?? [];
-                    }
-
-                    $this->Form->fieldSelect($name, $options, ($vars->{$name} ?? ''), ['id' => $name]);
-                } else {
-                    $this->Form->fieldText($name, ($vars->{$name} ?? ''), ['id' => $name]);
-                }
-                ?>
-            </li>
-            <?php
-            }
-            ?>
-        </ul>
-    </div>
-
-    <div class="button_row">
+<div>
+    <?php foreach ($whois_fields ?? [] as $name => $field) { ?>
+    <div class="mb-3">
         <?php
-        $this->Form->fieldSubmit(null, $this->_('OvhDomains.tab_whois.field_submit', true), ['class' => 'btn btn-primary float-right']);
+        $this->Form->label($field['label'], $name, ['class' => 'form-label']);
+
+        if ($field['type'] == 'select') {
+            $options = [];
+            $options = !is_array($field['options']) ? ${$field['options']} ?? [] : $field['options'] ?? [];
+
+            $this->Form->fieldSelect($name, $options, $vars->{$name} ?? '', ['id' => $name, 'class' => 'form-select']);
+        } else {
+            $this->Form->fieldText($name, $vars->{$name} ?? '', ['id' => $name, 'class' => 'form-control']);
+        }
         ?>
     </div>
-    <?php
-    $this->Form->end();
-    ?>
+    <?php } ?>
+</div>
+
+<div class="d-flex justify-content-end">
+    <?php $this->Form->fieldSubmit(null, $this->_('OvhDomains.tab_whois.field_submit', true), [
+        'class' => 'btn btn-primary'
+    ]); ?>
+</div>
+<?php
+$this->Form->end();
+?>

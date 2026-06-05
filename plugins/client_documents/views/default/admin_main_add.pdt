@@ -1,40 +1,50 @@
-        <?php
-        echo (isset($message) ? $message : null);
+<?php /** @var View $this **/ ?>
 
-        $this->Widget->clear();
-        $this->Widget->create($this->_('AdminMain.add.boxtitle_adddocument', true));
-        ?>
-        <div class="inner">
-            <?php $this->Form->create(null, ['id' => 'add_document', 'enctype' => 'multipart/form-data']);?>
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('AdminMain.add.field_name', true), 'name');
-                        $this->Form->fieldText('name', (isset($vars->name) ? $vars->name : null), ['id' => 'name']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('AdminMain.add.field_document', true), 'file');
-                        $this->Form->fieldFile('file', ['id' => 'document']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('AdminMain.add.field_description', true), 'description');
-                        $this->Form->fieldTextarea('description', (isset($vars->description) ? $vars->description : null), ['id' => 'description']);
-                        ?>
-                    </li>
-                </ul>
-            </div>
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('AdminMain.add.field_submit', true), ['class' => 'btn btn-primary pull-right']);
-                ?>
-            </div>
-            <?php $this->Form->end();?>
-        </div>
+<?php
+echo (isset($message) ? $message : null);
+
+$link_buttons = [
+    [
+        'icon' => 'bi bi-arrow-left me-1',
+        'name' => $this->_('AdminMain.add.link_back', true),
+        'attributes' => [
+            'href' => $this->base_uri . 'plugin/client_documents/admin_main/index/' . ($client->id ?? null)
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->create($this->_('AdminMain.add.boxtitle_adddocument', true));
+
+$this->Form->create(null, ['id' => 'add_document', 'enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+?>
+    <div class="mb-3">
         <?php
-        $this->Widget->end();
+        $this->Form->label($this->_('AdminMain.add.field_name', true), 'name', ['class' => 'form-label']);
+        $this->Form->fieldText('name', ($vars->name ?? null), ['id' => 'name', 'class' => 'form-control']);
         ?>
+    </div>
+    <div class="mb-3">
+        <?php
+        $this->Form->label($this->_('AdminMain.add.field_document', true), 'document', ['class' => 'form-label']);
+        $this->Form->fieldFile('file', ['id' => 'document', 'class' => 'form-control']);
+        ?>
+    </div>
+    <div class="mb-3">
+        <?php
+        $this->Form->label($this->_('AdminMain.add.field_description', true), 'description', ['class' => 'form-label']);
+        $this->Form->fieldTextarea('description', ($vars->description ?? null), ['id' => 'description', 'class' => 'form-control']);
+        ?>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminMain.add.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>

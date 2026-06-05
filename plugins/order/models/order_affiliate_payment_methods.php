@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Affiliate Payment Method Management
  *
@@ -23,7 +24,7 @@ class OrderAffiliatePaymentMethods extends OrderModel
         $this->Record = $this->getAffiliatePaymentMethod(['company_id' => $company_id]);
 
         $payment_methods = $this->Record->order($order)
-            ->limit($this->getPerPage(), (max(1, $page) - 1)*$this->getPerPage())->fetchAll();
+            ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->fetchAll();
         foreach ($payment_methods as $payment_method) {
             $payment_method->names = $this->getNames($payment_method->id);
         }
@@ -193,7 +194,7 @@ class OrderAffiliatePaymentMethods extends OrderModel
 
             foreach ($names as $name) {
                 $name['payment_method_id'] = $payment_method_id;
-                $this->Record->duplicate('name', '=', (isset($name['name']) ? $name['name'] : null))
+                $this->Record->duplicate('name', '=', ($name['name'] ?? null))
                     ->insert('order_affiliate_payment_method_names', $name, $fields);
             }
         }

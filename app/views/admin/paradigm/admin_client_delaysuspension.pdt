@@ -1,0 +1,27 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Form->create(null, ['id' => 'admin_client_delaysuspension', 'class' => 'disable-on-submit']);
+?>
+<div class="modal-header">
+    <h5 class="modal-title"><?php $this->_('AdminClients.view.delaysuspension_modal_title');?></h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <div class="mb-3">
+        <?php $this->Form->label($this->_('AdminClients.delaysuspension.field_autosuspend_date', true), 'autosuspend_date', ['class' => 'form-label']);?>
+        <div class="input-group">
+            <?php $this->Form->fieldText('autosuspend_date', (isset($vars->autosuspend_date) ? $vars->autosuspend_date : null), ['id' => 'autosuspend_date', 'class' => 'form-control', 'type' => 'date']);?>
+            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('autosuspend_date').value = '';">
+                <i class="bi bi-x-lg"></i> <?php $this->_('AdminClients.delaysuspension.text_clear');?>
+            </button>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AppController.modal.text_close');?></button>
+    <?php $this->Form->fieldSubmit('save', $this->_('AdminClients.delaysuspension.field_save', true), ['class' => 'btn btn-primary']);?>
+</div>
+<?php
+$this->Form->end();
+?>

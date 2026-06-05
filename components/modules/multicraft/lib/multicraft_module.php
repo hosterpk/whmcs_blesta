@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Multicraft Module actions
  *
@@ -138,7 +139,8 @@ class MulticraftModule
         }
 
         // Remove dedicated IPs if not set to use any
-        if (isset($vars['daemons']) && is_array($vars['daemons'])
+        if (
+            isset($vars['daemons']) && is_array($vars['daemons'])
             && count($vars['daemons']) == 1 && empty($vars['daemons'][0])
             && isset($vars['ips']) && is_array($vars['ips'])
             && count($vars['ips']) == 1 && empty($vars['ips'][0])
@@ -178,7 +180,7 @@ class MulticraftModule
     {
         // Set rule to validate IP addresses
         $range = '(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])';
-        $ip_address_rule = '/^(?:' . $range . "\." . $range . "\." . $range . "\." . $range . ')$/';
+        $ip_address_rule = '/^(?:' . $range . '\.' . $range . '\.' . $range . '\.' . $range . ')$/';
 
         if (!empty($ips) && !is_array($ips)) {
             return false;
@@ -187,7 +189,8 @@ class MulticraftModule
         // Validate an IP is set for each daemon
         if (is_array($daemons) && is_array($ips_in_use)) {
             foreach ($daemons as $index => $daemon_id) {
-                if (empty($ips[$index]['ip'])
+                if (
+                    empty($ips[$index]['ip'])
                     || !isset($ips_in_use[$index])
                     || !preg_match($ip_address_rule, $ips[$index]['ip'])
                 ) {
@@ -217,7 +220,8 @@ class MulticraftModule
         // Validate a deamon is set for each IP
         if (is_array($ips) && is_array($ips_in_use)) {
             foreach ($ips as $index => $ip) {
-                if (empty($daemons[$index]) || !isset($ips_in_use[$index])
+                if (
+                    empty($daemons[$index]) || !isset($ips_in_use[$index])
                     || !preg_match('/^[0-9]+$/', $daemons[$index])
                 ) {
                     return false;
@@ -313,8 +317,8 @@ class MulticraftModule
                     'if_set' => $ips_required,
                     'rule' => [
                         [$this, 'validateIpsMatchDaemons'],
-                        (isset($vars['daemons']) ? $vars['daemons'] : []),
-                        (isset($vars['ips_in_use']) ? $vars['ips_in_use'] : [])
+                        ($vars['daemons'] ?? []),
+                        ($vars['ips_in_use'] ?? [])
                     ],
                     'message' => Language::_('MulticraftModule.!error.ips.match', true)
                 ]
@@ -324,8 +328,8 @@ class MulticraftModule
                     'if_set' => $ips_required,
                     'rule' => [
                         [$this, 'validateDaemonsMatchIps'],
-                        (isset($vars['ips']) ? $vars['ips'] : []),
-                        (isset($vars['ips_in_use']) ? $vars['ips_in_use'] : [])
+                        ($vars['ips'] ?? []),
+                        ($vars['ips_in_use'] ?? [])
                     ],
                     'message' => Language::_('MulticraftModule.!error.daemons.match', true)
                 ]
@@ -334,8 +338,8 @@ class MulticraftModule
                 'match' => [
                     'rule' => [
                         [$this, 'validateIpsInUseMatchIps'],
-                        (isset($vars['ips']) ? $vars['ips'] : []),
-                        (isset($vars['daemons']) ? $vars['daemons'] : [])
+                        ($vars['ips'] ?? []),
+                        ($vars['daemons'] ?? [])
                     ],
                     'message' => Language::_('MulticraftModule.!error.ips_in_use.match', true)
                 ]
@@ -382,7 +386,7 @@ class MulticraftModule
                     );
                     $port = (isset($row->meta->ips_in_use)
                         && isset($row->meta->ips_in_use[$index])
-                        && $row->meta->ips_in_use[$index] == "1"
+                        && $row->meta->ips_in_use[$index] == '1'
                         ? $this->getServicePort($row->id, $ip, $daemon_id)
                         : '25565'
                     );

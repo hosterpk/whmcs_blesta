@@ -1,0 +1,84 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->setBodyWrapper(false);
+            $this->Widget->create($this->_('AdminCompanyGeneral.international.boxtitle_international', true), ['id' => 'admin_company_general_international'], ($render_section ?? null));
+            ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;"></th>
+                                    <th><?php $this->_('AdminCompanyGeneral.international.text_language');?></th>
+                                    <th><?php $this->_('AdminCompanyGeneral.international.text_iso');?></th>
+                                    <th style="width: 120px;"><?php $this->_('AdminCompanyGeneral.international.text_options');?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                if ((isset($languages) ? $languages : false)) {
+                                    foreach ($languages as $language) {
+                                        $is_installed = (isset($language->installed) ? $language->installed : false);
+                                        $icon = $is_installed ? 'check-circle' : 'slash-circle';
+                                        $icon_class = $is_installed ? 'text-success' : 'text-secondary';
+                                ?>
+                                <tr<?php echo $is_installed ? ' class="table-active"' : '';?>>
+                                    <td class="text-center">
+                                        <i class="bi bi-<?php echo $icon;?> <?php echo $icon_class;?>"></i>
+                                    </td>
+                                    <td>
+                                        <?php if ($is_installed) { ?><strong><?php } ?>
+                                        <?php echo $this->Html->safe($language->name ?? '');?>
+                                        <?php if ($is_installed) { ?></strong><?php } ?>
+                                    </td>
+                                    <td><?php echo $this->Html->safe($language->code ?? '');?></td>
+                                    <td>
+                                        <?php
+                                        if (!$language->uninstallable) {
+                                            $action = $is_installed ? 'un' : '';
+                                            $action_url = $this->base_uri . 'settings/company/general/' . $action . 'installlanguage/' . $this->Html->safe($language->code ?? '') . '/';
+                                            $confirm_message = $this->Html->safe(
+                                                $this->_('AdminCompanyGeneral.international.confirm_' . $action . 'install', true, $language->name ?? '')
+                                            );
+                                        ?>
+                                        <a href="<?php echo $action_url;?>"
+                                           class="btn btn-sm <?php echo $is_installed ? 'btn-outline-danger' : 'btn-primary';?> confirm-language-action"
+                                           data-confirm-message="<?php echo $confirm_message;?>">
+                                            <i class="bi <?php echo $is_installed ? 'bi-trash me-1' : 'bi-download me-2';?>"></i><?php echo $is_installed
+                                                ? $this->_('AdminCompanyGeneral.international.option_uninstall', true)
+                                                : $this->_('AdminCompanyGeneral.international.option_install', true);?>
+                                        </a>
+                                        <?php
+                                        } else {
+                                        ?>
+                                        <span class="text-muted"><?php $this->_('AdminCompanyGeneral.international.text_installed');?></span>
+                                        <?php
+                                        }
+                                        ?>
+                                    </td>
+                                </tr>
+                                <?php
+                                    }
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+<?php
+$this->Widget->end();
+?>
+        </div>
+
+        <script type="text/javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                if (typeof blestaModalConfirm === 'function') {
+                    blestaModalConfirm('.confirm-language-action', {
+                        submit: false
+                    });
+                }
+            });
+        </script>

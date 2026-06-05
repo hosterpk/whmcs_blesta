@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\DataFeed\Common;
 
 use Minphp\Html\Html;

@@ -1,0 +1,41 @@
+<?php /** @var View $this **/ ?>
+
+<!-- Mini Calendar -->
+<div class="side-content-section full">
+    <div class="mini-calendar"></div>
+</div>
+
+<!-- Quick Links -->
+<div class="side-content-section">
+    <h6 class="side-content-title">
+        <i class="bi bi-lightning"></i>
+        <?php $this->_('AdminMain.index.heading_quicklinks');?>
+    </h6>
+    <div class="side-content-links" id="sortable-quick-links">
+        <?php
+        if (!empty($quicklinks)) {
+            foreach ($quicklinks as $quicklink) {
+                ?>
+                <a href="<?php echo $this->Html->safe($quicklink->uri ?? '');?>" class="side-content-link" data-bookmark-id="<?php echo $this->Html->safe($quicklink->uri ?? '');?>" data-delete-message="<?php echo $this->Html->safe($this->_('AdminMain.index.modal_delete_quicklink_message', true, ($quicklink->title ?? '')));?>">
+                    <i class="bi bi-bookmark-star"></i>
+                    <span class="bookmark-title"><?php echo $this->Html->safe($quicklink->title ?? '');?></span>
+                    <div class="bookmark-actions">
+                        <button class="btn-bookmark-edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn-bookmark-delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <i class="bi bi-grip-vertical action-drag-handle"></i>
+                </a>
+                <?php
+            }
+        }
+        ?>
+        <div class="bookmark-empty-state" id="no-quicklinks-alert" style="display: none;">
+            <i class="bi bi-star"></i>
+            <p><?php $this->_('AdminMain.index.no_quicklinks');?></p>
+        </div>
+    </div>
+</div>

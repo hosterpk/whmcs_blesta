@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Type\Common;
 
 /**

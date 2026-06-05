@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\DataFeed\Feeds;
 
 use Blesta\Core\Util\DataFeed\Common\AbstractDataFeed;
@@ -109,19 +110,19 @@ class PackageFeed extends AbstractDataFeed
             <div class="title_row"><h3>' . Language::_('PackageFeed.getOptionFields.title_row_example_code', true) . '</h3></div>
             <div class="pad">
                 <small>' . Language::_('PackageFeed.getOptionFields.example_code_name', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/name/?package_id=4&lang=en_us"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/name/?package_id=4&lang=en_us"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('PackageFeed.getOptionFields.example_code_description', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/description/?package_id=4&format=html&lang=en_us"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/description/?package_id=4&format=html&lang=en_us"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('PackageFeed.getOptionFields.example_code_pricing', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/pricing/?pricing_id=4&get=price"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/pricing/?pricing_id=4&get=price"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('PackageFeed.getOptionFields.example_code_quantity', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/quantity/?package_id=4"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/quantity/?package_id=4"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('PackageFeed.getOptionFields.example_code_clientlimit', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/clientlimit/?package_id=4"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/package/clientlimit/?package_id=4"&gt;&lt;/script&gt;</pre>
             </div>
         ');
 
@@ -246,11 +247,7 @@ class PackageFeed extends AbstractDataFeed
             ];
 
             if (in_array($vars['get'], $accepted_values)) {
-                if (in_array($vars['get'], $monetary_values)) {
-                    return htmlentities($this->CurrencyFormat->format($pricing->{$vars['get']} ?? 0.00, $pricing->currency));
-                } else {
-                    return htmlentities($pricing->{$vars['get']} ?? '');
-                }
+                return in_array($vars['get'], $monetary_values) ? htmlentities($this->CurrencyFormat->format($pricing->{$vars['get']} ?? 0.00, $pricing->currency)) : htmlentities($pricing->{$vars['get']} ?? '');
             }
         }
     }

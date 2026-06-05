@@ -1,0 +1,570 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$tabs = [
+    ['name' => $this->_('AdminClients.services.category_active', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['active'] ?? 0) . '</span>', 'current' => ($status ?? null) == 'active', 'attributes' => ['href' => $this->base_uri . 'clients/services/' . ($client->id ?? null) . '/active/', 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.services.category_pending', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['pending'] ?? 0) . '</span>', 'current' => ($status ?? null) == 'pending', 'attributes' => ['href' => $this->base_uri . 'clients/services/' . ($client->id ?? null) . '/pending/', 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.services.category_suspended', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['suspended'] ?? 0) . '</span>', 'current' => ($status ?? null) == 'suspended', 'highlight' => true, 'attributes' => ['href' => $this->base_uri . 'clients/services/' . ($client->id ?? null) . '/suspended/', 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.services.category_canceled', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['canceled'] ?? 0) . '</span>', 'current' => ($status ?? null) == 'canceled', 'attributes' => ['href' => $this->base_uri . 'clients/services/' . ($client->id ?? null) . '/canceled/', 'class' => 'ajax']],
+];
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminClients.services.categorylink_newservice', true),
+            'href' => $this->base_uri . 'clients/addservice/' . ($client->id ?? null) . '/'
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setBadgeUri($this->base_uri . 'clients/serviceCount/' . ($client->id ?? null) . '/' . ($status ?? null));
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null)), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setWidgetButton('arrow');
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.services.boxtitle_services', true), ['id' => 'admin_clients_services'], ($render_section ?? null));
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+
+if (($services ?? false) && ($num_services = count($services)) > 0) {
+?>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <?php if (!in_array(($status ?? null), ['in_review', 'canceled'])) { ?>
+                    <th class="text-center" style="width: 40px;">
+                        <?php $this->Form->fieldCheckbox('service_ids[]', 'all', (($vars->service_ids[0] ?? null) == 'all'), ['class' => 'form-check-input', 'id' => 'select-all']);?>
+                    </th>
+                    <?php } ?>
+                    <?php if (in_array(($status ?? null), ['active', 'suspended'])) { ?>
+                    <th class="text-center" style="width: 30px;"></th>
+                    <th class="text-center" style="width: 30px;"></th>
+                    <?php } ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=name&order=' . ($sort == 'name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.services.heading_package');?>
+                            <?php if ($sort == 'name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th><?php $this->_('AdminClients.services.heading_label');?></th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=term&order=' . ($sort == 'term' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.services.heading_term');?>
+                            <?php if ($sort == 'term') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.services.heading_datecreated');?>
+                            <?php if ($sort == 'date_added') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_renews&order=' . ($sort == 'date_renews' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.services.heading_daterenews');?>
+                            <?php if ($sort == 'date_renews') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php if (($status ?? null) == 'suspended') { ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_suspended&order=' . ($sort == 'date_suspended' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.services.heading_datesuspended');?>
+                            <?php if ($sort == 'date_suspended') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php } elseif (($status ?? null) == 'canceled') { ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/services/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_canceled&order=' . ($sort == 'date_canceled' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.services.heading_datecanceled');?>
+                            <?php if ($sort == 'date_canceled') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php } ?>
+                    <th class="text-end" style="width: 100px;"><?php $this->_('AdminClients.services.heading_options');?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php for ($i = 0; $i < $num_services; $i++) { ?>
+                <tr data-collapse-row aria-expanded="false" data-service-id="<?php echo $this->Html->safe($services[$i]->id ?? null);?>" style="cursor: pointer;">
+                    <?php if (!in_array(($status ?? null), ['in_review', 'canceled'])) { ?>
+                    <td class="text-center service-checkbox">
+                        <?php $this->Form->fieldCheckbox('service_ids[]', ($services[$i]->id ?? null), in_array(($services[$i]->id ?? null), ($vars->service_ids ?? [])), ['class' => 'form-check-input row-checkbox']);?>
+                    </td>
+                    <?php } ?>
+                    <?php if (in_array(($status ?? null), ['active', 'suspended'])) {
+                        $icon = empty($services[$i]->date_canceled) ? 'check-circle-fill text-success' : 'calendar-x text-warning';
+                    ?>
+                    <td class="text-center">
+                        <i class="bi bi-<?php echo $this->Html->safe($icon);?>"></i>
+                    </td>
+                    <td class="text-center">
+                        <?php if (!empty($services[$i]->service_changes)) { ?>
+                        <i class="bi bi-clock-history text-warning" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.services.text_pending_service_changes');?>"></i>
+                        <?php } ?>
+                    </td>
+                    <?php } ?>
+                    <td><?php echo $this->Html->safe($services[$i]->package->name ?? null);?></td>
+                    <td><?php echo $this->Html->safe($services[$i]->name ?? null);?></td>
+                    <td>
+                        <?php
+                        if (($services[$i]->package_pricing->period ?? null) == 'onetime') {
+                            echo $this->Html->safe($periods[$services[$i]->package_pricing->period] ?? null);
+                        } else {
+                            $term = $this->Html->safe($services[$i]->package_pricing->term ?? null);
+                            $period = ($term == 1 ? ($periods[$services[$i]->package_pricing->period] ?? null) : ($periods[($services[$i]->package_pricing->period ?? '') . '_plural'] ?? null));
+                            $renewal_price = $this->CurrencyFormat->format(($services[$i]->renewal_price ?? null), ($services[$i]->override_currency ?? ($services[$i]->package_pricing->currency ?? null)));
+                            $this->_('AdminClients.services.recurring_term', false, $term, $this->Html->safe($period), $this->Html->safe($renewal_price));
+                        }
+                        ?>
+                    </td>
+                    <td><?php echo $this->Date->cast($services[$i]->date_added ?? null);?></td>
+                    <td>
+                        <?php
+                        $date_renews_text = (!empty($services[$i]->date_renews) ? $this->Date->cast($services[$i]->date_renews) : $this->_('AdminBilling.services.text_never', true));
+                        echo $date_renews_text;
+
+                        if (($services[$i]->date_paid_through ?? null) && ($services[$i]->date_paid_through ?? null) != ($services[$i]->date_renews ?? null)) {
+                        ?>
+                        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!tooltip.text_date_paid_through', false, !empty($services[$i]->date_paid_through) ? $this->Date->cast($services[$i]->date_paid_through) : $date_renews_text);?>"></i>
+                        <?php } ?>
+                    </td>
+                    <?php if (($status ?? null) == 'suspended') { ?>
+                    <td><?php echo empty($services[$i]->date_suspended) ? $this->_('AdminClients.services.text_never', true) : $this->Date->cast($services[$i]->date_suspended ?? null);?></td>
+                    <?php } elseif (($status ?? null) == 'canceled') { ?>
+                    <td><?php echo empty($services[$i]->date_canceled) ? $this->_('AdminClients.services.text_never', true) : $this->Date->cast($services[$i]->date_canceled ?? null);?></td>
+                    <?php } ?>
+                    <td class="text-end">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="<?php echo $this->base_uri . 'clients/editservice/' . ($client->id ?? null) . '/' . ($services[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-secondary manage-link" title="<?php $this->_('AdminClients.services.option_manage');?>">
+                                <i class="bi bi-gear"></i>
+                            </a>
+                            <?php if (in_array(($status ?? null), ['pending', 'canceled'])) { ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger service-delete-btn"
+                                data-delete-id="<?php echo $this->Html->safe($services[$i]->id ?? null);?>"
+                                data-confirm-message="<?php echo $this->Html->safe($this->_('AdminClients.services.confirm_delete', true));?>"
+                                title="<?php $this->_('AdminClients.services.option_delete');?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <?php } ?>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="collapse" id="service-details-<?php echo $this->Html->safe($services[$i]->id ?? null);?>">
+                    <td colspan="10" style="padding: 0; background-color: var(--bg-secondary);">
+                        <div class="service-info-container" data-service-id="<?php echo $this->Html->safe($services[$i]->id ?? null);?>">
+                            <div class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+<?php
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-server" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.services.no_results');?></p>
+</div>
+<?php
+}
+?>
+<div id="serviceActions" class="bulk-actions-bar d-none">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <span class="selected-count" id="servicesSelectedCount">0 <?php $this->_('AdminClients.services.text_items_selected');?></span>
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+            <?php $this->Form->fieldSelect('action', ($actions ?? []), ($vars->action ?? null), ['id' => 'action_select', 'class' => 'form-select form-select-sm', 'style' => 'width: 180px;']);?>
+
+            <!-- Schedule Cancellation -->
+            <div id="schedule_cancellation" class="action-option gap-2 align-items-center" style="display: none;">
+                <div class="form-check form-check-inline mb-0">
+                    <?php
+                    $this->Form->fieldRadio('action_type', 'none', ($vars->action_type ?? 'none') == 'none', ['id' => 'action_type_none', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.services.action.field_action_type_none', true), 'action_type_none', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <div class="form-check form-check-inline mb-0">
+                    <?php
+                    $this->Form->fieldRadio('action_type', 'date', ($vars->action_type ?? null) == 'date', ['id' => 'action_type_date', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.services.action.field_action_type_date', true), 'action_type_date', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <?php $this->Form->fieldText('date', ($vars->date ?? $this->Date->modify(date('c'), '+1 day', 'Y-m-d', Configure::get('Blesta.company_timezone'))), ['class' => 'form-control form-control-sm', 'style' => 'width: 130px;']);?>
+                <div class="form-check form-check-inline mb-0">
+                    <?php
+                    $this->Form->fieldRadio('action_type', 'term', ($vars->action_type ?? 'none') == 'term', ['id' => 'action_type_term', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.services.action.field_action_type_term', true), 'action_type_term', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+            </div>
+
+            <!-- Invoice Renewal -->
+            <div id="invoice_renewal" class="action-option gap-2 align-items-center" style="display: none;">
+                <label for="cycles" class="form-label mb-0"><?php $this->_('AdminClients.services.action.field_cycles');?></label>
+                <?php $this->Form->fieldText('cycles', ($vars->cycles ?? 1), ['class' => 'form-control form-control-sm', 'style' => 'width: 80px;']);?>
+            </div>
+
+            <!-- Push to Client -->
+            <div id="push_to_client" class="action-option gap-2 align-items-center" style="display: none;">
+                <label for="client" class="form-label mb-0"><?php $this->_('AdminClients.services.action.field_client');?></label>
+                <div class="position-relative">
+                    <?php
+                    $this->Form->fieldText('client', ($vars->client ?? ''), ['class' => 'form-control form-control-sm', 'id' => 'client', 'style' => 'width: 200px;', 'autocomplete' => 'off']);
+                    $this->Form->fieldHidden('client_id', ($vars->client_id ?? null), ['id' => 'client_id']);
+                    ?>
+                    <div id="client_autocomplete_results" class="autocomplete-results position-absolute bg-body border rounded shadow-sm" style="display: none; z-index: 1050; width: 100%; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <!-- Resend Welcome Email -->
+            <div id="resend_welcome_email" class="action-option gap-2 align-items-center" style="display: none;">
+                <label for="email" class="form-label mb-0"><?php $this->_('AdminClients.services.action.field_email');?></label>
+                <?php $this->Form->fieldText('email', ($vars->email ?? $client->email ?? ''), ['class' => 'form-control form-control-sm', 'style' => 'width: 250px;']);?>
+            </div>
+
+            <!-- Suspension -->
+            <div id="suspend" class="action-option gap-2 align-items-center" style="display: none;">
+                <label for="suspension_reason" class="form-label mb-0"><?php $this->_('AdminClients.services.action.field_suspension_reason');?></label>
+                <?php $this->Form->fieldText('suspension_reason', ($vars->suspension_reason ?? ''), ['class' => 'form-control form-control-sm', 'style' => 'width: 200px;']);?>
+            </div>
+
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminClients.services.field_actionsubmit', true), ['class' => 'btn btn-sm btn-primary']);?>
+        </div>
+    </div>
+</div>
+<?php
+$this->Form->end();
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+
+// Delete service form outside the widget to avoid AJAX replacement
+$this->Form->create($this->base_uri . 'clients/deleteservice/', ['id' => 'delete_service_form']);
+$this->Form->fieldHidden('client_id', ($client->id ?? null));
+$this->Form->fieldHidden('id', '', ['id' => 'delete_service_service_id']);
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var clientId = <?php echo json_encode($client->id ?? null);?>;
+
+    // Show/hide service actions bar based on checkbox state
+    var textItemSelected = <?php echo json_encode($this->_('AdminClients.services.text_item_selected', true));?>;
+    var textItemsSelected = <?php echo json_encode($this->_('AdminClients.services.text_items_selected', true));?>;
+
+    function showServiceActions() {
+        var servicesContainer = document.getElementById('admin_clients_services');
+        var serviceActions = document.getElementById('serviceActions');
+        var selectedCountEl = document.getElementById('servicesSelectedCount');
+
+        if (!servicesContainer || !serviceActions) return;
+
+        var checkedBoxes = servicesContainer.querySelectorAll('input.row-checkbox:checked');
+        if (checkedBoxes.length > 0) {
+            serviceActions.classList.remove('d-none');
+            if (selectedCountEl) {
+                var text = checkedBoxes.length === 1 ? textItemSelected : textItemsSelected;
+                selectedCountEl.textContent = checkedBoxes.length + ' ' + text;
+            }
+        } else {
+            serviceActions.classList.add('d-none');
+        }
+    }
+
+    // Switch action options visibility based on selected action
+    function switchServiceActions() {
+        var serviceActions = document.getElementById('serviceActions');
+        if (!serviceActions) return;
+
+        var actionSelectEl = serviceActions.querySelector('select[name="action"]');
+        if (!actionSelectEl) return;
+
+        // Get action option elements by their IDs (matching action values)
+        var actionOptions = serviceActions.querySelectorAll('.action-option');
+
+        // Hide all action options first
+        actionOptions.forEach(function(opt) {
+            opt.style.display = 'none';
+        });
+
+        // Get the selected action value and show the matching option
+        var action = actionSelectEl.value;
+        if (action) {
+            var targetElement = document.getElementById(action);
+            if (targetElement) {
+                targetElement.style.display = 'flex';
+            }
+        }
+    }
+
+    // Initialize tooltips in container
+    function initTooltips(container) {
+        if (!container) return;
+        var tooltipTriggerList = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+            if (!tooltipTriggerEl._tooltipInitialized) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+                tooltipTriggerEl._tooltipInitialized = true;
+            }
+        });
+    }
+
+    // Initialize on page load
+    function init() {
+        var servicesContainer = document.getElementById('admin_clients_services');
+        if (servicesContainer) {
+            initTooltips(servicesContainer);
+            switchServiceActions();
+            showServiceActions();
+        }
+    }
+
+    // Use document-level event delegation so events work after AJAX content replacement
+    document.addEventListener('change', function(e) {
+        var checkbox = e.target;
+        if (checkbox.type !== 'checkbox') return;
+
+        // Only handle checkboxes within admin_clients_services
+        var servicesContainer = document.getElementById('admin_clients_services');
+        if (!servicesContainer || !servicesContainer.contains(checkbox)) return;
+
+        // Handle "select all" checkbox
+        if (checkbox.id === 'select-all') {
+            var isChecked = checkbox.checked;
+            var rowCheckboxes = servicesContainer.querySelectorAll('input.row-checkbox');
+            rowCheckboxes.forEach(function(cb) {
+                cb.checked = isChecked;
+            });
+        } else if (checkbox.classList.contains('row-checkbox')) {
+            // Uncheck "select all" if individual checkbox is unchecked
+            var selectAllCheckbox = document.getElementById('select-all');
+            if (!checkbox.checked && selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+        }
+
+        showServiceActions();
+    });
+
+    // Handle action select change using event delegation
+    document.addEventListener('change', function(e) {
+        var target = e.target;
+        if (target.name === 'action' && target.closest('#serviceActions')) {
+            switchServiceActions();
+        }
+    });
+
+    // Handle service delete buttons with confirmation modal
+    document.addEventListener('click', function(e) {
+        var deleteBtn = e.target.closest('.service-delete-btn');
+        if (!deleteBtn) return;
+
+        var servicesContainer = document.getElementById('admin_clients_services');
+        if (!servicesContainer || !servicesContainer.contains(deleteBtn)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var serviceId = deleteBtn.getAttribute('data-delete-id');
+        var confirmMessage = deleteBtn.getAttribute('data-confirm-message');
+
+        document.getElementById('delete_service_service_id').value = serviceId;
+
+        // Create confirmation modal (same structure as admin_packages.pdt)
+        var modalEl = document.createElement('div');
+        modalEl.className = 'modal fade';
+        modalEl.setAttribute('tabindex', '-1');
+        modalEl.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered">' +
+                '<div class="modal-content">' +
+                    '<div class="modal-header border-0 pb-0">' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                    '</div>' +
+                    '<div class="modal-body text-center py-4">' +
+                        '<div class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i></div>' +
+                        '<h5 class="modal-title mb-3">' + <?php echo json_encode($this->_('AppController.modal.confirm_delete', true));?> + '</h5>' +
+                        '<p class="text-secondary">' + confirmMessage + '</p>' +
+                    '</div>' +
+                    '<div class="modal-footer border-0 justify-content-center">' +
+                        '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + <?php echo json_encode($this->_('AppController.modal.btn_cancel', true));?> + '</button>' +
+                        '<button type="button" class="btn btn-danger btn-confirm">' + <?php echo json_encode($this->_('AppController.modal.btn_delete', true));?> + '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(modalEl);
+        var modal = new bootstrap.Modal(modalEl);
+        var confirmed = false;
+
+        modalEl.querySelector('.btn-confirm').addEventListener('click', function() {
+            confirmed = true;
+            modal.hide();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            modalEl.remove();
+            if (confirmed) {
+                document.getElementById('delete_service_form').submit();
+            }
+        });
+
+        modal.show();
+    });
+
+    // Load service info when expanding a row
+    document.addEventListener('show.bs.collapse', function(e) {
+        var servicesContainer = document.getElementById('admin_clients_services');
+        if (!servicesContainer || !servicesContainer.contains(e.target)) return;
+
+        var container = e.target.querySelector('.service-info-container');
+        if (!container || container.hasAttribute('data-loaded')) return;
+
+        var serviceId = container.getAttribute('data-service-id');
+        fetch(baseUri + 'clients/serviceinfo/' + clientId + '/' + serviceId + '/', {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            container.innerHTML = data;
+            container.setAttribute('data-loaded', 'true');
+            document.dispatchEvent(new Event('blestaAjaxComplete'));
+        })
+        .catch(function(error) {
+            container.innerHTML = '<div class="alert alert-danger m-3">Error loading service details.</div>';
+        });
+    });
+
+    // Client autocomplete for "Push to Client" action
+    var debounceTimer;
+    document.addEventListener('input', function(e) {
+        var clientInput = e.target;
+        if (clientInput.id !== 'client' || !clientInput.closest('#push_to_client')) return;
+
+        clearTimeout(debounceTimer);
+        var query = clientInput.value;
+        var resultsContainer = document.getElementById('client_autocomplete_results');
+
+        if (query.length < 3) {
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        debounceTimer = setTimeout(function() {
+            var formData = new FormData();
+            formData.append('search', query);
+
+            // Get CSRF token from form
+            var form = clientInput.closest('form');
+            var csrfToken = form ? form.querySelector('input[name="_csrf_token"]') : null;
+            if (csrfToken) {
+                formData.append('_csrf_token', csrfToken.value);
+            }
+
+            fetch(baseUri + 'clients/getclients/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data && data.clients && resultsContainer) {
+                    var html = '';
+                    var hasResults = false;
+                    for (var id in data.clients) {
+                        hasResults = true;
+                        html += '<a href="#" class="list-group-item list-group-item-action py-2" data-client-id="' + id + '">' + data.clients[id] + '</a>';
+                    }
+
+                    if (hasResults) {
+                        resultsContainer.innerHTML = '<div class="list-group list-group-flush">' + html + '</div>';
+                        resultsContainer.style.display = 'block';
+                    } else {
+                        resultsContainer.innerHTML = '';
+                        resultsContainer.style.display = 'none';
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+            });
+        }, 300);
+    });
+
+    // Handle clicks on autocomplete results
+    document.addEventListener('click', function(e) {
+        var resultsContainer = document.getElementById('client_autocomplete_results');
+        var clientInput = document.getElementById('client');
+        var clientIdInput = document.getElementById('client_id');
+
+        // Handle selection from autocomplete
+        var listItem = e.target.closest('#client_autocomplete_results .list-group-item');
+        if (listItem && clientInput && clientIdInput) {
+            e.preventDefault();
+            clientInput.value = listItem.textContent.trim();
+            clientIdInput.value = listItem.getAttribute('data-client-id');
+            if (resultsContainer) {
+                resultsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        // Hide autocomplete when clicking outside
+        if (resultsContainer && clientInput && !clientInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // Run init on DOMContentLoaded, or immediately if loaded via AJAX
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+        // Content was loaded via AJAX after page load — notify expandable-rows.js
+        document.dispatchEvent(new Event('blestaAjaxComplete'));
+    }
+
+    // Also run init when the widget is refreshed via AJAX (MutationObserver)
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // Check if any added node is within admin_clients_services
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) {
+                        var servicesContainer = document.getElementById('admin_clients_services');
+                        if (servicesContainer && (servicesContainer.contains(node) || node === servicesContainer || node.querySelector && node.querySelector('#admin_clients_services'))) {
+                            setTimeout(function() {
+                                init();
+                            }, 0);
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    // Start observing the document body for changes
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>

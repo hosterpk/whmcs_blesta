@@ -1,5 +1,10 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use stdClass;
+
 /**
  * Module Client Meta
  *
@@ -45,11 +50,12 @@ class ModuleClientMeta extends AppModel
             }
             // Serialize value for storage
             if (!is_scalar($vars['value'])) {
-                $vars['value'] = json_encode($field['value']);
+                $vars['value'] = serialize($field['value']);
                 $vars['serialized'] = 1;
             }
             // Encrypt?
-            if ((!array_key_exists('encrypted', $field) || $field['encrypted'] === null)
+            if (
+                (!array_key_exists('encrypted', $field) || $field['encrypted'] === null)
                 && ($meta = $this->get($client_id, $vars['key'], $module_id, $module_row_id))
             ) {
                 $field['encrypted'] = $meta->encrypted;
@@ -90,7 +96,7 @@ class ModuleClientMeta extends AppModel
                 $result->value = $this->systemDecrypt($result->value);
             }
             if ($result->serialized) {
-                $result->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($result->value);
+                $result->value = safe_unserialize($result->value);
             }
         }
 
@@ -118,7 +124,7 @@ class ModuleClientMeta extends AppModel
                 $result->value = $this->systemDecrypt($result->value);
             }
             if ($result->serialized) {
-                $result->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($result->value);
+                $result->value = safe_unserialize($result->value);
             }
         }
 

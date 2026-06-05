@@ -80,7 +80,7 @@ class MassMailerJobs extends MassMailerModel
 
         // Unserialize the job data
         foreach ($jobs as $job) {
-            $job->data = unserialize($job->data);
+            $job->data = safe_unserialize($job->data);
         }
 
         return $jobs;

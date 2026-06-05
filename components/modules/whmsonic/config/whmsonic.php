@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('Whmsonic.email_templates', [
     'en_us' => [
         'lang' => 'en_us',

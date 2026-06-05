@@ -186,7 +186,7 @@ class EuropeTax extends AbstractTax
 
         if (in_array($country, $this->getCountries())) {
             try {
-                $validator = new Validator(new Europa, $tax_id, $country == 'GR' ? 'EL' : $country);
+                $validator = new Validator(new Europa(), $tax_id, $country == 'GR' ? 'EL' : $country);
 
                 return $validator->check();
             } catch (\Throwable $e) {
@@ -237,7 +237,7 @@ class EuropeTax extends AbstractTax
             } else {
                 // The taxpayer is a business
                 try {
-                    $validator = new Validator(new Europa, $tax_id, $country == 'GR' ? 'EL' : $country);
+                    $validator = new Validator(new Europa(), $tax_id, $country == 'GR' ? 'EL' : $country);
 
                     $tax_home = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'tax_home_eu_vat');
                     $tax_home = $tax_home->value ?? null;
@@ -347,20 +347,17 @@ class EuropeTax extends AbstractTax
      */
     private function reverseChargeApplies($client)
     {
-        if (isset($client)
+        return
+        isset($client)
             && $client->settings['tax_exempt'] == 'true'
             && in_array($client->country, $this->getCountries())
             && $client->country !== $client->settings['tax_home_eu_vat']
             && !empty($client->settings['tax_id'])
-        ) {
-            return $client->settings['enable_eu_vat'] == 'true'
+         ? $client->settings['enable_eu_vat'] == 'true'
                 || ($client->settings['enable_uk_vat'] == 'true'
                     && $client->settings['tax_intra_eu_uk_vat'] == 'true'
                     && $client->settings['enable_eu_vat'] !== 'true'
-                );
-        } else {
-            return false;
-        }
+                ) : false;
     }
 
     /**

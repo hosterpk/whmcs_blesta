@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('Cwatch.email_templates', [
     'en_us' => [
         'lang' => 'en_us',

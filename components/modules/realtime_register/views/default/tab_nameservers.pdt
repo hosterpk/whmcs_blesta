@@ -1,33 +1,30 @@
+<?php /** @var View $this **/ ?>
 
+<?php
+$this->Form->create();
+?>
+<h6 class="form-section-header"><?php $this->_('RealtimeRegister.tab_nameservers.heading'); ?></h6>
+
+<div>
+    <?php foreach ($nameserver_fields ?? [] as $name => $field) { ?>
+    <div class="mb-3">
         <?php
-        $this->Form->create();
+        $this->Form->label($field['label'], $name, ['class' => 'form-label']);
+        $this->Form->fieldText($name, $vars->{$name} ?? '', [
+        'id' => $name,
+        'class' => 'form-control',
+        'placeholder' => $field['label'],
+        ]);
         ?>
-        <div class="title_row first">
-            <h3><?php $this->_('RealtimeRegister.tab_nameservers.heading');?></h3>
-        </div>
+    </div>
+    <?php } ?>
+</div>
 
-        <div class="pad">
-            <ul>
-                <?php
-                foreach ($nameserver_fields ?? [] as $name => $field) {
-                ?>
-                <li>
-                    <?php
-                    $this->Form->label($field['label'], $name);
-                    $this->Form->fieldText($name, ($vars->{$name} ?? ''), ['id' => $name, 'class'=>'form-control', 'placeholder' => $field['label']]);
-                    ?>
-                </li>
-                <?php
-                }
-                ?>
-            </ul>
-        </div>
-
-        <div class="button_row">
-            <?php
-            $this->Form->fieldSubmit('save', $this->_('RealtimeRegister.tab_nameservers.field_update', true), ['class' => 'btn btn-primary float-right']);
-            ?>
-        </div>
-        <?php
-        $this->Form->end();
-        ?>
+<div class="d-flex justify-content-end">
+    <?php $this->Form->fieldSubmit('save', $this->_('RealtimeRegister.tab_nameservers.field_update', true), [
+        'class' => 'btn btn-primary'
+    ]); ?>
+</div>
+<?php
+$this->Form->end();
+?>

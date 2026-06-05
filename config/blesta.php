@@ -16,6 +16,24 @@
 Configure::errorReporting(0);
 // Override minPHP's debugging setting. true to enable debugging, false to disable it
 Configure::set('System.debug', false);
+// WARNING: Enabling query logging can cause performance issues
+Configure::set('System.query_logging', false);
+
+////////////////////////////////////////////////////////////////////////////////
+// Redis Cache (optional)
+////////////////////////////////////////////////////////////////////////////////
+// Uncomment and configure to enable Redis as a cross-request cache layer.
+// When enabled, expensive settings queries are cached in Redis and served
+// in <1ms instead of 15-45ms. Falls back silently if unavailable.
+// Configure::set('Blesta.redis', [
+//     'host' => '127.0.0.1',
+//     'port' => 6379,
+//     'password' => null,
+//     'database' => 0,
+//     'prefix' => 'blesta:',
+//     'timeout' => 2.0,       // connection timeout in seconds
+//     'read_timeout' => 2.0,  // read timeout in seconds
+// ]);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Database
@@ -27,9 +45,9 @@ Configure::set('Blesta.database_info', [
         'port' => '3306',
         'database' => 'hosterpk_blesta',
         'user' => 'hosterpk_blesta',
-        'pass' => ';o4FxB&-65{nmQ[h',
+        'pass' => 'rJtYL={$3=P4Uo;G',
         'persistent' => false,
-        'charset_query' => "SET NAMES 'utf8'",
+        'charset_query' => "SET NAMES 'utf8mb4'",
         'sqlmode_query' => "SET sql_mode='TRADITIONAL'",
         'options' => []
     ]
@@ -193,6 +211,8 @@ Configure::set('Blesta.payment_notices_max_days', 120);
 Configure::set('Blesta.quotation_valid_max_days', 60);
 // Number of days in the past to retain cron logs
 Configure::set('Blesta.cron_log_retention_days', 10);
+// Maximum number of snapshots to retain
+Configure::set('Blesta.snapshots_limit', 10);
 // Whether or not to delete account access logs according to the cron log retention policy
 Configure::set('Blesta.auto_delete_accountaccess_logs', false);
 // Whether or not to delete client setting logs according to the cron log retention policy
@@ -245,7 +265,7 @@ Configure::set('Blesta.replacement_keys', [
 // of values in the given order. If null, will sort "id_code" as a string by itself
 Configure::set('Blesta.id_code_sort_mode', ['id_format', 'id_value']);
 // The default view template for the admin interface
-Configure::set('Blesta.default_admin_view_template', 'default');
+Configure::set('Blesta.default_admin_view_template', 'paradigm');
 // The default view template for the client interface
 Configure::set('Blesta.default_client_view_template', 'bootstrap');
 
@@ -279,4 +299,4 @@ Configure::set('Blesta.csrf_bypass', []);
 Configure::set('Blesta.step_up_authentication', true);
 // The value used to generate the 256-bit AES key using HMAC SHA-256
 // NEVER MODIFY THIS VALUE OR ALL ENCRYPTED DATA WILL BE LOST!
-Configure::set('Blesta.system_key', '00251665fdc0b1291df25be27d850aad45f31cf68873c5402c195c2460323531');
+Configure::set('Blesta.system_key', '5598cb624a0a0f3294e398d663672a8d369e892e8b8797edbf2a77071cba16e1');

@@ -1,11 +1,11 @@
-<?php 
-    /** @var View $this */ 
+<?php /** @var View $this */ ?>
 
+<?php
     echo $message ?? null;
 
     $buttons = [
         [
-            'icon' => 'fas fa-plus',
+            'icon' => 'bi bi-plus-lg',
             'name' => '',
             'attributes' => [
                 'title' => $this->_('AdminMain.index.add', true),
@@ -16,43 +16,65 @@
 
     $this->Widget->clear();
     $this->Widget->setLinkButtons($buttons);
+    $this->Widget->setBodyWrapper(false);
     $this->Widget->create($this->_('AdminMain.index.boxtitle', true), ['id' => 'admin_main'], $render_section ?? null);
 ?>
     <?php if ((($num_pages = count($pages ?? [])) > 0)) { ?>
-        <table class="table">
-            <tr class="heading_row">
-                <td><span><a href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/index?sort=uri&order=' . ($sort == 'uri' ? $negate_order : $order));?>" class="ajax<?= $this->Html->safe($sort == 'uri' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading.uri'); ?></a></span></td>
-                <td><span><a href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/index?sort=title&order=' . ($sort == 'title' ? $negate_order : $order));?>" class="ajax<?= $this->Html->safe($sort == 'title' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading.title'); ?></a></span></td>
-                <td class="last"><?php $this->_('AdminMain.index.heading.options') ?></td>
-            </tr>
-
-            <?php for ($i = 0; $i < $num_pages; $i++) { ?>
-                <tr<?= ($i % 2 == 1 ? ' class="odd_row"' : '') ?>>
-                    <?php $page = $pages[$i] ?>
-                    <td><?= $this->Html->safe($page->uri) ?></td>
-                    <td><?= $this->Html->safe($page->title) ?></td>
-                    <td>
-                        <a href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/manage/?' . http_build_query(['uri' => $page->uri])) ?>"><?php $this->_('AdminMain.index.edit') ?></a>
-                        <?php $this->Form->create($this->base_uri . 'plugin/cms/admin_main/delete') ?>
-                            <?php $this->Form->fieldHidden('uri', $page->uri) ?>
-                            <a href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/delete') ?>" rel="<?php $this->_('AdminMain.modal.delete') ?>" class="manage"><?php $this->_('AdminMain.index.delete') ?></a>
-                        <?php $this->Form->end() ?>
-                    </td>
-                </tr>
-            <?php } ?>
-        </table>
-        <?php $this->Pagination->build() ?>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/index?sort=uri&order=' . ($sort == 'uri' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                                <?php $this->_('AdminMain.index.heading.uri'); ?>
+                                <?php if ($sort == 'uri') { ?><i class="bi bi-chevron-<?= $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/index?sort=title&order=' . ($sort == 'title' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                                <?php $this->_('AdminMain.index.heading.title'); ?>
+                                <?php if ($sort == 'title') { ?><i class="bi bi-chevron-<?= $order == 'asc' ? 'up' : 'down'; ?>"></i><?php } ?>
+                            </a>
+                        </th>
+                        <th style="width: 80px;"><?php $this->_('AdminMain.index.heading.options') ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php for ($i = 0; $i < $num_pages; $i++) { ?>
+                        <?php $page = $pages[$i] ?>
+                        <tr>
+                            <td><?= $this->Html->safe($page->uri) ?></td>
+                            <td><?= $this->Html->safe($page->title) ?></td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-outline-secondary" href="<?= $this->Html->safe($this->base_uri . 'plugin/cms/admin_main/manage/?' . http_build_query(['uri' => $page->uri])) ?>" title="<?php $this->_('AdminMain.index.edit') ?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <?php $this->Form->create($this->base_uri . 'plugin/cms/admin_main/delete', ['class' => 'd-inline']) ?>
+                                        <?php $this->Form->fieldHidden('uri', $page->uri) ?>
+                                        <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminMain.modal.delete', true));?>"
+                                            title="<?php $this->_('AdminMain.index.delete') ?>">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    <?php $this->Form->end() ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    <?php
+    if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        $this->Widget->footer();
+        $this->Pagination->build();
+    }
+    ?>
     <?php } else { ?>
-        <div class="empty_section">
-            <div class="empty_box">
-                <?php $this->_('AdminMain.index.empty') ?>
-            </div>
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0"><?php $this->_('AdminMain.index.empty') ?></p>
         </div>
     <?php } ?>
 <?php $this->Widget->end() ?>
-
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#admin_main a.manage[rel]').blestaModalConfirm({base_url: '<?= $this->Html->safe($this->base_uri);?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
-    });
-</script>

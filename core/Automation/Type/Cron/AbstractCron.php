@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Type\Cron;
 
 use Blesta\Core\Automation\Tasks\Common\LoggableInterface;
@@ -166,7 +167,7 @@ abstract class AbstractCron implements AutomationTypeInterface, LoggableInterfac
             // e.g. 6 hours after the task began, allow it to be restarted
             $pastDate = $this->date->modify(
                 $date,
-                '-' . (int)abs(Configure::get('Blesta.cron_task_restart_limit')) .' minutes',
+                '-' . (int)abs(Configure::get('Blesta.cron_task_restart_limit')) . ' minutes',
                 'c',
                 Configure::get('Blesta.company_timezone')
             );

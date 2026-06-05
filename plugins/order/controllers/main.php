@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order System main controller
  *
@@ -277,7 +278,7 @@ class Main extends OrderFormController
                 $sold_out = $package->qty == 0 && $package->qty !== null;
                 $limit_reached = $package->client_qty !== null
                     && $package->client_qty
-                        <= (isset($package_counts[$package->id]) ? $package_counts[$package->id] : 0);
+                        <= ($package_counts[$package->id] ?? 0);
 
                 if (!$sold_out && !$limit_reached && isset($package->pricing[0])) {
                     if ($pricing_id === null) {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk Customer Account management
  *
@@ -98,7 +99,7 @@ class PleskCustomerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/add');
 
         // Build gen_info section
-        $vars['status'] = (isset($vars['status']) ? $vars['status'] : '0');
+        $vars['status'] = ($vars['status'] ?? '0');
         $this->buildGenInfo($vars, $this->getContainer());
 
         return $this->api->submit($this->fetch(), $this->getContainer());
@@ -121,7 +122,7 @@ class PleskCustomerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/del');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         return $this->api->submit($this->fetch(), $this->getContainer());
@@ -194,12 +195,12 @@ class PleskCustomerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/set');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Build gen_info section into the values section
         $this->insert(['values' => null], $this->getContainer());
-        $general = (isset($vars['general']) ? $vars['general'] : []);
+        $general = ($vars['general'] ?? []);
         $this->buildGenInfo($general, $this->getContainer() . '/values');
 
         return $this->api->submit($this->fetch(), $this->getContainer());
@@ -224,7 +225,7 @@ class PleskCustomerAccounts extends PleskPacket
         $this->setContainer($this->base_container . '/convert-to-reseller');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         return $this->api->submit($this->fetch(), $this->getContainer());

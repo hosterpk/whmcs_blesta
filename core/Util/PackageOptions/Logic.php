@@ -1,11 +1,12 @@
 <?php
+
 namespace Blesta\Core\Util\PackageOptions;
 
-use \Configure;
-use \stdClass;
-use \Language;
-use \Loader;
-use \View;
+use Configure;
+use stdClass;
+use Language;
+use Loader;
+use View;
 
 /**
  * Package options logic handler.
@@ -84,11 +85,7 @@ class Logic
             }
 
             foreach (($condition_set->conditions ?? []) as $condition) {
-                if (is_array($condition->value_id)) {
-                    $condition_value_ids = $condition->value_id;
-                } else {
-                    $condition_value_ids = [$condition->value_id];
-                }
+                $condition_value_ids = is_array($condition->value_id) ? $condition->value_id : [$condition->value_id];
 
                 // Create the condition to be evaluated
                 $evaluation = [];
@@ -214,7 +211,7 @@ class Logic
     private function evaluateCondition($condition, $vars)
     {
         $trigger_option = $condition->triggering_option;
-        $submitted_trigger_value = isset($vars[$trigger_option->id]) ? $vars[$trigger_option->id] : null;
+        $submitted_trigger_value = $vars[$trigger_option->id] ?? null;
         $condition_value = $condition->value;
 
         // Override the value to compare against if the condition depends on a non empty "Option Value"
@@ -228,7 +225,8 @@ class Logic
         if (is_array($condition->value_id)) {
             $valid_values = [];
             foreach ($trigger_option->values as $value) {
-                if (in_array($value->id, $condition->value_id)
+                if (
+                    in_array($value->id, $condition->value_id)
                     && $value->value !== ''
                     && $value->value !== null
                 ) {
@@ -349,7 +347,8 @@ class Logic
      * @param array $unevaluated_conditional_options Array of condition sets for options that weren't submitted
      * @param array $vars The submitted form values to evaluate conditions against
      */
-    private function recordDisabledOptions($unevaluated_conditional_options, $vars) {
+    private function recordDisabledOptions($unevaluated_conditional_options, $vars)
+    {
 
         // Check remaining conditional options to see if their enabling conditions are met
         foreach ($unevaluated_conditional_options as $option_id => $unevaluated_condition_set) {

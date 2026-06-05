@@ -1,0 +1,20 @@
+[
+    {
+        "id": 77,
+        "package_id": 76,
+        "pricing_id": 205,
+        "default": 1
+    },
+    {
+        "id": 78,
+        "package_id": 76,
+        "pricing_id": 206,
+        "default": 0
+    },
+    {
+        "id": 79,
+        "package_id": 76,
+        "pricing_id": 207,
+        "default": 0
+    }
+]

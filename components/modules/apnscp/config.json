@@ -1,5 +1,5 @@
 {
-    "version": "1.5.2",
+    "version": "2.0.0",
     "name": "Apnscp.name",
     "description": "Apnscp.description",
     "authors": [
@@ -21,8 +21,18 @@
         "name_key": "apnscp_domain"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers"],
-        "package": ["package"],
-        "service": ["apnscp_domain", "apnscp_username", "apnscp_password"]
-    }
+        "module": [
+            "host_name",
+            "name_servers"
+        ],
+        "package": [
+            "package"
+        ],
+        "service": [
+            "apnscp_domain",
+            "apnscp_username",
+            "apnscp_password"
+        ]
+    },
+    "icon": "bi-server"
 }

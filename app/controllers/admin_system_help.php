@@ -17,14 +17,6 @@ class AdminSystemHelp extends AdminController
     public function preAction()
     {
         parent::preAction();
-
-        $this->uses(['Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-        );
     }
 
     /**
@@ -39,11 +31,5 @@ class AdminSystemHelp extends AdminController
      */
     public function credits()
     {
-        if (!$this->isAjax()) {
-            $this->redirect($this->base_uri . 'settings/system/');
-        }
-
-        echo $this->partial('admin_system_help_credits');
-        return false;
     }
 }

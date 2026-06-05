@@ -1,0 +1,74 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "quotation_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "description",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "qty",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "amount",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "order",
+            "type": "smallint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 5,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

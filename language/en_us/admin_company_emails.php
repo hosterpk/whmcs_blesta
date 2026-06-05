@@ -21,6 +21,7 @@ $lang['AdminCompanyEmails.!success.mail_updated'] = 'The Mail settings have been
 $lang['AdminCompanyEmails.!success.smtp_test'] = 'SMTP connection was successful!';
 $lang['AdminCompanyEmails.!success.oauth2_test'] = 'OAuth 2.0 connection was successful!';
 $lang['AdminCompanyEmails.!success.sendmail_test'] = 'Sendmail connection was successful!';
+$lang['AdminCompanyEmails.!success.snapshot_restored'] = 'The email template has been successfully restored from the snapshot!';
 
 
 // Tooltips
@@ -77,7 +78,8 @@ $lang['AdminCompanyEmails.templates.option_edit'] = 'Edit';
 
 $lang['AdminCompanyEmails.templates.no_results'] = 'There are no templates of this type.';
 
-$lang['AdminCompanyEmails.templates.field_templatesubmit'] = 'Update';
+$lang['AdminCompanyEmails.templates.field_templatesubmit'] = 'Apply';
+$lang['AdminCompanyEmails.templates.text_items_selected'] = 'items selected';
 
 $lang['AdminCompanyEmails.templates.payment_cc_approved_name'] = 'Payment Approved (Credit Card)';
 $lang['AdminCompanyEmails.templates.payment_cc_approved_desc'] = 'Notice sent after a successful credit card payment is approved.';
@@ -164,10 +166,18 @@ $lang['AdminCompanyEmails.edittemplate.page_title'] = 'Settings > Company > Emai
 $lang['AdminCompanyEmails.edittemplate.heading_email_template'] = 'Email Template';
 $lang['AdminCompanyEmails.edittemplate.heading_additional_attachments'] = 'Additional Attachments';
 $lang['AdminCompanyEmails.edittemplate.heading_file_name'] = 'File Name';
-$lang['AdminCompanyEmails.edittemplate.heading_options'] = 'Options';
+$lang['AdminCompanyEmails.edittemplate.heading_options'] = 'Actions';
 $lang['AdminCompanyEmails.edittemplate.boxtitle_edittemplate'] = 'Edit Email Template %1$s'; // %1$s is the email template group name
 
 $lang['AdminCompanyEmails.edittemplate.text_none'] = 'None';
+$lang['AdminCompanyEmails.edittemplate.text_from_name'] = 'Enter from name';
+$lang['AdminCompanyEmails.edittemplate.text_from_email'] = 'Enter from email address';
+$lang['AdminCompanyEmails.edittemplate.text_subject'] = 'Enter email subject';
+$lang['AdminCompanyEmails.edittemplate.text_plain_text'] = 'Enter plain text version of email';
+$lang['AdminCompanyEmails.edittemplate.text_available_tags'] = 'Available Tags';
+$lang['AdminCompanyEmails.edittemplate.text_tags_description'] = 'Use these tags in your email template to include dynamic content.';
+$lang['AdminCompanyEmails.edittemplate.text_drop_files'] = 'Drop files here or click browse to upload attachments';
+$lang['AdminCompanyEmails.edittemplate.text_browse_files'] = 'Browse Files';
 $lang['AdminCompanyEmails.edittemplate.confirm_delete_attachment'] = 'Are you sure you want to delete this attachment?';
 $lang['AdminCompanyEmails.edittemplate.option_delete'] = 'Delete';
 
@@ -185,6 +195,11 @@ $lang['AdminCompanyEmails.edittemplate.field_attachment'] = 'Attachment';
 $lang['AdminCompanyEmails.edittemplate.field.edittemplatesubmit'] = 'Update Template';
 $lang['AdminCompanyEmails.edittemplate.field_cancel'] = 'Cancel';
 $lang['AdminCompanyEmails.edittemplate.field_continue'] = 'Continue';
+$lang['AdminCompanyEmails.edittemplate.field_restore'] = 'Restore';
+$lang['AdminCompanyEmails.edittemplate.field_restore_snapshot'] = 'Restore Snapshot';
+$lang['AdminCompanyEmails.edittemplate.heading_snapshots'] = 'Template History';
+$lang['AdminCompanyEmails.edittemplate.text_no_snapshots'] = 'There are no snapshots available for this email template.';
+$lang['AdminCompanyEmails.edittemplate.confirm_restore_snapshot'] = 'Are you sure you want to restore this snapshot? Any unsaved changes will be lost.';
 
 
 // Email HTML templates
@@ -203,14 +218,14 @@ $lang['AdminCompanyEmails.htmltemplates.no_results'] = 'There are no HTML templa
 $lang['AdminCompanyEmails.addhtmltemplate.boxtitle_addhtmltemplate'] = 'Add HTML Template';
 $lang['AdminCompanyEmails.addhtmltemplate.field.name'] = 'Name';
 $lang['AdminCompanyEmails.addhtmltemplate.field.tags'] = 'Tags';
-$lang['AdminCompanyEmails.addhtmltemplate.field.addtemplatesubmit'] = 'Add Template';
+$lang['AdminCompanyEmails.addhtmltemplate.field.addtemplatesubmit'] = 'Create Template';
 
 
 // Add Email HTML template
 $lang['AdminCompanyEmails.edithtmltemplate.boxtitle_addhtmltemplate'] = 'Edit HTML Template';
 $lang['AdminCompanyEmails.edithtmltemplate.field.name'] = 'Name';
 $lang['AdminCompanyEmails.edithtmltemplate.field.tags'] = 'Tags';
-$lang['AdminCompanyEmails.edithtmltemplate.field.addtemplatesubmit'] = 'Edit Template';
+$lang['AdminCompanyEmails.edithtmltemplate.field.addtemplatesubmit'] = 'Update Template';
 
 
 // Email signatures
@@ -303,3 +318,36 @@ $lang['AdminCompanyEmails.gettemplateactions.update_from_email'] = 'Update "From
 $lang['AdminCompanyEmails.gettemplateactions.update_from_name'] = 'Update "From Name"';
 $lang['AdminCompanyEmails.gettemplateactions.update_html_template'] = 'Update HTML Template';
 $lang['AdminCompanyEmails.gettemplateactions.text_none'] = 'None';
+
+
+// AI Content Generation
+$lang['AdminCompanyEmails.ai.modal_title'] = 'AI Content Assistant';
+$lang['AdminCompanyEmails.ai.modal_title_generate'] = 'Generate Email Content';
+$lang['AdminCompanyEmails.ai.modal_title_rewrite'] = 'Rewrite Email Content';
+$lang['AdminCompanyEmails.ai.generate_button'] = 'Generate';
+$lang['AdminCompanyEmails.ai.rewrite_button'] = 'Rewrite';
+$lang['AdminCompanyEmails.ai.regenerate_button'] = 'Regenerate';
+$lang['AdminCompanyEmails.ai.use_content_button'] = 'Use This Content';
+$lang['AdminCompanyEmails.ai.btn_cancel'] = 'Cancel';
+$lang['AdminCompanyEmails.ai.generating'] = 'Generating...';
+$lang['AdminCompanyEmails.ai.prompt_context_label'] = 'Prompt Context';
+$lang['AdminCompanyEmails.ai.prompt_loading'] = 'Loading prompt...';
+$lang['AdminCompanyEmails.ai.additional_instructions_label'] = 'Additional Instructions';
+$lang['AdminCompanyEmails.ai.additional_instructions_placeholder'] = 'Add specific requirements or tone preferences...';
+$lang['AdminCompanyEmails.ai.additional_instructions_help'] = 'Optional guidance for the AI to customize the generated content.';
+$lang['AdminCompanyEmails.ai.generated_content_label'] = 'Generated Content';
+$lang['AdminCompanyEmails.ai.initial_instructions'] = 'Click Generate to create email content based on the template type and available tags.';
+$lang['AdminCompanyEmails.ai.preview_html'] = 'HTML Preview';
+$lang['AdminCompanyEmails.ai.preview_text'] = 'Text Preview';
+$lang['AdminCompanyEmails.ai.error_disabled'] = 'AI features are currently disabled.';
+$lang['AdminCompanyEmails.ai.error_feature_disabled'] = 'AI email template generation is not enabled.';
+$lang['AdminCompanyEmails.ai.error_prompt_required'] = 'A prompt is required to generate content.';
+$lang['AdminCompanyEmails.ai.error_prompt_too_long'] = 'Prompt exceeds maximum length.';
+$lang['AdminCompanyEmails.ai.error_generation_failed'] = 'Content generation failed. Please try again.';
+$lang['AdminCompanyEmails.ai.error_rate_limit'] = 'Too many requests. Please wait a moment before trying again.';
+$lang['AdminCompanyEmails.ai.error_prefix'] = 'Error:';
+$lang['AdminCompanyEmails.ai.apply_content_label'] = 'Apply content to:';
+$lang['AdminCompanyEmails.ai.apply_subject'] = 'Subject line';
+$lang['AdminCompanyEmails.ai.apply_html'] = 'HTML version';
+$lang['AdminCompanyEmails.ai.apply_text'] = 'Text version';
+$lang['AdminCompanyEmails.ai.preview_subject'] = 'Suggested Subject';

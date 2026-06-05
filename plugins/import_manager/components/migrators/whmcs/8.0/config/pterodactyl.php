@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('pterodactyl.map', [
     'module' => 'pterodactyl',
     'module_row_key' => 'server_name',
@@ -7,7 +8,9 @@ Configure::set('pterodactyl.map', [
         (object)['key' => 'host_name', 'value' => (object)['module' => 'hostname'], 'alternate_value' => (object)['module' => 'ipaddress'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'account_api_key', 'value' => '', 'serialized' => 0, 'encrypted' => 1],
         (object)['key' => 'application_api_key', 'value' => (object)['module' => 'password'], 'serialized' => 0, 'encrypted' => 1],
-        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) { return ($value == 'on' ? 'true' : 'false');}],
+        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) {
+            return ($value == 'on' ? 'true' : 'false');
+        }],
     ],
     'package_meta' => [
         (object)['key' => 'location_id', 'value' => (object)['package' => 'configoption5'], 'serialized' => 0, 'encrypted' => 0],

@@ -1,60 +1,44 @@
+<?php /** @var View $this */ ?>
 
         <?php
         echo ($message ?? null);
 
         $link_buttons = [
-            ['name'=>$this->_('AdminMain.urls.add_url', true), 'attributes'=>['href'=>$this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/addurl/'), 'class'=>'add_url']]
-        ];
-
-        $tabs = [
             [
-                'name' => $this->_('AdminMain.urls.tab_files', true),
-                'current' => false,
+                'icon' => 'bi bi-plus-lg me-1',
+                'name' => $this->_('AdminMain.urls.add_url', true),
                 'attributes' => [
-                    'class' => 'files',
-                    'href' => $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/')
-                ]
-            ],
-            [
-                'name' => $this->_('AdminMain.urls.tab_urls', true),
-                'current' => true,
-                'attributes' => [
-                    'class' => 'urls',
-                    'href' => $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/')
+                    'title' => $this->_('AdminMain.urls.add_url', true),
+                    'data-bs-toggle' => 'modal',
+                    'data-bs-target' => '#urlModal',
+                    'id' => 'addUrlBtn',
+                    'href' => '#urlModal'
                 ]
             ]
         ];
 
         $this->Widget->clear();
-        $this->Widget->setTabs($tabs);
+        $this->Widget->setLinkButtons($link_buttons);
+        $this->Widget->setBodyWrapper(false);
         $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
-        $this->Widget->create($this->_('AdminMain.urls.boxtitle_downloadmanager', true), ['id' => 'urls'], (isset($render_section) ? $render_section : null));
+        $this->Widget->create($this->_('AdminMain.urls.boxtitle_downloadmanager', true), ['id' => 'urls_widget'], ($render_section ?? null));
         ?>
-        <div class="pad">
-            <div class="inner">
-                <div class="links_row">
-                    <?php
-                    foreach ($link_buttons as $link_button) {
-                        $attributes = '';
-                        foreach (($link_button['attributes'] ?? []) as $attribute => $value) {
-                            $attributes .= ' ' . $attribute . '="' . $value . '"';
-                        }
-                    ?>
-                    <a class="btn btn-default btn-sm pull-right" title="<?php echo $this->Html->safe($link_button['name'] ?? '');?>"<?php echo $attributes;?>><?php echo $this->Html->safe($link_button['name'] ?? '');?></a>
-                    <?php
-                    }
-                    ?>
-                </div>
-                <?php
-                if (!empty($urls)) {
-                ?>
-                <table class="table table-striped" id="urls">
+            <?php
+            if (!empty($urls)) {
+            ?>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="urls">
                     <thead>
-                        <tr class="heading_row">
-                            <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/?sort=url&order=' . ($sort == 'url' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'url' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.urls.heading_url');?></a></span></td>
-                            <td><span><?php $this->_('AdminMain.urls.heading_file');?></span></td>
-                            <td><span><?php $this->_('AdminMain.urls.heading_link');?></span></td>
-                            <td class="last"><span><?php $this->_('AdminMain.urls.heading_options');?></span></td>
+                        <tr>
+                            <th>
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/?sort=url&order=' . ($sort == 'url' ? $negate_order : $order)); ?>" class="ajax text-decoration-none">
+                                    <?php $this->_('AdminMain.urls.heading_url'); ?>
+                                    <?php if ($sort == 'url') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                                </a>
+                            </th>
+                            <th><?php $this->_('AdminMain.urls.heading_file'); ?></th>
+                            <th><?php $this->_('AdminMain.urls.heading_link'); ?></th>
+                            <th class="text-end" style="width: 100px;"><?php $this->_('AdminMain.urls.heading_options'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,31 +46,39 @@
                         foreach ($urls as $url) {
                         ?>
                         <tr>
-                            <td><?php echo $this->Html->safe($url->url);?></td>
+                            <td><?php echo $this->Html->safe($url->url); ?></td>
                             <td>
                                 <?php
                                 if (!empty($url->file_id)) {
                                 ?>
-                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/edit/' . $url->file_id);?>"><i class="fas fa-file-archive fa-fw mr-1"></i><?php echo $this->Html->safe($url->full_path);?></a>
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/edit/' . $url->file_id); ?>">
+                                        <i class="bi bi-file-earmark-zip me-1"></i><?php echo $this->Html->safe($url->full_path); ?>
+                                    </a>
                                 <?php
                                 } elseif (!empty($url->category_id)) {
                                 ?>
-                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . $url->category_id);?>"><i class="fas fa-folder-open fa-fw mr-1"></i><?php $this->_('AdminMain.urls.latest_file', false, $url->full_path);?></a>
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . $url->category_id); ?>">
+                                        <i class="bi bi-folder2-open me-1"></i><?php $this->_('AdminMain.urls.latest_file', false, $url->full_path); ?>
+                                    </a>
                                 <?php
                                 }
                                 ?>
                             </td>
-                            <td><?php echo $this->Html->safe(($base_url ?? '/') . ltrim($public_uri ?? '', '/') . 'download/' . $url->url);?></td>
-                            <td>
-                                <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/editurl/' . $url->id);?>"><?php $this->_('AdminMain.urls.edit');?></a>,
-                                <?php
-                                $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/deleteurl/');
-                                $this->Form->fieldHidden('id', ($url->id ?? null));
-                                ?>
-                                <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/deleteurl/');?>" class="manage" rel="<?php $this->_('AdminMain.modal.delete_url');?>"><?php $this->_('AdminMain.urls.delete');?></a>
-                                <?php
-                                $this->Form->end();
-                                ?>
+                            <td><?php echo $this->Html->safe(($base_url ?? '/') . ltrim($public_uri ?? '', '/') . 'download/' . $url->url); ?></td>
+                            <td class="text-end">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a class="btn btn-sm btn-outline-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/editurl/' . $url->id); ?>" title="<?php $this->_('AdminMain.urls.edit'); ?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <?php $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/deleteurl/', ['class' => 'd-inline']); ?>
+                                        <?php $this->Form->fieldHidden('id', ($url->id ?? '')); ?>
+                                        <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                            data-confirm-message="<?php $this->_('AdminMain.modal.delete_url'); ?>"
+                                            title="<?php $this->_('AdminMain.urls.delete'); ?>">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    <?php $this->Form->end(); ?>
+                                </div>
                             </td>
                         </tr>
                         <?php
@@ -94,25 +86,169 @@
                         ?>
                     </tbody>
                 </table>
-                <?php
-                    if ($this->Pagination->hasPages()) {
-                        $this->Pagination->build();
-                    }
-                } else {
-                ?>
-                <div class="empty_section">
-                    <div class="empty_box"><?php $this->_('AdminMain.urls.no_urls');?></div>
-                </div>
-                <?php
-                }
-                ?>
             </div>
-        </div>
+            <?php
+            if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+                $this->Widget->footer();
+                $this->Pagination->build();
+            }
+            ?>
+            <?php
+            } else {
+            ?>
+            <div class="card-body">
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-link-45deg" style="font-size: 2rem; opacity: 0.3;"></i>
+                    <p class="mt-2 mb-0"><?php $this->_('AdminMain.urls.no_urls'); ?></p>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
         <?php
         $this->Widget->end();
+
         ?>
+
+        <!-- Add/Edit URL Modal -->
+        <div class="modal fade" id="urlModal" tabindex="-1" aria-labelledby="urlModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="urlModalLabel"><?php $this->_('AdminMain.urls.add_url'); ?></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <?php
+                        $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/addurl/', ['id' => 'urlForm']);
+                        ?>
+                        <input type="hidden" id="urlId" name="id">
+
+                        <div class="mb-3">
+                            <?php
+                            $this->Form->label($this->_('AdminMain.addurl.field_url', true), 'modalUrl', ['class' => 'form-label']);
+                            $this->Form->fieldText('url', null, ['id' => 'modalUrl', 'class' => 'form-control', 'required' => true]);
+                            ?>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('url_type', 'file', true, ['id' => 'modalUrlTypeFile', 'class' => 'form-check-input url_type']);
+                                $this->Form->label($this->_('AdminMain.addurl.field_file', true), 'modalUrlTypeFile', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('url_type', 'category', false, ['id' => 'modalUrlTypeCategory', 'class' => 'form-check-input url_type']);
+                                $this->Form->label($this->_('AdminMain.addurl.field_category', true), 'modalUrlTypeCategory', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="modalFieldFile">
+                            <?php
+                            $this->Form->label($this->_('AdminMain.addurl.field_file', true), 'modalFile', ['class' => 'form-label']);
+                            $this->Form->fieldSelect('file', ($files ?? []), null, ['id' => 'modalFile', 'class' => 'form-select']);
+                            ?>
+                        </div>
+
+                        <div class="mb-3" id="modalFieldCategory" style="display:none;">
+                            <?php
+                            $this->Form->label($this->_('AdminMain.addurl.field_category', true), 'modalCategory', ['class' => 'form-label']);
+                            ?>
+                            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php $this->_('AdminMain.!tooltip.category_type'); ?>"></i>
+                            <?php
+                            $this->Form->fieldSelect('category', ($categories ?? []), null, ['id' => 'modalCategory', 'class' => 'form-select']);
+                            ?>
+                        </div>
+
+                        <?php $this->Form->end(); ?>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminMain.modal.cancel'); ?></button>
+                        <button type="button" class="btn btn-primary" id="saveUrlBtn">
+                            <?php $this->_('AdminMain.modal.save'); ?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 <script type="text/javascript">
-    $(document).ready(function() {
-        $('#urls a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->Html->safe($this->base_uri);?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
+document.addEventListener('DOMContentLoaded', function() {
+    var urlModal = document.getElementById('urlModal');
+    var urlForm = document.getElementById('urlForm');
+    var saveUrlBtn = document.getElementById('saveUrlBtn');
+    var addUrlBtn = document.getElementById('addUrlBtn');
+    var urlModalLabel = document.getElementById('urlModalLabel');
+    var urlId = document.getElementById('urlId');
+    var modalUrl = document.getElementById('modalUrl');
+    var modalFile = document.getElementById('modalFile');
+    var modalCategory = document.getElementById('modalCategory');
+    var modalFieldFile = document.getElementById('modalFieldFile');
+    var modalFieldCategory = document.getElementById('modalFieldCategory');
+    var modalUrlTypeFile = document.getElementById('modalUrlTypeFile');
+    var modalUrlTypeCategory = document.getElementById('modalUrlTypeCategory');
+
+    // Toggle file/category fields based on radio selection
+    function toggleUrlType() {
+        if (modalUrlTypeFile.checked) {
+            modalFieldFile.style.display = 'block';
+            modalFieldCategory.style.display = 'none';
+        } else if (modalUrlTypeCategory.checked) {
+            modalFieldFile.style.display = 'none';
+            modalFieldCategory.style.display = 'block';
+        }
+    }
+
+    modalUrlTypeFile.addEventListener('change', toggleUrlType);
+    modalUrlTypeCategory.addEventListener('change', toggleUrlType);
+
+    // Reset form when opening modal for add
+    if (addUrlBtn) {
+        addUrlBtn.addEventListener('click', function() {
+            urlForm.action = '<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/addurl/'); ?>';
+            urlModalLabel.textContent = '<?php echo $this->Html->safe($this->_('AdminMain.urls.add_url', true)); ?>';
+            urlForm.reset();
+            urlId.value = '';
+            modalUrlTypeFile.checked = true;
+            toggleUrlType();
+        });
+    }
+
+    // Handle edit URL links
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('edit-url-btn')) {
+            e.preventDefault();
+            var urlData = JSON.parse(e.target.getAttribute('data-url'));
+
+            urlForm.action = '<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/editurl/'); ?>' + urlData.id;
+            urlModalLabel.textContent = '<?php echo $this->Html->safe($this->_('AdminMain.editurl.boxtitle_add', true)); ?>';
+            urlId.value = urlData.id;
+            modalUrl.value = urlData.url;
+
+            if (urlData.file_id) {
+                modalUrlTypeFile.checked = true;
+                modalFile.value = urlData.file_id;
+            } else {
+                modalUrlTypeCategory.checked = true;
+                modalCategory.value = urlData.category_id;
+            }
+
+            toggleUrlType();
+
+            var modal = new bootstrap.Modal(urlModal);
+            modal.show();
+        }
     });
+
+    // Save button click
+    saveUrlBtn.addEventListener('click', function() {
+        urlForm.submit();
+    });
+
+    // Initialize on page load
+    toggleUrlType();
+});
 </script>

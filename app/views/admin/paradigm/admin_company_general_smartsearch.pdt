@@ -1,0 +1,50 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyGeneral.smartsearch.boxtitle_smartsearch', true), ['id' => 'admin_company_general_smartsearch']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <!-- Smart Search Fields Checkboxes -->
+            <?php
+            foreach ($fields as $field) {
+            ?>
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        $field,
+                        'true',
+                        (isset($vars[$field]) ? $vars[$field] : 'true') == 'true',
+                        ['id' => $field, 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <?php
+                    $this->Form->label(
+                        $this->_('AdminCompanyGeneral.smartsearch.field_' . $field, true),
+                        $field,
+                        ['class' => 'form-check-label']
+                    );
+                    ?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+
+        </div>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyGeneral.smartsearch.field_submit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+        <?php $this->Form->end(); ?>
+<?php
+$this->Widget->end();
+?>
+</div>

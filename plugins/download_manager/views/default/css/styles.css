@@ -1,17 +1,225 @@
+.downloads>div {
+    padding-bottom: 10px;
+}
 
-#downloads { margin-top:0px;}
-#downloads .col { padding-top:4px;}
-#downloads .col div { font-size:12px; padding-right:8px;}
-#downloads .col div a.manage { color:#C62425}
-#downloads form { float:none; display:inline;}
+/* Response Folder Cards */
+.response-folder-card {
+    position: relative;
+    background: var(--bg-secondary, #f8f9fa);
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 0.5rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 160px;
+}
 
-#up_directory { padding:0; line-height:16px;}
-#up_directory a { font-size:12px; }
+.response-folder-card:hover {
+    background: var(--bg-tertiary, #e9ecef);
+    border-color: var(--accent-color, #0d6efd);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
 
-.inner_content .inner .pad { padding:10px 15px 0 15px;}
-.inner_content .inner .pad .table_sec { padding-top:10px;}
+.response-folder-icon {
+    font-size: 3rem;
+    color: var(--warning-color, #ffc107);
+    transition: all 0.2s ease;
+}
 
-.downloads > div { padding-bottom: 10px;}
-.downloads > div.clearfix { padding-bottom:0;}
+.response-folder-card:hover .response-folder-icon {
+    color: var(--accent-color, #0d6efd);
+    transform: scale(1.1);
+}
 
-.file a, .category a {word-wrap: break-word;}
+.response-folder-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary, inherit);
+    text-align: center;
+    word-break: break-word;
+}
+
+.response-folder-count {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Action Buttons on Folder Cards */
+.response-folder-actions {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+.response-folder-card:hover .response-folder-actions {
+    opacity: 1;
+}
+
+.response-folder-action-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #4a4a4a;
+    border-radius: 50%;
+    background: #3a3a3a;
+    color: var(--text-primary, #fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.response-folder-action-btn:hover {
+    background: var(--accent-color, #0d6efd);
+    color: white;
+    border-color: var(--accent-color, #0d6efd);
+    transform: scale(1.1);
+}
+
+.response-folder-action-btn.response-folder-delete-btn {
+    background: var(--danger-color, #dc3545);
+    color: white;
+    border-color: var(--danger-color, #dc3545);
+}
+
+.response-folder-action-btn.response-folder-delete-btn:hover {
+    background: #b02a37;
+    border-color: #b02a37;
+}
+
+.response-folder-action-btn i {
+    font-size: 0.875rem;
+}
+
+/* Light mode adjustments for action buttons */
+[data-theme="light"] .response-folder-action-btn {
+    background: #6c757d;
+    border-color: #5a6268;
+    color: white;
+}
+
+[data-theme="light"] .response-folder-action-btn:hover {
+    background: var(--accent-color, #0d6efd);
+    border-color: var(--accent-color, #0d6efd);
+}
+
+[data-theme="light"] .response-folder-action-btn.response-folder-delete-btn {
+    background: var(--danger-color, #dc3545);
+    border-color: var(--danger-color, #dc3545);
+}
+
+[data-theme="light"] .response-folder-action-btn.response-folder-delete-btn:hover {
+    background: #b02a37;
+    border-color: #b02a37;
+}
+
+.response-folder-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+/* File cards styling */
+.response-item-card .response-folder-icon {
+    color: var(--accent-color, #0d6efd);
+}
+
+.response-item-card:hover .response-folder-icon {
+    color: var(--success-color, #198754);
+}
+
+/* Delete forms should not interfere with layout */
+.delete-category-form,
+.delete-file-form {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+/* Responsive Grid for Folder Cards */
+@media (max-width: 576px) {
+    .response-folder-card {
+        padding: 1.5rem 1rem;
+        min-height: 140px;
+    }
+
+    .response-folder-icon {
+        font-size: 2.5rem;
+    }
+
+    .response-folder-name {
+        font-size: 0.875rem;
+    }
+}
+
+/* File Upload with Progress */
+.upload-progress-container {
+    display: none;
+}
+
+.upload-progress-container.active {
+    display: block;
+}
+
+/* Dual Select */
+.dual-select-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.dual-select-panel {
+    flex: 1;
+}
+
+.dual-select-list {
+    height: 200px !important;
+    min-height: 200px;
+}
+
+.dual-select-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+}
+
+.dual-select-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .dual-select-container {
+        flex-direction: column;
+    }
+
+    .dual-select-controls {
+        flex-direction: row;
+    }
+
+    .dual-select-btn {
+        transform: rotate(90deg);
+    }
+}

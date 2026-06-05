@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Proration;
 
 use Blesta\Proration\Proration as Prorate;

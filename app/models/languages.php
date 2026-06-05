@@ -1,5 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use stdClass;
+
 /**
  * Language management. Maintains all languages installed on the system and
  * allows new languages to be installed.
@@ -99,7 +105,7 @@ class Languages extends AppModel
                     'post_format' => 'strtolower'
                 ],
                 'unique' => [
-                    'rule' => [[$this, 'validateCodeExists'], (isset($vars['company_id']) ? $vars['company_id'] : null)],
+                    'rule' => [[$this, 'validateCodeExists'], ($vars['company_id'] ?? null)],
                     'negate' => true,
                     'message' => $this->_('Languages.!error.code.unique')
                 ]
@@ -142,6 +148,35 @@ class Languages extends AppModel
                 $email_vars = (array) $email;
                 $email_vars['lang'] = $code;
                 $this->Record->insert('emails', $email_vars, $fields);
+                $new_email_id = $this->Record->lastInsertId();
+
+                // Duplicate email history snapshots from the default language email to the new language email
+                $original_email = $this->Record->select(['id'])
+                    ->from('emails')
+                    ->where('email_group_id', '=', $email->email_group_id)
+                    ->where('company_id', '=', $company_id)
+                    ->where('lang', '=', $language)
+                    ->fetch();
+
+                if ($original_email) {
+                    $snapshots = $this->Record->select(['from', 'from_name', 'subject', 'text', 'html', 'date_saved'])
+                        ->from('email_snapshots')
+                        ->where('email_id', '=', $original_email->id)
+                        ->fetchAll();
+
+                    foreach ($snapshots as $snapshot) {
+                        $this->Record->insert('email_snapshots', [
+                            'email_id' => $new_email_id,
+                            'lang' => $code,
+                            'from' => $snapshot->from,
+                            'from_name' => $snapshot->from_name,
+                            'subject' => $snapshot->subject,
+                            'text' => $snapshot->text,
+                            'html' => $snapshot->html,
+                            'date_saved' => $snapshot->date_saved
+                        ]);
+                    }
+                }
             }
 
             // Add message templates for this language
@@ -188,6 +223,24 @@ class Languages extends AppModel
             $this->Record->from('languages')->where('code', '=', $code)->
                 where('company_id', '=', $company_id)->delete();
 
+            // Fetch all email IDs for this language and company before deleting emails
+            $email_ids = $this->Record->select(['id'])
+                ->from('emails')
+                ->where('lang', '=', $code)
+                ->where('company_id', '=', $company_id)
+                ->fetchAll();
+
+            // Remove all email history snapshots for emails in this language
+            if (!empty($email_ids)) {
+                $ids = array_map(function ($email) {
+                    return $email->id;
+                }, $email_ids);
+
+                $this->Record->from('email_snapshots')
+                    ->where('email_id', 'in', $ids)
+                    ->delete();
+            }
+
             // Remove all emails that use this language at this company as well
             $this->Record->from('emails')->where('lang', '=', $code)->
                 where('company_id', '=', $company_id)->delete();
@@ -220,6 +273,10 @@ class Languages extends AppModel
                 where('staff_settings.value', '=', $code)->
                 set('staff_settings.value', $default_language)->
                 update('staff_settings');
+
+            // Invalidate settings caches since we updated settings directly
+            Clients::clearSettingsCache();
+            Staff::clearSettingsCache();
         }
     }
 

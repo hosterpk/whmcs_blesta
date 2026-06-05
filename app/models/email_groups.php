@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use stdClass;
+
 /**
  * Email Group management
  *
@@ -215,7 +222,7 @@ class EmailGroups extends AppModel
     private function getRules(array $vars, $edit = false)
     {
         // Use the group ID for validation
-        $group_id = (isset($vars['group_id']) ? $vars['group_id'] : null);
+        $group_id = ($vars['group_id'] ?? null);
 
         $rules = [
             'action' => [

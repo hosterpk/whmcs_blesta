@@ -1,0 +1,45 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemHelp.credits.boxtitle_credits', true), ['id' => 'admin_system_help_credits']);
+    ?>
+
+    <div class="text-center mb-4">
+        <img src="<?php echo $this->view_dir;?>images/logo-color.svg" alt="Blesta" class="logo-light logo-full mx-auto" style="max-width: 200px;" />
+        <img src="<?php echo $this->view_dir;?>images/logo.svg" alt="Blesta" class="logo-dark logo-full mx-auto" style="max-width: 200px;" />
+        <p class="mt-3 text-muted">
+            Version <?php echo BLESTA_VERSION;?><br />
+            Copyright &copy; 2007-<?php echo $this->Date->format('Y');?> Phillips Data, Inc.
+        </p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <p>
+                Blesta is a customer management, billing, and support platform designed for hosting
+                providers &mdash; and trusted by businesses of all kinds. Since 2007, we&rsquo;ve focused on
+                creating software that lives up to its name &mdash; Blesta is an anagram of &ldquo;stable.&rdquo;
+            </p>
+            <p>
+                Stability is at the core of everything we build: a dependable platform you can trust
+                to run your business, straightforward pricing that doesn&rsquo;t punish you for growth,
+                and an extensible architecture developers can build on with confidence.
+            </p>
+            <p>
+                Blesta is privately owned and independent, allowing us to focus on long-term reliability
+                and customer success rather than short-term investor demands.
+            </p>
+
+            <p class="text-center text-muted mt-5 pt-5">
+                <em>Soli deo Gloria</em>
+            </p>
+        </div>
+    </div>
+
+    <?php $this->Widget->end();?>
+</div>

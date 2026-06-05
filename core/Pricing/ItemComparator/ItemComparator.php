@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\ItemComparator;
 
 use Blesta\Core\Pricing\ItemComparator\AbstractItemComparator;

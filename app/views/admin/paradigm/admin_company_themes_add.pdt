@@ -1,0 +1,323 @@
+<?php echo (isset($left_nav) ? $left_nav : null);?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Form->create(null, ['enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+    $this->Form->fieldHidden('type', (isset($vars->type) ? $vars->type : null));
+    ?>
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyThemes.add.boxtitle_addtheme', true), ['id' => 'admin_company_themes_add']);
+    ?>
+
+            <!-- Options Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyThemes.add.heading_options');?></h6>
+
+            <div class="mb-4">
+                <div class="form-check form-check-inline">
+                    <?php
+                    $this->Form->fieldRadio('add_type', 'import', (isset($vars->add_type) ? $vars->add_type : 'import') == 'import', ['id' => 'import_type', 'class' => 'form-check-input add_type']);
+                    ?>
+                    <?php
+                    $this->Form->label($this->_('AdminCompanyThemes.add.add_type_import', true), 'import_type', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <div class="form-check form-check-inline">
+                    <?php
+                    $this->Form->fieldRadio('add_type', 'manual', (isset($vars->add_type) ? $vars->add_type : null) == 'manual', ['id' => 'manual_type', 'class' => 'form-check-input add_type']);
+                    ?>
+                    <?php
+                    $this->Form->label($this->_('AdminCompanyThemes.add.add_type_manual', true), 'manual_type', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="import_type">
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyThemes.add.heading_import');?></h6>
+
+                <div class="mb-3">
+                    <label for="import_file" class="form-label">
+                        <?php $this->_('AdminCompanyThemes.add.field_import_file');?>
+                    </label>
+                    <?php
+                    $this->Form->fieldFile('import_file', ['id' => 'import_file', 'class' => 'form-control']);
+                    ?>
+                </div>
+            </div>
+
+            <!-- Manual Section -->
+            <div class="manual_type" style="display:none;">
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyThemes.add.heading_manual');?></h6>
+
+                <!-- Theme Name -->
+                <div class="mb-3">
+                    <label for="name" class="form-label">
+                        <?php $this->_('AdminCompanyThemes.add.field_name');?>
+                    </label>
+                    <?php
+                    $this->Form->fieldText('name', (isset($vars->name) ? $vars->name : null), ['id' => 'name', 'class' => 'form-control']);
+                    ?>
+                </div>
+
+                <?php if ((isset($vars->type) ? $vars->type : null) != 'admin') { ?>
+                <?php
+                // Display each color (client themes only)
+                foreach ((isset($colors) ? $colors : []) as $key => $color_field) {
+                ?>
+                <div class="mb-3 colors">
+                    <label class="form-label">
+                        <?php $this->_('AdminCompanyThemes.add.field_' . (isset($key) ? $key : null));?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.!theme.tooltip_' . (isset($key) ? $key : null), true));?>"></i>
+                    </label>
+                    <div class="color-fields">
+                    <?php
+                    foreach ($color_field as $color) {
+                        $color_value = (isset($vars->colors[$color]) ? $vars->colors[$color] : '');
+                        $color_with_hash = $color_value && !str_starts_with($color_value, '#') ? '#' . $color_value : ($color_value ?: '#FFFFFF');
+                        $color_without_hash = ltrim($color_value, '#') ?: 'FFFFFF';
+                    ?>
+                    <div class="color-picker-input-group">
+                        <input type="color"
+                               class="form-control form-control-color color-picker-input"
+                               id="color_picker_<?php echo (isset($color) ? $color : null);?>"
+                               value="<?php echo $this->Html->safe($color_with_hash);?>"
+                               data-color-field="colors_<?php echo (isset($color) ? $color : null);?>">
+                        <?php
+                        $this->Form->fieldText(
+                            'colors[' . (isset($color) ? $color : null) . ']',
+                            $color_without_hash,
+                            ['id' => 'colors_' . (isset($color) ? $color : null), 'class' => 'form-control form-control-sm color-text-input']
+                        );
+                        ?>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                    </div>
+                </div>
+                <?php
+                }
+                ?>
+                <?php } ?>
+
+                <?php if ((isset($vars->type) ? $vars->type : null) != 'admin') { ?>
+                <!-- Logo URL (client themes only) -->
+                <div class="mb-3">
+                    <label for="logo_url" class="form-label">
+                        <?php $this->_('AdminCompanyThemes.add.field_logo_url');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.!theme.tooltip_logo_url', true));?>"></i>
+                    </label>
+                    <?php
+                    $this->Form->fieldText('logo_url', (isset($vars->logo_url) ? $vars->logo_url : null), ['id' => 'logo_url', 'class' => 'form-control']);
+                    ?>
+                </div>
+                <?php } ?>
+
+                <!-- Custom CSS -->
+                <div class="mb-3">
+                    <label for="custom_css" class="form-label">
+                        <?php $this->_('AdminCompanyThemes.add.field_custom_css');?>
+                    </label>
+                    <?php
+                    $this->Form->fieldTextarea('custom_css', (isset($vars->custom_css) ? $vars->custom_css : null), ['id' => 'custom_css', 'class' => 'form-control']);
+                    ?>
+                </div>
+            </div>
+
+    <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyThemes.add.field_addthemesubmit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+    <?php
+    $this->Widget->end();
+    $this->Form->end();
+    ?>
+</div>
+
+<!-- Ace Editor for Custom CSS -->
+<script src="<?php echo VENDORWEBDIR;?>ace/src-min-noconflict/ace.js"></script>
+
+<script>
+(function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Initialize Ace editor for Custom CSS (deferred until manual section is visible,
+    // because Ace cannot calculate dimensions on a hidden container)
+    let aceInitialized = false;
+    function initAceEditor() {
+        if (aceInitialized) return;
+
+        const customCssTextarea = document.getElementById('custom_css');
+        if (!customCssTextarea || typeof ace === 'undefined') return;
+
+        aceInitialized = true;
+
+        const editorDiv = document.createElement('div');
+        editorDiv.id = 'ace_custom_css';
+        editorDiv.style.height = '300px';
+        editorDiv.style.width = '100%';
+        editorDiv.style.border = '1px solid var(--border-color, #dee2e6)';
+        editorDiv.style.borderRadius = '0.375rem';
+
+        customCssTextarea.style.display = 'none';
+        customCssTextarea.parentNode.insertBefore(editorDiv, customCssTextarea.nextSibling);
+
+        const editor = ace.edit('ace_custom_css');
+        editor.setTheme('ace/theme/tomorrow');
+        editor.session.setMode('ace/mode/css');
+        editor.setOptions({
+            fontSize: '14px',
+            showPrintMargin: false,
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true
+        });
+
+        editor.setValue(customCssTextarea.value || '', -1);
+
+        editor.session.on('change', function() {
+            customCssTextarea.value = editor.getValue();
+        });
+
+        function updateAceTheme() {
+            const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            editor.setTheme(isDarkMode ? 'ace/theme/tomorrow_night' : 'ace/theme/tomorrow');
+        }
+
+        updateAceTheme();
+
+        const observer = new MutationObserver(updateAceTheme);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-bs-theme']
+        });
+    }
+
+    // Function to toggle import/manual sections
+    function changeAddOptions() {
+        const importType = document.querySelector('.import_type');
+        const manualType = document.querySelector('.manual_type');
+        const checkedRadio = document.querySelector('.add_type:checked');
+
+        if (!importType || !manualType) return;
+
+        if (checkedRadio && checkedRadio.value === 'import') {
+            importType.style.display = 'block';
+            manualType.style.display = 'none';
+        } else {
+            importType.style.display = 'none';
+            manualType.style.display = 'block';
+            initAceEditor();
+        }
+    }
+
+    // Initialize on page load
+    changeAddOptions();
+
+    // Add event listeners to radio buttons
+    const addTypeRadios = document.querySelectorAll('.add_type');
+    addTypeRadios.forEach(function(radio) {
+        radio.addEventListener('change', changeAddOptions);
+    });
+
+    // Initialize native HTML5 color pickers
+    const colorPickers = document.querySelectorAll('.color-picker-input');
+    colorPickers.forEach(function(colorPicker) {
+        const textInputId = colorPicker.getAttribute('data-color-field');
+        const textInput = document.getElementById(textInputId);
+
+        if (!textInput) return;
+
+        // Sync color picker to text input on color picker change
+        colorPicker.addEventListener('input', function() {
+            const hexValue = this.value;
+            textInput.value = hexValue.substring(1);
+        });
+
+        colorPicker.addEventListener('change', function() {
+            const hexValue = this.value;
+            textInput.value = hexValue.substring(1);
+        });
+
+        // Sync text input to color picker on text input change
+        textInput.addEventListener('input', function() {
+            let hexValue = this.value.trim();
+
+            if (/^#?[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                if (!hexValue.startsWith('#')) {
+                    hexValue = '#' + hexValue;
+                }
+                colorPicker.value = hexValue;
+            }
+        });
+
+        textInput.addEventListener('change', function() {
+            let hexValue = this.value.trim();
+
+            if (/^#?[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                if (!hexValue.startsWith('#')) {
+                    hexValue = '#' + hexValue;
+                }
+                colorPicker.value = hexValue;
+                this.value = hexValue.substring(1);
+            } else {
+                const currentColor = colorPicker.value;
+                this.value = currentColor.substring(1);
+            }
+        });
+    });
+})();
+</script>
+
+<style>
+/* Color picker styling for Paradigm theme */
+.color-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.color-picker-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.color-picker-input {
+    width: 50px;
+    height: 38px;
+    padding: 2px;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.color-text-input {
+    font-family: monospace;
+    width: 120px;
+}
+
+/* Dark mode adjustments for color picker */
+[data-bs-theme="dark"] .color-picker-input {
+    border-color: var(--border-color, #2a2a2a);
+}
+/* Ace editor styling */
+#ace_custom_css {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+}
+/* Dark mode adjustments for Ace editor border */
+[data-bs-theme="dark"] #ace_custom_css {
+    border-color: var(--border-color, #2a2a2a) !important;
+}
+</style>

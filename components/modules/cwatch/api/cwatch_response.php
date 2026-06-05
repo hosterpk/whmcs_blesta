@@ -15,8 +15,8 @@ class CwatchResponse
      */
     public function __construct(array $apiResponse)
     {
-        $this->raw = isset($apiResponse['content']) ? $apiResponse['content'] : '';
-        $this->headers = isset($apiResponse['headers']) ? $apiResponse['headers'] : '';
+        $this->raw = $apiResponse['content'] ?? '';
+        $this->headers = $apiResponse['headers'] ?? '';
         $response = json_decode($this->raw);
         if (!isset($response->error)) {
             if (empty($response->validationErrors)) {

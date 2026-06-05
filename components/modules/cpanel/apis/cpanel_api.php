@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 /**
@@ -138,32 +139,32 @@ class CpanelApi
     use Container;
 
     // should debugging statements be printed?
-    private $debug			= false;
+    private $debug          = false;
 
     // The host to connect to
-    private $host				=	'127.0.0.1';
+    private $host               =   '127.0.0.1';
 
     // the port to connect to
-    private $port				=	'2087';
+    private $port               =   '2087';
 
     // should be the literal strings http or https
-    private $protocol		=	'https';
+    private $protocol       =   'https';
 
     // output that should be given by the xml-api
-    private $output		=	'simplexml';
+    private $output     =   'simplexml';
 
     // literal strings hash, token, or password
-    private $auth_type 	= null;
+    private $auth_type  = null;
 
     //  the actual password, token, or hash
-    private $auth 			= null;
+    private $auth           = null;
 
     // username to authenticate as
-    private $user				= null;
+    private $user               = null;
 
     // The HTTP Client to use
 
-    private $http_client		= 'curl';
+    private $http_client        = 'curl';
 
     /**
     * Instantiate the XML-API Object
@@ -176,15 +177,15 @@ class CpanelApi
     * @param string $password The password to authenticate with
     * @return Xml_Api object
     */
-    public function __construct($host = null, $user = null, $password = null )
+    public function __construct($host = null, $user = null, $password = null)
     {
         // Check if debugging must be enabled
-        if ( (defined('XMLAPI_DEBUG')) && (XMLAPI_DEBUG == '1') ) {
+        if ((defined('XMLAPI_DEBUG')) && (XMLAPI_DEBUG == '1')) {
              $this->debug = true;
         }
 
         // Check if raw xml output must be enabled
-        if ( (defined('XMLAPI_RAW_XML')) && (XMLAPI_RAW_XML == '1') ) {
+        if ((defined('XMLAPI_RAW_XML')) && (XMLAPI_RAW_XML == '1')) {
              $this->raw_xml = true;
         }
 
@@ -193,42 +194,43 @@ class CpanelApi
         * This can either be passed at this point or by using the set_hash, set_token, or set_password functions
         **/
 
-        if ( ( defined('XMLAPI_USER') ) && ( strlen(XMLAPI_USER) > 0 ) ) {
+        if (( defined('XMLAPI_USER') ) && ( strlen(XMLAPI_USER) > 0 )) {
             $this->user = XMLAPI_USER;
 
             // set the authtype to pass and place the password in $this->pass
-            if ( ( defined('XMLAPI_PASS') ) && ( strlen(XMLAPI_PASS) > 0 ) ) {
+            if (( defined('XMLAPI_PASS') ) && ( strlen(XMLAPI_PASS) > 0 )) {
                 $this->auth_type = 'pass';
                 $this->auth = XMLAPI_PASS;
             }
 
             // set the authtype to hash and place the hash in $this->auth
-            if ( ( defined('XMLAPI_HASH') ) && ( strlen(XMLAPI_HASH) > 0 ) ) {
+            if (( defined('XMLAPI_HASH') ) && ( strlen(XMLAPI_HASH) > 0 )) {
                 $this->auth_type = 'hash';
                 $this->auth = preg_replace("/(\n|\r|\s)/", '', XMLAPI_HASH);
             }
 
             // set the authtype to token and place the token in $this->auth
-            if ( ( defined('XMLAPI_TOKEN') ) && ( strlen(XMLAPI_TOKEN) > 0 ) ) {
+            if (( defined('XMLAPI_TOKEN') ) && ( strlen(XMLAPI_TOKEN) > 0 )) {
                 $this->auth_type = 'token';
                 $this->auth = XMLAPI_TOKEN;
             }
 
             // Throw warning if XMLAPI_HASH and XMLAPI_PASS are defined
-            if ( ( ( defined('XMLAPI_HASH') ) && ( strlen(XMLAPI_HASH) > 0 ) )
-                && ( ( defined('XMLAPI_PASS') ) && ( strlen(XMLAPI_PASS) > 0 ) ) ) {
+            if (
+                ( ( defined('XMLAPI_HASH') ) && ( strlen(XMLAPI_HASH) > 0 ) )
+                && ( ( defined('XMLAPI_PASS') ) && ( strlen(XMLAPI_PASS) > 0 ) )
+            ) {
                 error_log('warning: both XMLAPI_HASH and XMLAPI_PASS are defined, defaulting to XMLAPI_HASH');
             }
 
 
             // Throw a warning if XMLAPI_HASH and XMLAPI_PASS are undefined and XMLAPI_USER is defined
-            if ( !(defined('XMLAPI_HASH') ) || !defined('XMLAPI_PASS') ) {
+            if (!(defined('XMLAPI_HASH') ) || !defined('XMLAPI_PASS')) {
                 error_log('warning: XMLAPI_USER set but neither XMLAPI_HASH or XMLAPI_PASS have not been defined');
             }
-
         }
 
-        if ( ( $user != null ) && ( strlen( $user ) < 9 ) ) {
+        if (( $user != null ) && ( strlen($user) < 9 )) {
             $this->user = $user;
         }
 
@@ -244,25 +246,25 @@ class CpanelApi
 
         // Set the host, error if not defined
         if ($host == null) {
-            if ( (defined('XMLAPI_HOST')) && (strlen(XMLAPI_HOST) > 0) ) {
+            if ((defined('XMLAPI_HOST')) && (strlen(XMLAPI_HOST) > 0)) {
                 $this->host = XMLAPI_HOST;
             } else {
-                throw new Exception("No host defined");
+                throw new Exception('No host defined');
             }
         } else {
             $this->host = $host;
         }
 
         // disabling SSL is probably a bad idea.. just saying.
-        if ( defined('XMLAPI_USE_SSL' ) && (XMLAPI_USE_SSL == '0' ) ) {
-            $this->protocol = "http";
+        if (defined('XMLAPI_USE_SSL') && (XMLAPI_USE_SSL == '0' )) {
+            $this->protocol = 'http';
         }
 
         // Detemine what the default http client should be.
-        if ( function_exists('curl_setopt') ) {
-            $this->http_client = "curl";
-        } elseif ( ini_get('allow_url_fopen') ) {
-            $this->http_client = "fopen";
+        if (function_exists('curl_setopt')) {
+            $this->http_client = 'curl';
+        } elseif (ini_get('allow_url_fopen')) {
+            $this->http_client = 'fopen';
         } else {
             throw new Exception('allow_url_fopen and curl are neither available in this PHP configuration');
         }
@@ -296,7 +298,7 @@ class CpanelApi
     * @param bool $debug turn on or off debug mode
     * @see get_debug()
     */
-    public function set_debug( $debug = 1 )
+    public function set_debug($debug = 1)
     {
         $this->debug = $debug;
     }
@@ -320,7 +322,7 @@ class CpanelApi
     * @param string $host The host to query
     * @see get_host()
     */
-    public function set_host( $host )
+    public function set_host($host)
     {
         $this->host = $host;
     }
@@ -351,9 +353,9 @@ class CpanelApi
     * @see set_protocol()
     * @see get_port()
     */
-    public function set_port( $port )
+    public function set_port($port)
     {
-        if ( !is_int( $port ) ) {
+        if (!is_int($port)) {
             $port = intval($port);
         }
 
@@ -390,7 +392,7 @@ class CpanelApi
     * @param string $proto the protocol to use to connect to cpsrvd
     * @see get_protocol()
     */
-    public function set_protocol( $proto )
+    public function set_protocol($proto)
     {
         if ($proto != 'https' && $proto != 'http') {
             throw new Exception('https and http are the only protocols that can be passed to set_protocol');
@@ -429,7 +431,7 @@ class CpanelApi
     * @param string $output the output type to be set
     * @see get_output()
     */
-    public function set_output( $output )
+    public function set_output($output)
     {
         if ($output != 'json' && $output != 'xml' && $output != 'array' && $output != 'simplexml') {
             throw new Exception('json, xml, array and simplexml are the only allowed values for set_output');
@@ -464,9 +466,9 @@ class CpanelApi
     * @see get_auth_type()
     * @param string auth_type the auth type to be set
     */
-    public function set_auth_type( $auth_type )
+    public function set_auth_type($auth_type)
     {
-        if (!in_array($auth_type, array('hash', 'token', 'pass'))) {
+        if (!in_array($auth_type, ['hash', 'token', 'pass'])) {
             throw new Exception('the only allowable auth types are hash, token, and pass');
         }
         $this->auth_type = $auth_type;
@@ -484,7 +486,7 @@ class CpanelApi
     * @see set_auth_type()
     * @see set_user()
     */
-    public function set_password( $pass )
+    public function set_password($pass)
     {
         $this->auth_type = 'pass';
         $this->auth = $pass;
@@ -501,7 +503,7 @@ class CpanelApi
     * @see set_auth_type()
     * @see set_user()
     */
-    public function set_hash( $hash )
+    public function set_hash($hash)
     {
         $this->auth_type = 'hash';
         $this->auth = preg_replace("/(\n|\r|\s)/", '', $hash);
@@ -519,7 +521,7 @@ class CpanelApi
     * @see set_auth_type()
     * @see set_user()
     */
-    public function set_token( $token )
+    public function set_token($token)
     {
         $this->auth_type = 'token';
         $this->auth = $token;
@@ -547,7 +549,7 @@ class CpanelApi
     * @see set_hash()
     * @see get_user()
     */
-    public function set_user( $user )
+    public function set_user($user)
     {
         $this->user = $user;
     }
@@ -562,10 +564,10 @@ class CpanelApi
     * @see set_hash()
     * @see set_user()
     */
-    public function hash_auth( $user, $hash )
+    public function hash_auth($user, $hash)
     {
-        $this->set_hash( $hash );
-        $this->set_user( $user );
+        $this->set_hash($hash);
+        $this->set_user($user);
     }
 
     /**
@@ -577,10 +579,10 @@ class CpanelApi
     * @see set_pass()
     * @see set_user()
     */
-    public function password_auth( $user, $pass )
+    public function password_auth($user, $pass)
     {
-        $this->set_password( $pass );
-        $this->set_user( $user );
+        $this->set_password($pass);
+        $this->set_user($user);
     }
 
     /**
@@ -625,9 +627,9 @@ class CpanelApi
     * @see get_http_client()
     */
 
-    public function set_http_client( $client )
+    public function set_http_client($client)
     {
-        if ( ( $client != 'curl' ) && ( $client != 'fopen' ) ) {
+        if (( $client != 'curl' ) && ( $client != 'fopen' )) {
             throw new Exception('only curl and fopen and allowed http clients');
         }
         $this->http_client = $client;
@@ -647,9 +649,9 @@ class CpanelApi
     }
 
      /*
-    *	Query Functions
-    *	--
-    *	This is where the actual calling of the XML-API, building API1 & API2 calls happens
+    *   Query Functions
+    *   --
+    *   This is where the actual calling of the XML-API, building API1 & API2 calls happens
     */
 
     /**
@@ -661,7 +663,7 @@ class CpanelApi
     * @param array $vars An associative array of the parameters to be passed to the XML-API Calls
     * @return mixed
     */
-    public function xmlapi_query( $function, $vars = array() )
+    public function xmlapi_query($function, $vars = [])
     {
         // Check to make sure all the data needed to perform the query is in place
         if (!$function) {
@@ -672,7 +674,7 @@ class CpanelApi
             throw new Exception('no user has been set');
         }
 
-        if ($this->auth ==null) {
+        if ($this->auth == null) {
             throw new Exception('no authentication information has been set');
         }
 
@@ -698,13 +700,13 @@ class CpanelApi
         if ($this->auth_type == 'hash' || $this->auth_type == 'token') {
             $authstr = 'Authorization: WHM ' . $this->user . ':' . $this->auth . "\r\n";
         } elseif ($this->auth_type == 'pass') {
-            $authstr = 'Authorization: Basic ' . base64_encode($this->user .':'. $this->auth) . "\r\n";
+            $authstr = 'Authorization: Basic ' . base64_encode($this->user . ':' . $this->auth) . "\r\n";
         } else {
             throw new Exception('invalid auth_type set');
         }
 
         if ($this->debug) {
-            error_log("Authentication Header: " . $authstr ."\n");
+            error_log('Authentication Header: ' . $authstr . "\n");
         }
 
         // Perform the query (or pass the info to the functions that actually do perform the query)
@@ -717,7 +719,7 @@ class CpanelApi
         }
 
         /*
-        *	Post-Query Block
+        *   Post-Query Block
         * Handle response, return proper data types, debug, etc
         */
 
@@ -731,12 +733,12 @@ class CpanelApi
 
         if (stristr($response, '<html>') == true) {
             if (stristr($response, 'Login Attempt Failed') == true) {
-                error_log("Login Attempt Failed");
+                error_log('Login Attempt Failed');
 
                 return;
             }
             if (stristr($response, 'action="/login/"') == true) {
-                error_log("Authentication Error");
+                error_log('Authentication Error');
 
                 return;
             }
@@ -746,10 +748,10 @@ class CpanelApi
 
 
         // perform simplexml transformation (array relies on this)
-        if ( ($this->output == 'simplexml') || $this->output == 'array') {
+        if (($this->output == 'simplexml') || $this->output == 'array') {
             $response = simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
             if (!$response) {
-                    error_log("Some error message here");
+                    error_log('Some error message here');
 
                     return;
             }
@@ -769,7 +771,7 @@ class CpanelApi
         return $response;
     }
 
-    private function curl_query( $url, $postdata, $authstr )
+    private function curl_query($url, $postdata, $authstr)
     {
         $curl = curl_init();
         // Return contents of transfer on curl_exec
@@ -804,7 +806,7 @@ class CpanelApi
         // Send request
         $result = curl_exec($curl);
         if ($result == false) {
-            $error = "curl_exec threw error \"" . curl_error($curl) . "\" for " . $url . "?" . $postdata;
+            $error = 'curl_exec threw error "' . curl_error($curl) . '" for ' . $url . '?' . $postdata;
             $this->logger->error($error);
             throw new Exception($error);
         }
@@ -814,22 +816,22 @@ class CpanelApi
         return $result;
     }
 
-    private function fopen_query( $url, $postdata, $authstr )
+    private function fopen_query($url, $postdata, $authstr)
     {
-        if ( !(ini_get('allow_url_fopen') ) ) {
+        if (!(ini_get('allow_url_fopen') )) {
             throw new Exception('fopen_query called on system without allow_url_fopen enabled in php.ini');
         }
 
-        $opts = array(
-            'http' => array(
+        $opts = [
+            'http' => [
                 'allow_self_signed' => true,
                 'method' => 'POST',
                 'header' => $authstr .
                     "Content-Type: application/x-www-form-urlencoded\r\n" .
-                    "Content-Length: " . strlen($postdata) . "\r\n" .
+                    'Content-Length: ' . strlen($postdata) . "\r\n" .
                     "\r\n" . $postdata
-            )
-        );
+            ]
+        ];
         $context = stream_context_create($opts);
 
         return file_get_contents($url, false, $context);
@@ -878,10 +880,10 @@ class CpanelApi
     * @link http://docs.cpanel.net/twiki/bin/view/DeveloperResources/ApiRef/WebHome API1 & API2 Call documentation
     * @link http://docs.cpanel.net/twiki/bin/view/DeveloperResources/ApiBasics/CallingApiOne API1 Documentation
     */
-    public function api1_query($user, $module, $function, $args = array() )
+    public function api1_query($user, $module, $function, $args = [])
     {
-        if ( !isset($module) || !isset($function) || !isset($user) ) {
-            error_log("api1_query requires that a module and function are passed to it");
+        if (!isset($module) || !isset($function) || !isset($user)) {
+            error_log('api1_query requires that a module and function are passed to it');
 
             return false;
         }
@@ -897,20 +899,20 @@ class CpanelApi
         $func_type = 'cpanel_xmlapi_func';
         $api_type = 'cpanel_xmlapi_apiversion';
 
-        if ( $this->get_output() == 'json' ) {
+        if ($this->get_output() == 'json') {
             $cpuser = 'cpanel_jsonapi_user';
             $module_type = 'cpanel_jsonapi_module';
             $func_type = 'cpanel_jsonapi_func';
             $api_type = 'cpanel_jsonapi_apiversion';
         }
 
-        $call = array(
+        $call = [
                 $cpuser => $user,
                 $module_type => $module,
                 $func_type => $function,
                 $api_type => '1'
-            );
-        for ($int = 0; $int < count($args);  $int++) {
+            ];
+        for ($int = 0; $int < count($args); $int++) {
             $call['arg-' . $int] = $args[$int];
         }
 
@@ -934,15 +936,15 @@ class CpanelApi
     * @link http://docs.cpanel.net/twiki/bin/view/DeveloperResources/ApiBasics/CallingApiTwo API2 Documentation
     */
 
-    public function api2_query($user, $module, $function, $args = array())
+    public function api2_query($user, $module, $function, $args = [])
     {
-        if (!isset($user) || !isset($module) || !isset($function) ) {
-            error_log("api2_query requires that a username, module and function are passed to it");
+        if (!isset($user) || !isset($module) || !isset($function)) {
+            error_log('api2_query requires that a username, module and function are passed to it');
 
             return false;
         }
         if (!is_array($args)) {
-            error_log("api2_query requires that an array is passed to it as the 4th parameter");
+            error_log('api2_query requires that an array is passed to it as the 4th parameter');
 
             return false;
         }
@@ -952,7 +954,7 @@ class CpanelApi
         $func_type = 'cpanel_xmlapi_func';
         $api_type = 'cpanel_xmlapi_apiversion';
 
-        if ( $this->get_output() == 'json' ) {
+        if ($this->get_output() == 'json') {
             $cpuser = 'cpanel_jsonapi_user';
             $module_type = 'cpanel_jsonapi_module';
             $func_type = 'cpanel_jsonapi_func';
@@ -993,9 +995,9 @@ class CpanelApi
     *
     * This function will allow one to create an account, the $acctconf parameter requires that the follow
     * three associations are defined:
-    *	- username
-    *	- password
-    *	- domain
+    *   - username
+    *   - password
+    *   - domain
     *
     * Failure to prive these will cause an error to be logged.  Any other key/value pairs as defined by the createaccount call
     * documentation are allowed parameters for this call.
@@ -1008,12 +1010,12 @@ class CpanelApi
     public function createacct($acctconf)
     {
         if (!is_array($acctconf)) {
-            error_log("createacct requires that first parameter passed to it is an array");
+            error_log('createacct requires that first parameter passed to it is an array');
 
             return false;
         }
         if (!isset($acctconf['username']) || !isset($acctconf['password']) || !isset($acctconf['domain'])) {
-            error_log("createacct requires that username, password & domain elements are in the array passed to it");
+            error_log('createacct requires that username, password & domain elements are in the array passed to it');
 
             return false;
         }
@@ -1034,12 +1036,12 @@ class CpanelApi
     public function passwd($username, $pass)
     {
         if (!isset($username) || !isset($pass)) {
-            error_log("passwd requires that an username and password are passed to it");
+            error_log('passwd requires that an username and password are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('passwd', array('user' => $username, 'pass' => $pass));
+        return $this->xmlapi_query('passwd', ['user' => $username, 'pass' => $pass]);
     }
 
     /**
@@ -1055,12 +1057,12 @@ class CpanelApi
     public function limitbw($username, $bwlimit)
     {
         if (!isset($username) || !isset($bwlimit)) {
-            error_log("limitbw requires that an username and bwlimit are passed to it");
+            error_log('limitbw requires that an username and bwlimit are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('limitbw', array('user' => $username, 'bwlimit' => $bwlimit));
+        return $this->xmlapi_query('limitbw', ['user' => $username, 'bwlimit' => $bwlimit]);
     }
 
     /**
@@ -1076,7 +1078,7 @@ class CpanelApi
     public function listaccts($searchtype = null, $search = null)
     {
         if ($search) {
-            return $this->xmlapi_query('listaccts', array('searchtype' => $searchtype, 'search' => $search ));
+            return $this->xmlapi_query('listaccts', ['searchtype' => $searchtype, 'search' => $search ]);
         }
 
         return $this->xmlapi_query('listaccts');
@@ -1093,16 +1095,16 @@ class CpanelApi
     * @return mixed
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/ModifyAccount XML API Call documentation
     */
-    public function modifyacct($username, $args = array())
+    public function modifyacct($username, $args = [])
     {
         if (!isset($username)) {
-            error_log("modifyacct requires that username is passed to it");
+            error_log('modifyacct requires that username is passed to it');
 
             return false;
         }
         $args['user'] = $username;
         if (sizeof($args) < 2) {
-            error_log("modifyacct requires that at least one attribute is passed to it");
+            error_log('modifyacct requires that at least one attribute is passed to it');
 
             return false;
         }
@@ -1123,24 +1125,24 @@ class CpanelApi
     public function editquota($username, $quota)
     {
         if (!isset($username) || !isset($quota)) {
-            error_log("editquota requires that an username and quota are passed to it");
+            error_log('editquota requires that an username and quota are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('editquota', array('user' => $username, 'quota' => $quota));
+        return $this->xmlapi_query('editquota', ['user' => $username, 'quota' => $quota]);
     }
 
     /**
     * Return a summary of the account's information
     *
     * This call will return a brief report of information about an account, such as:
-    *	- Disk Limit
-    *	- Disk Used
-    *	- Domain
-    *	- Account Email
-    *	- Theme
-    * 	- Start Data
+    *   - Disk Limit
+    *   - Disk Used
+    *   - Domain
+    *   - Account Email
+    *   - Theme
+    *   - Start Data
     *
     * Please see the XML API Call documentation for more information on what is returned by this call
     *
@@ -1151,12 +1153,12 @@ class CpanelApi
     public function accountsummary($username)
     {
         if (!isset($username)) {
-            error_log("accountsummary requires that an username is passed to it");
+            error_log('accountsummary requires that an username is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('accountsummary', array('user' => $username));
+        return $this->xmlapi_query('accountsummary', ['user' => $username]);
     }
 
     /**
@@ -1173,15 +1175,15 @@ class CpanelApi
     public function suspendacct($username, $reason = null)
     {
         if (!isset($username)) {
-            error_log("suspendacct requires that an username is passed to it");
+            error_log('suspendacct requires that an username is passed to it');
 
             return false;
         }
         if ($reason) {
-            return $this->xmlapi_query('suspendacct', array('user' => $username, 'reason' => $reason ));
+            return $this->xmlapi_query('suspendacct', ['user' => $username, 'reason' => $reason ]);
         }
 
-        return $this->xmlapi_query('suspendacct', array('user' => $username));
+        return $this->xmlapi_query('suspendacct', ['user' => $username]);
     }
 
     /**
@@ -1211,15 +1213,15 @@ class CpanelApi
     public function removeacct($username, $keepdns = false)
     {
         if (!isset($username)) {
-            error_log("removeacct requires that a username is passed to it");
+            error_log('removeacct requires that a username is passed to it');
 
             return false;
         }
         if ($keepdns) {
-            return $this->xmlapi_query('removeacct', array('user' => $username, 'keepdns' => '1'));
+            return $this->xmlapi_query('removeacct', ['user' => $username, 'keepdns' => '1']);
         }
 
-        return $this->xmlapi_query('removeacct', array('user' => $username));
+        return $this->xmlapi_query('removeacct', ['user' => $username]);
     }
 
     /**
@@ -1234,12 +1236,12 @@ class CpanelApi
     public function unsuspendacct($username)
     {
         if (!isset($username)) {
-            error_log("unsuspendacct requires that a username is passed to it");
+            error_log('unsuspendacct requires that a username is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('unsuspendacct', array('user' => $username));
+        return $this->xmlapi_query('unsuspendacct', ['user' => $username]);
     }
 
     /**
@@ -1255,12 +1257,12 @@ class CpanelApi
     public function changepackage($username, $pkg)
     {
         if (!isset($username) || !isset($pkg)) {
-            error_log("changepackage requires that username and pkg are passed to it");
+            error_log('changepackage requires that username and pkg are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('changepackage', array('user' => $username, 'pkg' => $pkg));
+        return $this->xmlapi_query('changepackage', ['user' => $username, 'pkg' => $pkg]);
     }
 
     /**
@@ -1287,15 +1289,15 @@ class CpanelApi
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/DomainUserData
     */
 
-    public function domainuserdata( $domain )
+    public function domainuserdata($domain)
     {
-        if (!isset( $domain ) ) {
-            error_log("domainuserdata requires that domain is passed to it");
+        if (!isset($domain)) {
+            error_log('domainuserdata requires that domain is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query("domainuserdata", array( 'domain' => $domain ) );
+        return $this->xmlapi_query('domainuserdata', [ 'domain' => $domain ]);
     }
 
     /**
@@ -1309,25 +1311,21 @@ class CpanelApi
     * @return mixed
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/SetSiteIp XML API Call documentation
     */
-    public function setsiteip ( $ip, $user = null, $domain = null )
+    public function setsiteip($ip, $user = null, $domain = null)
     {
-        if ( !isset($ip) ) {
-            error_log("setsiteip requires that ip is passed to it");
+        if (!isset($ip)) {
+            error_log('setsiteip requires that ip is passed to it');
 
             return false;
         }
 
         if ($user == null && $domain == null) {
-            error_log("setsiteip requires that either domain or user is passed to it");
+            error_log('setsiteip requires that either domain or user is passed to it');
 
             return false;
         }
 
-        if ($user == null) {
-            return $this->xmlapi_query( "setsiteip", array( "ip" => $ip, "domain" => $domain ) );
-        } else {
-            return $this->xmlapi_query( "setsiteip", array( "ip" => $ip, "user" => $user ) );
-        }
+        return $user == null ? $this->xmlapi_query('setsiteip', [ 'ip' => $ip, 'domain' => $domain ]) : $this->xmlapi_query('setsiteip', [ 'ip' => $ip, 'user' => $user ]);
     }
 
     ####
@@ -1349,12 +1347,12 @@ class CpanelApi
     public function adddns($domain, $ip)
     {
         if (!isset($domain) || !isset($ip)) {
-            error_log("adddns require that domain, ip are passed to it");
+            error_log('adddns require that domain, ip are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('adddns', array('domain' => $domain, 'ip' => $ip));
+        return $this->xmlapi_query('adddns', ['domain' => $domain, 'ip' => $ip]);
     }
 
     /**
@@ -1369,7 +1367,7 @@ class CpanelApi
     * @return mixed
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/AddZoneRecord XML API Call documentation
     */
-    public function addzonerecord( $zone, $args )
+    public function addzonerecord($zone, $args)
     {
         if (!is_array($args)) {
             error_log("addzonerecord requires that $args passed to it is an array");
@@ -1397,7 +1395,7 @@ class CpanelApi
     * @see dumpzone()
     */
 
-    public function editzonerecord( $zone, $line, $args )
+    public function editzonerecord($zone, $line, $args)
     {
         if (!is_array($args)) {
             error_log("editzone requires that $args passed to it is an array");
@@ -1421,9 +1419,9 @@ class CpanelApi
     * @return mixed
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/GetZoneRecord XML API Call documentation
     */
-    public function getzonerecord( $zone, $line )
+    public function getzonerecord($zone, $line)
     {
-        return $this->xmlapi_query('getzonerecord', array( 'domain' => $zone, 'Line' => $line ) );
+        return $this->xmlapi_query('getzonerecord', [ 'domain' => $zone, 'Line' => $line ]);
     }
 
     /**
@@ -1438,12 +1436,12 @@ class CpanelApi
     public function killdns($domain)
     {
         if (!isset($domain)) {
-            error_log("killdns requires that domain is passed to it");
+            error_log('killdns requires that domain is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('killdns', array('domain' => $domain));
+        return $this->xmlapi_query('killdns', ['domain' => $domain]);
     }
 
     /**
@@ -1472,12 +1470,12 @@ class CpanelApi
     public function dumpzone($domain)
     {
         if (!isset($domain)) {
-            error_log("dumpzone requires that a domain is passed to it");
+            error_log('dumpzone requires that a domain is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('dumpzone', array('domain' => $domain));
+        return $this->xmlapi_query('dumpzone', ['domain' => $domain]);
     }
 
     /**
@@ -1492,12 +1490,12 @@ class CpanelApi
     public function lookupnsip($nameserver)
     {
         if (!isset($nameserver)) {
-            error_log("lookupnsip requres that a nameserver is passed to it");
+            error_log('lookupnsip requres that a nameserver is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('lookupnsip', array('nameserver' => $nameserver));
+        return $this->xmlapi_query('lookupnsip', ['nameserver' => $nameserver]);
     }
 
     /**
@@ -1510,13 +1508,13 @@ class CpanelApi
     */
     public function removezonerecord($zone, $line)
     {
-        if ( !isset($zone) || !isset($line) ) {
-            error_log("removezone record requires that a zone and line number is passed to it");
+        if (!isset($zone) || !isset($line)) {
+            error_log('removezone record requires that a zone and line number is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('removezonerecord', array('zone' => $zone, 'Line' => $line) );
+        return $this->xmlapi_query('removezonerecord', ['zone' => $zone, 'Line' => $line]);
     }
 
     /**
@@ -1529,13 +1527,13 @@ class CpanelApi
     */
     public function resetzone($domain)
     {
-        if ( !isset($domain) ) {
-            error_log("resetzone requires that a domain name is passed to it");
+        if (!isset($domain)) {
+            error_log('resetzone requires that a domain name is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('resetzone', array('domain' => $domain));
+        return $this->xmlapi_query('resetzone', ['domain' => $domain]);
     }
 
     ####
@@ -1556,7 +1554,7 @@ class CpanelApi
     public function addpkg($pkg)
     {
         if (!isset($pkg['name'])) {
-            error_log("addpkg requires that name is defined in the array passed to it");
+            error_log('addpkg requires that name is defined in the array passed to it');
 
             return false;
         }
@@ -1575,12 +1573,12 @@ class CpanelApi
     public function killpkg($pkgname)
     {
         if (!isset($pkgname)) {
-            error_log("killpkg requires that the package name is passed to it");
+            error_log('killpkg requires that the package name is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('killpkg', array('pkg' => $pkgname));
+        return $this->xmlapi_query('killpkg', ['pkg' => $pkgname]);
     }
 
     /**
@@ -1596,7 +1594,7 @@ class CpanelApi
     public function editpkg($pkg)
     {
         if (!$isset($pkg['name'])) {
-            error_log("editpkg requires that name is defined in the array passed to it");
+            error_log('editpkg requires that name is defined in the array passed to it');
 
             return false;
         }
@@ -1634,15 +1632,15 @@ class CpanelApi
     public function setupreseller($username, $makeowner = true)
     {
         if (!isset($username)) {
-            error_log("setupreseller requires that username is passed to it");
+            error_log('setupreseller requires that username is passed to it');
 
             return false;
         }
         if ($makeowner) {
-            return $this->xmlapi_query('setupreseller', array('user' => $username, 'makeowner' => '1'));
+            return $this->xmlapi_query('setupreseller', ['user' => $username, 'makeowner' => '1']);
         }
 
-        return $this->xmlapi_query('setupreseller', array('user' => $username, 'makeowner' => '0'));
+        return $this->xmlapi_query('setupreseller', ['user' => $username, 'makeowner' => '0']);
     }
 
     /**
@@ -1658,7 +1656,7 @@ class CpanelApi
     public function saveacllist($acl)
     {
         if (!isset($acl['acllist'])) {
-            error_log("saveacllist requires that acllist is defined in the array passed to it");
+            error_log('saveacllist requires that acllist is defined in the array passed to it');
 
             return false;
         }
@@ -1703,12 +1701,12 @@ class CpanelApi
     public function resellerstats($username)
     {
         if (!isset($username)) {
-            error_log("resellerstats requires that a username is passed to it");
+            error_log('resellerstats requires that a username is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('resellerstats', array('reseller' => $username));
+        return $this->xmlapi_query('resellerstats', ['reseller' => $username]);
     }
 
     /**
@@ -1723,12 +1721,12 @@ class CpanelApi
     public function unsetupreseller($username)
     {
         if (!isset($username)) {
-            error_log("unsetupreseller requires that a username is passed to it");
+            error_log('unsetupreseller requires that a username is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('unsetupreseller', array('user' => $username));
+        return $this->xmlapi_query('unsetupreseller', ['user' => $username]);
     }
 
     /**
@@ -1744,7 +1742,7 @@ class CpanelApi
     public function setacls($acl)
     {
         if (!isset($acl['reseller'])) {
-            error_log("setacls requires that reseller is defined in the array passed to it");
+            error_log('setacls requires that reseller is defined in the array passed to it');
 
             return false;
         }
@@ -1766,16 +1764,16 @@ class CpanelApi
     public function terminatereseller($reseller, $terminatereseller = true)
     {
         if (!isset($reseller)) {
-            error_log("terminatereseller requires that username is passed to it");
+            error_log('terminatereseller requires that username is passed to it');
 
             return false;
         }
         $verify = 'I understand this will irrevocably remove all the accounts owned by the reseller ' . $reseller;
         if ($terminatereseller) {
-            return $this->xmlapi_query('terminatereseller', array('reseller' => $reseller, 'terminatereseller' => '1', 'verify' => $verify));
+            return $this->xmlapi_query('terminatereseller', ['reseller' => $reseller, 'terminatereseller' => '1', 'verify' => $verify]);
         }
 
-        return $this->xmlapi_query('terminatereseller', array('reseller' => $reseller, 'terminatereseller' => '0', 'verify' => $verify));
+        return $this->xmlapi_query('terminatereseller', ['reseller' => $reseller, 'terminatereseller' => '0', 'verify' => $verify]);
     }
 
     /**
@@ -1790,17 +1788,17 @@ class CpanelApi
     */
     public function setresellerips($user, $ip = null)
     {
-        if (!isset($user) ) {
-            error_log("setresellerips requires that a username is passed to it");
+        if (!isset($user)) {
+            error_log('setresellerips requires that a username is passed to it');
 
             return false;
         }
-        $params = array("user" => $user);
+        $params = ['user' => $user];
         if ($ip != null) {
             $params['ip'] = $ip;
         }
 
-        return $this->xmlapi_query('setresellerips',$params);
+        return $this->xmlapi_query('setresellerips', $params);
     }
 
     /**
@@ -1816,15 +1814,15 @@ class CpanelApi
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/SetResellerLimits XML API Call documentation
     *
     */
-    public function setresellerlimits( $reseller_cfg )
+    public function setresellerlimits($reseller_cfg)
     {
-        if ( !isset($reseller_cfg['user'] ) ) {
-            error_log("setresellerlimits requires that a user is defined in the array passed to it");
+        if (!isset($reseller_cfg['user'])) {
+            error_log('setresellerlimits requires that a user is defined in the array passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('setresellerlimits',$reseller_cfg);
+        return $this->xmlapi_query('setresellerlimits', $reseller_cfg);
     }
 
     /**
@@ -1839,13 +1837,13 @@ class CpanelApi
     */
     public function setresellermainip($reseller, $ip)
     {
-        if ( !isset($reseller) || !isset($ip) ) {
-            error_log("setresellermainip requires that an reseller and ip are passed to it");
+        if (!isset($reseller) || !isset($ip)) {
+            error_log('setresellermainip requires that an reseller and ip are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query("setresellermainip", array('user' => $reseller, 'ip' => $ip));
+        return $this->xmlapi_query('setresellermainip', ['user' => $reseller, 'ip' => $ip]);
     }
 
     /**
@@ -1862,30 +1860,26 @@ class CpanelApi
     */
     public function setresellerpackagelimits($user, $no_limit, $package = null, $allowed = null, $number = null)
     {
-        if (!isset($user) || !isset($no_limit) ) {
-            error_log("setresellerpackagelimits requires that a username and no_limit are passed to it by default");
+        if (!isset($user) || !isset($no_limit)) {
+            error_log('setresellerpackagelimits requires that a username and no_limit are passed to it by default');
 
             return false;
         }
         if ($no_limit) {
-            return $this->xmlapi_query("setresellerpackagelimits", array( 'user' => $user, "no_limit" => '1') );
+            return $this->xmlapi_query('setresellerpackagelimits', [ 'user' => $user, 'no_limit' => '1']);
         } else {
-            if ( is_null($package) || is_null($allowed) ) {
+            if (is_null($package) || is_null($allowed)) {
                 error_log('setresellerpackagelimits requires that package and allowed are passed to it if no_limit eq 0');
 
                 return false;
             }
-            $params = array(
+            $params = [
                 'user' => $user,
                 'no_limit' => '0',
                 'package' => $package,
-            );
-            if ($allowed) {
-                $params['allowed'] = 1;
-            } else {
-                $params['allowed'] = 0;
-            }
-            if ( !is_null($number) ) {
+            ];
+            $params['allowed'] = $allowed ? 1 : 0;
+            if (!is_null($number)) {
                 $params['number'] = $number;
             }
 
@@ -1904,12 +1898,12 @@ class CpanelApi
     */
     public function suspendreseller($reseller, $reason = null)
     {
-        if (!isset($reseller) ) {
+        if (!isset($reseller)) {
             error_log("suspendreseller requires that the reseller's username is passed to it");
 
             return false;
         }
-        $params = array("user" => $reseller);
+        $params = ['user' => $reseller];
         if ($reason) {
             $params['reason'] = $reason;
         }
@@ -1928,13 +1922,13 @@ class CpanelApi
     */
     public function unsuspendreseller($user)
     {
-        if (!isset($user) ) {
-            error_log("unsuspendreseller requires that a username is passed to it");
+        if (!isset($user)) {
+            error_log('unsuspendreseller requires that a username is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('unsuspendreseller', array('user' => $user));
+        return $this->xmlapi_query('unsuspendreseller', ['user' => $user]);
     }
 
     /**
@@ -1953,7 +1947,7 @@ class CpanelApi
             return false;
         }
 
-        return $this->xmlapi_query('acctcounts', array('user' => $user) );
+        return $this->xmlapi_query('acctcounts', ['user' => $user]);
     }
 
     /**
@@ -1969,11 +1963,11 @@ class CpanelApi
     public function setresellernameservers($user, $nameservers = null)
     {
         if (!isset($user)) {
-            error_log("setresellernameservers requires that a username is passed to it");
+            error_log('setresellernameservers requires that a username is passed to it');
 
             return false;
         }
-        $params = array('user' => $user);
+        $params = ['user' => $user];
         if ($nameservers) {
             $params['nameservers'] = $nameservers;
         }
@@ -2051,7 +2045,7 @@ class CpanelApi
     public function reboot($force = false)
     {
         if ($force) {
-            return $this->xmlapi_query('reboot', array('force' => '1'));
+            return $this->xmlapi_query('reboot', ['force' => '1']);
         }
 
         return $this->xmlapi_query('reboot');
@@ -2069,12 +2063,12 @@ class CpanelApi
     public function addip($ip, $netmask)
     {
         if (!isset($ip) || !isset($netmask)) {
-            error_log("addip requires that an IP address and Netmask are passed to it");
+            error_log('addip requires that an IP address and Netmask are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('addip', array('ip' => $ip, 'netmask' => $netmask));
+        return $this->xmlapi_query('addip', ['ip' => $ip, 'netmask' => $netmask]);
     }
 
     // This function allows you to delete an IP address from your server.
@@ -2090,9 +2084,9 @@ class CpanelApi
     */
     public function delip($ip, $ethernetdev = null, $skipifshutdown = false)
     {
-        $args = array();
+        $args = [];
         if (!isset($ip)) {
-            error_log("delip requires that an IP is defined in the array passed to it");
+            error_log('delip requires that an IP is defined in the array passed to it');
 
             return false;
         }
@@ -2128,12 +2122,12 @@ class CpanelApi
     public function sethostname($hostname)
     {
         if (!isset($hostname)) {
-            error_log("sethostname requires that hostname is passed to it");
+            error_log('sethostname requires that hostname is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('sethostname', array('hostname' => $hostname));
+        return $this->xmlapi_query('sethostname', ['hostname' => $hostname]);
     }
 
     /**
@@ -2149,9 +2143,9 @@ class CpanelApi
     */
     public function setresolvers($nameserver1, $nameserver2 = null, $nameserver3 = null)
     {
-        $args = array();
+        $args = [];
         if (!isset($nameserver1)) {
-            error_log("setresolvers requires that nameserver1 is defined in the array passed to it");
+            error_log('setresolvers requires that nameserver1 is defined in the array passed to it');
 
             return false;
         }
@@ -2188,24 +2182,24 @@ class CpanelApi
     public function nvset($key, $value)
     {
         if (!isset($key) || !isset($value)) {
-            error_log("nvset requires that key and value are passed to it");
+            error_log('nvset requires that key and value are passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('nvset', array('key' => $key, 'value' => $value));
+        return $this->xmlapi_query('nvset', ['key' => $key, 'value' => $value]);
     }
 
     // This function allows you to retrieve and view a non-volatile variable's value.
     public function nvget($key)
     {
         if (!isset($key)) {
-            error_log("nvget requires that key is passed to it");
+            error_log('nvget requires that key is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('nvget', array('key' => $key));
+        return $this->xmlapi_query('nvget', ['key' => $key]);
     }
 
     ####
@@ -2223,12 +2217,12 @@ class CpanelApi
     public function restartsrv($service)
     {
         if (!isset($service)) {
-            error_log("restartsrv requires that service is passed to it");
+            error_log('restartsrv requires that service is passed to it');
 
             return false;
         }
 
-        return $this->xmlapi_query('restartservice', array('service' => $service));
+        return $this->xmlapi_query('restartservice', ['service' => $service]);
     }
 
     /**
@@ -2239,16 +2233,16 @@ class CpanelApi
     * @return mixed
     * @link http://docs.cpanel.net/twiki/bin/view/AllDocumentation/AutomationIntegration/ServiceStatus XML API Call documentation
     */
-    public function servicestatus($args=array())
-     {
+    public function servicestatus($args = [])
+    {
         if (!empty($args) && !is_array($args)) {
-            $args = array('service'=>$args);
+            $args = ['service' => $args];
         } elseif (!is_array($args)) {
-            $args = array();
+            $args = [];
         }
 
         return $this->xmlapi_query('servicestatus', $args);
-     }
+    }
 
     /**
     * Configure A Service
@@ -2263,26 +2257,17 @@ class CpanelApi
     public function configureservice($service, $enabled = true, $monitored = true)
     {
         if (!isset($service)) {
-            error_log("configure service requires that a service is passed to it");
+            error_log('configure service requires that a service is passed to it');
 
             return false;
         }
-        $params = array('service' => $service);
+        $params = ['service' => $service];
 
-        if ($enabled) {
-            $params['enabled'] = 1;
-        } else {
-            $params['enabled'] = 0;
-        }
+        $params['enabled'] = $enabled ? 1 : 0;
 
-        if ($monitored) {
-            $params['monitored'] = 1;
-        } else {
-            $params['monitored'] = 0;
-        }
+        $params['monitored'] = $monitored ? 1 : 0;
 
         return $this->xmlapi_query('configureservice', $params);
-
     }
 
     ####
@@ -2299,8 +2284,8 @@ class CpanelApi
     */
     public function fetchsslinfo($args)
     {
-        if ( (isset($args['domain']) && isset($args['crtdata'])) || (!isset($args['domain']) && !isset($args['crtdata'])) ) {
-            error_log("fetchsslinfo requires domain OR crtdata is passed to it");
+        if ((isset($args['domain']) && isset($args['crtdata'])) || (!isset($args['domain']) && !isset($args['crtdata']))) {
+            error_log('fetchsslinfo requires domain OR crtdata is passed to it');
         }
         if (isset($args['crtdata'])) {
             // crtdata must be URL-encoded!
@@ -2321,7 +2306,7 @@ class CpanelApi
     public function generatessl($args)
     {
         if (!isset($args['xemail']) || !isset($args['host']) || !isset($args['country']) || !isset($args['state']) || !isset($args['city']) || !isset($args['co']) || !isset($args['cod']) || !isset($args['email']) || !isset($args['pass'])) {
-            error_log("generatessl requires that xemail, host, country, state, city, co, cod, email and pass are defined in the array passed to it");
+            error_log('generatessl requires that xemail, host, country, state, city, co, cod, email and pass are defined in the array passed to it');
 
             return false;
         }
@@ -2341,7 +2326,7 @@ class CpanelApi
     public function installssl($args)
     {
         if (!isset($args['user']) || !isset($args['domain']) || !isset($args['cert']) || !isset($args['key']) || !isset($args['cab']) || !isset($args['ip'])) {
-            error_log("installssl requires that user, domain, cert, key, cab and ip are defined in the array passed to it");
+            error_log('installssl requires that user, domain, cert, key, cab and ip are defined in the array passed to it');
 
             return false;
         }
@@ -2371,12 +2356,12 @@ class CpanelApi
     public function addpop($username, $args)
     {
         if (!isset($username) || !isset($args)) {
-            error_log("addpop requires that a user and args are passed to it");
+            error_log('addpop requires that a user and args are passed to it');
 
             return false;
         }
         if (is_array($args) && (sizeof($args) < 3)) {
-            error_log("addpop requires that args at least contains an email_username, email_password and email_domain");
+            error_log('addpop requires that args at least contains an email_username, email_password and email_domain');
 
             return false;
         }
@@ -2387,9 +2372,9 @@ class CpanelApi
     // This API function displays a list of all parked domains for a specific user.
     public function park($username, $newdomain, $topdomain)
     {
-        $args = array();
-        if ( (!isset($username)) && (!isset($newdomain)) ) {
-            error_log("park requires that a username and new domain are passed to it");
+        $args = [];
+        if ((!isset($username)) && (!isset($newdomain))) {
+            error_log('park requires that a username and new domain are passed to it');
 
             return false;
         }
@@ -2404,9 +2389,9 @@ class CpanelApi
     // This API function displays a list of all parked domains for a specific user.
     public function unpark($username, $domain)
     {
-        $args = array();
-        if ( (!isset($username)) && (!isset($domain)) ) {
-            error_log("unpark requires that a username and domain are passed to it");
+        $args = [];
+        if ((!isset($username)) && (!isset($domain))) {
+            error_log('unpark requires that a username and domain are passed to it');
 
             return false;
         }
@@ -2425,12 +2410,12 @@ class CpanelApi
     public function getdiskusage($username, $args)
     {
         if (!isset($username) || !isset($args)) {
-            error_log("getdiskusage requires that a username and args are passed to it");
+            error_log('getdiskusage requires that a username and args are passed to it');
 
             return false;
         }
         if (is_array($args) && (!isset($args['domain']) || !isset($args['login']))) {
-            error_log("getdiskusage requires that args at least contains an email_domain and email_username");
+            error_log('getdiskusage requires that args at least contains an email_domain and email_username');
 
             return false;
         }
@@ -2442,7 +2427,7 @@ class CpanelApi
     public function listftpwithdisk($username)
     {
         if (!isset($username)) {
-            error_log("listftpwithdisk requires that user is passed to it");
+            error_log('listftpwithdisk requires that user is passed to it');
 
             return false;
         }
@@ -2454,7 +2439,7 @@ class CpanelApi
     public function listftp($username)
     {
         if (!isset($username)) {
-            error_log("listftp requires that user is passed to it");
+            error_log('listftp requires that user is passed to it');
 
             return false;
         }
@@ -2465,9 +2450,9 @@ class CpanelApi
     // This API function displays a list of all parked domains for a specific user.
     public function listparkeddomains($username, $domain = null)
     {
-        $args = array();
+        $args = [];
         if (!isset($username)) {
-            error_log("listparkeddomains requires that a user is passed to it");
+            error_log('listparkeddomains requires that a user is passed to it');
 
             return false;
         }
@@ -2483,9 +2468,9 @@ class CpanelApi
     // This API function displays a list of all addon domains for a specific user.
     public function listaddondomains($username, $domain = null)
     {
-        $args = array();
+        $args = [];
         if (!isset($username)) {
-            error_log("listaddondomains requires that a user is passed to it");
+            error_log('listaddondomains requires that a user is passed to it');
 
             return false;
         }
@@ -2501,13 +2486,13 @@ class CpanelApi
     // This API function displays a list of all selected stats for a specific user.
     public function stat($username, $args = null)
     {
-        if ( (!isset($username)) || (!isset($args)) ) {
-            error_log("stat requires that a username and options are passed to it");
+        if ((!isset($username)) || (!isset($args))) {
+            error_log('stat requires that a username and options are passed to it');
 
             return false;
         }
         if (is_array($args)) {
-        $display = '';
+            $display = '';
             foreach ($args as $key => $value) {
                 $display .= $value . '|';
             }
@@ -2518,5 +2503,4 @@ class CpanelApi
 
         return $this->api2_query($username, 'StatsBar', 'stat', $values);
     }
-
 }

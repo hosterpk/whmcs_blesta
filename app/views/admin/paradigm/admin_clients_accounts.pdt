@@ -1,0 +1,64 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$link_buttons = [
+    ['icon' => 'bi bi-plus-lg me-1', 'name' => $this->_('AdminClients.accounts.categorylink_cc', true), 'attributes' => ['href' => $this->base_uri . 'clients/addccaccount/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/']],
+    ['icon' => 'bi bi-plus-lg me-1', 'name' => $this->_('AdminClients.accounts.categorylink_ach', true), 'attributes' => ['href' => $this->base_uri . 'clients/addachaccount/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/']]
+];
+
+$this->Widget->clear();
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setWidgetButton(['href' => $this->base_uri . 'clients/accounttypes/' . (isset($client->id) ? $client->id : null), 'class' => 'ajax setting']);
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminClients.accounts.boxtitle_accounts', true), ['id' => 'clients_accounts'], (isset($render_section) ? $render_section : null));
+echo (isset($content) ? $content : null);
+
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var accountsContainer = document.getElementById('accounts');
+
+    if (accountsContainer) {
+        // Update selected card styling and hidden account_type field on radio change
+        accountsContainer.addEventListener('change', function(e) {
+            if (e.target.name !== 'account_id') return;
+
+            // Remove selected class from all cards
+            accountsContainer.querySelectorAll('.payment-method-card').forEach(function(card) {
+                card.classList.remove('selected');
+            });
+
+            // Add selected class to the parent card
+            var card = e.target.closest('.payment-method-card');
+            if (card) {
+                card.classList.add('selected');
+            }
+
+            // Update hidden account_type field
+            var accountTypeField = document.getElementById('account_type');
+            if (accountTypeField) {
+                accountTypeField.value = e.target.getAttribute('data-account-type') || '';
+            }
+        });
+
+        // Prevent action button clicks from selecting the card
+        accountsContainer.querySelectorAll('.payment-method-actions a').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+
+        // Bind delete confirmation modals (submit: false navigates to href on confirm)
+        if (typeof blestaModalConfirm === 'function') {
+            blestaModalConfirm('.modal-confirm-delete-account', {
+                title: 'Confirm Delete',
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
+                submit: false
+            });
+        }
+    }
+});
+</script>

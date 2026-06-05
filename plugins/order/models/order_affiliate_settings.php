@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Affiliate Setting Management
  *
@@ -84,9 +85,9 @@ class OrderAffiliateSettings extends OrderModel
             $total_available = $this->getSetting($affiliate_id, 'total_available');
             $total_withdrawn = $this->getSetting($affiliate_id, 'total_withdrawn');
 
-            $old_currency = isset($old_currency->value) ? $old_currency->value : 'USD';
-            $total_available = isset($total_available->value) ? $total_available->value : 0;
-            $total_withdrawn = isset($total_withdrawn->value) ? $total_withdrawn->value : 0;
+            $old_currency = $old_currency->value ?? 'USD';
+            $total_available = $total_available->value ?? 0;
+            $total_withdrawn = $total_withdrawn->value ?? 0;
 
             $params = [
                 'total_available' => $this->Currencies->convert(

@@ -240,7 +240,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'more';
-                    $icon = 'fa-chart-line';
+                    $icon = 'bi-graph-up';
                     break;
                 case 'revenue_month':
                     // Get this month's revenue
@@ -254,7 +254,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'more';
-                    $icon = 'fa-chart-area';
+                    $icon = 'bi-graph-up-arrow';
                     break;
                 case 'revenue_year':
                     // Get this year's revenue
@@ -268,7 +268,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'more';
-                    $icon = 'fa-chart-bar';
+                    $icon = 'bi-bar-chart';
                     break;
                 case 'credits_today':
                     // Get today's credits
@@ -282,7 +282,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-chart-line';
+                    $icon = 'bi-graph-up';
                     break;
                 case 'credits_month':
                     // Get this month's credits
@@ -296,7 +296,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-chart-area';
+                    $icon = 'bi-graph-up-arrow';
                     break;
                 case 'credits_year':
                     // Get this year's credits
@@ -310,7 +310,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-chart-bar';
+                    $icon = 'bi-bar-chart';
                     break;
                 case 'invoiced_today':
                     // Get today's invoice total
@@ -325,7 +325,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-file-invoice-dollar';
+                    $icon = 'bi-file-earmark-text';
                     break;
                 case 'invoiced_month':
                     // Get this month's invoice total
@@ -340,7 +340,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-file-invoice-dollar';
+                    $icon = 'bi-file-earmark-text';
                     break;
                 case 'invoiced_today_proforma':
                     // Get today's invoice total
@@ -355,7 +355,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-file-invoice-dollar';
+                    $icon = 'bi-file-earmark-text';
                     break;
                 case 'invoiced_month_proforma':
                     // Get this month's invoice total
@@ -370,7 +370,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-file-invoice-dollar';
+                    $icon = 'bi-file-earmark-text';
                     break;
                 case 'balance_outstanding':
                     // Get the total amount to be paid
@@ -379,7 +379,7 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-balance-scale';
+                    $icon = 'bi-hourglass-split';
                     break;
                 case 'balance_overdue':
                     // Get the total amount past due
@@ -388,19 +388,19 @@ class AdminMain extends BillingOverviewController
                         $currency
                     );
                     $value_class = 'less';
-                    $icon = 'fa-balance-scale';
+                    $icon = 'bi-exclamation-circle';
                     break;
                 case 'scheduled_cancelation':
                     // Get the number of service cancelations
                     $value = $this->BillingOverviewStatistics->getScheduledCancelationsCount($this->company_id);
                     $value_class = 'neutral';
-                    $icon = 'fa-clock';
+                    $icon = 'bi-clock';
                     break;
                 case 'services_active':
                     // Get the number of active services
                     $value = $this->BillingOverviewStatistics->getActiveServicesCount($this->company_id);
                     $value_class = 'neutral';
-                    $icon = 'fa-cogs';
+                    $icon = 'bi-gear';
                     break;
                 case 'services_added_today':
                     // Get the number of services added today
@@ -410,7 +410,7 @@ class AdminMain extends BillingOverviewController
                         $dates['today_end']
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-plus';
+                    $icon = 'bi-plus';
                     break;
                 case 'services_canceled_today':
                     // Get the number of services canceled today
@@ -420,7 +420,7 @@ class AdminMain extends BillingOverviewController
                         $dates['today_end']
                     );
                     $value_class = 'neutral';
-                    $icon = 'fa-minus';
+                    $icon = 'bi-dash';
                     break;
                 default:
                     // Move on, this is not a statistic setting
@@ -432,7 +432,7 @@ class AdminMain extends BillingOverviewController
                 'name' => Language::_('AdminMain.index.statistic.' . $statistic, true),
                 'value' => $value,
                 'value_class' => $value_class,
-                'icon' => 'fas fa-fw ' . $icon
+                'icon' => $icon
             ];
         }
 

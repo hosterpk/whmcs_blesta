@@ -1,0 +1,438 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo ($message ?? null);
+
+$tabs = [];
+foreach ($quotation_statuses ?? [] as $status_id => $category_name) {
+    $tabs[] = [
+        'name' => $category_name . '<span class="badge bg-secondary ms-2">' . ($status_count[$status_id] ?? 0) . '</span>',
+        'current' => ($status ?? null) == $status_id,
+        'attributes' => ['href' => $this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . $status_id . '/', 'class' => 'ajax']
+    ];
+}
+
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminClients.quotations.categorylink_createquotation', true),
+            'href' => $this->base_uri . 'clients/createquotation/' . ($client->id ?? null) . '/'
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setBadgeUri($this->base_uri . 'clients/quotationcount/' . ($client->id ?? null) . '/' . ($status ?? null));
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null)), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setWidgetButton('arrow');
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.quotations.boxtitle_quotations', true), ['id' => 'admin_clients_quotations'], ($render_section ?? null));
+
+$this->Form->create(null, ['id' => 'quotations_form', 'class' => 'disable-on-submit']);
+
+if (($quotations ?? false) && ($num_quotations = count($quotations)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="quotations">
+        <thead>
+            <tr>
+                <th style="width: 40px;" class="text-center">
+                    <?php $this->Form->fieldCheckbox('quotation_id[]', 'all', (($vars->quotation_id[0] ?? null) == 'all'), ['class' => 'form-check-input']);?>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=id_code&order=' . ($sort == 'id_code' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_quotation');?>
+                        <?php if ($sort == 'id_code') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=title&order=' . ($sort == 'title' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_title');?>
+                        <?php if ($sort == 'title') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=staff_first_name&order=' . ($sort == 'staff_first_name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_staff');?>
+                        <?php if ($sort == 'staff_first_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=subtotal&order=' . ($sort == 'subtotal' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_subtotal');?>
+                        <?php if ($sort == 'subtotal') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=total&order=' . ($sort == 'total' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_total');?>
+                        <?php if ($sort == 'total') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_created&order=' . ($sort == 'date_created' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_date_created');?>
+                        <?php if ($sort == 'date_created') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <?php if (($status ?? null) !== 'approved') { ?>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/quotations/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_expires&order=' . ($sort == 'date_expires' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.quotations.heading_date_expires');?>
+                        <?php if ($sort == 'date_expires') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <?php } ?>
+                <th style="width: 140px;"><?php $this->_('AdminClients.quotations.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            for ($i = 0; $i < $num_quotations; $i++) {
+                $expired = (($status ?? null) == 'expired' && $this->Date->toTime($this->Date->cast($quotations[$i]->date_expires)) < $this->Date->toTime(date('c')));
+            ?>
+            <tr class="quotation_applied"<?php echo ($status ?? null) != 'draft' ? ' style="cursor: pointer;" data-collapse-row aria-expanded="false"' : '';?>>
+                <td class="text-center">
+                    <?php $this->Form->fieldCheckbox('quotation_id[]', ($quotations[$i]->id ?? null), false, ['class' => 'form-check-input']);?>
+                </td>
+                <td><?php echo $this->Html->safe($quotations[$i]->id_code ?? null);?></td>
+                <td><?php echo $this->Html->safe($quotations[$i]->title ?? null);?></td>
+                <td><?php echo ($quotations[$i]->staff_first_name ?? null) . ' ' . ($quotations[$i]->staff_last_name ?? null);?></td>
+                <td><?php echo $this->CurrencyFormat->format($quotations[$i]->subtotal, $quotations[$i]->currency, ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format($quotations[$i]->total, $quotations[$i]->currency, ['html_code' => true]);?></td>
+                <td><?php echo $this->Date->cast($quotations[$i]->date_created);?></td>
+                <?php if (($status ?? null) !== 'approved') { ?>
+                <td<?php echo $expired ? ' class="text-danger"' : '';?>><?php echo $this->Date->cast($quotations[$i]->date_expires);?></td>
+                <?php } ?>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="<?php echo $this->base_uri . 'clients/viewquotation/' . ($quotations[$i]->client_id ?? null) . '/' . ($quotations[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.quotations.option_view');?>">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="<?php echo $this->base_uri . 'clients/editquotation/' . ($quotations[$i]->client_id ?? null) . '/' . ($quotations[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.quotations.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <?php if ($status == 'approved') { ?>
+                        <a href="<?php echo $this->base_uri . 'clients/invoicequotation/' . ($quotations[$i]->client_id ?? null) . '/' . ($quotations[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-primary invoice_quotation" title="<?php $this->_('AdminClients.quotations.option_invoice');?>">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </a>
+                        <?php } ?>
+                        <?php if ($status == 'pending') { ?>
+                        <a href="<?php echo $this->base_uri . 'clients/approvequotation/' . ($quotations[$i]->client_id ?? null) . '/' . ($quotations[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-success approve-quotation" data-confirm-message="<?php echo $this->Html->safe($this->_('AdminClients.quotations.confirm_approve', true));?>" title="<?php $this->_('AdminClients.quotations.option_approve');?>">
+                            <i class="bi bi-check-lg"></i>
+                        </a>
+                        <?php } ?>
+                    </div>
+                </td>
+            </tr>
+            <?php if (($status ?? null) != 'draft') { ?>
+            <tr class="collapse">
+                <td colspan="<?php echo ($status ?? null) !== 'approved' ? '10' : '9';?>" style="padding: 0; background-color: var(--bg-secondary);">
+                    <div class="quotation-invoices-container" data-quotation-id="<?php echo $this->Html->safe($quotations[$i]->id ?? null);?>">
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php
+                }
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+<?php
+    if (!empty($quotation_actions)) {
+    ?>
+    <div id="quotation_action" class="bulk-actions-bar d-none">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <span class="selected-count" id="quotationsSelectedCount">0 <?php $this->_('AdminClients.quotations.text_items_selected');?></span>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <?php
+                $this->Form->fieldSelect('action', ($quotation_actions ?? null), ($vars->action ?? null), ['class' => 'form-select form-select-sm', 'style' => 'width: 180px;']);
+                $this->Form->fieldText('email', ($client->email ?? null), ['class' => 'action d-none form-control form-control-sm', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('interfax', ($contact_fax[0]->number ?? null), ['class' => 'action d-none form-control form-control-sm', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('postalmethods', ($this->Html->concat(' ', ($client->address1 ?? null), ($client->address2 ?? null), ($client->city ?? null), ($client->state ?? null), ($client->zip ?? null))), ['class' => 'action d-none form-control form-control-sm', 'disabled' => 'disabled', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('sms', ($contact_mobile[0]->number ?? null), ['class' => 'action d-none form-control form-control-sm', 'disabled' => 'disabled', 'style' => 'width: 200px;']);
+                $this->Form->fieldSelect('status', ($quotation_statuses ?? null), ($vars->status ?? null), ['class' => 'action d-none form-select form-select-sm', 'style' => 'width: 150px;']);
+                $this->Form->fieldSubmit('save', $this->_('AdminClients.quotations.field_quotationsubmit', true), ['class' => 'btn btn-primary btn-sm']);
+                ?>
+            </div>
+        </div>
+    </div>
+    <?php
+    }
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-file-earmark-text" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.quotations.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Form->end();
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var clientId = <?php echo json_encode($client->id ?? null);?>;
+    var widgetId = 'admin_clients_quotations';
+    var textItemSelected = <?php echo json_encode($this->_('AdminClients.quotations.text_item_selected', true));?>;
+    var textItemsSelected = <?php echo json_encode($this->_('AdminClients.quotations.text_items_selected', true));?>;
+
+    // Handle action input visibility
+    function updateActionFields() {
+        var actionInputs = document.querySelectorAll('#quotation_action .action');
+        var actionSelect = document.querySelector("#quotation_action select[name='action']");
+
+        if (!actionSelect) return;
+
+        actionInputs.forEach(function(input) {
+            input.classList.add('d-none');
+        });
+
+        var currentValue = actionSelect.value;
+        if (currentValue) {
+            var targetInput = document.querySelector("#quotation_action input[name='" + currentValue + "']");
+            if (targetInput) {
+                targetInput.classList.remove('d-none');
+            }
+
+            var targetSelect = document.querySelector("#quotation_action select[name='" + currentValue + "']");
+            if (targetSelect) {
+                targetSelect.classList.remove('d-none');
+            }
+        }
+    }
+
+    // Update bulk actions bar visibility and count - looks up elements fresh each time
+    function updateBulkActions() {
+        var widgetContainer = document.getElementById(widgetId);
+        var quotationAction = document.getElementById('quotation_action');
+        var selectedCount = document.getElementById('quotationsSelectedCount');
+
+        if (!widgetContainer || !quotationAction) return;
+
+        var checkedCount = widgetContainer.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])').length;
+        if (checkedCount > 0) {
+            quotationAction.classList.remove('d-none');
+            if (selectedCount) {
+                var text = checkedCount === 1 ? textItemSelected : textItemsSelected;
+                selectedCount.textContent = checkedCount + ' ' + text;
+            }
+            updateActionFields();
+        } else {
+            quotationAction.classList.add('d-none');
+        }
+    }
+
+    // Initialize on page load
+    updateActionFields();
+
+    // Register persistent event handlers only once (survives AJAX content replacement)
+    var widget = document.getElementById(widgetId);
+    if (widget && !widget.hasAttribute('data-handlers-init')) {
+        widget.setAttribute('data-handlers-init', 'true');
+
+        // Checkbox change handler for bulk actions
+        document.addEventListener('change', function(e) {
+            var target = e.target;
+            if (target.type !== 'checkbox' && !target.matches("#quotation_action select[name='action']")) return;
+
+            var w = document.getElementById(widgetId);
+
+            // Handle action select change
+            if (target.matches("#quotation_action select[name='action']")) {
+                updateActionFields();
+                return;
+            }
+
+            // Handle checkbox changes
+            if (!w || !w.contains(target)) return;
+
+            if (target.value === 'all') {
+                var allCheckboxes = w.querySelectorAll('input[type="checkbox"]');
+                allCheckboxes.forEach(function(cb) {
+                    if (cb !== target) {
+                        cb.checked = target.checked;
+                    }
+                });
+            } else if (!target.checked) {
+                var allCheckbox = w.querySelector('input[value="all"]');
+                if (allCheckbox) {
+                    allCheckbox.checked = false;
+                }
+            }
+
+            updateBulkActions();
+        });
+
+        // Lazy-load quotation invoices when collapse row is shown
+        document.addEventListener('show.bs.collapse', function(e) {
+            var collapseRow = e.target.closest('tr.collapse');
+            var w = document.getElementById(widgetId);
+            if (!collapseRow || !w || !w.contains(collapseRow)) return;
+
+            var container = collapseRow.querySelector('.quotation-invoices-container');
+            if (!container || container.hasAttribute('data-loaded')) return;
+
+            var quotationId = container.getAttribute('data-quotation-id');
+            container.setAttribute('data-loaded', 'true');
+
+            fetch(baseUri + 'clients/quotationinvoices/' + clientId + '/' + quotationId + '/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(response) { return response.text(); })
+            .then(function(html) {
+                container.innerHTML = html;
+            })
+            .catch(function() {
+                container.innerHTML = '<div class="alert alert-danger m-3">Error loading quotation details.</div>';
+                container.removeAttribute('data-loaded');
+            });
+        });
+
+        // Click handler for confirmation links and invoice modal
+        document.addEventListener('click', function(e) {
+            var w = document.getElementById(widgetId);
+            if (!w) return;
+
+            // Handle approve quotation confirmation
+            var approveBtn = e.target.closest('.approve-quotation');
+            if (approveBtn && w.contains(approveBtn)) {
+                e.preventDefault();
+                var message = approveBtn.getAttribute('data-confirm-message') || '';
+                var href = approveBtn.getAttribute('href');
+
+                var modalEl = document.createElement('div');
+                modalEl.className = 'modal fade';
+                modalEl.setAttribute('tabindex', '-1');
+                modalEl.innerHTML =
+                    '<div class="modal-dialog modal-dialog-centered">' +
+                    '<div class="modal-content">' +
+                    '<div class="modal-header border-0 pb-0">' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php $this->_("AppController.modal.text_close");?>"></button>' +
+                    '</div>' +
+                    '<div class="modal-body text-center py-4">' +
+                    '<div class="mb-3"><i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i></div>' +
+                    '<h5 class="modal-title mb-3"><?php $this->_("AppController.modal.text_confirm");?></h5>' +
+                    '<p class="text-secondary">' + message + '</p>' +
+                    '</div>' +
+                    '<div class="modal-footer border-0 justify-content-center">' +
+                    '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_("AppController.modal.btn_cancel");?></button>' +
+                    '<button type="button" class="btn btn-success btn-confirm">Confirm</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+
+                document.body.appendChild(modalEl);
+                var modal = new bootstrap.Modal(modalEl);
+                var confirmed = false;
+
+                modalEl.querySelector('.btn-confirm').addEventListener('click', function() {
+                    confirmed = true;
+                    this.blur();
+                    modal.hide();
+                });
+
+                modalEl.addEventListener('hidden.bs.modal', function() {
+                    modalEl.remove();
+                    if (confirmed) {
+                        window.location = href;
+                    }
+                });
+
+                modal.show();
+                return;
+            }
+
+            // Handle invoice quotation modal
+            var invoiceQuotationLink = e.target.closest('a.invoice_quotation');
+            if (invoiceQuotationLink && w.contains(invoiceQuotationLink)) {
+                e.preventDefault();
+                var href = invoiceQuotationLink.getAttribute('href');
+
+                var modal = document.getElementById('quotationInvoiceModal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'quotationInvoiceModal';
+                    modal.className = 'modal fade';
+                    modal.tabIndex = -1;
+                    modal.innerHTML =
+                        '<div class="modal-dialog modal-lg">' +
+                            '<div class="modal-content">' +
+                                '<div class="modal-header">' +
+                                    '<h5 class="modal-title"><?php $this->_('AdminClients.quotations.option_invoice');?></h5>' +
+                                    '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php $this->_('AppController.modal.text_close');?>"></button>' +
+                                '</div>' +
+                                '<div class="modal-body"></div>' +
+                                '<div class="modal-footer">' +
+                                    '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AppController.modal.btn_cancel');?></button>' +
+                                    '<button type="button" class="btn btn-primary btn-submit"><?php $this->_('AdminClients.invoicequotation.field_submit');?></button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                    document.body.appendChild(modal);
+
+                    modal.querySelector('.btn-submit').addEventListener('click', function() {
+                        var form = modal.querySelector('form');
+                        if (form) form.submit();
+                    });
+                }
+
+                var modalBody = modal.querySelector('.modal-body');
+                modalBody.innerHTML =
+                    '<div class="text-center py-4">' +
+                        '<div class="spinner-border" role="status">' +
+                            '<span class="visually-hidden">Loading...</span>' +
+                        '</div>' +
+                    '</div>';
+
+                var bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+
+                fetch(href, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) { return response.text(); })
+                .then(function(html) {
+                    modalBody.innerHTML = html;
+
+                    // Execute scripts from fetched content (innerHTML doesn't execute <script> tags)
+                    modalBody.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                })
+                .catch(function() {
+                    modalBody.innerHTML = '<div class="alert alert-danger">Error loading content.</div>';
+                });
+                return;
+            }
+        });
+    }
+
+    // Re-initialize expandable rows for AJAX-loaded widget
+    document.dispatchEvent(new Event('blestaAjaxComplete'));
+})();
+</script>

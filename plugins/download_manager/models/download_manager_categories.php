@@ -123,11 +123,15 @@ class DownloadManagerCategories extends DownloadManagerModel
      */
     public function getAll($company_id, $parent_id = null)
     {
-        $this->Record = $this->getCategories();
+        $this->Record->select(['download_categories.*', 'COUNT(download_files.id)' => 'file_count'])
+            ->from('download_categories')
+            ->leftJoin('download_files', 'download_files.category_id', '=', 'download_categories.id', false)
+            ->where('download_categories.parent_id', '=', $parent_id)
+            ->where('download_categories.company_id', '=', $company_id)
+            ->group(['download_categories.id'])
+            ->order(['download_categories.name' => 'ASC']);
 
-        return $this->Record->where('parent_id', '=', $parent_id)->
-            where('company_id', '=', $company_id)->
-            order(['name'=>'ASC'])->fetchAll();
+        return $this->Record->fetchAll();
     }
 
     /**

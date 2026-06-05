@@ -1,28 +1,75 @@
-<div class="container">
-    <div class="card">
-        <div class="card-header p-3 h3">
-            <i class="fas fa-upload"></i>
-            Blesta Upgrader
-            <img class="float-right blesta-logo" src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" />
-        </div>
-        <div class="card-body">
-            <?php
-            echo (isset($message) ? $message : null);
-            ?>
+<?php /** @var View $this **/ ?>
 
-            <?php
-            $this->Form->create(null, ['class' => 'disable-on-submit']);
-            $this->Form->fieldHidden('process', 'true');
-            ?>
-            <?php $this->Form->fieldSubmit('upgrade', 'Upgrade', ['class' => 'btn btn-secondary float-right']);?>
-            <div class="install_progress">
-                <div class="progress" style="display: none;">
-                    <div class="progress-bar progress-bar-striped bg-success"></div>
-                </div>
+<div class="installer-container">
+    <div class="installer-header-section">
+        <img src="<?php echo $this->view_dir . 'images/logo.svg';?>" alt="Blesta" class="installer-logo installer-logo-dark">
+        <img src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" class="installer-logo installer-logo-light">
+        <div class="logo-divider"></div>
+        <div class="installer-label">Upgrader</div>
+    </div>
+
+    <div class="installer-content">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <?php
+                $this->Form->create(null, ['class' => 'disable-on-submit']);
+                $this->Form->fieldHidden('process', 'true');
+                ?>
+                    <?php echo ($message ?? null);?>
+
+                    <div class="install-method-card text-center">
+                        <h2>Ready to Upgrade</h2>
+                        <p>Click the button below to begin the upgrade process. This may take a few moments.</p>
+
+                        <div class="install_progress mb-4">
+                            <div class="progress" style="display: none;">
+                                <div class="progress-bar progress-bar-striped bg-success"></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" name="upgrade" id="upgrade_btn" class="btn btn-continue" data-loading-text="Upgrading...">
+                            <span>Upgrade</span>
+                            <i class="bi bi-arrow-up-circle"></i>
+                        </button>
+                    </div>
+                <?php
+                $this->Form->end();
+                ?>
             </div>
-            <?php
-            $this->Form->end();
-            ?>
         </div>
     </div>
 </div>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.spin-icon {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('.disable-on-submit');
+    if (form) {
+        form.addEventListener('submit', function() {
+            var btn = document.getElementById('upgrade_btn');
+            if (btn) {
+                btn.querySelector('span').textContent = btn.getAttribute('data-loading-text') || 'Upgrading...';
+                var icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'bi bi-arrow-repeat spin-icon';
+                }
+            }
+
+            var progress = form.querySelector('.progress');
+            if (progress) {
+                progress.style.display = '';
+            }
+        });
+    }
+});
+</script>

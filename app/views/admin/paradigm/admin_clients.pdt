@@ -1,0 +1,321 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo ($message ?? null);
+
+$tabs = [
+    [
+        'name' => $this->_('AdminClients.index.category_active', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['active'] ?? 0) . '</span>',
+        'current' => ($status ?? null) == 'active',
+        'attributes' => ['href' => $this->base_uri . 'clients/index/active/', 'class' => 'ajax']
+    ],
+    [
+        'name' => $this->_('AdminClients.index.category_inactive', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['inactive'] ?? 0) . '</span>',
+        'current' => ($status ?? null) == 'inactive',
+        'attributes' => ['href' => $this->base_uri . 'clients/index/inactive/', 'class' => 'ajax']
+    ],
+    [
+        'name' => $this->_('AdminClients.index.category_fraud', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['fraud'] ?? 0) . '</span>',
+        'current' => ($status ?? null) == 'fraud',
+        'highlight' => true,
+        'attributes' => ['href' => $this->base_uri . 'clients/index/fraud/', 'class' => 'ajax']
+    ],
+];
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminClients.index.categorylink_clientsadd', true),
+            'href' => $this->base_uri . 'clients/add/'
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'clients/index/' . ($status ?? null)), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.index.boxtitle_browseclients', true), ['id' => 'admin_clients'], ($render_section ?? null));
+?>
+
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'clients_form']);
+
+if (($clients ?? false) && ($num_clients = count($clients)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="clients_table">
+        <thead>
+            <tr>
+                <th style="width: 40px;">
+                    <?php $this->Form->fieldCheckbox('client_ids[]', 'all', false, ['class' => 'form-check-input', 'id' => 'select-all']);?>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/index/' . ($status ?? null) . '/?sort=id_code&order=' . ($sort == 'id_code' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.index.heading_client');?>
+                        <?php if ($sort == 'id_code') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/index/' . ($status ?? null) . '/?sort=group_name&order=' . ($sort == 'group_name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.index.heading_group');?>
+                        <?php if ($sort == 'group_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/index/' . ($status ?? null) . '/?sort=first_name&order=' . ($sort == 'first_name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.index.heading_name');?>
+                        <?php if ($sort == 'first_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/index/' . ($status ?? null) . '/?sort=company&order=' . ($sort == 'company' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.index.heading_company');?>
+                        <?php if ($sort == 'company') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/index/' . ($status ?? null) . '/?sort=email&order=' . ($sort == 'email' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.index.heading_email');?>
+                        <?php if ($sort == 'email') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th style="width: 100px;"><?php $this->_('AdminClients.accounts.text_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            for ($i = 0; $i < $num_clients; $i++) {
+                $bg_color = $this->Color->hex(($clients[$i]->group->color ?? '#6c757d'))->asHtml();
+                $text_color = $this->Color->hex(($clients[$i]->group->color ?? '#6c757d'))->contrastYiq()->asHtml();
+            ?>
+            <tr>
+                <td>
+                    <?php $this->Form->fieldCheckbox('client_ids[]', ($clients[$i]->id ?? null), in_array(($clients[$i]->id ?? null), ($vars->client_ids ?? [])), ['class' => 'form-check-input row-checkbox']);?>
+                </td>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . $clients[$i]->id . '/');?>">
+                        <?php echo $this->Html->safe($clients[$i]->id_code ?? null);?>
+                    </a>
+                </td>
+                <td>
+                    <span class="badge" style="background-color: <?php echo $bg_color;?>; color: <?php echo $text_color;?>;">
+                        <?php echo $this->Html->safe($clients[$i]->group->name ?? null);?>
+                    </span>
+                </td>
+                <td><?php echo ($clients[$i]->first_name ?? null) . ' ' . ($clients[$i]->last_name ?? null);?></td>
+                <td><?php echo $this->Html->safe($clients[$i]->company ?? null);?></td>
+                <td>
+                    <a href="mailto:<?php echo $this->Html->safe($clients[$i]->email ?? null);?>">
+                        <?php echo $this->Html->safe($clients[$i]->email ?? null);?>
+                    </a>
+                </td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . $clients[$i]->id . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.invoices.option_view');?>">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edit/' . $clients[$i]->id . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.invoices.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- Bulk Actions Bar -->
+<div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <span class="selected-count" id="selectedCount">0 <?php $this->_('AdminClients.index.items_selected');?></span>
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+            <?php
+            $this->Form->fieldSelect('action', ($bulk_actions ?? []), ($vars->action ?? null), ['class' => 'form-select form-select-sm', 'id' => 'action_select', 'style' => 'width: 200px;']);
+            $this->Form->fieldHidden('action_value', ($vars->action_value ?? ''), ['id' => 'action_value_hidden']);
+            ?>
+
+            <!-- Change Status Options -->
+            <div id="change_status_options" class="bulk-action-options d-none d-flex gap-2 align-items-center">
+                <label for="action_value_status" class="form-label mb-0"><?php $this->_('AdminClients.index.action.field_status');?></label>
+                <?php $this->Form->fieldSelect('action_value_status', ($status_types ?? []), ($vars->action_value ?? null), ['class' => 'form-select form-select-sm action-value-field', 'id' => 'action_value_status', 'style' => 'width: 150px;']);?>
+            </div>
+
+            <!-- Change Client Group Options -->
+            <div id="change_client_group_options" class="bulk-action-options d-none d-flex gap-2 align-items-center">
+                <label for="action_value_group" class="form-label mb-0"><?php $this->_('AdminClients.index.action.field_client_group');?></label>
+                <?php $this->Form->fieldSelect('action_value_group', ($client_groups_list ?? []), ($vars->action_value ?? null), ['class' => 'form-select form-select-sm action-value-field', 'id' => 'action_value_group', 'style' => 'width: 200px;']);?>
+            </div>
+
+            <!-- Invoice Method Options -->
+            <div id="change_inv_method_options" class="bulk-action-options d-none d-flex gap-2 align-items-center">
+                <label for="action_value_inv_method" class="form-label mb-0"><?php $this->_('AdminClients.index.action.field_inv_method');?></label>
+                <?php $this->Form->fieldSelect('action_value_inv_method', ($delivery_methods ?? []), ($vars->action_value ?? null), ['class' => 'form-select form-select-sm action-value-field', 'id' => 'action_value_inv_method', 'style' => 'width: 180px;']);?>
+            </div>
+
+            <!-- Auto Debit Options -->
+            <div id="change_autodebit_options" class="bulk-action-options d-none d-flex gap-2 align-items-center">
+                <?php $this->Form->fieldSelect('action_value_autodebit', ($toggle_options ?? []), ($vars->action_value ?? null), ['class' => 'form-select form-select-sm action-value-field', 'id' => 'action_value_autodebit', 'style' => 'width: 150px;']);?>
+            </div>
+
+            <!-- Payment Notices Options -->
+            <div id="change_payment_notices_options" class="bulk-action-options d-none d-flex gap-2 align-items-center">
+                <?php $this->Form->fieldSelect('action_value_payment_notices', ($toggle_options ?? []), ($vars->action_value ?? null), ['class' => 'form-select form-select-sm action-value-field', 'id' => 'action_value_payment_notices', 'style' => 'width: 150px;']);?>
+            </div>
+
+            <!-- Auto Suspension Options -->
+            <div id="change_autosuspend_options" class="bulk-action-options d-none d-flex gap-2 align-items-center">
+                <?php $this->Form->fieldSelect('action_value_autosuspend', ($toggle_options ?? []), ($vars->action_value ?? null), ['class' => 'form-select form-select-sm action-value-field', 'id' => 'action_value_autosuspend', 'style' => 'width: 150px;']);?>
+            </div>
+
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminClients.index.field_actionsubmit', true), ['class' => 'btn btn-sm btn-primary']);
+            ?>
+        </div>
+    </div>
+</div>
+
+<?php
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-people" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.index.no_results');?></p>
+</div>
+<?php
+}
+$this->Form->end();
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+?>
+
+<script>
+(function() {
+    var widgetContainer = document.getElementById('admin_clients');
+
+    function initBulkActions() {
+        if (!widgetContainer) {
+            widgetContainer = document.getElementById('admin_clients');
+        }
+        if (!widgetContainer) return;
+
+        var bulkActionsBar = widgetContainer.querySelector('#bulkActionsBar');
+        var selectedCount = widgetContainer.querySelector('#selectedCount');
+        var selectAllCheckbox = widgetContainer.querySelector('#select-all');
+        var actionSelect = widgetContainer.querySelector('#action_select');
+
+        function updateBulkActions() {
+            var checkedBoxes = widgetContainer.querySelectorAll('.row-checkbox:checked');
+            if (bulkActionsBar) {
+                if (checkedBoxes.length > 0) {
+                    bulkActionsBar.style.display = 'block';
+                    if (selectedCount) {
+                        selectedCount.textContent = checkedBoxes.length + ' <?php $this->_('AdminClients.index.items_selected');?>';
+                    }
+                } else {
+                    bulkActionsBar.style.display = 'none';
+                }
+            }
+        }
+
+        function syncActionValue() {
+            var hiddenField = widgetContainer.querySelector('#action_value_hidden');
+            if (!hiddenField || !actionSelect) return;
+            var visibleGroup = widgetContainer.querySelector('#' + actionSelect.value + '_options');
+            if (visibleGroup) {
+                var visibleSelect = visibleGroup.querySelector('.action-value-field');
+                if (visibleSelect) {
+                    hiddenField.value = visibleSelect.value;
+                }
+            }
+        }
+
+        function switchClientActions() {
+            if (!actionSelect) return;
+            var action = actionSelect.value;
+            var optionGroups = widgetContainer.querySelectorAll('.bulk-action-options');
+            optionGroups.forEach(function(group) {
+                group.classList.add('d-none');
+            });
+            var targetOptions = widgetContainer.querySelector('#' + action + '_options');
+            if (targetOptions) {
+                targetOptions.classList.remove('d-none');
+            }
+            syncActionValue();
+        }
+
+        // Event delegation on the widget container
+        widgetContainer.addEventListener('change', function(e) {
+            var target = e.target;
+
+            // Select all checkbox
+            if (target.id === 'select-all') {
+                var checkboxes = widgetContainer.querySelectorAll('.row-checkbox');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = target.checked;
+                });
+                updateBulkActions();
+                return;
+            }
+
+            // Individual row checkbox
+            if (target.classList.contains('row-checkbox')) {
+                if (!target.checked && selectAllCheckbox) {
+                    selectAllCheckbox.checked = false;
+                }
+                updateBulkActions();
+                return;
+            }
+
+            // Action dropdown
+            if (target.id === 'action_select') {
+                switchClientActions();
+                return;
+            }
+
+            // Sub-field value changed — sync to hidden field
+            if (target.classList.contains('action-value-field')) {
+                syncActionValue();
+                return;
+            }
+        });
+
+        // Sync hidden field on form submit
+        var clientsForm = widgetContainer.querySelector('#clients_form');
+        if (clientsForm) {
+            clientsForm.addEventListener('submit', function() {
+                syncActionValue();
+            });
+        }
+
+        // Initialize action visibility
+        if (actionSelect) {
+            switchClientActions();
+        }
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBulkActions);
+    } else {
+        initBulkActions();
+    }
+
+    // Re-initialize after AJAX content replacement
+    document.addEventListener('blestaAjaxComplete', function() {
+        widgetContainer = document.getElementById('admin_clients');
+        initBulkActions();
+    });
+})();
+</script>

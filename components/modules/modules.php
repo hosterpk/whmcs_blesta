@@ -1,10 +1,9 @@
 <?php
+
 use Blesta\Core\Util\Components\Component;
 
 Loader::load(COMPONENTDIR . 'modules' . DS . 'module.php');
 Loader::load(COMPONENTDIR . 'modules' . DS . 'registrar_module.php');
-Loader::load(COMPONENTDIR . 'modules' . DS . 'module_field.php');
-Loader::load(COMPONENTDIR . 'modules' . DS . 'module_fields.php');
 
 /**
  * Factory class for creating Module objects

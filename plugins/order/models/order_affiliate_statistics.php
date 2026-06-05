@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Affiliate Statistics Management
  *
@@ -27,8 +28,8 @@ class OrderAffiliateStatistics extends OrderModel
      */
     public function get(array $filters = [])
     {
-        $filters['start_date'] = $this->Date->format('Y-m-d', (isset($filters['start_date']) ? $filters['start_date'] : null));
-        $filters['end_date'] = $this->Date->format('Y-m-d', (isset($filters['end_date']) ? $filters['end_date'] : null));
+        $filters['start_date'] = $this->Date->format('Y-m-d', ($filters['start_date'] ?? null));
+        $filters['end_date'] = $this->Date->format('Y-m-d', ($filters['end_date'] ?? null));
 
         return $this->Record->select()
             ->from('order_affiliate_statistics')

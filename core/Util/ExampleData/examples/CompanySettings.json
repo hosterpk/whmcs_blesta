@@ -1,0 +1,30 @@
+[
+    {
+        "key": "timezone",
+        "company_id": 1,
+        "value": "UTC",
+        "encrypted": 0,
+        "inherit": "1"
+    },
+    {
+        "key": "country",
+        "company_id": 1,
+        "value": "US",
+        "encrypted": 0,
+        "inherit": "1"
+    },
+    {
+        "key": "date_format",
+        "company_id": 1,
+        "value": "M d, Y",
+        "encrypted": 0,
+        "inherit": "1"
+    },
+    {
+        "key": "datetime_format",
+        "company_id": 1,
+        "value": "M d, Y g:i:s A",
+        "encrypted": 0,
+        "inherit": "1"
+    }
+]

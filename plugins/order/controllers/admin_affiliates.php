@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin Affiliates controller
  *
@@ -36,10 +37,10 @@ class AdminAffiliates extends OrderAffiliateController
      */
     public function index()
     {
-        $status = (isset($this->get[0]) ? $this->get[0] : 'active');
+        $status = ($this->get[0] ?? 'active');
         $page = (isset($this->get[1]) ? (int)$this->get[1] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'client_id');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'asc');
+        $sort = ($this->get['sort'] ?? 'client_id');
+        $order = ($this->get['order'] ?? 'asc');
 
         // Set the number of affiliates of each type
         $status_count = [
@@ -164,7 +165,7 @@ class AdminAffiliates extends OrderAffiliateController
         $vars = new stdClass();
 
         if (!empty($this->post)) {
-            $affiliate_id = $this->addAffiliate(isset($this->post['client_id']) ? $this->post['client_id'] : 0);
+            $affiliate_id = $this->addAffiliate($this->post['client_id'] ?? 0);
 
             if ($affiliate_id) {
                 $this->flashMessage(
@@ -214,7 +215,7 @@ class AdminAffiliates extends OrderAffiliateController
     public function activate()
     {
         // Get affiliate or redirect if not given
-        $affiliate_id = isset($this->get[0]) ? $this->get[0] : (isset($this->post['id']) ? $this->post['id'] : null);
+        $affiliate_id = $this->get[0] ?? ($this->post['id'] ?? null);
         if (!($affiliate = $this->OrderAffiliates->get($affiliate_id))) {
             $this->redirect($this->base_uri . 'plugin/order/admin_affiliates/');
         }
@@ -238,7 +239,7 @@ class AdminAffiliates extends OrderAffiliateController
     public function deactivate()
     {
         // Get affiliate or redirect if not given
-        $affiliate_id = isset($this->get[0]) ? $this->get[0] : (isset($this->post['id']) ? $this->post['id'] : null);
+        $affiliate_id = $this->get[0] ?? ($this->post['id'] ?? null);
         if (!($affiliate = $this->OrderAffiliates->get($affiliate_id))) {
             $this->redirect($this->base_uri . 'plugin/order/admin_affiliates/');
         }

@@ -1,0 +1,276 @@
+<?php /** @var View $this **/ ?>
+
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyGroups.add.boxtitle_addgroup', true), ['id' => 'admin_company_groups_add']);
+            ?>
+                    <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+                    <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_basic');?></h6>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <?php $this->_('AdminCompanyGroups.add.field_name');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'name',
+                            (isset($vars->name) ? $vars->name : null),
+                            ['id' => 'name', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="color" class="form-label">
+                            <?php $this->_('AdminCompanyGroups.add.field_color');?>
+                        </label>
+                        <?php
+                        $color_value = (isset($vars->color) ? $vars->color : '');
+                        $color_with_hash = $color_value && !str_starts_with($color_value, '#') ? '#' . $color_value : ($color_value ?: '#FFFFFF');
+                        $color_without_hash = ltrim($color_value, '#') ?: 'FFFFFF';
+                        ?>
+                        <div class="color-picker-input-group">
+                            <input type="color"
+                                   class="form-control form-control-color color-picker-input"
+                                   id="color_picker_color"
+                                   value="<?php echo $this->Html->safe($color_with_hash);?>"
+                                   data-color-field="color">
+                            <?php
+                            $this->Form->fieldText(
+                                'color',
+                                $color_without_hash,
+                                ['id' => 'color', 'class' => 'form-control form-control-sm color-text-input']
+                            );
+                            ?>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">
+                            <?php $this->_('AdminCompanyGroups.add.field_description');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldTextarea(
+                            'description',
+                            (isset($vars->description) ? $vars->description : null),
+                            ['id' => 'description', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'use_company_settings',
+                            'true',
+                            ((isset($vars->use_company_settings) ? $vars->use_company_settings : null) == 'true'),
+                            ['id' => 'use_company_settings', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="use_company_settings" class="form-check-label">
+                            <?php $this->_('AdminCompanyGroups.add.field_company_settings');?>
+                        </label>
+                    </div>
+
+                    <div id="group_settings">
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_invoice');?></h6>
+                        <?php echo (isset($invoice_form) ? $invoice_form : null);?>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_late_fees');?></h6>
+                        <?php echo (isset($late_fees_form) ? $late_fees_form : null);?>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_delivery');?></h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <?php $this->_('AdminCompanyGroups.add.field_delivery_methods');?>
+                            </label>
+                            <?php
+                            foreach ((isset($delivery_methods) ? $delivery_methods : []) as $method => $name) {
+                                $disable = $method == 'email';
+                                $options = ['id' => 'delivery_method_' . $method, 'class' => 'form-check-input'];
+                                if ($disable) {
+                                    $options['disabled'] = 'disabled';
+                                }
+                            ?>
+                            <div class="form-check">
+                                <?php
+                                $this->Form->fieldCheckbox(
+                                    'delivery_methods[]',
+                                    $method,
+                                    (in_array($method, (isset($vars->delivery_methods) ? $vars->delivery_methods : [])) || $disable),
+                                    $options
+                                );
+                                ?>
+                                <label for="delivery_method_<?php echo $this->Html->safe($method);?>" class="form-check-label">
+                                    <?php echo $this->Html->safe($name);?>
+                                </label>
+                            </div>
+                            <?php
+                            }
+                            ?>
+                        </div>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_payment');?></h6>
+                        <?php echo (isset($notice_form) ? $notice_form : null);?>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_client_settings');?></h6>
+                        <?php echo (isset($general_form) ? $general_form : null);?>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_client_fields');?></h6>
+                        <?php echo (isset($required_fields_form) ? $required_fields_form : null);?>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_gateway_restrictions');?></h6>
+                        <?php echo (isset($gateway_restrictions_form) ? $gateway_restrictions_form : null);?>
+
+                        <h6 class="form-section-header"><?php $this->_('AdminCompanyGroups.add.heading_credit_handling');?></h6>
+                        <?php echo (isset($credit_handling_form) ? $credit_handling_form : null);?>
+                    </div>
+
+                </div>
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminCompanyGroups.add.text_addsubmit', true),
+                        ['class' => 'btn btn-primary']
+                    );
+                    ?>
+                </div>
+                <?php $this->Form->end();?>
+<?php
+$this->Widget->end();
+?>
+        </div>
+
+<script>
+// Initialize color picker and manage group settings
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize native HTML5 color picker
+    const colorPickers = document.querySelectorAll('.color-picker-input');
+    colorPickers.forEach(function(colorPicker) {
+        const textInputId = colorPicker.getAttribute('data-color-field');
+        const textInput = document.getElementById(textInputId);
+
+        if (!textInput) return;
+
+        colorPicker.addEventListener('input', function() {
+            textInput.value = this.value.substring(1);
+        });
+
+        colorPicker.addEventListener('change', function() {
+            textInput.value = this.value.substring(1);
+        });
+
+        textInput.addEventListener('input', function() {
+            let hexValue = this.value.trim();
+            if (/^#?[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                if (!hexValue.startsWith('#')) {
+                    hexValue = '#' + hexValue;
+                }
+                colorPicker.value = hexValue;
+            }
+        });
+
+        textInput.addEventListener('change', function() {
+            let hexValue = this.value.trim();
+            if (/^#?[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                if (!hexValue.startsWith('#')) {
+                    hexValue = '#' + hexValue;
+                }
+                colorPicker.value = hexValue;
+                this.value = hexValue.substring(1);
+            } else {
+                const currentColor = colorPicker.value;
+                this.value = currentColor.substring(1);
+            }
+        });
+    });
+
+    // Enable/disable setting fields
+    const useCompanySettings = document.getElementById('use_company_settings');
+    const groupSettings = document.getElementById('group_settings');
+
+    if (useCompanySettings && groupSettings) {
+        function updateSettingFields() {
+            const inputs = groupSettings.querySelectorAll('input, select');
+
+            if (useCompanySettings.checked) {
+                // Disable all settings
+                inputs.forEach(function(input) {
+                    input.disabled = true;
+                });
+            } else {
+                // Enable settings except for specific fields
+                inputs.forEach(function(input) {
+                    const id = input.getAttribute('id');
+                    if (id === 'email' || id === 'first_name' || id === 'last_name' ||
+                        id === 'delivery_method_email' || input.classList.contains('disabled')) {
+                        input.disabled = true;
+                    } else {
+                        input.disabled = false;
+                    }
+                });
+
+                // Disable the minimum field if the fee type is fixed
+                groupSettings.querySelectorAll('.fee_type:checked').forEach(function(feeType) {
+                    const minimumField = feeType.closest('div').querySelector('.minimum');
+                    if (minimumField) {
+                        if (feeType.value === 'fixed') {
+                            minimumField.disabled = true;
+                        } else {
+                            minimumField.disabled = false;
+                        }
+                    }
+                });
+
+                // Disable the prevent payments checkbox if email verification is unchecked
+                const emailVerification = document.getElementById('email_verification');
+                const preventUnverifiedPayments = document.getElementById('prevent_unverified_payments');
+                if (emailVerification && preventUnverifiedPayments) {
+                    preventUnverifiedPayments.disabled = !emailVerification.checked;
+                }
+            }
+        }
+
+        // Initialize on page load
+        updateSettingFields();
+
+        // Update when checkbox changes
+        useCompanySettings.addEventListener('change', updateSettingFields);
+    }
+});
+</script>
+
+<style>
+.color-picker-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    width: fit-content;
+}
+
+.color-picker-input {
+    width: 50px;
+    height: 38px;
+    padding: 2px;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.color-text-input {
+    font-family: monospace;
+    width: 120px;
+}
+
+[data-bs-theme="dark"] .color-picker-input {
+    border-color: var(--border-color, #2a2a2a);
+}
+</style>

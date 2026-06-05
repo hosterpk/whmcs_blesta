@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('enom.map', [
     'module' => 'enom',
     'module_row_key' => 'user',

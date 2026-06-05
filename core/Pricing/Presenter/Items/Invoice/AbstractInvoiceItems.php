@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Items\Invoice;
 
 use Blesta\Items\Item\ItemInterface;
@@ -60,16 +61,16 @@ abstract class AbstractInvoiceItems implements InvoiceItemsInterface
         PricingFactory $pricingFactory,
         ItemFactory $itemFactory,
         ItemInterface $settings,
-        ItemCollection $taxes = null,
-        ItemInterface $options = null
+        ?ItemCollection $taxes = null,
+        ?ItemInterface $options = null
     ) {
         $this->pricingFactory = $pricingFactory;
         $this->itemFactory = $itemFactory;
         $this->settings = $settings;
 
         // Default to empty collections/items if null
-        $this->taxes = ($taxes === null ? $this->itemFactory->itemCollection() : $taxes);
-        $this->options = ($options === null ? $this->itemFactory->item() : $options);
+        $this->taxes = ($taxes ?? $this->itemFactory->itemCollection());
+        $this->options = ($options ?? $this->itemFactory->item());
     }
 
     /**

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generic Clientexec Invoices Migrator.
  *

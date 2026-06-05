@@ -285,8 +285,18 @@ class ClientContacts extends ClientController
                         unset($vars['confirm_password']);
                     }
 
-                    unset($vars['username']);
-                    $this->Users->edit($contact->user_id, $vars);
+                    // Whitelist user fields to prevent mass assignment
+                    $user_vars = array_intersect_key(
+                        $vars,
+                        array_flip(
+                            [
+                                'new_password',
+                                'confirm_password',
+                                'recovery_email'
+                            ]
+                        )
+                    );
+                    $this->Users->edit($contact->user_id, $user_vars);
                 } else {
                     $vars['user_id'] = $this->Users->add($vars);
                 }
@@ -470,7 +480,7 @@ class ClientContacts extends ClientController
                 $setting = $this->ClientGroups->getSetting($this->client->client_group_id, $group_name);
 
                 if ($setting) {
-                    $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
+                    $unserialized = safe_unserialize(
                         base64_decode($setting->value)
                     );
                     if (is_array($unserialized)) {
@@ -509,7 +519,7 @@ class ClientContacts extends ClientController
                 $setting = $this->ClientGroups->getSetting($this->client->client_group_id, $group_name);
 
                 if ($setting) {
-                    $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
+                    $unserialized = safe_unserialize(
                         base64_decode($setting->value)
                     );
                     if (is_array($unserialized)) {

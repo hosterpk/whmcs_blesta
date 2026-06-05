@@ -56,7 +56,7 @@ class NominetEppDomainRequest extends eppUpdateDomainRequest
                 $pw = $this->createElement('domain:pw');
                 $pw->appendChild($this->createCDATASection($authcode));
             } else {
-                $pw = $this->createElement('domain:pw',$authcode);
+                $pw = $this->createElement('domain:pw', $authcode);
             }
 
             $authinfo->appendChild($pw);
@@ -67,7 +67,8 @@ class NominetEppDomainRequest extends eppUpdateDomainRequest
         $this->addTag($element, $tag);
     }
 
-    protected function addTag($element, $tag) {
+    protected function addTag($element, $tag)
+    {
         $registrant = $this->createElement('domain:registrant', $tag);
         $element->appendChild($registrant);
     }

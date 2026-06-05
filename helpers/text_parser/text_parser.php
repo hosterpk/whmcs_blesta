@@ -1,6 +1,10 @@
 <?php
+
+namespace Blesta\Helpers\TextParser;
+
 use Blesta\Core\Util\Helpers\Helper;
 use Html2Text\Html2Text;
+use Parsedown;
 
 /**
  * Wrapper for text parsers
@@ -16,7 +20,7 @@ class TextParser extends Helper
     /**
      * Creates and returns an instance of the requested text parser
      *
-     * @param string $parser The parser to use for encouding. Acceptable types are:
+     * @param string $parser The parser to use for encoding. Acceptable types are:
      *
      *  - markdown
      * @return mixed Returns an instance of the parser object that was loaded, false if the parser was not found
@@ -35,9 +39,10 @@ class TextParser extends Helper
     /**
      * Encodes a string using the given parser
      *
-     * @param string $parser The parser to use for encouding. Acceptable types are:
+     * @param string $parser The parser to use for encoding. Acceptable types are:
      *
      *  - markdown
+     *  - html2text
      * @param string $text The text to encode using the given parser
      * @return string The encoded text using the given parser
      */
@@ -50,17 +55,16 @@ class TextParser extends Helper
                 }
 
                 return $this->Parsedown->text($text);
+                break;
+            case 'html2text':
+                if (!isset($this->Html2text)) {
+                    $this->Html2text = $this->create($parser);
+                }
+
+                $this->Html2text->setHtml($text);
+                return $this->Html2text->getText();
+                break;
         }
         return null;
-    }
-
-    /**
-     * Load the given file from the vendor directory
-     *
-     * @param string $file The file, including its relative path from the vendor directory, to load
-     */
-    private function load($file)
-    {
-        Loader::load(VENDORDIR . $file);
     }
 }

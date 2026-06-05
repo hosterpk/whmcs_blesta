@@ -1,0 +1,196 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyTaxes.edit.boxtitle_edit', true), ['id' => 'admin_company_taxes_edit']);
+            ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+            <div class="mb-3">
+                        <label for="type" class="form-label">
+                            <?php $this->_('AdminCompanyTaxes.edit.field.type');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyTaxes.!tooltip.type', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'type',
+                            (isset($tax_types) ? $tax_types : null),
+                            (isset($vars->type) ? $vars->type : null),
+                            ['id' => 'type', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <?php $this->_('AdminCompanyTaxes.edit.field.level');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyTaxes.!tooltip.level', true));?>"></i>
+                        </label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio(
+                                    'level',
+                                    '1',
+                                    ((isset($vars->level) ? $vars->level : '1') == '1'),
+                                    ['id' => 'level1', 'class' => 'form-check-input']
+                                );
+                                ?>
+                                <label for="level1" class="form-check-label">
+                                    <?php $this->_('AdminCompanyTaxes.edit.field.level1');?>
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio(
+                                    'level',
+                                    '2',
+                                    ((isset($vars->level) ? $vars->level : null) == '2'),
+                                    ['id' => 'level2', 'class' => 'form-check-input']
+                                );
+                                ?>
+                                <label for="level2" class="form-check-label">
+                                    <?php $this->_('AdminCompanyTaxes.edit.field.level2');?>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <?php $this->_('AdminCompanyTaxes.edit.field.name');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyTaxes.!tooltip.name', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'name',
+                            (isset($vars->name) ? $vars->name : null),
+                            ['id' => 'name', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">
+                            <?php $this->_('AdminCompanyTaxes.edit.field.amount');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyTaxes.!tooltip.amount', true));?>"></i>
+                        </label>
+                        <div class="input-group">
+                            <?php
+                            $this->Form->fieldText(
+                                'amount',
+                                (isset($vars->amount) ? $vars->amount : null),
+                                ['id' => 'amount', 'class' => 'form-control']
+                            );
+                            ?>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="country" class="form-label">
+                            <?php $this->_('AdminCompanyTaxes.edit.field.country');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyTaxes.!tooltip.country', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'country',
+                            (isset($countries) ? $countries : null),
+                            (isset($vars->country) ? $vars->country : null),
+                            ['id' => 'country', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="state" class="form-label">
+                            <?php $this->_('AdminCompanyTaxes.edit.field.state');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyTaxes.!tooltip.state', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'state',
+                            (isset($states) ? $states : null),
+                            (isset($vars->state) ? $vars->state : null),
+                            ['id' => 'state', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                echo $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyTaxes.edit.field.editsubmit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+            <?php $this->Form->end();?>
+            <?php $this->Widget->end();?>
+        </div>
+
+        <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            const countrySelect = document.getElementById('country');
+            const stateSelect = document.getElementById('state');
+
+            if (!countrySelect || !stateSelect) return;
+
+            countrySelect.addEventListener('change', function() {
+                const countryCode = this.value;
+                const baseUri = '<?php echo $this->Html->safe($this->base_uri);?>';
+
+                // Fetch states for the selected country
+                fetch(baseUri + 'settings/company/taxes/getstates/' + encodeURIComponent(countryCode), {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Remove all existing options
+                    stateSelect.innerHTML = '';
+
+                    // Sort the data by value
+                    const sortedData = Object.entries(data).sort((a, b) => {
+                        return a[1].localeCompare(b[1]);
+                    });
+
+                    // Append all new options
+                    sortedData.forEach(([key, value]) => {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = value;
+                        stateSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching states:', error);
+                });
+            });
+        });
+        </script>

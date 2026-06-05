@@ -1,5 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use stdClass;
+
 /**
  * Tax rule management
  *
@@ -37,7 +43,7 @@ class Taxes extends AppModel
      */
     public function add(array $vars)
     {
-        $vars['status'] = (isset($vars['status']) ? $vars['status'] : 'active');
+        $vars['status'] = ($vars['status'] ?? 'active');
         $this->Input->setRules($this->getRules());
 
         if ($this->Input->validates($vars)) {
@@ -256,7 +262,7 @@ class Taxes extends AppModel
                 ],
                 'positive' => [
                     'if_set' => true,
-                    'rule' => function($amount) {
+                    'rule' => function ($amount) {
                         if (!is_numeric($amount)) {
                             return true; // the existing rule will handle the check for a number
                         }

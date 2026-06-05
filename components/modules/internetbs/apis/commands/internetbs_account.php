@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs Account Management
  *
@@ -30,7 +31,7 @@ class InternetbsAccount
      *  - Currency The currency for which the account balance should be retrieved for.
      * @return InternetbsResponse The response object
      */
-    public function getBalance(array $vars) : InternetbsResponse
+    public function getBalance(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Account/Balance/Get', $vars);
     }
@@ -43,7 +44,7 @@ class InternetbsAccount
      *  - Currency The currency of the prepaid balance that will be used for all billable API operations.
      * @return InternetbsResponse The response object
      */
-    public function setDefaultCurrency(array $vars) : InternetbsResponse
+    public function setDefaultCurrency(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Account/DefaultCurrency/Set', $vars, 'POST');
     }
@@ -53,7 +54,7 @@ class InternetbsAccount
      *
      * @return InternetbsResponse The response object
      */
-    public function getDefaultCurrency() : InternetbsResponse
+    public function getDefaultCurrency(): InternetbsResponse
     {
         return $this->api->apiRequest('/Account/DefaultCurrency/Get');
     }
@@ -69,7 +70,7 @@ class InternetbsAccount
      *      command will return all current prices for all products.
      * @return InternetbsResponse The response object
      */
-    public function getPriceList(array $vars) : InternetbsResponse
+    public function getPriceList(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Account/PriceList/Get', $vars);
     }

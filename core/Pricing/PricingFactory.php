@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing;
 
 use Blesta\Pricing\PricingFactory as PriceFactory;
@@ -197,6 +198,6 @@ class PricingFactory extends PriceFactory
      */
     public function getOptions()
     {
-        return isset($this->options) ? $this->options : [];
+        return $this->options ?? [];
     }
 }

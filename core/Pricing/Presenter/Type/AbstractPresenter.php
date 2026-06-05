@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Type;
 
 use Blesta\Core\Pricing\Presenter\Collection\CollectionDiscounts;
@@ -20,10 +21,10 @@ use Blesta\Pricing\Collection\ItemPriceCollection;
 abstract class AbstractPresenter implements PresenterInterface
 {
     // Include traits for building discounts, taxes, items, and totals
-    use CollectionDiscounts,
-        CollectionItems,
-        CollectionTaxes,
-        CollectionTotal;
+    use CollectionDiscounts;
+    use CollectionItems;
+    use CollectionTaxes;
+    use CollectionTotal;
 
     /**
      * @var ItemPriceCollection A collection of ItemPrices

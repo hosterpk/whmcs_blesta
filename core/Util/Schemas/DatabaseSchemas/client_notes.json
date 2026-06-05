@@ -1,0 +1,113 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "staff_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "title",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "stickied",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": "MUL",
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_updated",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "staff_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "staff_id"
+            ]
+        },
+        {
+            "name": "stickied",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "stickied"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

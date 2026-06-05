@@ -1,0 +1,15 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemMarketplace.listing.boxtitle_listing', true, (isset($extension->name) ? $extension->name : null)), ['id' => 'admin_system_marketplace_listing']);
+    ?>
+
+        <!-- Marketplace listing content will be added here -->
+
+    <?php $this->Widget->end();?>
+</div>

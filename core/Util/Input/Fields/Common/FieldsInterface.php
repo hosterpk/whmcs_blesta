@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Input\Fields\Common;
 
 /**
@@ -26,7 +27,7 @@ interface FieldsInterface
      * @return FieldInterface A FieldInterface object to be passed into one of the various field methods to assign this
      *  label to that field
      */
-    public function label($name, $for = null, array $attributes = null, $preserve_tags = false);
+    public function label($name, $for = null, ?array $attributes = null, $preserve_tags = false);
 
     /**
      * Creates a tooltip with the given message
@@ -48,7 +49,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldText($name, $value = null, $attributes = [], FieldInterface $label = null);
+    public function fieldText($name, $value = null, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a hidden input field
@@ -74,7 +75,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldImage($name, $value = null, $attributes = [], FieldInterface $label = null);
+    public function fieldImage($name, $value = null, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a reset input field
@@ -88,7 +89,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldReset($name, $value = null, $attributes = [], FieldInterface $label = null);
+    public function fieldReset($name, $value = null, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a checkbox
@@ -108,7 +109,7 @@ interface FieldsInterface
         $value = null,
         $checked = false,
         $attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     );
 
     /**
@@ -129,7 +130,7 @@ interface FieldsInterface
         $value = null,
         $checked = false,
         $attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     );
 
     /**
@@ -144,7 +145,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldTextarea($name, $value = null, $attributes = [], FieldInterface $label = null);
+    public function fieldTextarea($name, $value = null, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a password input field
@@ -157,7 +158,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldPassword($name, $attributes = [], FieldInterface $label = null);
+    public function fieldPassword($name, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a file input field
@@ -170,7 +171,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldFile($name, $attributes = [], FieldInterface $label = null);
+    public function fieldFile($name, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a select list
@@ -193,7 +194,7 @@ interface FieldsInterface
         $selected_value = null,
         $attributes = [],
         $option_attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     );
 
     /**
@@ -217,7 +218,7 @@ interface FieldsInterface
         $selected_values = [],
         $attributes = [],
         $option_attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     );
 
     /**
@@ -232,7 +233,7 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldButton($name, $value = null, $attributes = [], FieldInterface $label = null);
+    public function fieldButton($name, $value = null, $attributes = [], ?FieldInterface $label = null);
 
     /**
      * Creates a button of type submit
@@ -246,5 +247,5 @@ interface FieldsInterface
      * @see FieldsInterface::label()
      * @see FieldInterface::attach()
      */
-    public function fieldSubmit($name, $value = null, $attributes = [], FieldInterface $label = null);
+    public function fieldSubmit($name, $value = null, $attributes = [], ?FieldInterface $label = null);
 }

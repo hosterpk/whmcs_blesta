@@ -1,0 +1,79 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "level",
+            "type": "enum('staff','client')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "staff",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "alias",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "plugin_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "level",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "level",
+                "alias"
+            ]
+        },
+        {
+            "name": "plugin_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "plugin_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

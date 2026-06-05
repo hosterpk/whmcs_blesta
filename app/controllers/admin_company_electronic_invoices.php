@@ -17,14 +17,8 @@ class AdminCompanyElectronicInvoices extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Companies', 'Navigation']);
+        $this->uses(['Companies']);
         $this->components(['InvoiceFormats']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**
@@ -51,7 +45,7 @@ class AdminCompanyElectronicInvoices extends AdminController
 
         // Fetch enabled formats
         $enabled_formats = $this->Companies->getSetting($this->company_id, 'electronic_invoice_formats');
-        $enabled_formats = !empty($enabled_formats->value) ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($enabled_formats->value) : [];
+        $enabled_formats = !empty($enabled_formats->value) ? safe_unserialize($enabled_formats->value) : [];
 
         // Prepare data for the view
         $formats_data = [];
@@ -83,6 +77,6 @@ class AdminCompanyElectronicInvoices extends AdminController
         }
 
         // Stored as comma-separated values
-        return \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($setting->value);
+        return safe_unserialize($setting->value);
     }
 }

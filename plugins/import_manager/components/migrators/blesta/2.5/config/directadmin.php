@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('directadmin.map', [
     'module' => 'direct_admin',
     'module_row_key' => 'serverip',
@@ -9,7 +10,7 @@ Configure::set('directadmin.map', [
         (object)['key' => 'password', 'value' => (object)['module' => 'password'], 'serialized' => 0, 'encrypted' => 1],
         (object)['key' => 'use_ssl', 'value' => (object)['module' => 'usessl'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'account_limit', 'value' => (object)['module' => 'max'], 'serialized' => 0, 'encrypted' => 0],
-        (object)['key' => 'name_servers', 'value' =>null, 'serialized' => 0, 'encrypted' => 0],
+        (object)['key' => 'name_servers', 'value' => null, 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'notes', 'value' => null, 'serialized' => 0, 'encrypted' => 0]
     ],
     'package_meta' => [

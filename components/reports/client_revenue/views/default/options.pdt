@@ -1,31 +1,22 @@
 
-            <p><?php $this->_('ClientRevenue.description'); ?></p>
-            <div class="pad_side">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('ClientRevenue.options.currency', true), 'currency');
-                        $this->Form->fieldSelect('currency', ($currencies ?? null), ($vars->currency ?? ($default_currency ?? 'USD')), ['id' => 'currency']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('ClientRevenue.options.field_start_date', true), 'start_date');
-                        $this->Form->fieldText('start_date', ($vars->start_date ?? null), ['id' => 'start_date', 'class' => 'date']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('ClientRevenue.options.field_end_date', true), 'end_date');
-                        $this->Form->fieldText('end_date', ($vars->end_date ?? null), ['id' => 'end_date', 'class' => 'date']);
-                        ?>
-                    </li>
-                </ul>
-            </div>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('input.date').datePicker({
-            startDate:'1996-01-01'
-        });
-    });
-</script>
+<p class="mb-3"><?php $this->_('ClientRevenue.description'); ?></p>
+<div class="row g-3">
+    <div class="col-md-6">
+        <label for="currency" class="form-label"><?php $this->_('ClientRevenue.options.currency');?></label>
+        <?php
+        $this->Form->fieldSelect('currency', ($currencies ?? null), ($vars->currency ?? ($default_currency ?? 'USD')), ['id' => 'currency', 'class' => 'form-select']);
+        ?>
+    </div>
+    <div class="col-md-6">
+        <label for="start_date" class="form-label"><?php $this->_('ClientRevenue.options.field_start_date');?></label>
+        <?php
+        $this->Form->fieldText('start_date', ($vars->start_date ?? null), ['id' => 'start_date', 'type' => 'date', 'class' => 'form-control']);
+        ?>
+    </div>
+    <div class="col-md-6">
+        <label for="end_date" class="form-label"><?php $this->_('ClientRevenue.options.field_end_date');?></label>
+        <?php
+        $this->Form->fieldText('end_date', ($vars->end_date ?? null), ['id' => 'end_date', 'type' => 'date', 'class' => 'form-control']);
+        ?>
+    </div>
+</div>

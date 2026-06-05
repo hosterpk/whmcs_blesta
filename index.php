@@ -23,21 +23,26 @@ try {
         // Dispatch the CLI request
         Dispatcher::dispatchCli($argv);
     }
-} catch (Exception $e) {
+} catch (Throwable $e) {
     // Attempt to log the error
     try {
         if (($container = Configure::get('container'))) {
             $logger = $container->get('logger');
             $logger->error($e);
         }
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         // Nothing to do
     }
 
     try {
+        // Clear all existing buffer output safely
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         // Attempt to raise any error, gracefully
         Dispatcher::raiseError($e);
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         if (Configure::get('System.debug')) {
             echo $e->getMessage() . ' on line <strong>' . $e->getLine() .
                 '</strong> in <strong>' . $e->getFile() . "</strong>\n" .

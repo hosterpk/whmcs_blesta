@@ -72,6 +72,9 @@ $lang['Clients.!error.stickied.length'] = 'Sticky length may not exceed 1 charac
 // Restricted packages
 $lang['Clients.!error.package_ids.exists'] = 'At least one of the packages provided does not exist.';
 
+// Notification errors
+$lang['Clients.!error.action.exists'] = 'Invalid notification action "%1$s".'; // %1$s is the action
+$lang['Clients.!error.action[].exists'] = 'Invalid notification action.'; // For array validation
 
 // Text
 $lang['Clients.getCustomFieldTypes.textbox'] = 'Text Box';

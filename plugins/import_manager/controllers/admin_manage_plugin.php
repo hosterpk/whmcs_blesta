@@ -36,7 +36,7 @@ class AdminManagePlugin extends AppController
         $this->company_id = Configure::get('Blesta.company_id');
 
         // Set the plugin ID
-        $this->plugin_id = (isset($this->get[0]) ? $this->get[0] : null);
+        $this->plugin_id = ($this->get[0] ?? null);
 
         // Set the page title
         $this->parent->structure->set(
@@ -68,7 +68,13 @@ class AdminManagePlugin extends AppController
         $vars = [
             'migrators' => $this->ImportManagerImporter->getMigrators(),
             'plugin_id' => $this->plugin_id,
-            'message' => $this->setMessage('notice', Language::_('ImportManagerManagePlugin.index.import_via_cli', true, ROOTWEBDIR), true)
+            'message' => $this->setMessage(
+                'info',
+                Language::_('ImportManagerManagePlugin.index.import_via_cli', true, ROOTWEBDIR),
+                true,
+                null,
+                false
+            )
         ];
 
         // Set the view to render
@@ -166,7 +172,7 @@ class AdminManagePlugin extends AppController
         $this->helpers(['DataStructure']);
 
         $this->Array = $this->DataStructure->create('Array');
-        
+
         // Set the company ID
         $this->company_id = 1;
         $migrators = $this->ImportManagerImporter->getMigrators();
@@ -260,7 +266,7 @@ class AdminManagePlugin extends AppController
                 foreach ($errors as $error) {
                     $this->Console->output($error['valid'] . "\n");
                 }
-            } 
+            }
         }
 
         $this->ImportManagerImporter->runMigrator(
@@ -271,7 +277,7 @@ class AdminManagePlugin extends AppController
 
         if (($errors = $this->ImportManagerImporter->errors())) {
             $errors = $this->Array->flatten($errors);
-            $error = " - " . implode("\n - ", $errors);
+            $error = ' - ' . implode("\n - ", $errors);
 
             $this->Console->output("%s\n" . $error . "\n%s\n", str_repeat('-', 40), str_repeat('-', 40));
         } else {
@@ -316,8 +322,8 @@ class AdminManagePlugin extends AppController
 
         $this->components(['ImportManager.Migrators']);
 
-        $type = isset($this->get[1]) ? $this->get[1] : null;
-        $version = isset($this->get[2]) ? $this->get[2] : null;
+        $type = $this->get[1] ?? null;
+        $version = $this->get[2] ?? null;
         $migrator = $this->Migrators->create($type, $version, [$this->ImportManagerImporter->Record]);
 
         if (!$migrator) {

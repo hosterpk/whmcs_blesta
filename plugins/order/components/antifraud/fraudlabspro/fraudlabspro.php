@@ -1,4 +1,5 @@
 <?php
+
 /**
  * FraudLabs Pro Fraud Detection
  *
@@ -44,7 +45,7 @@ class FraudLabsPro implements FraudDetect
             $api_key->attach(
                 $fields->fieldText(
                     'fraudlabspro_api_key',
-                    (isset($vars->fraudlabspro_api_key) ? $vars->fraudlabspro_api_key : null),
+                    ($vars->fraudlabspro_api_key ?? null),
                     ['id' => 'fraudlabspro_api_key']
                 )
             )
@@ -63,7 +64,7 @@ class FraudLabsPro implements FraudDetect
             $reject_score->attach(
                 $fields->fieldText(
                     'fraudlabspro_reject_score',
-                    (isset($vars->fraudlabspro_reject_score) ? $vars->fraudlabspro_reject_score : '80'),
+                    ($vars->fraudlabspro_reject_score ?? '80'),
                     ['id' => 'fraudlabspro_reject_score']
                 )
             )
@@ -78,7 +79,7 @@ class FraudLabsPro implements FraudDetect
             $review_score->attach(
                 $fields->fieldText(
                     'fraudlabspro_review_score',
-                    (isset($vars->fraudlabspro_review_score) ? $vars->fraudlabspro_review_score : '10'),
+                    ($vars->fraudlabspro_review_score ?? '10'),
                     ['id' => 'fraudlabspro_review_score']
                 )
             )
@@ -93,7 +94,7 @@ class FraudLabsPro implements FraudDetect
             $fields->fieldRadio(
                 'fraudlabspro_follow_flp_result',
                 'yes',
-                (isset($vars->fraudlabspro_follow_flp_result) ? $vars->fraudlabspro_follow_flp_result : 'yes') == 'yes',
+                ($vars->fraudlabspro_follow_flp_result ?? 'yes') == 'yes',
                 ['id' => 'fraudlabspro_follow_flp_result_yes'],
                 $fields->label(
                     Language::_('FraudLabsPro.settings.option_yes', true),
@@ -105,7 +106,7 @@ class FraudLabsPro implements FraudDetect
             $fields->fieldRadio(
                 'fraudlabspro_follow_flp_result',
                 'no',
-                (isset($vars->fraudlabspro_follow_flp_result) ? $vars->fraudlabspro_follow_flp_result : null) == 'no',
+                ($vars->fraudlabspro_follow_flp_result ?? null) == 'no',
                 ['id' => 'fraudlabspro_follow_flp_result_no'],
                 $fields->label(
                     Language::_('FraudLabsPro.settings.option_no', true),
@@ -151,7 +152,7 @@ class FraudLabsPro implements FraudDetect
 
         $url  = 'https://api.fraudlabspro.com/?' . http_build_query($params);
 
-        for ($i=0; $i<3; $i++) {
+        for ($i = 0; $i < 3; $i++) {
             $response = $this->getHttp($url);
 
             if (is_null($this->result = json_decode($response)) === false) {
@@ -173,8 +174,10 @@ class FraudLabsPro implements FraudDetect
             return 'review';
         }
 
-        if ($this->result->fraudlabspro_status == 'REJECT'
-            && $this->options['fraudlabspro_follow_flp_result'] == 'yes') {
+        if (
+            $this->result->fraudlabspro_status == 'REJECT'
+            && $this->options['fraudlabspro_follow_flp_result'] == 'yes'
+        ) {
             $this->setError('reject', 'fraudlabspro');
             return 'reject';
         }
@@ -232,7 +235,7 @@ class FraudLabsPro implements FraudDetect
     private function hashIt($s, $prefix = 'fraudlabspro_')
     {
         $hash = $prefix . $s;
-        for ($i=0; $i<65536; $i++) {
+        for ($i = 0; $i < 65536; $i++) {
             $hash = sha1($prefix . $hash);
         }
 

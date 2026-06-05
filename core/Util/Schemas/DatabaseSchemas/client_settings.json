@@ -1,0 +1,62 @@
+{
+    "columns": [
+        {
+            "name": "key",
+            "type": "varchar(32)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 32
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "value",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "encrypted",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "key",
+                "client_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -37,7 +37,7 @@ class AdminSettings extends AppController
      */
     public function company()
     {
-        return $this->renderAjaxWidgetIfAsync();
+        $this->redirect($this->base_uri . 'settings/company/general/localization/');
     }
 
     /**
@@ -45,6 +45,6 @@ class AdminSettings extends AppController
      */
     public function system()
     {
-        return $this->renderAjaxWidgetIfAsync();
+        $this->redirect($this->base_uri . 'settings/system/general/basic/');
     }
 }

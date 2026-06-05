@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Multicraft Package actions
  *
@@ -152,7 +153,7 @@ class MulticraftPackage
         $server_name->attach(
             $fields->fieldText(
                 'meta[server_name]',
-                (isset($vars->meta['server_name']) ? $vars->meta['server_name'] : 'Minecraft Server'),
+                ($vars->meta['server_name'] ?? 'Minecraft Server'),
                 ['id' => 'multicraft_server_name']
             )
         );
@@ -163,7 +164,7 @@ class MulticraftPackage
         $players->attach(
             $fields->fieldText(
                 'meta[players]',
-                (isset($vars->meta['players']) ? $vars->meta['players'] : null),
+                ($vars->meta['players'] ?? null),
                 ['id' => 'multicraft_players']
             )
         );
@@ -174,7 +175,7 @@ class MulticraftPackage
         $memory->attach(
             $fields->fieldText(
                 'meta[memory]',
-                (isset($vars->meta['memory']) ? $vars->meta['memory'] : null),
+                ($vars->meta['memory'] ?? null),
                 ['id' => 'multicraft_memory']
             )
         );
@@ -188,7 +189,7 @@ class MulticraftPackage
         $jar->attach(
             $fields->fieldText(
                 'meta[jarfile]',
-                (isset($vars->meta['jarfile']) ? $vars->meta['jarfile'] : null),
+                ($vars->meta['jarfile'] ?? null),
                 ['id' => 'multicraft_jarfile']
             )
         );
@@ -203,7 +204,7 @@ class MulticraftPackage
             $fields->fieldSelect(
                 'meta[jardir]',
                 $this->getJarDirectories(),
-                (isset($vars->meta['jardir']) ? $vars->meta['jardir'] : null),
+                ($vars->meta['jardir'] ?? null),
                 ['id' => 'multicraft_jardir']
             )
         );
@@ -217,7 +218,7 @@ class MulticraftPackage
         $user_jar = $fields->fieldCheckbox(
             'meta[user_jar]',
             '1',
-            (isset($vars->meta['user_jar']) ? $vars->meta['user_jar'] : null) == '1',
+            ($vars->meta['user_jar'] ?? null) == '1',
             ['id' => 'multicraft_user_jar'],
             $label
         );
@@ -233,7 +234,7 @@ class MulticraftPackage
         $user_name = $fields->fieldCheckbox(
             'meta[user_name]',
             '1',
-            (isset($vars->meta['user_name']) ? $vars->meta['user_name'] : null) == '1',
+            ($vars->meta['user_name'] ?? null) == '1',
             ['id' => 'multicraft_user_name'],
             $label
         );
@@ -252,7 +253,7 @@ class MulticraftPackage
         $user_schedule = $fields->fieldCheckbox(
             'meta[user_schedule]',
             '1',
-            (isset($vars->meta['user_schedule']) ? $vars->meta['user_schedule'] : null) == '1',
+            ($vars->meta['user_schedule'] ?? null) == '1',
             ['id' => 'multicraft_user_schedule'],
             $label
         );
@@ -268,7 +269,7 @@ class MulticraftPackage
         $user_ftp = $fields->fieldCheckbox(
             'meta[user_ftp]',
             '1',
-            (isset($vars->meta['user_ftp']) ? $vars->meta['user_ftp'] : null) == '1',
+            ($vars->meta['user_ftp'] ?? null) == '1',
             ['id' => 'multicraft_user_ftp'],
             $label
         );
@@ -287,7 +288,7 @@ class MulticraftPackage
         $user_visibility = $fields->fieldCheckbox(
             'meta[user_visibility]',
             '1',
-            (isset($vars->meta['user_visibility']) ? $vars->meta['user_visibility'] : null) == '1',
+            ($vars->meta['user_visibility'] ?? null) == '1',
             ['id' => 'multicraft_user_visibility'],
             $label
         );
@@ -307,7 +308,7 @@ class MulticraftPackage
             $fields->fieldSelect(
                 'meta[default_level]',
                 $this->getDefaultRoles(),
-                (isset($vars->meta['default_level']) ? $vars->meta['default_level'] : '10'),
+                ($vars->meta['default_level'] ?? '10'),
                 ['id' => 'multicraft_default_level']
             )
         );
@@ -324,7 +325,7 @@ class MulticraftPackage
         $autostart = $fields->fieldCheckbox(
             'meta[autostart]',
             '1',
-            (isset($vars->meta['autostart']) ? $vars->meta['autostart'] : null) == '1',
+            ($vars->meta['autostart'] ?? null) == '1',
             ['id' => 'multicraft_autostart'],
             $label
         );
@@ -343,7 +344,7 @@ class MulticraftPackage
         $create_ftp = $fields->fieldCheckbox(
             'meta[create_ftp]',
             '1',
-            (isset($vars->meta['create_ftp']) ? $vars->meta['create_ftp'] : null) == '1',
+            ($vars->meta['create_ftp'] ?? null) == '1',
             ['id' => 'multicraft_create_ftp'],
             $label
         );
@@ -363,7 +364,7 @@ class MulticraftPackage
             $fields->fieldSelect(
                 'meta[server_visibility]',
                 $this->getServerVisibilityOptions(),
-                (isset($vars->meta['server_visibility']) ? $vars->meta['server_visibility'] : '1'),
+                ($vars->meta['server_visibility'] ?? '1'),
                 ['id' => 'multicraft_server_visibility']
             )
         );

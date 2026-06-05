@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Discount;
 
 /**

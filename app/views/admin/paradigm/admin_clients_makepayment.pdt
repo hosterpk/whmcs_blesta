@@ -1,0 +1,296 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+
+// Build "Record Payment Instead" link button for card-filter-bar
+$record_url = $this->base_uri . 'clients/recordpayment/' . $this->Html->safe($client->id ?? '') . '/';
+$record_name = $this->_('AdminClients.makepayment.record_payment', true);
+if (isset($invoice) && $invoice) {
+    $record_url .= $this->Html->safe($invoice->id ?? '') . '/';
+    $record_name = $this->_('AdminClients.makepayment.record_invoice', true, $invoice->id_code ?? null);
+}
+$this->Widget->setLinkButtons([[
+    'icon' => 'bi bi-journal-text me-1',
+    'name' => $record_name,
+    'attributes' => ['href' => $record_url]
+]]);
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+$this->Widget->create($this->_('AdminClients.makepayment.boxtitle_makepayment', true), ['id' => 'admin_clients_makepayment'], (isset($render_section) ? $render_section : null));
+?>
+
+    <?php
+    // Hidden fields for form backward compatibility
+    // JavaScript syncs these based on radio selection
+    $default_pay_with = (isset($vars->pay_with) ? $vars->pay_with : 'account');
+    $default_payment_account = (isset($vars->payment_account) ? $vars->payment_account : '');
+    ?>
+    <input type="hidden" name="pay_with" id="hidden_pay_with" value="<?php echo $this->Html->safe($default_pay_with);?>">
+    <input type="hidden" name="payment_account" id="hidden_payment_account" value="<?php echo $this->Html->safe($default_payment_account);?>">
+
+    <!-- Payment Method Cards -->
+    <div class="payment-method-cards mb-3">
+        <?php
+        $has_accounts = false;
+        $has_selection = (isset($vars->payment_account) && $vars->payment_account !== '');
+        $now_ym = date('Ym');
+        $expiring_ym = date('Ym', strtotime('+3 months'));
+
+        // Determine if we should show saved accounts (skip if passphrase required)
+        $show_accounts = !(isset($require_passphrase) ? $require_passphrase : false);
+
+        if ($show_accounts) {
+            // CC accounts
+            foreach ((array)($cc_accounts ?? []) as $account) {
+                $has_accounts = true;
+                $account_value = 'cc_' . $account->id;
+
+                // Check auto-debit
+                $is_autodebit = false;
+                if (isset($autodebit) && $autodebit && $autodebit->type == 'cc' && $autodebit->account_id == $account->id) {
+                    $is_autodebit = true;
+                }
+
+                // Check expiration
+                $card_ym = $account->expiration;
+                $is_expired = ($card_ym < $now_ym);
+                $is_expiring = (!$is_expired && $card_ym <= $expiring_ym);
+
+                // Determine if this card should be pre-selected
+                $is_checked = ($has_selection && isset($vars->payment_account) && $vars->payment_account == $account_value);
+                if (!$has_selection) {
+                    $is_checked = true;
+                    $has_selection = true;
+                }
+
+                $card_type_name = (isset($cc_types[$account->type]) ? $cc_types[$account->type] : $account->type);
+
+                // Format expiration for display (MMYYYY -> MM/YYYY)
+                $exp_month = substr($card_ym, 4, 2);
+                $exp_year = substr($card_ym, 0, 4);
+        ?>
+        <label class="payment-method-card<?php echo $is_checked ? ' selected' : '';?>">
+            <input type="radio" name="payment_source" value="<?php echo $this->Html->safe($account_value);?>"<?php echo $is_checked ? ' checked' : '';?>>
+            <div class="payment-method-content">
+                <div class="payment-method-icon">
+                    <i class="bi bi-credit-card-2-front"></i>
+                </div>
+                <div class="payment-method-details">
+                    <div class="payment-method-name">
+                        <?php $this->_('AdminClients.makepayment.card_name_cc', false, $card_type_name, $account->last4);?>
+                        <?php if ($is_autodebit) { ?><span class="payment-method-badge auto-debit"><?php $this->_('AdminClients.makepayment.badge_autodebit');?></span><?php } ?>
+                        <?php if ($is_expired) { ?><span class="payment-method-badge expired"><?php $this->_('AdminClients.makepayment.badge_expired');?></span><?php } ?>
+                        <?php if ($is_expiring) { ?><span class="payment-method-badge expiring"><?php $this->_('AdminClients.makepayment.badge_expiring');?></span><?php } ?>
+                    </div>
+                    <div class="payment-method-info">
+                        <?php $this->_('AdminClients.makepayment.card_info_cc', false, $account->first_name, $account->last_name, $exp_month, $exp_year);?>
+                    </div>
+                </div>
+            </div>
+        </label>
+        <?php
+            }
+
+            // ACH accounts
+            foreach ((array)($ach_accounts ?? []) as $account) {
+                $has_accounts = true;
+                $account_value = 'ach_' . $account->id;
+
+                // Check auto-debit
+                $is_autodebit = false;
+                if (isset($autodebit) && $autodebit && $autodebit->type == 'ach' && $autodebit->account_id == $account->id) {
+                    $is_autodebit = true;
+                }
+
+                // Determine if this card should be pre-selected
+                $is_checked = ($has_selection && isset($vars->payment_account) && $vars->payment_account == $account_value);
+                if (!$has_selection) {
+                    $is_checked = true;
+                    $has_selection = true;
+                }
+
+                $ach_type_name = (isset($ach_types[$account->type]) ? $ach_types[$account->type] : $account->type);
+        ?>
+        <label class="payment-method-card<?php echo $is_checked ? ' selected' : '';?>">
+            <input type="radio" name="payment_source" value="<?php echo $this->Html->safe($account_value);?>"<?php echo $is_checked ? ' checked' : '';?>>
+            <div class="payment-method-content">
+                <div class="payment-method-icon">
+                    <i class="bi bi-bank"></i>
+                </div>
+                <div class="payment-method-details">
+                    <div class="payment-method-name">
+                        <?php $this->_('AdminClients.makepayment.card_name_ach', false, $ach_type_name, $account->last4);?>
+                        <?php if ($is_autodebit) { ?><span class="payment-method-badge auto-debit"><?php $this->_('AdminClients.makepayment.badge_autodebit');?></span><?php } ?>
+                    </div>
+                    <div class="payment-method-info">
+                        <?php $this->_('AdminClients.makepayment.card_info_ach', false, $account->first_name, $account->last_name);?>
+                    </div>
+                </div>
+            </div>
+        </label>
+        <?php
+            }
+        }
+
+        // "Use New Payment Method" card
+        if (!empty($payment_types)) {
+            $new_checked = (!$has_accounts || (isset($vars->pay_with) && $vars->pay_with == 'details'));
+        ?>
+        <label class="payment-method-card add-payment-method-card<?php echo $new_checked ? ' selected' : '';?>" id="labelUseDetails">
+            <input type="radio" name="payment_source" value="new"<?php echo $new_checked ? ' checked' : '';?> id="pay_with_details">
+            <div class="add-payment-content">
+                <div class="add-payment-icon">
+                    <i class="bi bi-plus-lg"></i>
+                </div>
+                <div class="payment-method-details">
+                    <div class="payment-method-name">
+                        <?php $this->_('AdminClients.makepayment.field_newmethod');?>
+                    </div>
+                    <div class="payment-method-info">
+                        <?php
+                        $payment_names = '';
+                        foreach ($payment_types as $type => $name) {
+                            $payment_names .= $this->Html->safe($name) . ' / ';
+                        }
+                        echo trim($payment_names, ' / ');
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </label>
+        <?php
+        }
+        ?>
+    </div>
+
+    <!-- Payment Type Selection (for new payment details) -->
+    <?php
+    if (!empty($payment_types)) {
+    ?>
+    <div id="paymentTypeSelection" class="mb-3" style="<?php echo ($new_checked ?? false) ? '' : 'display: none;';?>">
+        <?php
+        $this->Form->label($this->_('AdminClients.makepayment.field_paymenttype', true), 'payment_type', ['class' => 'form-label']);
+        $this->Form->fieldSelect('payment_type', $payment_types, (isset($vars->payment_type) ? $vars->payment_type : 'cc'), ['id' => 'payment_type', 'class' => 'form-select']);
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+
+    <!-- Payment Details (Contact Info + CC/ACH) -->
+    <div id="payment_details" style="<?php echo ($new_checked ?? false) ? '' : 'display: none;';?>">
+        <!-- Contact Information Section -->
+        <h6 class="form-section-header">
+            <?php $this->_('AdminClients.makepayment.heading_contactinfo');?>
+        </h6>
+        <?php echo (isset($contact_info) ? $contact_info : null);?>
+
+        <!-- Credit Card Information Section -->
+        <div id="payment_details_cc"<?php echo ((isset($vars->payment_type) ? $vars->payment_type : 'cc') != 'cc') ? ' style="display: none;"' : '';?>>
+            <span class="d-none"></span>
+            <h6 class="form-section-header"><?php $this->_('AdminClients.makepayment.heading_ccinfo');?></h6>
+            <?php echo (isset($cc_info) ? $cc_info : null);?>
+        </div>
+
+        <!-- ACH Information Section -->
+        <div id="payment_details_ach"<?php echo ((isset($vars->payment_type) ? $vars->payment_type : null) == 'ach') ? '' : ' style="display: none;"';?>>
+            <span class="d-none"></span>
+            <h6 class="form-section-header"><?php $this->_('AdminClients.makepayment.heading_achinfo');?></h6>
+            <?php echo (isset($ach_info) ? $ach_info : null);?>
+        </div>
+    </div>
+
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.makepayment.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+
+<?php
+$this->Widget->end();
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var paymentTypeSelect = document.getElementById('payment_type');
+    var payment_details = document.getElementById('payment_details');
+    var payment_details_cc = document.getElementById('payment_details_cc');
+    var payment_details_ach = document.getElementById('payment_details_ach');
+    var paymentTypeSelection = document.getElementById('paymentTypeSelection');
+    var hiddenPayWith = document.getElementById('hidden_pay_with');
+    var hiddenPaymentAccount = document.getElementById('hidden_payment_account');
+
+    function syncHiddenFields(value) {
+        if (value === 'new') {
+            hiddenPayWith.value = 'details';
+            hiddenPaymentAccount.value = '';
+        } else {
+            hiddenPayWith.value = 'account';
+            hiddenPaymentAccount.value = value;
+        }
+    }
+
+    function updateSelectedCards() {
+        document.querySelectorAll('.payment-method-card').forEach(function(card) {
+            var radio = card.querySelector('input[type="radio"]');
+            if (radio && radio.checked) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+
+    function togglePaymentSections(value) {
+        if (value === 'new') {
+            if (payment_details) payment_details.style.display = 'block';
+            if (paymentTypeSelection) paymentTypeSelection.style.display = 'block';
+            togglePayDetails(paymentTypeSelect ? paymentTypeSelect.value : 'cc');
+        } else {
+            if (payment_details) payment_details.style.display = 'none';
+            if (paymentTypeSelection) paymentTypeSelection.style.display = 'none';
+        }
+    }
+
+    function togglePayDetails(paymentType) {
+        if (paymentType === 'cc') {
+            if (payment_details_ach) payment_details_ach.style.display = 'none';
+            if (payment_details_cc) payment_details_cc.style.display = 'block';
+        } else {
+            if (payment_details_cc) payment_details_cc.style.display = 'none';
+            if (payment_details_ach) payment_details_ach.style.display = 'block';
+        }
+    }
+
+    // Listen for payment_source radio changes
+    document.querySelectorAll('input[name="payment_source"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            syncHiddenFields(this.value);
+            updateSelectedCards();
+            togglePaymentSections(this.value);
+        });
+    });
+
+    // Payment type select change
+    if (paymentTypeSelect) {
+        paymentTypeSelect.addEventListener('change', function() {
+            togglePayDetails(this.value);
+        });
+    }
+
+    // Set initial state from checked radio
+    var checkedSource = document.querySelector('input[name="payment_source"]:checked');
+    if (checkedSource) {
+        syncHiddenFields(checkedSource.value);
+        updateSelectedCards();
+        togglePaymentSections(checkedSource.value);
+    }
+});
+</script>

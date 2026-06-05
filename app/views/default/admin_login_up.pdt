@@ -1,59 +1,163 @@
+<?php /** @var View $this **/ ?>
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="login-box vertical-center">
-                <div class="card card-login">
-                    <div class="card-body">
-                        <h3><?php $this->_('AdminLogin.up.title_adminarea', false, (isset($system_company->name) ? $this->Html->safe($system_company->name) : null));?></h3>
+<div class="login-container">
+    <div class="login-brand-panel">
+        <div class="brand-content">
+            <?php
+            if (!empty($theme_logo)) {
+                ?>
+                <img<?php echo (!empty($admin_logo_height) ? ' style="height: ' . $admin_logo_height . 'px;"' : '');?> src="<?php echo $this->Html->safe(($theme_logo_dark ?? null) ?: $theme_logo);?>" alt="<?php echo $this->Html->safe($system_company->name ?? 'Blesta');?>" class="brand-logo brand-logo-dark" />
+                <img<?php echo (!empty($admin_logo_height) ? ' style="height: ' . $admin_logo_height . 'px;"' : '');?> src="<?php (print (isset($theme_logo) ? $this->Html->safe($theme_logo) : null));?>" alt="<?php echo $this->Html->safe($system_company->name ?? 'Blesta');?>" class="brand-logo brand-logo-light" />
+                <?php
+            } else {
+                ?>
+                <img src="<?php echo $this->view_dir . 'images/logo.svg';?>" alt="Blesta" class="brand-logo brand-logo-dark">
+                <img src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" class="brand-logo brand-logo-light">
+                <?php
+            }
+            ?>
+            <h2 class="brand-title"><?php echo $this->Html->safe($system_company->name ?? 'Blesta');?></h2>
+            <p class="brand-subtitle"><?php $this->_('AdminLogin.up.page_subtitle', false);?></p>
+        </div>
+    </div>
+
+    <div class="login-form-panel">
+        <div class="login-form-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <h1><?php $this->_('AdminLogin.up.title_adminarea', false);?></h1>
+                    <p><?php $this->_('AdminLogin.up.subtitle_adminarea', false);?></p>
+                </div>
+
+                <?php echo ($message ?? null);?>
+
+                <?php
+                $this->Form->create(null, ['class' => 'disable-on-submit']);
+                ?>
+                    <div class="form-group">
                         <?php
-                        echo (isset($message) ? $message : null);
-                        $this->Form->create(null, ['class' => 'disable-on-submit']);
-                        ?>
-                            <div class="form-group">
+                        if (($two_factor_mode ?? 'none') == 'none') {
+                            ?>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-lock input-icon"></i>
                                 <?php
-                                if ($two_factor_mode == 'none') {
-                                    $this->Form->fieldPassword(
-                                        'password',
-                                        [
-                                            'id' => 'password',
-                                            'class' => 'form-control',
-                                            'tabindex' => 1,
-                                            'placeholder' => $this->_('AdminLogin.up.field_password', true),
-                                            'autofocus' => 'autofocus'
-                                        ]
-                                    );
-                                } else {
-                                    $this->Form->fieldText(
-                                        'stepup_password',
-                                        null,
-                                        [
-                                            'class' => 'form-control',
-                                            'tabindex' => 1,
-                                            'placeholder' => $this->_('AdminLogin.up.field_password_otp', true),
-                                            'autofocus' => 'autofocus'
-                                        ]
-                                    );
+                                $this->Form->fieldPassword(
+                                    'password',
+                                    [
+                                        'id' => 'password',
+                                        'class' => 'form-control form-control-modern',
+                                        'tabindex' => 1,
+                                        'placeholder' => $this->_('AdminLogin.up.field_password', true),
+                                        'autocomplete' => 'current-password',
+                                        'autofocus' => 'autofocus'
+                                    ]
+                                );
+                                ?>
+                                <button type="button" class="password-toggle" id="password-toggle" aria-label="Toggle password visibility">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <?php
+                        } else {
+                            ?>
+                            <div class="d-flex justify-content-center">
+                                <?php
+                                for ($i = 1; $i <= 6; $i++) {
+                                    ?>
+                                    <div class="p-2">
+                                        <?php
+                                        $this->Form->fieldText(
+                                            'otp-' . $i,
+                                            ($vars->{'otp-' . $i} ?? null),
+                                            [
+                                                'id' => 'otp-' . $i,
+                                                'class' => 'otp-digit form-control text-center fs-2',
+                                                'maxlength' => 1,
+                                                'pattern' => '[0-9]'
+                                            ]
+                                        );
+                                        ?>
+                                    </div>
+                                    <?php
                                 }
                                 ?>
                             </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <button class="btn btn-block btn-success float-right" type="submit">
-                                        <i class="fas fa-sign-in-alt"></i> <?php $this->_('AdminLogin.up.field_loginsubmit');?>
-                                    </button>
-                                </div>
-                            </div>
-                        <?php
-                        $this->Form->end();
+                            <?php
+                            $this->Form->fieldHidden('stepup_password', null, ['id' => 'otp']);
+                            ?>
+                            <?php
+                        }
                         ?>
                     </div>
-                    <div class="card-footer">
-                       <div class="pass-reset">
-                           <a href="<?php echo $this->base_uri . 'settings/company/';?>"><?php $this->_('AdminLogin.up.link_cancel');?></a>
-                       </div>
+
+                    <button type="submit" class="btn btn-success btn-login" id="login-button">
+                        <span id="login-button-text">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> <?php $this->_('AdminLogin.up.field_loginsubmit');?>
+                        </span>
+                    </button>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            let otp_inputs = document.querySelectorAll('.otp-digit');
+
+                            function updateOTP() {
+                                let otp = '';
+                                otp_inputs.forEach(function(input) {
+                                    otp += input.value;
+                                });
+                                document.getElementById('otp').value = otp;
+                            }
+
+                            otp_inputs.forEach(function(input, index) {
+                                input.addEventListener('input', function() {
+                                    let value = this.value.replace(/\D/g, '');
+                                    this.value = value;
+
+                                    if (value.length === 1) {
+                                        let next = otp_inputs[index + 1];
+                                        if (next) next.focus();
+                                    }
+
+                                    updateOTP();
+                                });
+
+                                input.addEventListener('keydown', function(e) {
+                                    if (e.key === 'Backspace' && !this.value && index > 0) {
+                                        otp_inputs[index - 1].focus();
+                                    } else if (e.key === 'ArrowLeft' && index > 0) {
+                                        otp_inputs[index - 1].focus();
+                                    } else if (e.key === 'ArrowRight' && index < otp_inputs.length - 1) {
+                                        otp_inputs[index + 1].focus();
+                                    }
+                                });
+
+                                input.addEventListener('paste', function(e) {
+                                    e.preventDefault();
+                                    let paste = (e.clipboardData || window.clipboardData).getData('text');
+                                    let digits = paste.replace(/\D/g, '').split('');
+
+                                    digits.forEach(function(digit, i) {
+                                        if (index + i < otp_inputs.length) {
+                                            otp_inputs[index + i].value = digit;
+                                        }
+                                    });
+
+                                    let next_index = Math.min(index + digits.length, otp_inputs.length - 1);
+                                    if (otp_inputs[next_index]) {
+                                        otp_inputs[next_index].focus();
+                                    }
+                                    updateOTP();
+                                });
+                            });
+                        });
+                    </script>
+
+                    <div class="forgot-password">
+                        <a href="<?php echo $this->base_uri . 'settings/company/';?>" id="cancel-link"><?php $this->_('AdminLogin.up.link_cancel');?></a>
                     </div>
-                </div>
+                <?php
+                $this->Form->end();
+                ?>
             </div>
         </div>
     </div>

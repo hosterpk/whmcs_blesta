@@ -39,8 +39,17 @@ class AdminResponses extends SupportManagerController
 
         // Build the partial for listing categories and responses
         $category_id = (isset($category->id) ? $category->id : null);
+        $categories = $this->SupportManagerResponses->getAllCategories($this->company_id, $category_id);
+
+        // Calculate item count for each category (subcategories + responses)
+        foreach ($categories as &$cat) {
+            $subcategory_count = count($this->SupportManagerResponses->getAllCategories($this->company_id, $cat->id));
+            $response_count = count($this->SupportManagerResponses->getAll($this->company_id, $cat->id));
+            $cat->item_count = $subcategory_count + $response_count;
+        }
+
         $vars = [
-            'categories' => $this->SupportManagerResponses->getAllCategories($this->company_id, $category_id),
+            'categories' => $categories,
             'category' => $category,
             'show_links' => true
         ];

@@ -1,33 +1,33 @@
 
-<ul>
-    <li>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Converge.merchant_id', true), null, ['class' => 'form-label']);
+    $this->Form->fieldText('merchant_id', (isset($meta['merchant_id']) ? $meta['merchant_id'] : null), ['class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Converge.user_id', true), null, ['class' => 'form-label']);
+    $this->Form->fieldText('user_id', (isset($meta['user_id']) ? $meta['user_id'] : null), ['class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Converge.pin', true), null, ['class' => 'form-label']);
+    $this->Form->fieldText('pin', (isset($meta['pin']) ? $meta['pin'] : null), ['class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <div class="form-check">
         <?php
-        $this->Form->label($this->_('Converge.merchant_id', true));
-        $this->Form->fieldText('merchant_id', (isset($meta['merchant_id']) ? $meta['merchant_id'] : null));
+        $this->Form->fieldCheckbox('live_mode', 'true', ((isset($meta['live_mode']) ? $meta['live_mode'] : 'false') == 'true'), ['id' => 'live_mode', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('Converge.live_mode', true), 'live_mode', ['class' => 'form-check-label']);
         ?>
-    </li>
-    <li>
-        <?php
-        $this->Form->label($this->_('Converge.user_id', true));
-        $this->Form->fieldText('user_id', (isset($meta['user_id']) ? $meta['user_id'] : null));
-        ?>
-    </li>
-    <li>
-        <?php
-        $this->Form->label($this->_('Converge.pin', true));
-        $this->Form->fieldText('pin', (isset($meta['pin']) ? $meta['pin'] : null));
-        ?>
-    </li>
-    <li>
-        <?php
-        $this->Form->fieldCheckbox('live_mode', 'true', ((isset($meta['live_mode']) ? $meta['live_mode'] : 'false') == 'true'), ['id'=>'live_mode']);
-        $this->Form->label($this->_('Converge.live_mode', true), 'live_mode', ['class'=>'inline']);
-        ?>
-    </li>
-    <li>
-        <?php
-        $this->Form->label($this->_('Converge.multiCurrency', true));
-        $this->Form->fieldSelect('multicurrency', [0 => $this->_('Converge.no', true), 1 => $this->_('Converge.yes', true)], (isset($meta['multicurrency']) ? $meta['multicurrency'] : null));
-        ?>
-    </li>
-</ul>
+    </div>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Converge.multiCurrency', true), null, ['class' => 'form-label']);
+    $this->Form->fieldSelect('multicurrency', [0 => $this->_('Converge.no', true), 1 => $this->_('Converge.yes', true)], (isset($meta['multicurrency']) ? $meta['multicurrency'] : null), ['class' => 'form-select']);
+    ?>
+</div>

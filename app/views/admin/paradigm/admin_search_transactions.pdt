@@ -1,0 +1,63 @@
+<?php
+$has_results = ($transactions ?? false) && count($transactions) > 0;
+
+if (($smart_search ?? false) && !$has_results) {
+    return;
+}
+?>
+<div class="card-body pb-0">
+    <h6 class="form-section-header"><?php $this->_('AdminSearch.transactions.heading');?></h6>
+</div>
+<?php if ($has_results) { ?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th><?php $this->_('AdminSearch.transactions.heading_client_id');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_type');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_amount');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_credited');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_applied');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_number');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_status');?></th>
+                <th><?php $this->_('AdminSearch.transactions.heading_date');?></th>
+                <th style="width: 80px;"><?php $this->_('AdminSearch.transactions.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $num_transactions = count($transactions);
+            for ($i = 0; $i < $num_transactions; $i++) {
+                $transaction_type = ($transactions[$i]->type_name != '' ? $transactions[$i]->type_name : $transactions[$i]->type);
+            ?>
+            <tr>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . ($transactions[$i]->client_id ?? null) . '/');?>">
+                        <?php echo $this->Html->safe($transactions[$i]->client_id_code ?? null);?>
+                    </a>
+                </td>
+                <td><?php echo $this->Html->safe($transaction_types[$transaction_type] ?? null);?></td>
+                <td><?php echo $this->CurrencyFormat->format(($transactions[$i]->amount ?? null), ($transactions[$i]->currency ?? null), ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format(($transactions[$i]->credited_amount ?? null), ($transactions[$i]->currency ?? null), ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format(($transactions[$i]->applied_amount ?? null), ($transactions[$i]->currency ?? null), ['html_code' => true]);?></td>
+                <td><?php echo $this->Html->safe($transactions[$i]->transaction_id ?? null);?></td>
+                <td><?php echo $this->Html->safe($transaction_status[$transactions[$i]->status] ?? null);?></td>
+                <td><?php echo $this->Date->cast($transactions[$i]->date_added ?? null);?></td>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . ($transactions[$i]->client_id ?? null) . '/' . ($transactions[$i]->id ?? null));?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminSearch.transactions.option_edit');?>">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+<?php } else { ?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-credit-card" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminSearch.transactions.no_results');?></p>
+</div>
+<?php } ?>

@@ -79,6 +79,14 @@ class OvhDomains extends RegistrarModule
         Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
 
         $this->view->set('endpoints', array_combine(array_keys($this->endpoints), array_keys($this->endpoints)));
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -107,6 +115,14 @@ class OvhDomains extends RegistrarModule
         }
 
         $this->view->set('endpoints', array_combine(array_keys($this->endpoints), array_keys($this->endpoints)));
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -319,7 +335,7 @@ class OvhDomains extends RegistrarModule
         // Build meta data to return
         $meta = [];
         if ($this->Input->validates($vars)) {
-            if (!isset($vars['meta'] )) {
+            if (!isset($vars['meta'])) {
                 return [];
             }
 
@@ -360,7 +376,7 @@ class OvhDomains extends RegistrarModule
         // Build meta data to return
         $meta = [];
         if ($this->Input->validates($vars)) {
-            if (!isset($vars['meta'] )) {
+            if (!isset($vars['meta'])) {
                 return [];
             }
 
@@ -505,17 +521,13 @@ class OvhDomains extends RegistrarModule
         }
 
         // Set input fields
-        if (array_key_exists('auth_info', $vars)) {
-            $input_fields = array_merge(
-                Configure::get('OvhDomains.transfer_fields'),
-                Configure::get('OvhDomains.nameserver_fields')
-            );
-        } else {
-            $input_fields = array_merge(
-                Configure::get('OvhDomains.domain_fields'),
-                Configure::get('OvhDomains.nameserver_fields')
-            );
-        }
+        $input_fields = array_key_exists('auth_info', $vars) ? array_merge(
+            Configure::get('OvhDomains.transfer_fields'),
+            Configure::get('OvhDomains.nameserver_fields')
+        ) : array_merge(
+            Configure::get('OvhDomains.domain_fields'),
+            Configure::get('OvhDomains.nameserver_fields')
+        );
 
         // Initialize API
         $api = $this->getApi($row->meta->application_key, $row->meta->secret_key, $row->meta->consumer_key, $row->meta->endpoint);
@@ -574,11 +586,7 @@ class OvhDomains extends RegistrarModule
 
         // Only provision the service if 'use_module' is true
         if ($vars['use_module'] == 'true') {
-            if (isset($vars['transfer'])) {
-                $domain = $this->transferDomain($vars['domain'], $row->id, $vars);
-            } else {
-                $domain = $this->registerDomain($vars['domain'], $row->id, $vars);
-            }
+            $domain = isset($vars['transfer']) ? $this->transferDomain($vars['domain'], $row->id, $vars) : $this->registerDomain($vars['domain'], $row->id, $vars);
 
             if ($domain) {
                 if (!empty($nameservers)) {
@@ -870,12 +878,12 @@ class OvhDomains extends RegistrarModule
                 ]
             ],
             'ns' => [
-                'count'=>[
+                'count' => [
                     'rule' => [[$this, 'validateNameServerCount']],
                     'message' => Language::_('OvhDomains.!error.ns_count', true)
                 ],
-                'valid'=>[
-                    'rule'=>[[$this, 'validateNameServers']],
+                'valid' => [
+                    'rule' => [[$this, 'validateNameServers']],
                     'message' => Language::_('OvhDomains.!error.ns_valid', true)
                 ]
             ]
@@ -931,9 +939,9 @@ class OvhDomains extends RegistrarModule
         ];
 
         // Check if DNS Management is enabled
-        if (!$this->featureServiceEnabled('dns_management', $service)) {
-            unset($tabs['tabDns']);
-        }
+        // if (!$this->featureServiceEnabled('dns_management', $service)) {
+        //     unset($tabs['tabDns']);
+        // }
 
         return $tabs;
     }
@@ -2134,7 +2142,7 @@ class OvhDomains extends RegistrarModule
         );
 
         if ($cache) {
-            $response = unserialize(base64_decode($cache));
+            $response = safe_unserialize(base64_decode($cache));
         }
 
         if (!isset($response)) {
@@ -2166,7 +2174,7 @@ class OvhDomains extends RegistrarModule
                             strtotime(Configure::get('Blesta.cache_length')) - time(),
                             Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'ovh_domains' . DS
                         );
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         // Write to cache failed, so disable caching
                         Configure::set('Caching.on', false);
                     }
@@ -2307,7 +2315,7 @@ class OvhDomains extends RegistrarModule
         );
 
         if ($cache) {
-            $response = unserialize(base64_decode($cache));
+            $response = safe_unserialize(base64_decode($cache));
         }
 
         // Create a new order cart
@@ -2334,7 +2342,7 @@ class OvhDomains extends RegistrarModule
                         strtotime(Configure::get('Blesta.cache_length')) - time(),
                         Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'ovh_domains' . DS
                     );
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Write to cache failed, so disable caching
                     Configure::set('Caching.on', false);
                 }

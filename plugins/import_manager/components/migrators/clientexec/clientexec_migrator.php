@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generic Clientexec Migrator.
  *
@@ -65,7 +66,7 @@ class ClientexecMigrator extends Migrator
                 $this->{$action}();
                 $this->endTimer($action);
                 $this->debug("-----------------\n");
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $errors[] = $action . ': ' . $e->getMessage() . ' on line ' . $e->getLine();
                 $this->logException($e);
             }
@@ -373,7 +374,7 @@ class ClientexecMigrator extends Migrator
         foreach ($notes as $note) {
             $vars = [
                 'client_id' => $this->mappings['clients'][$note->target_id],
-                'staff_id' => isset($this->mappings['staff'][$note->admin_id]) ? $this->mappings['staff'][$note->admin_id] : 0,
+                'staff_id' => $this->mappings['staff'][$note->admin_id] ?? 0,
                 'title' => $this->decode($note->subject),
                 'description' => $this->decode($note->note),
                 'stickied' => 0,
@@ -985,7 +986,7 @@ class ClientexecMigrator extends Migrator
 
             // Get module mapping
             $mapping = $this->getModuleMapping(
-                isset($modules[$package->module_id]) ? $modules[$package->module_id] : 'generic_server'
+                $modules[$package->module_id] ?? 'generic_server'
             );
 
             // Get default currency
@@ -1225,14 +1226,14 @@ class ClientexecMigrator extends Migrator
         foreach ($tickets as $ticket) {
             $vars = [
                 'code' => is_numeric($ticket->id) ? (int) $ticket->id : preg_replace('/[^0-9]+/', '', $ticket->id),
-                'department_id' => isset($this->mappings['support_departments'][$ticket->assignedtodeptid]) ? $this->mappings['support_departments'][$ticket->assignedtodeptid] : 0,
-                'staff_id' => isset($this->mappings['staff'][$ticket->assignedtoid]) ? $this->mappings['staff'][$ticket->assignedtoid] : null,
+                'department_id' => $this->mappings['support_departments'][$ticket->assignedtodeptid] ?? 0,
+                'staff_id' => $this->mappings['staff'][$ticket->assignedtoid] ?? null,
                 'service_id' => null,
                 'client_id' => $ticket->userid > 0 && isset($this->mappings['clients'][$ticket->userid]) ? $this->mappings['clients'][$ticket->userid] : null,
                 'email' => null,
                 'summary' => $this->decode($ticket->subject),
-                'priority' => isset($priorities[$ticket->priority]) ? $priorities[$ticket->priority] : 'medium',
-                'status' => isset($statuses[$ticket->status]) ? $statuses[$ticket->status] : 'open',
+                'priority' => $priorities[$ticket->priority] ?? 'medium',
+                'status' => $statuses[$ticket->status] ?? 'open',
                 'date_added' => $this->Companies->dateToUtc($ticket->datesubmitted),
                 'date_updated' => $this->Companies->dateToUtc($ticket->lastlog_datetime),
                 'date_closed' => isset($statuses[$ticket->status]) && $statuses[$ticket->status] == 'closed' ? $this->Companies->dateToUtc($ticket->lastlog_datetime) : null,
@@ -1247,7 +1248,7 @@ class ClientexecMigrator extends Migrator
                 if ($response->logtype == '0') {
                     $vars = [
                         'ticket_id' => $this->mappings['support_tickets'][$response->troubleticketid],
-                        'staff_id' => isset($this->mappings['staff'][$response->userid]) ? $this->mappings['staff'][$response->userid] : null,
+                        'staff_id' => $this->mappings['staff'][$response->userid] ?? null,
                         'type' => 'reply',
                         'details' => $this->decode($response->message),
                         'date_added' => $this->Companies->dateToUtc($response->mydatetime),

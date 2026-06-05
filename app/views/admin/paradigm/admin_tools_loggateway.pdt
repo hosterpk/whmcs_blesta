@@ -1,0 +1,96 @@
+<?php /** @var View $this **/ ?>
+
+
+        <?php
+        $tabs = [];
+        foreach ((isset($link_tabs) ? $link_tabs : []) as $tab) {
+            $tabs[] = [
+                'name' => $tab['name'],
+                'current' => ($tab['uri'] == 'gateway'),
+                'attributes' => [
+                    'href' => $this->base_uri . 'tools/logs/' . $tab['uri'] . '/'
+                ]
+            ];
+        }
+
+        $this->Widget->clear();
+        $this->Widget->setTabs($tabs);
+        $this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'tools/logs/gateway/'), !empty($filter_vars));
+        $this->Widget->setAjaxFiltering();
+        $this->Widget->setBodyWrapper(false);
+        $this->Widget->create($this->_('AdminTools.logs.boxtitle_logs', true), ['id' => 'admin_tools_loggateway'], (isset($render_section) ? $render_section : null));
+        ?>
+        <div class="table-responsive">
+            <?php
+            if ((isset($gateway_logs) ? $gateway_logs : false) && ($num_logs = count($gateway_logs)) > 0) {
+            ?>
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'tools/logs/gateway/?sort=gateway_name&order=' . ($sort == 'gateway_name' ? $negate_order : $order));?>" class="ajax text-decoration-none<?php echo $sort == 'gateway_name' ? ' ' . $order : '';?>">
+                                <?php $this->_('AdminTools.loggateway.text_name');?>
+                                <?php if ($sort == 'gateway_name') { ?>
+                                <i class="bi bi-arrow-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                                <?php } ?>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'tools/logs/gateway/?sort=staff_first_name&order=' . ($sort == 'staff_first_name' ? $negate_order : $order));?>" class="ajax text-decoration-none<?php echo $sort == 'staff_first_name' ? ' ' . $order : '';?>">
+                                <?php $this->_('AdminTools.loggateway.text_staffname');?>
+                                <?php if ($sort == 'staff_first_name') { ?>
+                                <i class="bi bi-arrow-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                                <?php } ?>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'tools/logs/gateway/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax text-decoration-none<?php echo $sort == 'date_added' ? ' ' . $order : '';?>">
+                                <?php $this->_('AdminTools.loggateway.text_date');?>
+                                <?php if ($sort == 'date_added') { ?>
+                                <i class="bi bi-arrow-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                                <?php } ?>
+                            </a>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                for ($i = 0; $i < $num_logs; $i++) {
+                    $group_id = (isset($gateway_logs[$i]->group) ? $this->Html->safe($gateway_logs[$i]->group) : null);
+                ?>
+                <tr class="gateway_list" style="cursor: pointer;" data-collapse-row aria-expanded="false">
+                    <td><a href="<?php echo (isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'settings/company/gateways/manage/' . (isset($gateway_logs[$i]->gateway_id) ? $this->Html->safe($gateway_logs[$i]->gateway_id) : null) . '/';?>"><?php (print (isset($gateway_logs[$i]->gateway_name) ? $this->Html->safe($gateway_logs[$i]->gateway_name) : null));?></a></td>
+                    <td><?php echo (isset($gateway_logs[$i]->staff_first_name) ? $this->Html->safe($gateway_logs[$i]->staff_first_name) : null) . ' ' . (isset($gateway_logs[$i]->staff_last_name) ? $this->Html->safe($gateway_logs[$i]->staff_last_name) : null);?></td>
+                    <td><?php echo $this->Date->cast((isset($gateway_logs[$i]->date_added) ? $this->Html->safe($gateway_logs[$i]->date_added) : null), 'date_time');?></td>
+                </tr>
+                <tr class="collapse" data-collapse-src="<?php echo $this->Html->safe($this->base_uri . 'tools/gatewayloglist/' . $group_id);?>">
+                    <td colspan="3" style="padding: 0; background-color: var(--bg-secondary);">
+                        <div class="subtable p-3">
+                        </div>
+                    </td>
+                </tr>
+                <?php
+                }
+                ?>
+                </tbody>
+            </table>
+            <?php
+            } else {
+            ?>
+            <div class="card-body text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3 mb-0"><?php $this->_('AdminTools.loggateway.no_results');?></p>
+            </div>
+            <?php
+            }
+            ?>
+        </div>
+        <?php
+        if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+            $this->Widget->footer();
+            $this->Pagination->build();
+        }
+        ?>
+        <?php
+        $this->Widget->end();
+        ?>

@@ -1,0 +1,60 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyBilling.acceptedtypes.boxtitle_types', true), ['id' => 'admin_company_billing_acceptedtypes']);
+    ?>
+            <?php
+            $this->Form->create(null, ['class' => 'disable-on-submit']);
+            // Set a placeholder value so that data is submitted if no checkboxes are set
+            $this->Form->fieldHidden('update', 'true');
+            ?>
+
+            <!-- Dynamic Payment Types (partial) -->
+            <?php echo (isset($partial_payment_types) ? $partial_payment_types : null);?>
+
+            <!-- Client Settings Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.acceptedtypes.client_settings');?></h6>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'update_clients',
+                        'true',
+                        false,
+                        ['id' => 'update_clients', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="update_clients" class="form-check-label">
+                        <?php $this->_('AdminCompanyBilling.acceptedtypes.field_update_clients');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.acceptedtypes.tooltip_update_clients', true));?>"></i>
+                    </label>
+                </div>
+            </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit('save', $this->_('AdminCompanyBilling.acceptedtypes.field_typessubmit', true), ['class' => 'btn btn-primary']);
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

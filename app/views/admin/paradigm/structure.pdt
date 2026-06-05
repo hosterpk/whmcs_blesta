@@ -1,0 +1,643 @@
+<?php /** @var View $this **/ ?>
+
+<!DOCTYPE html>
+<html lang="<?php echo $this->Html->safe($html_lang ?? 'en');?>" data-bs-theme="dark" data-theme="dark" dir="<?php echo (in_array($this->_('AppController.lang.dir', true), ['ltr', 'rtl']) ? $this->_('AppController.lang.dir', true) : 'ltr');?>">
+    <head>
+        <meta charset="utf-8">
+        <meta name="referrer" content="never">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="shortcut icon" href="<?php echo $this->Html->safe(!empty($favicon_admin) ? $favicon_admin : (!empty($admin_icon) ? $admin_icon : $this->view_dir . 'images/favicon.ico'));?>" />
+
+        <?php
+        if (isset($this->Css)) {
+            echo $this->Css->getFiles('head');
+        }
+
+        if (isset($this->Javascript)) {
+            echo $this->Javascript->getFiles('head');
+        }
+
+        if ($this->_('AppController.lang.dir', true) == 'rtl') {
+        ?>
+            <link rel="stylesheet" href="<?php echo $this->view_dir;?>css/rtl.css" />
+        <?php
+        }
+        ?>
+
+        <title>
+            <?php
+            if (!isset($page_title) && isset($page_title_lang)) {
+                $page_title = str_contains($page_title_lang, '%')
+                    ? $this->_($page_title_lang, true, $get_params ?? '')
+                    : $this->_($page_title_lang, true);
+            }
+
+            if (!empty($page_title)) {
+                echo $this->Html->safe($page_title);
+            }
+
+            if (isset($system_company->name)) {
+                echo $this->Html->safe(' | ' . $system_company->name);
+            }
+            ?>
+        </title>
+
+        <?php echo ($head ?? null);?>
+    </head>
+
+    <body class="<?php echo $this->Html->safe($css_route_class ?? '');?>">
+        <div class="wrapper">
+            <!-- Icon Bar -->
+            <aside class="icon-bar">
+                <button class="icon-bar-item mobile-menu-toggle">
+                    <i class="bi bi-text-indent-right"></i>
+                </button>
+                <button class="icon-bar-item<?php echo ($quicklink_active ?? false) ? ' bookmarked' : '';?>" id="bookmark-btn" href="<?php echo $this->base_uri;?>main/updateQuickLink/">
+                    <i class="bi bi-star<?php echo ($quicklink_active ?? false) ? '-fill' : '';?>"></i>
+                </button>
+
+                <?php
+                foreach ($icon_bar_top ?? [] as $icon) {
+                ?>
+                    <a href="<?php echo $this->Html->safe($icon['href']);?>" class="icon-bar-item<?php echo ($icon['active'] ?? false) ? ' active' : '';?>">
+                        <i class="<?php echo $this->Html->safe($icon['icon']);?>"></i>
+                    </a>
+                <?php
+                }
+                ?>
+
+                <div class="icon-bar-spacer"></div>
+                <div class="icon-bar-bottom pt-3">
+                    <?php
+                    if (!empty($icon_bar) && is_array($icon_bar)) {
+                        foreach ($icon_bar['bottom'] ?? [] as $icon) {
+                    ?>
+                        <a href="<?php echo $this->Html->safe($icon['href']);?>" class="icon-bar-item">
+                            <i class="<?php echo $this->Html->safe($icon['icon']);?>"></i>
+                        </a>
+                    <?php
+                        }
+                    }
+                    ?>
+
+                    <a href="<?php echo $this->base_uri;?>settings/" class="icon-bar-item <?php echo (($this->controller ?? '') == 'admin_settings') ? 'active' : '';?>">
+                        <i class="bi bi-gear"></i>
+                    </a>
+                    <?php if ($show_ai_chatbot ?? true) { ?>
+                    <a href="<?php echo $this->base_uri;?>chatbot/" class="icon-bar-item ai-icon<?php echo (($this->controller ?? '') == 'admin_chatbot') ? ' active' : '';?>">
+                        <i class="bi bi-stars"></i>
+                    </a>
+                    <?php } ?>
+                </div>
+            </aside>
+
+            <!-- Sidebar -->
+            <?php view('partials/sidebar', $this);?>
+
+            <!-- Top Navigation Bar -->
+            <nav class="top-bar">
+                <div class="top-bar-left">
+                    <?php
+                    if (!empty($theme_logo)) {
+                        ?>
+                        <img src="<?php echo $this->Html->safe(($theme_logo_dark ?? null) ?: $theme_logo);?>" class="top-bar-logo logo-dark logo-full" alt="<?php $this->Html->safe($system_company->name ?? 'Blesta');?>">
+                        <img src="<?php echo $this->Html->safe($theme_logo);?>" class="top-bar-logo logo-light logo-full" alt="<?php $this->Html->safe($system_company->name ?? 'Blesta');?>">
+                        <img src="<?php echo $this->Html->safe(($admin_icon_dark ?? null) ?: ($admin_icon ?? $this->view_dir . 'images/icon.svg'));?>" class="top-bar-logo logo-dark logo-icon" alt="<?php $this->Html->safe($system_company->name ?? 'Blesta');?>">
+                        <img src="<?php echo $this->Html->safe($admin_icon ?? $this->view_dir . 'images/icon-color.svg');?>" class="top-bar-logo logo-light logo-icon" alt="<?php $this->Html->safe($system_company->name ?? 'Blesta');?>">
+                        <?php
+                    } else {
+                        ?>
+                        <img src="<?php echo $this->view_dir;?>images/logo.svg" class="top-bar-logo logo-dark logo-full" alt="Blesta">
+                        <img src="<?php echo $this->view_dir;?>images/logo-color.svg" class="top-bar-logo logo-light logo-full" alt="Blesta">
+                        <img src="<?php echo $this->view_dir;?>images/icon.svg" class="top-bar-logo logo-dark logo-icon" alt="Blesta">
+                        <img src="<?php echo $this->view_dir;?>images/icon-color.svg" class="top-bar-logo logo-light logo-icon" alt="Blesta">
+                        <?php
+                    }
+                    ?>
+                </div>
+
+                <!-- Right Section - Actions -->
+                <div class="top-bar-right">
+                    <!-- Search Bar -->
+                    <div class="search-bar">
+                        <div class="dropdown d-inline">
+                            <i class="<?php echo $this->Html->safe($search_options[$default_search_option ?? 'smart']->icon ?? 'bi bi-search');?> search-bar-icon dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false"></i>
+                            <?php
+                            if (($search_options ?? null)) {
+                                ?>
+                                <ul class="dropdown-menu dropdown-menu-search">
+                                    <?php
+                                    foreach ($search_options ?? [] as $type => $option) {
+                                        ?>
+                                    <li>
+                                        <a class="dropdown-item search-type-option" href="#" data-type="<?php echo $this->Html->safe($type);?>" data-icon="<?php echo $this->Html->safe($option->icon);?>" data-placeholder="<?php echo $this->Html->safe($option->name);?>">
+                                            <i class="<?php echo $this->Html->safe($option->icon);?>"></i> <?php echo $this->Html->safe($option->name);?>
+                                        </a>
+                                    </li>
+                                        <?php
+                                    }
+                                    ?>
+                                </ul>
+                                <?php
+                            }
+                            ?>
+                        </div>
+
+                        <?php
+                        $this->Form->create($this->base_uri . 'search/', ['class' => 'd-inline disable-on-submit']);
+                        $search_option = ($default_search_option ?? 'smart');
+                        $this->Form->fieldHidden('search_type', $search_option);
+                        $this->Form->fieldText('search', '', ['id' => 'smart-search', 'data-search-type' => 'smart', 'placeholder' => ($search_options[$search_option] ?? null)]);
+                        $this->Form->end();
+                        ?>
+                        <span class="search-bar-shortcut">Ctrl + K</span>
+                    </div>
+
+                    <?php
+                    // Pinned Notes Icon - show on any client page with notes (view, services, notes, invoices, etc.)
+                    if (!empty($sticky_notes_data) && count($sticky_notes_data) > 0) {
+                    ?>
+                    <!-- Pinned Notes -->
+                    <button class="top-bar-icon pinned-notes-icon has-notes"
+                            type="button"
+                            id="pinnedNotesToggle"
+                            title="<?php $this->_('AdminClients.view.pinned_notes_title');?>">
+                        <i class="bi bi-pin-angle-fill"></i>
+                        <span class="notification-badge" id="pinnedNotesBadge"><?php echo count($sticky_notes_data);?></span>
+                    </button>
+                    <?php
+                    }
+                    ?>
+
+                    <?php if (!empty($quick_jump_enabled)) { ?>
+                    <!-- Quick Jump -->
+                    <div class="dropdown">
+                        <button class="top-bar-icon"
+                                type="button"
+                                id="quickJumpToggle"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                title="<?php $this->_('AdminClients.view.quick_jump_title');?>">
+                            <i class="bi bi-signpost-2"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end" id="quickJumpMenu">
+                            <div class="dropdown-header"><?php $this->_('AdminClients.view.quick_jump_title');?></div>
+                            <div id="quickJumpMenuItems"></div>
+                        </div>
+                    </div>
+                    <?php } ?>
+
+                    <!-- Theme Toggle -->
+                    <button class="top-bar-icon" type="button" id="theme-toggle">
+                        <i class="bi bi-moon-stars"></i>
+                    </button>
+
+                    <!-- Notifications -->
+                    <?php view('partials/notifications', $this);?>
+
+                    <?php
+                    if (($maintenance_mode ?? false)) {
+                    ?>
+                        <!-- Step Up Authentication -->
+                        <div class="dropdown">
+                            <button class="top-bar-icon stepup-auth-indicator" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-nut"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end stepup-dropdown">
+                                <div class="dropdown-header">
+                                    <i class="bi bi-nut text-warning me-1"></i>
+                                    <?php $this->_('AppController.structure.text_maintenance_header');?>
+                                </div>
+                                <div class="dropdown-item-text small text-secondary">
+                                    <div class="mb-2">
+                                        <?php $this->_('AppController.structure.text_maintenance');?>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/system/general/maintenance/');?>" class="dropdown-item">
+                                    <i class="bi bi-pencil me-2"></i>
+                                    <?php $this->_('AppController.structure.text_maintenance_button');?>
+                                </a>
+                            </div>
+                        </div>
+                    <?php
+                    }
+                    ?>
+
+                    <?php
+                    if (($step_up_access ?? false)) {
+                    ?>
+                        <!-- Step Up Authentication -->
+                        <div class="dropdown" id="stepupAuthIndicator" data-expires-at="<?php echo (int) ($step_up_expires ?? 0);?>" data-extend-url="<?php echo $this->Html->safe($this->base_uri . 'login/extend/');?>" data-end-url="<?php echo $this->Html->safe($this->base_uri . 'login/drop/');?>" data-csrf-token="<?php echo $this->Form->getCsrfToken();?>">
+                            <button class="top-bar-icon stepup-auth-indicator" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                <span class="stepup-badge">SU</span>
+                                <span class="stepup-timer-badge" id="stepupTimerBadge" style="display: none;"></span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end stepup-dropdown">
+                                <div class="dropdown-header">
+                                    <i class="bi bi-shield-check text-success me-1"></i>
+                                    <?php $this->_('AppController.structure.text_step_up_access_header');?>
+                                </div>
+                                <div class="dropdown-item-text small text-secondary">
+                                    <div class="mb-2">
+                                        <?php $this->_('AppController.structure.text_step_up_access');?>
+                                    </div>
+                                    <div class="mb-2 d-flex align-items-center">
+                                        <i class="bi bi-clock me-2"></i>
+                                        <span><?php $this->_('AppController.structure.text_step_up_time_remaining');?>
+                                        <strong id="stepupTimer" class="timer-normal">--:--</strong></span>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="px-3 py-2 d-grid gap-2">
+                                    <button type="button" class="btn btn-sm btn-success" id="stepupExtendBtn">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>
+                                        <?php $this->_('AppController.structure.text_step_up_extend');?>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger" id="stepupEndBtn">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        <?php $this->_('AppController.structure.text_step_up_access_button');?>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    <?php
+                    }
+                    ?>
+
+                    <!-- User Menu -->
+                    <div class="dropdown">
+                        <button class="top-bar-user" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <?php if (!empty($user->avatar)) { ?>
+                            <img src="<?php echo WEBDIR . 'uploads/avatar/' . ($user->id ?? null) . '/';?>" class="top-bar-user-avatar" />
+                            <?php } ?>
+                            <span class="top-bar-user-name">
+                                <?php echo $this->Html->concat(' ', ($staff->first_name ?? ''), ($staff->last_name ?? ''));?>
+                            </span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <a class="dropdown-item <?php echo (($this->controller ?? '') == 'admin_myinfo' && ($this->action ?? '') == 'index') ? 'active' : '';?>" href="<?php echo $this->base_uri;?>myinfo/">
+                                <i class="bi bi-person"></i>
+                                <span><?php $this->_('AppController.structure.text_myinfo');?></span>
+                            </a>
+                            <a class="dropdown-item <?php echo (($this->controller ?? '') == 'admin_myinfo' && ($this->action ?? '') == 'notices') ? 'active' : '';?>" href="<?php echo $this->base_uri;?>myinfo/notices/">
+                                <i class="bi bi-envelope"></i>
+                                <span><?php $this->_('AppController.structure.text_notices');?></span>
+                            </a>
+                            <a class="dropdown-item <?php echo (($this->controller ?? '') == 'admin_myinfo' && ($this->action ?? '') == 'notifications') ? 'active' : '';?>" href="<?php echo $this->base_uri;?>myinfo/notifications/">
+                                <i class="bi bi-bell"></i>
+                                <span><?php $this->_('AppController.structure.text_notifications');?></span>
+                            </a>
+                            <a class="dropdown-item <?php echo (($this->controller ?? '') == 'admin_myinfo' && ($this->action ?? '') == 'iconbar') ? 'active' : '';?>" href="<?php echo $this->base_uri;?>myinfo/iconbar/">
+                                <i class="bi bi-pencil-square"></i>
+                                <span><?php $this->_('AppController.structure.text_iconbar');?></span>
+                            </a>
+                            <hr class="dropdown-divider">
+                            <a class="dropdown-item" href="<?php echo $this->base_uri;?>logout/">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span><?php $this->_('AppController.structure.text_logout');?></span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content <?php echo isset($side_bar) ? 'with-side-content' : '';?>">
+                <?php echo ($content ?? null);?>
+                <?php view('partials/admin_query_logger', $this);?>
+            </main>
+        </div>
+
+        <!-- Notification Modal -->
+        <div class="modal fade" data-bs-backdrop="static" id="notification-modal">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notification-modal-label"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="notification-modal-body">
+                    </div>
+                    <div class="modal-footer" id="notification-modal-footer" style="display: none;">
+                        <a href="#" id="notification-modal-link" class="btn btn-sm btn-primary w-100">
+                            <i class="bi bi-box-arrow-up-right me-2"></i><?php $this->_('AppController.structure.text_open');?>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Icon Confirmation Modal -->
+        <div class="modal fade" id="confirm-modal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center px-4 pb-4">
+                        <!-- Large icon -->
+                        <div class="mb-3" id="confirm-modal-icon-container">
+                            <i class="bi bi-exclamation-triangle-fill text-danger" id="confirm-modal-icon" style="font-size: 4rem;"></i>
+                        </div>
+                        <!-- Title -->
+                        <h5 class="mb-3" id="confirm-modal-title">
+                            <?php $this->_('AppController.modal.heading_confirm');?>
+                        </h5>
+                        <!-- Message -->
+                        <p class="text-muted mb-0" id="confirm-modal-message">
+                            <?php $this->_('AppController.modal.text_confirm_action');?>
+                        </p>
+                    </div>
+                    <div class="modal-footer border-0 justify-content-center pb-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <?php $this->_('AppController.modal.text_close');?>
+                        </button>
+                        <button type="button" class="btn btn-danger" id="confirm-modal-button">
+                            <?php $this->_('AppController.modal.text_confirm');?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Container for Pinned Notes -->
+        <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999; margin-top: 70px;"></div>
+
+        <?php
+        // Pinned Notes Data and JavaScript - show on any client page with notes
+        if (!empty($sticky_notes_data) && count($sticky_notes_data) > 0) {
+        ?>
+        <script>
+            var pinnedNotesData = <?php echo json_encode(array_map(function($note) {
+                return [
+                    'id' => $note->id,
+                    'client_id' => $note->client_id,
+                    'title' => $note->title ?? 'Note',
+                    'description' => $note->description ?? '',
+                    'author' => trim(($note->staff_first_name ?? '') . ' ' . ($note->staff_last_name ?? '')),
+                    'date' => $this->Date->cast($note->date_updated ?? ''),
+                    'link' => $this->base_uri . 'clients/editnote/' . $note->client_id . '/' . $note->id . '/'
+                ];
+            }, $sticky_notes_data));?>;
+            var unpinUrl = '<?php echo $this->base_uri;?>clients/stickynotes/';
+            var unpinText = <?php echo json_encode($this->_('AdminClients.pinnednotes.text_unpin', true));?>;
+
+            document.addEventListener('DOMContentLoaded', function() {
+                initPinnedNotes();
+            });
+
+            function initPinnedNotes() {
+                var toggleBtn = document.getElementById('pinnedNotesToggle');
+                if (!toggleBtn) return;
+
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showAllPinnedNotes();
+                });
+            }
+
+            function showAllPinnedNotes() {
+                var container = document.getElementById('toastContainer');
+                if (!container) return;
+
+                // Clear existing toasts
+                container.innerHTML = '';
+
+                // Create toasts for each note
+                pinnedNotesData.forEach(function(note, index) {
+                    var toast = createPinnedNoteToast(note);
+                    container.appendChild(toast);
+
+                    // Initialize and show the Bootstrap toast with staggered delay
+                    setTimeout(function() {
+                        var bsToast = new bootstrap.Toast(toast, {
+                            autohide: true,
+                            delay: 6000
+                        });
+                        bsToast.show();
+                    }, index * 100);
+                });
+            }
+
+            function createPinnedNoteToast(note) {
+                var toast = document.createElement('div');
+                toast.className = 'toast pinned-note-toast';
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                toast.setAttribute('data-note-id', note.id);
+
+                var truncatedTitle = note.title.length > 150
+                    ? note.title.substring(0, 150) + '...'
+                    : note.title;
+
+                var truncatedDesc = note.description.length > 180
+                    ? note.description.substring(0, 180) + '...'
+                    : note.description;
+
+                toast.innerHTML = '<div class="toast-header">' +
+                    '<i class="bi bi-pin-angle-fill text-warning me-2"></i>' +
+                    '<strong class="me-auto" title="' + escapeHtml(note.title) + '">' + escapeHtml(truncatedTitle) + '</strong>' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="toast-body" onclick="window.location.href=\'' + note.link + '\'" style="cursor: pointer;">' +
+                    '<div>' + escapeHtml(truncatedDesc) + '</div>' +
+                    '<div class="note-meta">' +
+                        '<span><i class="bi bi-person me-1"></i>' + escapeHtml(note.author) + '</span>' +
+                        '<span><i class="bi bi-clock me-1"></i>' + escapeHtml(note.date) + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="toast-footer p-2">' +
+                    '<button type="button" class="unpin-btn w-100" onclick="unpinNote(' + note.id + ', ' + note.client_id + ')">' +
+                        '<i class="bi bi-pin-angle me-1"></i>' + unpinText +
+                    '</button>' +
+                '</div>';
+
+                return toast;
+            }
+
+            function unpinNote(noteId, clientId) {
+                var url = unpinUrl + clientId + '/' + noteId + '/';
+
+                fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(response) {
+                    if (response.ok) {
+                        // Remove the toast
+                        var toast = document.querySelector('.toast[data-note-id="' + noteId + '"]');
+                        if (toast) {
+                            var bsToast = bootstrap.Toast.getInstance(toast);
+                            if (bsToast) {
+                                bsToast.hide();
+                            }
+                            toast.remove();
+                        }
+
+                        // Remove from data array
+                        pinnedNotesData = pinnedNotesData.filter(function(note) {
+                            return note.id != noteId;
+                        });
+
+                        // Update badge count
+                        updatePinnedNotesBadge();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error unpinning note:', error);
+                });
+            }
+
+            function updatePinnedNotesBadge() {
+                var badge = document.getElementById('pinnedNotesBadge');
+                var toggleBtn = document.getElementById('pinnedNotesToggle');
+
+                if (pinnedNotesData.length === 0) {
+                    // Hide the icon completely if no notes left
+                    if (toggleBtn) {
+                        toggleBtn.style.display = 'none';
+                    }
+                } else if (badge) {
+                    badge.textContent = pinnedNotesData.length;
+                }
+            }
+
+            function escapeHtml(text) {
+                var div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        </script>
+        <?php
+        }
+        ?>
+
+        <?php if (!empty($quick_jump_enabled)) { ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                initQuickJump();
+            });
+
+            function initQuickJump() {
+                var quickJumpToggle = document.getElementById('quickJumpToggle');
+                var quickJumpMenu = document.getElementById('quickJumpMenu');
+                var quickJumpDropdown = quickJumpToggle ? quickJumpToggle.closest('.dropdown') : null;
+
+                if (!quickJumpToggle || !quickJumpMenu || !quickJumpDropdown) return;
+
+                // Build menu each time it opens to keep current sorted order.
+                quickJumpDropdown.addEventListener('shown.bs.dropdown', function() {
+                    buildQuickJumpMenu();
+                });
+
+                // Also refresh after any AJAX widget updates on client pages.
+                document.addEventListener('blestaAjaxComplete', function() {
+                    buildQuickJumpMenu();
+                });
+
+                buildQuickJumpMenu();
+            }
+
+            function buildQuickJumpMenu() {
+                var container = document.getElementById('quickJumpMenuItems');
+                var rightContainer = document.getElementById('right_container');
+
+                if (!container) return;
+                container.innerHTML = '';
+
+                if (!rightContainer) {
+                    appendQuickJumpEmpty(container);
+                    return;
+                }
+
+                var widgets = rightContainer.querySelectorAll(<?php echo json_encode($quick_jump_widget_selector ?? '.column section.card[id]'); ?>);
+                if (!widgets.length) {
+                    appendQuickJumpEmpty(container);
+                    return;
+                }
+
+                widgets.forEach(function(widget) {
+                    var targetId = widget.getAttribute('id');
+                    if (!targetId) return;
+
+                    var headerTitle = widget.querySelector(<?php echo json_encode($quick_jump_header_selector ?? '.card-header h5'); ?>);
+                    var title = headerTitle ? headerTitle.textContent.trim() : targetId;
+
+                    var item = document.createElement('a');
+                    item.className = 'dropdown-item';
+                    item.href = '#' + targetId;
+                    item.setAttribute('data-target-id', targetId);
+
+                    var widgetId = widget.getAttribute('data-widget-id') || getFallbackWidgetId(widget);
+                    if (widgetId) {
+                        item.setAttribute('data-widget-id', widgetId);
+                    }
+
+                    item.textContent = title;
+                    item.addEventListener('click', handleQuickJumpClick);
+                    container.appendChild(item);
+                });
+            }
+
+            function appendQuickJumpEmpty(container) {
+                var emptyState = document.createElement('div');
+                emptyState.className = 'dropdown-item-text text-secondary';
+                emptyState.textContent = <?php echo json_encode($this->_('AdminClients.view.quick_jump_empty', true));?>;
+                container.appendChild(emptyState);
+            }
+
+            function getFallbackWidgetId(widget) {
+                if (!widget || !widget.id) return '';
+
+                if (widget.id.indexOf('admin_clients_') === 0) {
+                    return widget.id.substring('admin_clients_'.length);
+                }
+
+                return widget.id;
+            }
+
+            function handleQuickJumpClick(event) {
+                event.preventDefault();
+
+                var link = event.currentTarget;
+                if (!link) return;
+
+                var targetId = link.getAttribute('data-target-id');
+                if (!targetId) return;
+
+                var target = document.getElementById(targetId);
+                if (!target) return;
+
+                var topBar = document.querySelector('.top-bar');
+                var offset = topBar ? topBar.offsetHeight + 16 : 16;
+                var targetTop = target.getBoundingClientRect().top + window.pageYOffset - offset;
+
+                window.scrollTo({
+                    top: targetTop,
+                    behavior: 'smooth'
+                });
+            }
+        </script>
+        <?php } ?>
+
+        <?php
+        if (isset($this->Css)) {
+            echo $this->Css->getFiles('body');
+            echo $this->Css->getInline();
+        }
+
+        if (isset($this->Javascript)) {
+            echo $this->Javascript->getFiles('body');
+            echo $this->Javascript->getInline();
+        }
+
+        echo ($body_end ?? null);
+        ?>
+    </body>
+</html>

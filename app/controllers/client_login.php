@@ -226,8 +226,12 @@ class ClientLogin extends AppController
                 && $client->status == 'active'
                 && $this->PasswordResets->validate($this->get['sid'])
             ) {
-                // Update the user's password
-                $this->Users->edit($token->user_id, $this->post);
+                // Update the user's password (only allow password fields to prevent mass assignment)
+                $user_vars = [
+                    'new_password' => $this->post['new_password'],
+                    'confirm_password' => $this->post['confirm_password'] ?? null,
+                ];
+                $this->Users->edit($token->user_id, $user_vars);
 
                 if (!($errors = $this->Users->errors())) {
                     $this->post['username'] = $user->username;

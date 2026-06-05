@@ -1,0 +1,242 @@
+<?php
+echo (isset($message) ? $message : null);
+
+// Build tabs for the widget
+$tabs = [
+    [
+        'name' => $this->_('AdminBilling.printqueue.category_to_print', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['to_print']) ? $this->Html->safe($status_count['to_print']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'to_print'),
+        'attributes' => ['href' => $this->base_uri . 'billing/printqueue/to_print/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.printqueue.category_printed', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['printed']) ? $this->Html->safe($status_count['printed']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'printed'),
+        'attributes' => ['href' => $this->base_uri . 'billing/printqueue/printed/']
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminBilling.printqueue.boxtitle_printqueue', true), ['id' => 'admin_billing_printqueue'], ($render_section ?? null));
+?>
+
+<?php
+if ((isset($invoices) ? $invoices : false) && (($num_invoices = count($invoices)) > 0)) {
+    $this->Form->create(null, ['id' => 'printqueue_form', 'class' => 'disable-on-submit']);
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="printqueue">
+        <thead>
+            <tr>
+                <th style="width: 40px;">
+                    <?php $this->Form->fieldCheckbox('print_all', '1', '0', ['id' => 'print_all', 'class' => 'form-check-input']);?>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=id_code&order=' . ($sort == 'id_code' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_invoice');?>
+                        <?php if ($sort == 'id_code') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=client_id_code&order=' . ($sort == 'client_id_code' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_client');?>
+                        <?php if ($sort == 'client_id_code') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=total&order=' . ($sort == 'total' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_amount');?>
+                        <?php if ($sort == 'total') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=paid&order=' . ($sort == 'paid' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_paid');?>
+                        <?php if ($sort == 'paid') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=due&order=' . ($sort == 'due' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_due');?>
+                        <?php if ($sort == 'due') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=date_billed&order=' . ($sort == 'date_billed' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_datebilled');?>
+                        <?php if ($sort == 'date_billed') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=date_due&order=' . ($sort == 'date_due' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_datedue');?>
+                        <?php if ($sort == 'date_due') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <?php
+                if ((isset($status) ? $this->Html->safe($status) : null) == 'printed') {
+                ?>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/printqueue/' . (isset($status) ? $status : null) . '/?sort=delivery_date_sent&order=' . ($sort == 'delivery_date_sent' ? $negate_order : $order));?>" class="text-decoration-none">
+                        <?php $this->_('AdminBilling.printqueue.heading_deliverydatesent');?>
+                        <?php if ($sort == 'delivery_date_sent') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <?php
+                }
+                ?>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Display all invoices
+            for ($i = 0; $i < $num_invoices; $i++) {
+            ?>
+            <tr>
+                <td onclick="event.stopPropagation();">
+                    <?php $this->Form->fieldCheckbox('print[]', (isset($invoices[$i]->id) ? $invoices[$i]->id : null), ((isset($vars->print[$i]) ? $vars->print[$i] : '0') == '1'), ['class' => 'form-check-input print-box']);?>
+                </td>
+                <td><?php echo (isset($invoices[$i]->id_code) ? $this->Html->safe($invoices[$i]->id_code) : null);?></td>
+                <td>
+                    <a href="<?php echo $this->base_uri . 'clients/view/' . (isset($invoices[$i]->client_id) ? $this->Html->safe($invoices[$i]->client_id) : null);?>" data-bs-toggle="tooltip" title="<?php echo (isset($invoices[$i]->client_first_name) ? $this->Html->safe($invoices[$i]->client_first_name) : null) . ' ' . (isset($invoices[$i]->client_last_name) ? $this->Html->safe($invoices[$i]->client_last_name) : null) . ($invoices[$i]->client_company ? ' - ' . $this->Html->safe($invoices[$i]->client_company) : '');?>">
+                        <?php (print (isset($invoices[$i]->client_id_code) ? $this->Html->safe($invoices[$i]->client_id_code) : null));?>
+                    </a>
+                </td>
+                <td><?php echo $this->CurrencyFormat->format($invoices[$i]->total, $invoices[$i]->currency, ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format($invoices[$i]->paid, $invoices[$i]->currency, ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format($invoices[$i]->due, $invoices[$i]->currency, ['html_code' => true]);?></td>
+                <td><?php echo $this->Date->cast($invoices[$i]->date_billed);?></td>
+                <td><?php echo $this->Date->cast($invoices[$i]->date_due);?></td>
+                <?php
+                if ((isset($status) ? $this->Html->safe($status) : null) == 'printed') {
+                ?>
+                <td><?php echo $this->Date->cast($invoices[$i]->delivery_date_sent);?></td>
+                <?php
+                }
+                ?>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- Bulk Actions Bar -->
+<div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="selected-count" id="selectedCount"></span>
+        <div class="d-flex gap-2 align-items-center">
+            <?php
+            $this->Form->fieldSubmit('print_submit', $this->_('AdminBilling.printqueue.text_printsubmit', true), ['class' => 'btn btn-sm btn-primary']);
+            // Mark as printed button
+            if ((isset($status) ? $this->Html->safe($status) : null) == 'to_print') {
+                $this->Form->fieldSubmit('mark_printed', $this->_('AdminBilling.printqueue.text_marksubmit', true), ['class' => 'btn btn-sm btn-warning']);
+            }
+            ?>
+        </div>
+    </div>
+</div>
+
+<?php
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+?>
+<?php
+    $this->Form->end();
+} else {
+?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0">
+        <?php
+        if ((isset($status) ? $this->Html->safe($status) : null) == 'printed') {
+            $this->_('AdminBilling.printqueue.no_results_printed');
+        } else {
+            $this->_('AdminBilling.printqueue.no_results_to_print');
+        }
+        ?>
+    </p>
+</div>
+<?php
+}
+
+$this->Widget->end();
+?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const printqueueTable = document.getElementById('printqueue');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCount = document.getElementById('selectedCount');
+    const selectAllCheckbox = document.getElementById('print_all');
+    var textItemSelected = <?php echo json_encode($this->_('AdminBilling.printqueue.text_item_selected', true));?>;
+    var textItemsSelected = <?php echo json_encode($this->_('AdminBilling.printqueue.text_items_selected', true));?>;
+
+    if (!printqueueTable) return;
+
+    // Initialize tooltips
+    const tooltipTriggerList = printqueueTable.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+
+    // Handle select all checkbox
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = printqueueTable.querySelectorAll('.print-box');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Handle individual checkboxes
+    const rowCheckboxes = printqueueTable.querySelectorAll('.print-box');
+    rowCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // Uncheck select all if any checkbox is unchecked
+            if (!this.checked && selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+            updateBulkActions();
+        });
+    });
+
+    // Update bulk actions bar visibility and count
+    function updateBulkActions() {
+        const checkedBoxes = printqueueTable.querySelectorAll('.print-box:checked');
+        if (checkedBoxes.length > 0) {
+            bulkActionsBar.style.display = 'block';
+            var text = checkedBoxes.length === 1 ? textItemSelected : textItemsSelected;
+            selectedCount.textContent = checkedBoxes.length + ' ' + text;
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+    }
+
+    // Initialize on page load
+    updateBulkActions();
+});
+</script>

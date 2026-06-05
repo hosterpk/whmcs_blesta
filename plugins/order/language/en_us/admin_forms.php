@@ -26,10 +26,11 @@ $lang['AdminForms.index.heading_template'] = "Template";
 $lang['AdminForms.index.heading_type'] = "Type";
 $lang['AdminForms.index.heading_date_added'] = "Date Added";
 $lang['AdminForms.index.heading_status'] = "Status";
-$lang['AdminForms.index.heading_options'] = "Options";
+$lang['AdminForms.index.heading_actions'] = "Actions";
 $lang['AdminForms.index.option_edit'] = "Edit";
 $lang['AdminForms.index.option_delete'] = "Delete";
-$lang['AdminForms.index.text_confirm_delete'] = "Really delete this order form?";
+$lang['AdminForms.index.back_to_forms'] = "Back to Order Forms";
+$lang['AdminForms.index.text_confirm_delete'] = "Are you sure you want to delete this order form?";
 $lang['AdminForms.index.field_status_active'] = "Active";
 $lang['AdminForms.index.field_status_inactive'] = "Inactive";
 
@@ -47,6 +48,7 @@ $lang['AdminForms.add.field_manual_review'] = "Require Manual Review and Approva
 $lang['AdminForms.add.field_require_ssl'] = "Force Secure Connection (HTTPS)";
 $lang['AdminForms.add.field_require_captcha'] = "Require Human Verification Challenge for All Signups";
 $lang['AdminForms.add.field_monthly_breakdown'] = "Display Monthly Pricing Breakdown";
+$lang['AdminForms.add.field_require_recurring_consent'] = "Require Consent to Recurring Subscriptions";
 $lang['AdminForms.add.field_require_tos'] = "Require Agreement to Terms of Service";
 $lang['AdminForms.add.field_tos_url'] = "Terms of Service URL";
 $lang['AdminForms.add.field_abandoned_cart_first'] = "Abandoned Order Time (1st Notice)";
@@ -68,7 +70,9 @@ $lang['AdminForms.add.tooltip_abandoned_cart_third'] = "The number of hours or d
 $lang['AdminForms.add.tooltip_abandoned_cart_cancellation'] = "The number of hours or days after an unpaid order is placed to cancel the order.";
 $lang['AdminForms.add.tooltip_inactive_after_cancellation'] = "Mark a client as inactive after cancellation if this order/service is their first one.";
 $lang['AdminForms.add.tooltip_monthly_breakdown'] = 'When selecting a package, show the monthly cost for each pricing option as well as the savings per month when compared to the monthly price (if applicable).';
+$lang['AdminForms.add.tooltip_require_recurring_consent'] = "When enabled, customers must explicitly consent to recurring billing before completing an order with recurring items. This replaces the Save Payment Details checkbox.";
 $lang['AdminForms.add.field_addsubmit'] = "Add Form";
+$lang['AdminForms.add.field_cancel'] = "Cancel";
 $lang['AdminForms.add.heading_basic'] = "Basic";
 $lang['AdminForms.add.heading_abandoned_cart'] = "Abandoned Order";
 
@@ -84,6 +88,7 @@ $lang['AdminForms.edit.field_type'] = "Type";
 $lang['AdminForms.edit.field_allow_coupons'] = "Allow Coupons";
 $lang['AdminForms.edit.field_manual_review'] = "Require Manual Review and Approval of All Orders";
 $lang['AdminForms.edit.field_require_ssl'] = "Force Secure Connection (HTTPS)";
+$lang['AdminForms.edit.field_require_recurring_consent'] = "Require Consent to Recurring Subscriptions";
 $lang['AdminForms.edit.field_require_tos'] = "Require Agreement to Terms of Service";
 $lang['AdminForms.edit.field_require_captcha'] = "Require Human Verification Challenge for All Signups";
 $lang['AdminForms.edit.field_monthly_breakdown'] = "Display Monthly Pricing Breakdown";
@@ -107,7 +112,9 @@ $lang['AdminForms.edit.tooltip_abandoned_cart_third'] = "The number of hours or 
 $lang['AdminForms.edit.tooltip_abandoned_cart_cancellation'] = "The number of hours or days before or after an unpaid order is placed to cancel the order.";
 $lang['AdminForms.edit.tooltip_inactive_after_cancellation'] = "Mark a client as inactive after cancellation if this order/service is their first one.";
 $lang['AdminForms.edit.tooltip_monthly_breakdown'] = 'When selecting a package, show the monthly cost for each pricing option as well as the savings per month when compared to the monthly price (if applicable).';
+$lang['AdminForms.edit.tooltip_require_recurring_consent'] = "When enabled, customers must explicitly consent to recurring billing before completing an order with recurring items. This replaces the Save Payment Details checkbox.";
 $lang['AdminForms.edit.field_addsubmit'] = "Edit Form";
+$lang['AdminForms.edit.field_cancel'] = "Cancel";
 $lang['AdminForms.edit.heading_basic'] = "Basic";
 $lang['AdminForms.edit.heading_abandoned_cart'] = "Abandoned Order";
 
@@ -151,3 +158,14 @@ $lang['AdminForms.settings.payments_allowed_cc'] = 'Credit Card';
 $lang['AdminForms.settings.payments_allowed_ach'] = 'Automated Clearing House';
 
 $lang['AdminForms.settings.field_save'] = "Save Settings";
+
+// Embed Codes
+$lang['AdminForms.embed_codes.heading'] = 'Embed Code for Domain Search';
+$lang['AdminForms.embed_codes.description'] = 'Copy one of the snippets below to embed a domain search form on an external site. Submissions will open the checkout on this order form with the entered domain pre-loaded.';
+$lang['AdminForms.embed_codes.label_first'] = 'Enter a URL label for this order form to generate embed codes.';
+$lang['AdminForms.embed_codes.html_plain'] = 'Plain HTML';
+$lang['AdminForms.embed_codes.html_bs5'] = 'Bootstrap 5';
+$lang['AdminForms.embed_codes.preview'] = 'Preview';
+$lang['AdminForms.embed_codes.copy'] = 'Copy';
+$lang['AdminForms.embed_codes.csrf_required'] = 'CSRF bypass is required for embedded domain search to work.';
+$lang['AdminForms.embed_codes.csrf_instructions'] = 'POSTs from an external site will be rejected until you add config::preconfig to the Blesta.csrf_bypass array in config/blesta.php:';

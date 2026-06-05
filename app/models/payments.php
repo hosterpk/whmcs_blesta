@@ -1,5 +1,10 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Loader;
+
 /**
  * Processes payments through remote gateways and records the transactions.
  * Supports non-merchant gateways by returning markup used to render those payment buttons.
@@ -205,7 +210,8 @@ class Payments extends AppModel
      * @param int $transaction_id The ID of the transaction being confirmed
      * @return string The Html, if any, provided by the merchant gateway for confirming payments
      */
-    public function getBuildPaymentConfirmation($client_id, $transaction_id) {
+    public function getBuildPaymentConfirmation($client_id, $transaction_id)
+    {
         $result = $this->GatewayPayments->getBuildPaymentConfirmation($client_id, $transaction_id);
 
         if (($errors = $this->GatewayPayments->errors())) {
@@ -436,7 +442,7 @@ class Payments extends AppModel
      * @return object An object representing the transaction if attempted,
      *  void otherwise. Check Payments::errors(), as some transactions may be attempted and yet still produce errors
      */
-    public function capturePayment($client_id, $transaction_id, $amount = null, array $options = null)
+    public function capturePayment($client_id, $transaction_id, $amount = null, ?array $options = null)
     {
         $result = $this->GatewayPayments->capturePayment($client_id, $transaction_id, $amount, $options);
         if (($errors = $this->GatewayPayments->errors())) {
@@ -459,7 +465,7 @@ class Payments extends AppModel
      * @return mixed An object representing the transaction if attempted,
      *  void otherwise. Check Payments::errors(), as some transactions may be attempted and yet still produce errors
      */
-    public function refundPayment($client_id, $transaction_id, $amount = null, array $options = null)
+    public function refundPayment($client_id, $transaction_id, $amount = null, ?array $options = null)
     {
         $result = $this->GatewayPayments->refundPayment($client_id, $transaction_id, $amount, $options);
         if (($errors = $this->GatewayPayments->errors())) {
@@ -480,7 +486,7 @@ class Payments extends AppModel
      * @return mixed An object representing the transaction if attempted,
      *  void otherwise. Check Payments::errors(), as some transactions may be attempted and yet still produce errors
      */
-    public function voidPayment($client_id, $transaction_id, array $options = null)
+    public function voidPayment($client_id, $transaction_id, ?array $options = null)
     {
         $result = $this->GatewayPayments->voidPayment($client_id, $transaction_id, $options);
         if (($errors = $this->GatewayPayments->errors())) {

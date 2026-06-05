@@ -109,6 +109,8 @@ $lang['AdminClients.!error.future_cancel_date'] = 'The scheduled cancellation da
 $lang['AdminClients.!error.invoices_not_voided'] = 'The following invoices could not be voided because they contain partial payments: %1$s.'; // %1$s is a CSV list of all invoices numbers that could not be voided
 $lang['AdminClients.!error.passwordreset.failed'] = 'The password reset email failed to be sent.';
 $lang['AdminClients.!error.invoices_renew_service'] = 'The service cannot be renewed until all invoices containing this service have been paid.';
+$lang['AdminClients.!error.bulk_inv_method.invalid_for_group'] = 'The selected invoice method is not available for the following clients due to their client group settings: %1$s'; // %1$s is a CSV list of client names
+$lang['AdminClients.!error.invalid_pricing_id'] = 'The selected pricing is invalid.';
 
 
 // Notice messages
@@ -154,6 +156,29 @@ $lang['AdminClients.index.categorylink_clientsadd'] = 'Add Client';
 
 $lang['AdminClients.index.no_results'] = 'There are no clients with this status.';
 
+// Bulk actions
+$lang['AdminClients.index.items_selected'] = 'items selected';
+$lang['AdminClients.index.field_actionsubmit'] = 'Submit';
+$lang['AdminClients.index.action.change_status'] = 'Change Status';
+$lang['AdminClients.index.action.change_client_group'] = 'Change Client Group';
+$lang['AdminClients.index.action.change_inv_method'] = 'Invoice Method';
+$lang['AdminClients.index.action.change_autodebit'] = 'Auto Debit';
+$lang['AdminClients.index.action.change_payment_notices'] = 'Payment Notices';
+$lang['AdminClients.index.action.change_autosuspend'] = 'Auto Suspension';
+$lang['AdminClients.index.action.field_status'] = 'Status';
+$lang['AdminClients.index.action.field_client_group'] = 'Client Group';
+$lang['AdminClients.index.action.field_inv_method'] = 'Method';
+$lang['AdminClients.index.action.field_toggle_enable'] = 'Enable';
+$lang['AdminClients.index.action.field_toggle_disable'] = 'Disable';
+
+// Bulk action success messages
+$lang['AdminClients.!success.clients_status_updated'] = 'The selected clients have been updated.';
+$lang['AdminClients.!success.clients_client_group_updated'] = 'The selected clients have been updated.';
+$lang['AdminClients.!success.clients_inv_method_updated'] = 'The selected clients have been updated.';
+$lang['AdminClients.!success.clients_autodebit_updated'] = 'The selected clients have been updated.';
+$lang['AdminClients.!success.clients_payment_notices_updated'] = 'The selected clients have been updated.';
+$lang['AdminClients.!success.clients_autosuspend_updated'] = 'The selected clients have been updated.';
+
 
 // Add
 $lang['AdminClients.add.page_title'] = 'Clients Create New Client';
@@ -197,14 +222,15 @@ $lang['AdminClients.add.field_receive_email_marketing'] = 'Opt-in to marketing e
 $lang['AdminClients.add.field_inherit_gateway_restrictions'] = 'Inherit Gateway Restrictions from Client Group';
 
 $lang['AdminClients.add.field_clientsubmit'] = 'Create Client';
+$lang['AdminClients.add.field_cancel'] = 'Cancel';
 
 
 // Accounts
 $lang['AdminClients.accounts.page_title'] = 'Client #%1$s Payment Accounts'; // %1$s is the client ID number
 $lang['AdminClients.accounts.boxtitle_accounts'] = 'Payment Accounts';
 
-$lang['AdminClients.accounts.categorylink_ach'] = 'Add ACH Account';
-$lang['AdminClients.accounts.categorylink_cc'] = 'Add CC Account';
+$lang['AdminClients.accounts.categorylink_ach'] = 'ACH Account';
+$lang['AdminClients.accounts.categorylink_cc'] = 'CC Account';
 
 $lang['AdminClients.accounts.text_name'] = 'Name';
 $lang['AdminClients.accounts.text_type'] = 'Type';
@@ -224,6 +250,13 @@ $lang['AdminClients.accounts.type_ach'] = '%1$s - %2$s'; // %1$s is the account 
 $lang['AdminClients.accounts.field_accountsubmit'] = 'Use for Auto Debit';
 
 $lang['AdminClients.accounts.disclamer_default_gatway'] = '* This payment account is stored locally. The displayed gateway is the default for this client\'s currency and is subject to change.';
+$lang['AdminClients.accounts.badge_auto_debit'] = 'Auto Debit';
+$lang['AdminClients.accounts.badge_expired'] = 'Expired';
+$lang['AdminClients.accounts.badge_expiring'] = 'Expiring Soon';
+$lang['AdminClients.accounts.badge_unverified'] = 'Unverified';
+$lang['AdminClients.accounts.text_no_autodebit'] = 'No Auto Debit';
+$lang['AdminClients.accounts.text_no_autodebit_desc'] = 'Do not automatically charge a payment method';
+$lang['AdminClients.accounts.text_expires'] = 'Expires %1$s'; // %1$s is formatted expiration
 $lang['AdminClients.accounts.no_results'] = 'There are no ACH or CC accounts.';
 
 
@@ -247,13 +280,13 @@ $lang['AdminClients.addAchAccount.text_ach'] = 'ACH';
 // Edit CC account
 $lang['AdminClients.editccaccount.page_title'] = 'Client #%1$s Edit Credit Card Account'; // %1$s is the client ID number
 $lang['AdminClients.editccaccount.boxtitle_editccaccount'] = 'Edit Credit Card Account';
-$lang['AdminClients.editccaccount.field_accountsubmit'] = 'Edit Account';
+$lang['AdminClients.editccaccount.field_accountsubmit'] = 'Update Account';
 
 
 // Edit ACH account
 $lang['AdminClients.editachaccount.page_title'] = 'Client #%1$s Edit ACH Account'; // %1$s is the client ID number
 $lang['AdminClients.editachaccount.boxtitle_editachaccount'] = 'Edit ACH Account';
-$lang['AdminClients.editachaccount.field_accountsubmit'] = 'Edit Account';
+$lang['AdminClients.editachaccount.field_accountsubmit'] = 'Update Account';
 
 
 // Verify ACH account
@@ -307,7 +340,7 @@ $lang['AdminClients.createinvoice.heading_description'] = 'Description';
 $lang['AdminClients.createinvoice.heading_quantity'] = 'Quantity';
 $lang['AdminClients.createinvoice.heading_unitcost'] = 'Unit Cost';
 $lang['AdminClients.createinvoice.heading_tax'] = 'Tax';
-$lang['AdminClients.createinvoice.heading_options'] = 'Options';
+$lang['AdminClients.createinvoice.heading_options'] = 'Actions';
 
 $lang['AdminClients.createinvoice.heading_term'] = 'Term';
 $lang['AdminClients.createinvoice.heading_period'] = 'Period';
@@ -332,7 +365,7 @@ $lang['AdminClients.createinvoice.field_duration_times'] = 'number of times';
 $lang['AdminClients.createinvoice.field_notepublic'] = 'Public Note:';
 $lang['AdminClients.createinvoice.field_noteprivate'] = 'Private Note:';
 
-$lang['AdminClients.createinvoice.field_invoicesubmit'] = 'Create';
+$lang['AdminClients.createinvoice.field_invoicesubmit'] = 'Create Invoice';
 $lang['AdminClients.createinvoice.field_invoicedraft'] = 'Save as Draft';
 
 $lang['AdminClients.createinvoice.section_recurringinvoice'] = 'Recurring Invoice';
@@ -353,7 +386,7 @@ $lang['AdminClients.createquotation.heading_description'] = 'Description';
 $lang['AdminClients.createquotation.heading_quantity'] = 'Quantity';
 $lang['AdminClients.createquotation.heading_unitcost'] = 'Unit Cost';
 $lang['AdminClients.createquotation.heading_tax'] = 'Tax';
-$lang['AdminClients.createquotation.heading_options'] = 'Options';
+$lang['AdminClients.createquotation.heading_options'] = 'Actions';
 
 $lang['AdminClients.createquotation.option_add'] = 'Add';
 $lang['AdminClients.createquotation.option_delete'] = 'Delete';
@@ -368,7 +401,7 @@ $lang['AdminClients.createquotation.field_currency'] = 'Currency';
 $lang['AdminClients.createquotation.field_notes'] = 'Notes:';
 $lang['AdminClients.createquotation.field_private_notes'] = 'Private Notes:';
 
-$lang['AdminClients.createquotation.field_quotationsubmit'] = 'Create';
+$lang['AdminClients.createquotation.field_quotationsubmit'] = 'Create Quotation';
 $lang['AdminClients.createquotation.field_quotationdraft'] = 'Save as Draft';
 
 $lang['AdminClients.createquotation.section_notes'] = 'Notes';
@@ -388,7 +421,7 @@ $lang['AdminClients.editquotation.heading_description'] = 'Description';
 $lang['AdminClients.editquotation.heading_quantity'] = 'Quantity';
 $lang['AdminClients.editquotation.heading_unitcost'] = 'Unit Cost';
 $lang['AdminClients.editquotation.heading_tax'] = 'Tax';
-$lang['AdminClients.editquotation.heading_options'] = 'Options';
+$lang['AdminClients.editquotation.heading_options'] = 'Actions';
 
 $lang['AdminClients.editquotation.option_add'] = 'Add';
 $lang['AdminClients.editquotation.option_delete'] = 'Delete';
@@ -475,7 +508,8 @@ $lang['AdminClients.edit.field.currency'] = 'Currency';
 $lang['AdminClients.edit.field.notification_threshold'] = 'Notification Threshold';
 $lang['AdminClients.edit.!tooltip.notification_threshold'] = 'Client will receive a daily notification when their credit balance falls below this amount. Leave blank to disable notifications for this currency.';
 
-$lang['AdminClients.edit.field_clientsubmit'] = 'Modify Client';
+$lang['AdminClients.edit.field_clientsubmit'] = 'Update Client';
+$lang['AdminClients.edit.field_cancel'] = 'Cancel';
 
 
 // Account ACH Info
@@ -561,7 +595,7 @@ $lang['AdminClients.editcontact.field_email'] = 'Email';
 
 $lang['AdminClients.editcontact.field_contacttype'] = 'Contact Type';
 
-$lang['AdminClients.editcontact.field_contactsubmit'] = 'Modify Contact';
+$lang['AdminClients.editcontact.field_contactsubmit'] = 'Update Contact';
 $lang['AdminClients.editcontact.field_deletecontact'] = 'Delete Contact';
 
 $lang['AdminClients.editcontact.confirm_delete'] = 'Are you sure you want to delete this contact?';
@@ -577,7 +611,7 @@ $lang['AdminClients.editinvoice.heading_description'] = 'Description';
 $lang['AdminClients.editinvoice.heading_quantity'] = 'Quantity';
 $lang['AdminClients.editinvoice.heading_unitcost'] = 'Unit Cost';
 $lang['AdminClients.editinvoice.heading_tax'] = 'Tax';
-$lang['AdminClients.editinvoice.heading_options'] = 'Options';
+$lang['AdminClients.editinvoice.heading_options'] = 'Actions';
 
 $lang['AdminClients.editinvoice.heading_term'] = 'Term';
 $lang['AdminClients.editinvoice.heading_period'] = 'Period';
@@ -606,7 +640,7 @@ $lang['AdminClients.editinvoice.field_duration_times'] = 'number of times';
 $lang['AdminClients.editinvoice.field_notepublic'] = 'Public Note:';
 $lang['AdminClients.editinvoice.field_noteprivate'] = 'Private Note:';
 
-$lang['AdminClients.editinvoice.field_invoicesubmit'] = 'Modify Invoice';
+$lang['AdminClients.editinvoice.field_invoicesubmit'] = 'Update Invoice';
 $lang['AdminClients.editinvoice.field_invoicedvoid'] = 'Void Invoice';
 $lang['AdminClients.editinvoice.field_invoicecreate'] = 'Create';
 $lang['AdminClients.editinvoice.field_invoicesavedraft'] = 'Save Draft';
@@ -647,10 +681,10 @@ $lang['AdminClients.edittransaction.heading_date'] = 'Date';
 $lang['AdminClients.edittransaction.subheading_invoice'] = 'Invoice #';
 $lang['AdminClients.edittransaction.subheading_amount'] = 'Amount';
 $lang['AdminClients.edittransaction.subheading_appliedon'] = 'Applied On';
-$lang['AdminClients.edittransaction.subheading_options'] = 'Options';
+$lang['AdminClients.edittransaction.subheading_options'] = 'Actions';
 $lang['AdminClients.edittransaction.field_status'] = 'Status';
 $lang['AdminClients.edittransaction.field_processremotely'] = 'Process this status change with the payment gateway (%1$s)'; // %1$s is the name of the remote gateway
-$lang['AdminClients.edittransaction.field_submit'] = 'Modify Transaction';
+$lang['AdminClients.edittransaction.field_submit'] = 'Update Transaction';
 $lang['AdminClients.edittransaction.applied_no_results'] = 'This transaction has not been applied to any invoices.';
 $lang['AdminClients.edittransaction.option_unapply'] = 'Unapply';
 $lang['AdminClients.edittransaction.confirm_unapply'] = 'Really unapply this transaction from the selected invoice?';
@@ -709,7 +743,7 @@ $lang['AdminClients.invoices.heading_dateclosed'] = 'Date Closed';
 $lang['AdminClients.invoices.heading_datebilled'] = 'Date Billed';
 $lang['AdminClients.invoices.heading_datedue'] = 'Date Due';
 $lang['AdminClients.invoices.heading_status'] = 'Status';
-$lang['AdminClients.invoices.heading_options'] = 'Options';
+$lang['AdminClients.invoices.heading_options'] = 'Actions';
 $lang['AdminClients.invoices.heading_term'] = 'Term';
 $lang['AdminClients.invoices.heading_duration'] = 'Duration';
 $lang['AdminClients.invoices.heading_count'] = 'Count';
@@ -727,7 +761,7 @@ $lang['AdminClients.invoices.headingexpand_paymenttype'] = 'Payment Type';
 $lang['AdminClients.invoices.headingexpand_amount'] = 'Amount';
 $lang['AdminClients.invoices.headingexpand_applied'] = 'Applied';
 $lang['AdminClients.invoices.headingexpand_appliedon'] = 'Applied On';
-$lang['AdminClients.invoices.headingexpand_options'] = 'Options';
+$lang['AdminClients.invoices.headingexpand_options'] = 'Actions';
 
 $lang['AdminClients.invoices.status_sent'] = 'Sent';
 $lang['AdminClients.invoices.status_unsent'] = 'Unsent';
@@ -751,12 +785,14 @@ $lang['AdminClients.invoices.!error.electronic_invoice_format.required'] = 'Plea
 $lang['AdminClients.invoices.!error.electronic_invoice_download_failed'] = 'Failed to create electronic invoice download.';
 $lang['AdminClients.invoices.!error.electronic_invoice_generation_failed'] = 'Failed to generate electronic invoices.';
 
-$lang['AdminClients.invoices.field_invoicesubmit'] = 'Submit';
+$lang['AdminClients.invoices.field_invoicesubmit'] = 'Apply';
 $lang['AdminClients.invoices.field_continue'] = 'Continue';
 $lang['AdminClients.invoices.field_cancel'] = 'Cancel';
 
 $lang['AdminClients.invoices.no_results'] = 'There are no invoices with this status.';
 $lang['AdminClients.invoices.applied_no_results'] = 'This invoice has no transactions applied to it.';
+$lang['AdminClients.invoices.text_item_selected'] = 'item selected';
+$lang['AdminClients.invoices.text_items_selected'] = 'items selected';
 
 $lang['AdminClients.invoices.subtotal_w_tax'] = '%1$s +tax'; // %1$s is the sub total amount
 $lang['AdminClients.invoices.term_day'] = '%1$s day'; // %1$s is the term (an integer)
@@ -785,7 +821,7 @@ $lang['AdminClients.quotations.heading_subtotal'] = 'Subtotal';
 $lang['AdminClients.quotations.heading_total'] = 'Amount';
 $lang['AdminClients.quotations.heading_date_created'] = 'Creation Date';
 $lang['AdminClients.quotations.heading_date_expires'] = 'Expiration Date';
-$lang['AdminClients.quotations.heading_options'] = 'Options';
+$lang['AdminClients.quotations.heading_options'] = 'Actions';
 
 $lang['AdminClients.quotations.category_draft'] = 'Draft';
 $lang['AdminClients.quotations.category_approved'] = 'Approved';
@@ -803,19 +839,21 @@ $lang['AdminClients.quotations.option_approve'] = 'Approve';
 $lang['AdminClients.quotations.confirm_approve'] = 'Are you sure you want to approve this quote?';
 
 $lang['AdminClients.quotations.categorylink_createquotation'] = 'Create Quote';
-$lang['AdminClients.quotations.field_quotationsubmit'] = 'Submit';
+$lang['AdminClients.quotations.field_quotationsubmit'] = 'Apply';
 
 $lang['AdminClients.quotations.action.email'] = 'Deliver by Email';
 $lang['AdminClients.quotations.action.status'] = 'Change Status';
 
 $lang['AdminClients.quotations.no_results'] = 'There are no quotes with this status.';
+$lang['AdminClients.quotations.text_item_selected'] = 'item selected';
+$lang['AdminClients.quotations.text_items_selected'] = 'items selected';
 
 // Quotation Invoices
 $lang['AdminClients.quotationinvoices.headingexpand_invoice'] = 'Invoice #';
 $lang['AdminClients.quotationinvoices.headingexpand_amount'] = 'Amount';
 $lang['AdminClients.quotationinvoices.headingexpand_paid'] = 'Paid';
 $lang['AdminClients.quotationinvoices.headingexpand_date_billed'] = 'Date Billed';
-$lang['AdminClients.quotationinvoices.headingexpand_options'] = 'Options';
+$lang['AdminClients.quotationinvoices.headingexpand_options'] = 'Actions';
 
 $lang['AdminClients.quotationinvoices.option_view'] = 'View';
 
@@ -840,6 +878,11 @@ $lang['AdminClients.stickynotes.text_unstick'] = 'Unstick';
 $lang['AdminClients.stickynotes.text_more'] = 'Show More';
 $lang['AdminClients.stickynotes.text_less'] = 'Show Less';
 
+// Pinned Notes (Top Bar)
+$lang['AdminClients.view.pinned_notes_title'] = 'Pinned Notes';
+$lang['AdminClients.view.quick_jump_title'] = 'Quick Jump';
+$lang['AdminClients.view.quick_jump_empty'] = 'No widgets available';
+$lang['AdminClients.pinnednotes.text_unpin'] = 'Unpin Note';
 
 // Notes
 $lang['AdminClients.notes.page_title'] = 'Client #%1$s Notes'; // %1$s is the client ID number
@@ -847,7 +890,7 @@ $lang['AdminClients.notes.boxtitle_notes'] = 'Notes';
 
 $lang['AdminClients.notes.heading_title'] = 'Summary';
 $lang['AdminClients.notes.heading_dateupdated'] = 'Date Updated';
-$lang['AdminClients.notes.heading_options'] = 'Options';
+$lang['AdminClients.notes.heading_options'] = 'Actions';
 
 $lang['AdminClients.notes.heading_staff'] = 'Created by';
 $lang['AdminClients.notes.heading_dateadded'] = 'Date Added';
@@ -863,6 +906,24 @@ $lang['AdminClients.notes.confirm_delete'] = 'Are you sure you want to delete th
 $lang['AdminClients.notes.no_results'] = 'There are no notes.';
 
 $lang['AdminClients.!notes.stickied'] = 'Check this box to display this note on the client profile page.';
+
+
+// Contacts listing
+$lang['AdminClients.contacts.page_title'] = 'Client #%1$s Contacts'; // %1$s is the client ID number
+$lang['AdminClients.contacts.boxtitle_contacts'] = 'Contacts';
+$lang['AdminClients.contacts.categorylink_create'] = 'Add Contact';
+
+$lang['AdminClients.contacts.heading_name'] = 'Name';
+$lang['AdminClients.contacts.heading_email'] = 'Email';
+$lang['AdminClients.contacts.heading_type'] = 'Type';
+$lang['AdminClients.contacts.heading_options'] = 'Actions';
+
+$lang['AdminClients.contacts.option_edit'] = 'Edit';
+$lang['AdminClients.contacts.option_delete'] = 'Delete';
+
+$lang['AdminClients.contacts.confirm_delete'] = 'Are you sure you want to delete this contact?';
+
+$lang['AdminClients.contacts.no_results'] = 'There are no contacts for this client.';
 
 
 // Add Note
@@ -884,7 +945,7 @@ $lang['AdminClients.editnote.field_title'] = 'Summary';
 $lang['AdminClients.editnote.field_description'] = 'Details';
 $lang['AdminClients.editnote.field_stickied'] = 'Sticky this Note';
 
-$lang['AdminClients.editnote.field_notesubmit'] = 'Edit Note';
+$lang['AdminClients.editnote.field_notesubmit'] = 'Update Note';
 
 
 // Create Service
@@ -912,12 +973,14 @@ $lang['AdminClients.addservice_basic.field_invoice_method_dont'] = 'Do Not Invoi
 $lang['AdminClients.addservice_basic.field_term'] = 'Term';
 $lang['AdminClients.addservice_basic.field_price_override'] = 'Override Price';
 $lang['AdminClients.addservice_basic.field_override_price'] = 'Price';
+$lang['AdminClients.addservice_basic.field_currency'] = 'Currency';
 $lang['AdminClients.addservice_basic.field_status'] = 'Status';
 $lang['AdminClients.addservice_basic.field_notify_order'] = 'Send order confirmation email when activated';
 $lang['AdminClients.addservice_basic.field_disable_option_logic'] = 'Disable option logic';
 $lang['AdminClients.addservice_basic.tooltip_disable_option_logic'] = 'Ignore rules making some package options dependent on the others, instead allowing any value to be set for package options.';
 $lang['AdminClients.addservice_basic.field_use_module'] = 'Provision using the %1$s module when activated'; // %1$s is the name of the module the service is being created for
 $lang['AdminClients.addservice_basic.module_heading'] = '%1$s Options'; // %1$s is the name of the module options are being displayed for
+$lang['AdminClients.addservice_basic.no_module_options'] = 'This module has no configurable options.';
 $lang['AdminClients.addservice_basic.addons_heading'] = 'Add-ons';
 $lang['AdminClients.addservice_basic.field_default_addon'] = 'None';
 $lang['AdminClients.addservice_basic.field_continue'] = 'Continue';
@@ -951,6 +1014,7 @@ $lang['AdminClients.editservice.boxtitle_editservice'] = 'Manage Service: %1$s -
 $lang['AdminClients.editservice.tab_basic'] = 'Basic Options';
 $lang['AdminClients.editservice.tab_advanced'] = 'Advanced Options';
 $lang['AdminClients.editservice.tab_addon'] = 'Add-ons (%1$s)'; // %1$s is the number of addons on the service
+$lang['AdminClients.editservice.tab_addon_label'] = 'Add-ons';
 $lang['AdminClients.editservice.suspension_reason_note'] = 'Reason for Suspension: %1$s'; // %1$s is the reason this service was suspended
 $lang['AdminClients.editservice.cancellation_reason_note'] = 'Reason for Cancellation: %1$s'; // %1$s is the reason this service was canceled
 
@@ -978,6 +1042,7 @@ $lang['AdminClients.editservice.text_children'] = 'This service is associated wi
 $lang['AdminClients.editservice.text_uncancel'] = 'You are about to re-activate a cancelled service. If "Use module" is unchecked, the service will be reactivated in Blesta only. Note that reactivating through the module may be problematic and may not be supported by all modules. Reactivating a cancelled service does not undo the cancel action performed through the module\'s API.';
 
 $lang['AdminClients.editservice.action_heading'] = 'Actions';
+$lang['AdminClients.editservice.action_empty_state'] = 'Select an action above to manage this service.';
 $lang['AdminClients.editservice.package_heading'] = 'Upgrade/Downgrade';
 $lang['AdminClients.editservice.module_heading'] = '%1$s Options'; // %1$s is the name of the module options are being displayed for
 $lang['AdminClients.editservice.addon_heading'] = 'Available Add-ons';
@@ -1001,6 +1066,8 @@ $lang['AdminClients.editservice.action.field_date_renews'] = 'Date Renews';
 $lang['AdminClients.editservice.action.field_suspension_reason'] = 'Reason for Suspension';
 $lang['AdminClients.editservice.action.field_cancellation_reason'] = 'Reason for Cancellation';
 $lang['AdminClients.editservice.action.field_coupon_code'] = 'Coupon Code';
+$lang['AdminClients.editservice.confirm_cancel'] = 'Are you sure you want to cancel this service? This action cannot be undone.';
+$lang['AdminClients.editservice.field_cancel_service'] = 'Cancel Service';
 
 $lang['AdminClients.editservice.field_invoice_method'] = 'Invoice Method';
 $lang['AdminClients.editservice.field_invoice_method_create'] = 'Create Invoice';
@@ -1012,6 +1079,7 @@ $lang['AdminClients.editservice.field_status'] = 'Status';
 $lang['AdminClients.editservice.package.field_pricing'] = 'Package/Term';
 $lang['AdminClients.editservice.field_price_override'] = 'Override Price';
 $lang['AdminClients.editservice.field_override_price'] = 'Price';
+$lang['AdminClients.editservice.field_override_currency'] = 'Currency';
 $lang['AdminClients.editservice.field_current_coupon_code'] = 'Current Coupon Code';
 $lang['AdminClients.editservice.field_new_coupon_code'] = 'New Coupon Code';
 $lang['AdminClients.editservice.tooltip_coupon_code'] = 'Coupon must be valid, and will be applied when service renews.';
@@ -1029,6 +1097,7 @@ $lang['AdminClients.editservice.field_key'] = 'Key';
 $lang['AdminClients.editservice.field_value'] = 'Value';
 $lang['AdminClients.editservice.field_serialized'] = 'Serialized';
 $lang['AdminClients.editservice.field_encrypted'] = 'Encrypted';
+$lang['AdminClients.editservice.field_add'] = 'Add Field';
 
 // Service info
 $lang['AdminClients.serviceinfo.no_results'] = 'This service has no details.';
@@ -1044,10 +1113,23 @@ $lang['AdminClients.makepayment.field_paymentaccount_ach'] = 'ACH Accounts';
 $lang['AdminClients.makepayment.field_paymentaccount_cc'] = 'Credit Card Accounts';
 $lang['AdminClients.makepayment.field_submit'] = 'Continue';
 $lang['AdminClients.makepayment.field_useaccount'] = 'Use Payment Account';
+$lang['AdminClients.makepayment.text_usefromaccount'] = 'Pay using a saved payment method';
 $lang['AdminClients.makepayment.field_newdetails'] = 'New Payment Details';
+$lang['AdminClients.makepayment.field_paymenttype'] = 'Payment Type';
+$lang['AdminClients.makepayment.heading_contactinfo'] = 'Contact Information';
+$lang['AdminClients.makepayment.heading_ccinfo'] = 'Credit Card Information';
+$lang['AdminClients.makepayment.heading_achinfo'] = 'Bank Account Information';
 $lang['AdminClients.makepayment.boxtitle_makepaymentamount'] = 'Make Payment';
 $lang['AdminClients.makepayment.record_invoice'] = 'Record Payment for Invoice #%1$s, instead'; // %1$s is the invoice number
 $lang['AdminClients.makepayment.record_payment'] = 'Record Payment instead';
+$lang['AdminClients.makepayment.badge_autodebit'] = 'Auto Debit';
+$lang['AdminClients.makepayment.badge_expired'] = 'Expired';
+$lang['AdminClients.makepayment.badge_expiring'] = 'Expiring Soon';
+$lang['AdminClients.makepayment.card_name_cc'] = '%1$s •••• %2$s'; // %1$s card type, %2$s last 4
+$lang['AdminClients.makepayment.card_name_ach'] = '%1$s •••• %2$s'; // %1$s account type, %2$s last 4
+$lang['AdminClients.makepayment.card_info_cc'] = '%1$s %2$s • Expires %3$s/%4$s'; // %1$s first name, %2$s last name, %3$s expiry month, %4$s expiry year
+$lang['AdminClients.makepayment.card_info_ach'] = '%1$s %2$s'; // %1$s first name, %2$s last name
+$lang['AdminClients.makepayment.field_newmethod'] = 'Use New Payment Method';
 
 $lang['AdminClients.makepaymentamount.heading_invoices'] = 'Invoice Selection';
 $lang['AdminClients.makepaymentamount.field_submit'] = 'Review and Confirm';
@@ -1130,7 +1212,7 @@ $lang['AdminClients.services.heading_datecreated'] = 'Date Created';
 $lang['AdminClients.services.heading_daterenews'] = 'Date Renews';
 $lang['AdminClients.services.heading_datesuspended'] = 'Date Suspended';
 $lang['AdminClients.services.heading_datecanceled'] = 'Date Canceled';
-$lang['AdminClients.services.heading_options'] = 'Options';
+$lang['AdminClients.services.heading_options'] = 'Actions';
 
 $lang['AdminClients.services.category_active'] = 'Active';
 $lang['AdminClients.services.category_pending'] = 'Pending';
@@ -1160,7 +1242,10 @@ $lang['AdminClients.services.action.field_action_type_none'] = 'Do not cancel';
 $lang['AdminClients.services.action.field_cycles'] = 'Number of Cycles';
 $lang['AdminClients.services.action.field_client'] = 'Client:';
 $lang['AdminClients.services.action.field_suspension_reason'] = 'Suspension Reason:';
-$lang['AdminClients.services.field_actionsubmit'] = 'Submit';
+$lang['AdminClients.services.action.field_email'] = 'Email:';
+$lang['AdminClients.services.field_actionsubmit'] = 'Apply';
+$lang['AdminClients.services.text_item_selected'] = 'item selected';
+$lang['AdminClients.services.text_items_selected'] = 'items selected';
 
 
 // Transactions
@@ -1174,12 +1259,12 @@ $lang['AdminClients.transactions.heading_applied'] = 'Applied';
 $lang['AdminClients.transactions.heading_number'] = 'Number';
 $lang['AdminClients.transactions.heading_reference_id'] = 'Reference #';
 $lang['AdminClients.transactions.heading_date'] = 'Date';
-$lang['AdminClients.transactions.heading_options'] = 'Options';
+$lang['AdminClients.transactions.heading_options'] = 'Actions';
 
 $lang['AdminClients.transactions.headingexpand_invoice'] = 'Invoice';
 $lang['AdminClients.transactions.headingexpand_amount'] = 'Amount';
 $lang['AdminClients.transactions.headingexpand_appliedon'] = 'Applied On';
-$lang['AdminClients.transactions.headingexpand_options'] = 'Options';
+$lang['AdminClients.transactions.headingexpand_options'] = 'Actions';
 
 $lang['AdminClients.transactions.category_approved'] = 'Approved';
 $lang['AdminClients.transactions.category_declined'] = 'Declined';
@@ -1206,7 +1291,10 @@ $lang['AdminClients.view.status_link'] = '(Click to change)';
 $lang['AdminClients.view.number'] = '(%1$s %2$s)'; // %1$s is the number location, %2$s is the number type
 $lang['AdminClients.view.link_vcard'] = 'vCard';
 $lang['AdminClients.view.link_notes'] = 'Notes';
+$lang['AdminClients.view.link_contacts'] = 'Contacts';
 $lang['AdminClients.view.link_editclient'] = 'Edit';
+$lang['AdminClients.view.balance_title'] = 'Account Balance';
+$lang['AdminClients.view.delete_modal_confirm'] = 'Are you sure you want to delete this client? This action cannot be undone.';
 
 $lang['AdminClients.view.setting_memberof'] = 'Member of';
 $lang['AdminClients.view.setting_invoicemethod'] = 'Invoice Method';
@@ -1286,7 +1374,7 @@ $lang['AdminClients.packages.boxtitle_packages'] = 'Restricted Packages';
 $lang['AdminClients.packages.text_name'] = 'Name';
 $lang['AdminClients.packages.text_module'] = 'Module';
 
-$lang['AdminClients.packages.field_packagesubmit'] = 'Save Restricted Package Access';
+$lang['AdminClients.packages.field_packagesubmit'] = 'Save';
 
 $lang['AdminClients.packages.no_results'] = 'There are no restricted packages.';
 

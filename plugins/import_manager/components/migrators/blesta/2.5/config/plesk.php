@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('plesk.map', [
     'module' => 'plesk',
     'module_row_key' => 'hostip',

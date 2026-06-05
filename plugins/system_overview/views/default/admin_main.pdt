@@ -1,14 +1,438 @@
-
         <?php
         $this->Widget->clear();
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css?ver=1.4.0', ['id' => 'system_overview_styles']);
+        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'system_overview_styles']);
+        $this->Widget->setWidgetButton('widget-width');
         $this->Widget->setWidgetButton('arrow');
-        $this->Widget->setWidgetButton(['href'=>$this->base_uri . 'widget/system_overview/admin_main/settings/', 'class'=>'ajax setting']);
-        $this->Widget->create($this->_('AdminMain.index.boxtitle_overview', true), ['id'=>'widget_system_overview_admin_main' . ((isset($billing) ? $billing : 'false') == 'true' ? '_billing' : '')], (isset($render_section) ? $render_section : null));
+        $this->Widget->setWidgetButton([
+            'href' => $this->base_uri . 'widget/system_overview/admin_main/settings/',
+            'class' => 'ajax setting',
+        ]);
+        $this->Widget->create(
+            $this->_('AdminMain.index.boxtitle_overview', true),
+            ['id' => 'widget_system_overview_admin_main' . (($billing ?? 'false') == 'true' ? '_billing' : '')],
+            $render_section ?? null,
+        );
         ?>
-        <div id="overview">
-            <?php echo (isset($content) ? $content : null);?>
+        <div class="row">
+            <!-- Left Column: Stats -->
+            <div class="col-md-6 mb-3 mb-md-0">
+                <ul class="status-list">
+                    <?php foreach ($statistics ?? [] as $statistic) { ?>
+                    <li class="status-list-item">
+                        <span>
+                            <i class="bi <?php echo isset($statistic['icon'])
+                                ? $this->Html->safe($statistic['icon'])
+                                : null; ?> me-2"></i>
+                            <?php echo isset($statistic['name']) ? $this->Html->safe($statistic['name']) : null; ?>
+                        </span>
+                        <strong><?php echo isset($statistic['value'])
+                            ? $this->Html->safe($statistic['value'])
+                            : null; ?></strong>
+                    </li>
+                    <?php } ?>
+                </ul>
+            </div>
+
+            <!-- Right Column: Recent Users -->
+            <div class="col-md-6">
+                <h6 class="mb-3">
+                    <i class="bi bi-clock-history text-secondary me-2"></i>
+                    <?php $this->_('AdminMain.overview.heading_users'); ?>
+                </h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <?php
+                    $recent_users = $recent_users ?? [];
+
+                    foreach ($recent_users as $user) {
+
+                        // Build tooltip content
+                        $tooltip_content =
+                            '<strong>' . $this->_('AdminMain.overview.tooltip_activity', true) . '</strong><br>';
+
+                        if (($user->class ?? null) == 'latest' || ($user->class ?? null) == 'user') {
+                            $tooltip_content .= isset($user->last_activity)
+                                ? $this->Html->safe($user->last_activity)
+                                : null;
+                        } else {
+                            $tooltip_content .= $this->Date->cast($user->date_updated, 'date_time');
+                        }
+
+                        if ($user->geo_ip['location'] ?? null) {
+                            $location = $user->geo_ip['location'];
+                            $tooltip_content .=
+                                '<br><br>' .
+                                '<strong>' .
+                                $this->_('AdminMain.overview.tooltip_location', true) .
+                                '</strong><br>' .
+                                $this->Html->safe(
+                                    $this->Html->concat(', ', $location['city'] ?? null, $location['region'] ?? null),
+                                ) .
+                                '<br>' .
+                                (isset($location['country_name'])
+                                    ? $this->Html->safe($location['country_name'])
+                                    : null);
+                        }
+
+                        $user_class = isset($user->class) ? $this->Html->safe($user->class) : 'old';
+                        ?>
+                    <span class="user-badge-wrapper <?php echo $user_class; ?>">
+                        <?php if ($user->client_id ?? null) { ?>
+                        <a href="<?php echo $this->Html->safe(
+                            $this->base_uri . 'clients/view/' . $user->client_id . '/',
+                        ); ?>" class="badge bg-secondary text-decoration-none user-activity-badge" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="<?php echo $this->Html->safe(
+    $tooltip_content,
+); ?>"><?php echo $this->Html->safe(($user->first_name ?? null) . ' ' . ($user->last_name ?? null)); ?></a>
+                        <?php } else { ?>
+                        <span class="badge bg-secondary user-activity-badge" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="<?php echo $this->Html->safe(
+                            $tooltip_content,
+                        ); ?>"><?php echo $this->Html->safe(
+    ($user->first_name ?? null) . ' ' . ($user->last_name ?? null),
+); ?></span>
+                        <?php } ?>
+                    </span>
+                    <?php
+                    }
+                    ?>
+                </div>
+            </div>
         </div>
-        <?php
-        $this->Widget->end();
-        ?>
+
+        <!-- Tab Navigation and Charts -->
+        <div class="card-filter-bar mt-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <!-- Left: Box Tab Navigation -->
+                <ul class="nav nav-tabs-box border-0 mb-0" role="tablist">
+                    <?php
+                    $tab_index = 0;
+                    foreach ($tabs ?? [] as $tab) { ?>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link<?php echo $tab['current'] ?? false
+                            ? ' active'
+                            : ''; ?>" data-bs-toggle="tab" data-bs-target="#system-tab-<?php echo $tab_index; ?>" type="button" role="tab">
+                            <?php echo isset($tab['name']) ? $this->Html->safe($tab['name']) : null; ?>
+                        </button>
+                    </li>
+                    <?php $tab_index++;}
+                    ?>
+                </ul>
+
+                <!-- Right: Time Period Selector -->
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="systemPeriod" id="systemPeriod24h" autocomplete="off" checked>
+                    <label class="btn btn-outline-secondary" for="systemPeriod24h">24H</label>
+
+                    <input type="radio" class="btn-check" name="systemPeriod" id="systemPeriod7d" autocomplete="off">
+                    <label class="btn btn-outline-secondary" for="systemPeriod7d">7D</label>
+
+                    <input type="radio" class="btn-check" name="systemPeriod" id="systemPeriod30d" autocomplete="off">
+                    <label class="btn btn-outline-secondary" for="systemPeriod30d">30D</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content">
+            <?php
+            $tab_index = 0;
+            $graph_list = $graphs['graphs'] ?? [];
+            if (empty($graph_list)) { ?>
+            <div class="tab-pane fade show active" id="system-tab-0" role="tabpanel">
+                <div class="card-body">
+                    <div class="text-center text-muted p-4">
+                        <?php $this->_('AdminMain.overview.no_graphs'); ?>
+                    </div>
+                </div>
+            </div>
+            <?php } else {foreach ($graph_list as $graph_type => $graph) { ?>
+            <div class="tab-pane fade<?php echo $tab_index === 0
+                ? ' show active'
+                : ''; ?>" id="system-tab-<?php echo $tab_index; ?>" role="tabpanel">
+                <div class="card-body">
+                    <div id="<?php echo isset($graph_type)
+                        ? $this->Html->safe($graph_type)
+                        : null; ?>" class="system-overview-chart" data-chart-type="<?php echo isset($graph_type)
+    ? $this->Html->safe($graph_type)
+    : null; ?>" data-chart-data="<?php echo $this->Html->safe(json_encode($graph['data'] ?? [])); ?>"></div>
+                </div>
+            </div>
+            <?php $tab_index++;}}
+            ?>
+        </div>
+        <?php $this->Widget->end(); ?>
+
+        <script type="text/javascript">
+            // Define global functions only once
+            if (typeof window.SystemOverview === 'undefined') {
+                window.SystemOverview = {
+                    charts: {},
+                    baseUri: '<?php echo $this->Html->safe($this->base_uri); ?>',
+
+                    getCurrentTheme: function() {
+                        return document.documentElement.getAttribute('data-theme') || 'dark';
+                    },
+
+                    getBaseChartOptions: function() {
+                        var isDark = this.getCurrentTheme() === 'dark';
+
+                        return {
+                            chart: {
+                                background: 'transparent',
+                                foreColor: isDark ? '#a0a0a0' : '#666666',
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                toolbar: {
+                                    show: true,
+                                    tools: {
+                                        download: true,
+                                        selection: true,
+                                        zoom: true,
+                                        zoomin: true,
+                                        zoomout: true,
+                                        pan: true,
+                                        reset: true
+                                    }
+                                }
+                            },
+                            theme: {
+                                mode: isDark ? 'dark' : 'light'
+                            },
+                            grid: {
+                                borderColor: isDark ? '#2a2a2a' : '#e0e0e0',
+                                strokeDashArray: 3
+                            },
+                            tooltip: {
+                                theme: isDark ? 'dark' : 'light'
+                            },
+                            legend: {
+                                labels: {
+                                    colors: isDark ? '#a0a0a0' : '#666666'
+                                }
+                            },
+                            xaxis: {
+                                labels: {
+                                    style: {
+                                        colors: isDark ? '#a0a0a0' : '#666666'
+                                    }
+                                },
+                                axisBorder: {
+                                    color: isDark ? '#2a2a2a' : '#e0e0e0'
+                                },
+                                axisTicks: {
+                                    color: isDark ? '#2a2a2a' : '#e0e0e0'
+                                }
+                            },
+                            yaxis: {
+                                labels: {
+                                    style: {
+                                        colors: isDark ? '#a0a0a0' : '#666666'
+                                    }
+                                }
+                            },
+                            dataLabels: {
+                                enabled: false
+                            }
+                        };
+                    },
+
+                    createStackedAreaChart: function(graphType, data) {
+                        var categories = [];
+                        var series = [];
+
+                        if (data.length > 0 && data[0].points) {
+                            var points = typeof data[0].points === 'string' ? JSON.parse(data[0].points) : data[0].points;
+                            points.forEach(function(point) {
+                                var date = new Date(point[0]);
+                                categories.push(date.toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric'
+                                }));
+                            });
+                        }
+
+                        var colors = ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6f42c1'];
+
+                        data.forEach(function(seriesData) {
+                            var points = typeof seriesData.points === 'string' ? JSON.parse(seriesData.points) : seriesData.points;
+                            var values = points.map(function(point) {
+                                return point[1];
+                            });
+
+                            series.push({
+                                name: seriesData.name,
+                                data: values
+                            });
+                        });
+
+                        var options = this.getBaseChartOptions();
+                        options.chart.type = 'area';
+                        options.chart.stacked = true;
+                        options.chart.height = 300;
+                        options.series = series;
+                        options.xaxis.categories = categories;
+                        options.stroke = {
+                            curve: 'smooth',
+                            width: 2
+                        };
+                        options.fill = {
+                            type: 'gradient',
+                            gradient: {
+                                opacityFrom: 0.6,
+                                opacityTo: 0.1
+                            }
+                        };
+                        options.colors = colors;
+
+                        return options;
+                    },
+
+                    destroyCharts: function() {
+                        var self = this;
+                        Object.keys(self.charts).forEach(function(chartId) {
+                            if (self.charts[chartId]) {
+                                try {
+                                    self.charts[chartId].destroy();
+                                } catch (e) {}
+                            }
+                        });
+                        self.charts = {};
+                    },
+
+                    initChartsFromDataAttributes: function() {
+                        var self = this;
+                        self.destroyCharts();
+
+                        document.querySelectorAll('.system-overview-chart[data-chart-data]').forEach(function(container) {
+                            var chartType = container.getAttribute('data-chart-type');
+                            var chartDataStr = container.getAttribute('data-chart-data');
+
+                            if (!chartType || !chartDataStr) return;
+
+                            try {
+                                var chartData = JSON.parse(chartDataStr);
+                                var options = self.createStackedAreaChart(chartType, chartData);
+                                var chart = new ApexCharts(container, options);
+                                chart.render();
+                                self.charts[chartType] = chart;
+                            } catch (e) {
+                                console.error('Failed to initialize chart:', e);
+                            }
+                        });
+                    },
+
+                    init: function() {
+                        var self = this;
+
+                        // Initialize charts from data attributes
+                        if (typeof ApexCharts !== 'undefined') {
+                            self.initChartsFromDataAttributes();
+                        }
+
+                        // Set up period change handler (only once)
+                        if (!self.periodHandlerBound) {
+                            document.addEventListener('change', function(e) {
+                                if (!e.target.matches('input[name="systemPeriod"]')) {
+                                    return;
+                                }
+
+                                var period = e.target.id.replace('systemPeriod', '').toLowerCase();
+
+                                fetch(self.baseUri + 'widget/system_overview/admin_main/graphData/' + period + '/', {
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    }
+                                })
+                                .then(function(response) { return response.json(); })
+                                .then(function(response) {
+                                    if (!response.graphs) {
+                                        return;
+                                    }
+
+                                    Object.keys(response.graphs).forEach(function(graphType) {
+                                        if (self.charts[graphType]) {
+                                            var graphData = response.graphs[graphType].data;
+                                            var newOptions = self.createStackedAreaChart(graphType, graphData);
+
+                                            self.charts[graphType].updateOptions({
+                                                series: newOptions.series,
+                                                xaxis: {
+                                                    categories: newOptions.xaxis.categories
+                                                }
+                                            });
+                                        }
+                                    });
+                                });
+                            });
+                            self.periodHandlerBound = true;
+                        }
+
+                        // Theme change observer (only once)
+                        if (!self.themeObserver) {
+                            self.themeObserver = new MutationObserver(function(mutations) {
+                                mutations.forEach(function(mutation) {
+                                    if (mutation.attributeName === 'data-theme') {
+                                        Object.keys(self.charts).forEach(function(chartId) {
+                                            if (self.charts[chartId]) {
+                                                var baseOptions = self.getBaseChartOptions();
+                                                self.charts[chartId].updateOptions({
+                                                    chart: baseOptions.chart,
+                                                    theme: baseOptions.theme,
+                                                    grid: baseOptions.grid,
+                                                    tooltip: baseOptions.tooltip,
+                                                    legend: baseOptions.legend,
+                                                    xaxis: baseOptions.xaxis,
+                                                    yaxis: baseOptions.yaxis
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            });
+
+                            self.themeObserver.observe(document.documentElement, {
+                                attributes: true,
+                                attributeFilter: ['data-theme']
+                            });
+                        }
+
+                        // MutationObserver to detect when new chart containers are added (for AJAX reloads)
+                        if (!self.domObserver) {
+                            self.domObserver = new MutationObserver(function(mutations) {
+                                mutations.forEach(function(mutation) {
+                                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                                        mutation.addedNodes.forEach(function(node) {
+                                            if (node.nodeType === 1) {
+                                                var charts = node.querySelectorAll ? node.querySelectorAll('.system-overview-chart[data-chart-data]') : [];
+                                                if (charts.length > 0 || (node.classList && node.classList.contains('system-overview-chart'))) {
+                                                    setTimeout(function() {
+                                                        self.initChartsFromDataAttributes();
+                                                    }, 100);
+                                                }
+                                            }
+                                        });
+                                    }
+                                });
+                            });
+
+                            self.domObserver.observe(document.body, {
+                                childList: true,
+                                subtree: true
+                            });
+                        }
+
+                        // Initialize tooltips
+                        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+                            if (!bootstrap.Tooltip.getInstance(el)) {
+                                new bootstrap.Tooltip(el, {
+                                    html: true,
+                                    delay: {
+                                        show: 300,
+                                        hide: 100
+                                    }
+                                });
+                            }
+                        });
+                    }
+                };
+            }
+
+            // Initialize or re-initialize
+            window.SystemOverview.init();
+        </script>

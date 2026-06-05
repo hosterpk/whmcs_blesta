@@ -1,0 +1,78 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "name",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "hostname",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "address",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "phone",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "fax",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        }
+    ],
+    "indexes": [
+        {
+            "name": "hostname",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "hostname"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

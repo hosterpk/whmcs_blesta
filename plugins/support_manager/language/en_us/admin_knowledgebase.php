@@ -24,6 +24,7 @@ $lang['AdminKnowledgebase.index.boxtitle_knowledgebase'] = 'Knowledge Base';
 $lang['AdminKnowledgebase.index.go_back'] = 'Go up a level';
 $lang['AdminKnowledgebase.index.edit'] = 'Edit';
 $lang['AdminKnowledgebase.index.delete'] = 'Delete';
+$lang['AdminKnowledgebase.index.view'] = 'View';
 $lang['AdminKnowledgebase.modal.delete_article'] = 'Are you sure you want to delete this article?';
 $lang['AdminKnowledgebase.modal.delete_category'] = 'Are you sure you want to delete this category? All subcategories and articles within this category will be moved to the parent category.';
 $lang['AdminKnowledgebase.index.no_results'] = 'There are no categories or articles in this section.';

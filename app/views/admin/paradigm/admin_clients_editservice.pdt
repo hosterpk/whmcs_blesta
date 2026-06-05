@@ -1,0 +1,26 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->setTabs((isset($tabs) ? $tabs : []));
+$this->Widget->create($this->_('AdminClients.editservice.boxtitle_editservice', true, (isset($package->name) ? $package->name : null), (isset($service->name) ? $service->name : null)), ['id' => 'admin_clients_editservice'], (isset($render_section) ? $render_section : null));
+?>
+    <?php echo (isset($form) ? $form : null);?>
+<?php
+$is_pending = in_array(($service->status ?? null), ['pending', 'in_review']);
+if ($is_pending) {
+    $this->Widget->footer();
+?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $submit_lang = 'AdminClients.editservice.field_module_' . (($service->status ?? null) == 'in_review' ? 'save' : 'activate');
+    $this->Form->fieldSubmit('save', $this->_($submit_lang, true), ['class' => 'btn btn-primary', 'form' => 'pending_service']);
+    ?>
+</div>
+<?php
+}
+$this->Widget->end();
+?>

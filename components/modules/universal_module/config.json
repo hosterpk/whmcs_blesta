@@ -1,5 +1,5 @@
 {
-    "version": "1.12.1",
+    "version": "2.0.0",
     "name": "UniversalModule.name",
     "description": "UniversalModule.description",
     "authors": [
@@ -14,8 +14,15 @@
         "row_key": "name"
     },
     "email_tags": {
-        "module": ["*"],
-        "package": ["*"],
-        "service": ["*"]
-    }
+        "module": [
+            "*"
+        ],
+        "package": [
+            "*"
+        ],
+        "service": [
+            "*"
+        ]
+    },
+    "icon": "bi-gear"
 }

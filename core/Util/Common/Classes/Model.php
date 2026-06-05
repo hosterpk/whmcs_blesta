@@ -2,7 +2,7 @@
 
 namespace Blesta\Core\Util\Common\Classes;
 
-use \Model as BaseModel;
+use Model as MinphpModel;
 
 /**
  * Base class for models
@@ -14,19 +14,26 @@ use \Model as BaseModel;
  * @link http://www.blesta.com/ Blesta
  */
 #[\AllowDynamicProperties]
-class Model extends BaseModel
+class Model extends MinphpModel
 {
-    protected $models;
-    protected $components;
-    protected $helpers;
-
-    public function __construct($db_info = null)
+    /**
+     * Returns an instance of the model
+     *
+     * @return static The model instance
+     */
+    public static function instance(...$args): static
     {
-        parent::__construct($db_info);
+        return new static(...$args);
+    }
 
-        $this->models = new \stdClass();
-        $this->components = new \stdClass();
-        $this->helpers = new \stdClass();
+    /**
+     * Returns the hostname for the current company
+     *
+     * @return string The company hostname (e.g., "example.com")
+     */
+    public static function hostname(): string
+    {
+        return \Configure::get('Blesta.company')->hostname;
     }
 
     /**
@@ -39,7 +46,7 @@ class Model extends BaseModel
      * @param string|null $data The serialized or JSON-encoded data
      * @return mixed The unserialized data, or null on failure
      */
-    public static function safeUnserialize($data)
+    public static function safeUnserialize(?string $data)
     {
         if ($data === null) {
             return null;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin Payment Methods controller
  *
@@ -62,7 +63,7 @@ class AdminPaymentMethods extends OrderAffiliateController
             Configure::get('Blesta.pagination'),
             [
                 'total_results' => $total_results,
-                'uri' => $this->base_uri . 'plugin/order/admin_affiliates/index/[p]/'
+                'uri' => $this->base_uri . 'plugin/order/admin_payment_methods/index/[p]/'
             ]
         );
         $this->setPagination($this->get, $settings);
@@ -81,7 +82,7 @@ class AdminPaymentMethods extends OrderAffiliateController
 
         if (!empty($this->post)) {
             $params = [
-                'names' => (isset($this->post['names']) ? $this->post['names'] : []),
+                'names' => ($this->post['names'] ?? []),
                 'company_id' => $this->company_id
             ];
             $this->OrderAffiliatePaymentMethods->add($params);
@@ -115,7 +116,7 @@ class AdminPaymentMethods extends OrderAffiliateController
 
         if (!empty($this->post)) {
             $params = [
-                'names' => (isset($this->post['names']) ? $this->post['names'] : []),
+                'names' => ($this->post['names'] ?? []),
                 'company_id' => $this->company_id
             ];
             $this->OrderAffiliatePaymentMethods->edit($payment_method->id, $params);
@@ -141,7 +142,7 @@ class AdminPaymentMethods extends OrderAffiliateController
     public function delete()
     {
         // If the payment method is given, make sure it exists
-        $payment_method_id = isset($this->get[0]) ? $this->get[0] : (isset($this->post['id']) ? $this->post['id'] : null);
+        $payment_method_id = $this->get[0] ?? ($this->post['id'] ?? null);
         if (!($payment_method = $this->OrderAffiliatePaymentMethods->get((int)$payment_method_id))) {
             $this->redirect($this->base_uri . 'plugin/order/admin_payment_methods/');
         }

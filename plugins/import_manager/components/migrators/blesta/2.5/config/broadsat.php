@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('broadsat.map', [
     'module' => 'universal_module',
     'module_row_key' => 'login',

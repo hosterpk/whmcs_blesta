@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Type\Common\AutomationTypeInterface;
@@ -162,7 +163,7 @@ class ProvisionPendingServices extends StaffNoticeTask
                     date('c'),
                     '+' . $service->term . ' ' . $service->period,
                     'c',
-                    isset($this->options['timezone']) ? $this->options['timezone'] : 'UTC'
+                    $this->options['timezone'] ?? 'UTC'
                 )
                 : null
             );

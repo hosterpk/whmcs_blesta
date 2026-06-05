@@ -1,5 +1,5 @@
 {
-    "version": "2.14.0",
+    "version": "3.0.0",
     "type": "registrar",
     "name": "Namecheap.name",
     "description": "Namecheap.description",
@@ -23,6 +23,9 @@
     "email_tags": {
         "module": [],
         "package": [],
-        "service": ["domain"]
-    }
+        "service": [
+            "domain"
+        ]
+    },
+    "icon": "bi-globe"
 }

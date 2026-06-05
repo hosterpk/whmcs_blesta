@@ -24,7 +24,7 @@ $lang['AdminMain.index.heading_date'] = 'Date Added';
 $lang['AdminMain.index.heading_type'] = 'Type';
 $lang['AdminMain.index.heading_status'] = 'Status';
 $lang['AdminMain.index.heading_complete'] = 'Completed';
-$lang['AdminMain.index.heading_options'] = 'Options';
+$lang['AdminMain.index.heading_options'] = 'Actions';
 $lang['AdminMain.index.option_export'] = 'Export';
 
 $lang['AdminMain.index.type.email'] = 'Email';

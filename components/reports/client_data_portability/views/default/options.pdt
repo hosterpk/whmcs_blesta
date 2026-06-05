@@ -1,12 +1,12 @@
 
-            <div class="pad_side">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('ClientDataPortability.options.field_client_id', true), 'client_id');
-                        $this->Form->fieldText('client_id', (isset($vars->client_id) ? $vars->client_id : null), ['id' => 'client_id']);
-                        ?>
-                        <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('ClientDataPortability.!tooltip.client_id');?></div></span>
-                    </li>
-                </ul>
-            </div>
+<div class="row g-3">
+    <div class="col-md-6">
+        <label for="client_id" class="form-label">
+            <?php $this->_('ClientDataPortability.options.field_client_id');?>
+            <i class="bi bi-info-circle-fill ms-1" data-bs-toggle="tooltip" title="<?php $this->_('ClientDataPortability.!tooltip.client_id');?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('client_id', (isset($vars->client_id) ? $vars->client_id : null), ['id' => 'client_id', 'class' => 'form-control']);
+        ?>
+    </div>
+</div>

@@ -1,0 +1,10 @@
+{
+    "code": "USD",
+    "company_id": 1,
+    "format": "#,###.##",
+    "precision": 2,
+    "prefix": "$",
+    "suffix": null,
+    "exchange_rate": "1.000000",
+    "exchange_updated": null
+}

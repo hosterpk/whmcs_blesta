@@ -1,0 +1,30 @@
+<?php /** @var View $this **/ ?>
+
+<aside class="side-content side-content-mobile-visible">
+    <div class="settings-nav">
+        <!-- Files Section -->
+        <div class="settings-group">
+            <?php
+            $request_uri = strtolower(rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '', '/'));
+            $is_files_active = (strpos($request_uri, '/files') !== false);
+            ?>
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/');?>"
+               class="settings-group-header<?php echo $is_files_active ? ' active' : '';?>">
+                <i class="bi bi-file-earmark-text"></i>
+                <span><?php $this->_('AdminMain.sidebar.files');?></span>
+            </a>
+        </div>
+
+        <!-- Static URLs Section -->
+        <div class="settings-group">
+            <?php
+            $is_urls_active = (strpos($request_uri, '/urls') !== false);
+            ?>
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/');?>"
+               class="settings-group-header<?php echo $is_urls_active ? ' active' : '';?>">
+                <i class="bi bi-link-45deg"></i>
+                <span><?php $this->_('AdminMain.sidebar.urls');?></span>
+            </a>
+        </div>
+    </div>
+</aside>

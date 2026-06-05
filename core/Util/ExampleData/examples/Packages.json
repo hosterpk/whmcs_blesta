@@ -1,0 +1,21 @@
+{
+    "id": 76,
+    "id_format": "{num}",
+    "id_value": 55,
+    "module_id": 3,
+    "qty": null,
+    "client_qty": null,
+    "module_row": 40,
+    "module_group": null,
+    "module_group_client": 0,
+    "taxable": 0,
+    "single_term": 0,
+    "status": "active",
+    "hidden": 0,
+    "company_id": 1,
+    "prorata_day": null,
+    "prorata_cutoff": null,
+    "upgrades_use_renewal": 1,
+    "manual_activation": 0,
+    "override_price": 0
+}

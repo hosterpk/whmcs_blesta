@@ -1,4 +1,5 @@
 <?php
+
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'enhance_response.php';
 
 /**
@@ -123,8 +124,7 @@ class EnhanceApi
         // Return request response
         return new EnhanceResponse([
             'content' => $data[count($data) - 1],
-            'headers' => array_splice($data, 0, count($data) - 1)]
-        );
+            'headers' => array_splice($data, 0, count($data) - 1)]);
     }
 
     /**
@@ -481,24 +481,32 @@ class EnhanceApi
      */
     public function findCustomerByEmailWithLogging($email, $logCallback = null)
     {
-        if ($logCallback) $logCallback("Starting login search for email: $email");
+        if ($logCallback) {
+            $logCallback("Starting login search for email: $email");
+        }
 
         // Get all logins for the main organization
         $response = $this->getLogins();
 
         if ($response->errors()) {
-            if ($logCallback) $logCallback("ERROR: Failed to get logins - " . serialize($response->errors()));
+            if ($logCallback) {
+                $logCallback('ERROR: Failed to get logins - ' . serialize($response->errors()));
+            }
             return null;
         }
 
         $logins = $response->response();
         if (!isset($logins->items) || !is_array($logins->items)) {
-            if ($logCallback) $logCallback("ERROR: No login items in API response");
+            if ($logCallback) {
+                $logCallback('ERROR: No login items in API response');
+            }
             return null;
         }
 
         $loginCount = count($logins->items);
-        if ($logCallback) $logCallback("Found $loginCount logins to check in main organization");
+        if ($logCallback) {
+            $logCallback("Found $loginCount logins to check in main organization");
+        }
 
         // Search through logins to find matching email
         for ($index = 0; $index < $loginCount; $index++) {
@@ -507,17 +515,23 @@ class EnhanceApi
             $loginId = $login->id ?? null;
             $loginName = $login->name ?? 'Unknown';
 
-            if ($logCallback) $logCallback("Checking login $index: '$loginName' - email: '$loginEmail'");
+            if ($logCallback) {
+                $logCallback("Checking login $index: '$loginName' - email: '$loginEmail'");
+            }
 
             // Compare emails (case-sensitive)
             if ($loginEmail === $email) {
-                if ($logCallback) $logCallback("LOGIN MATCH FOUND! '$loginEmail' === '$email'");
+                if ($logCallback) {
+                    $logCallback("LOGIN MATCH FOUND! '$loginEmail' === '$email'");
+                }
 
                 // We also try to find the customer record
                 $customerInfo = $this->findCustomerForLogin($loginId, $logCallback);
 
                 if ($customerInfo) {
-                    if ($logCallback) $logCallback("Found customer record: " . serialize($customerInfo));
+                    if ($logCallback) {
+                        $logCallback('Found customer record: ' . serialize($customerInfo));
+                    }
 
                     return [
                         'customer_id' => $customerInfo['id'],
@@ -527,7 +541,9 @@ class EnhanceApi
                         'email' => $loginEmail
                     ];
                 } else {
-                    if ($logCallback) $logCallback("WARNING: Found login but no customer record. Using login info.");
+                    if ($logCallback) {
+                        $logCallback('WARNING: Found login but no customer record. Using login info.');
+                    }
 
                     // Return login info with main org as fallback
                     return [
@@ -539,11 +555,15 @@ class EnhanceApi
                     ];
                 }
             } else {
-                if ($logCallback) $logCallback("No match: '$loginEmail' !== '$email'");
+                if ($logCallback) {
+                    $logCallback("No match: '$loginEmail' !== '$email'");
+                }
             }
         }
 
-        if ($logCallback) $logCallback("Search complete - no matching login found for email: $email");
+        if ($logCallback) {
+            $logCallback("Search complete - no matching login found for email: $email");
+        }
         return null;
     }
 
@@ -556,22 +576,30 @@ class EnhanceApi
      */
     private function findCustomerForLogin($loginId, $logCallback = null)
     {
-        if ($logCallback) $logCallback("Searching for customer records under main org");
+        if ($logCallback) {
+            $logCallback('Searching for customer records under main org');
+        }
 
         // Get all customers under the main organization
         $response = $this->getCustomers();
 
         if ($response->errors()) {
-            if ($logCallback) $logCallback("ERROR: Failed to get customers - " . serialize($response->errors()));
+            if ($logCallback) {
+                $logCallback('ERROR: Failed to get customers - ' . serialize($response->errors()));
+            }
             return null;
         }
 
         $customers = $response->response();
-        if ($logCallback) $logCallback("DEBUG: Raw customers response structure: " . json_encode($customers));
+        if ($logCallback) {
+            $logCallback('DEBUG: Raw customers response structure: ' . json_encode($customers));
+        }
 
         if (!isset($customers->data) || !is_array($customers->data)) {
             if (!isset($customers->items) || !is_array($customers->items)) {
-                if ($logCallback) $logCallback("ERROR: No customer data in response. Available keys: " . implode(', ', array_keys((array)$customers)));
+                if ($logCallback) {
+                    $logCallback('ERROR: No customer data in response. Available keys: ' . implode(', ', array_keys((array)$customers)));
+                }
                 return null;
             }
             // Try items array instead
@@ -580,13 +608,17 @@ class EnhanceApi
             $customersList = $customers->data;
         }
 
-        if ($logCallback) $logCallback("Found " . count($customersList) . " customers in main organization");
+        if ($logCallback) {
+            $logCallback('Found ' . count($customersList) . ' customers in main organization');
+        }
 
         // For now, just return the first customer if any exist
         // In a real implementation, we might match by name or other criteria
         if (count($customersList) > 0) {
             $customer = $customersList[0];
-            if ($logCallback) $logCallback("Returning first customer: " . ($customer->name ?? 'Unknown'));
+            if ($logCallback) {
+                $logCallback('Returning first customer: ' . ($customer->name ?? 'Unknown'));
+            }
 
             return [
                 'id' => $customer->id ?? null,
@@ -594,7 +626,9 @@ class EnhanceApi
             ];
         }
 
-        if ($logCallback) $logCallback("No customers found in main organization");
+        if ($logCallback) {
+            $logCallback('No customers found in main organization');
+        }
         return null;
     }
 
@@ -607,26 +641,36 @@ class EnhanceApi
      */
     private function findCustomerOrgForLogin($loginId, $logCallback = null)
     {
-        if ($logCallback) $logCallback("Searching for customer organization containing login ID: $loginId");
+        if ($logCallback) {
+            $logCallback("Searching for customer organization containing login ID: $loginId");
+        }
 
         // Get all customer organizations
         $response = $this->getCustomers();
 
         if ($response->errors()) {
-            if ($logCallback) $logCallback("ERROR: Failed to get customers - " . serialize($response->errors()));
+            if ($logCallback) {
+                $logCallback('ERROR: Failed to get customers - ' . serialize($response->errors()));
+            }
             return null;
         }
 
         $customers = $response->response();
-        if ($logCallback) $logCallback("DEBUG: Raw customers response structure: " . json_encode($customers));
+        if ($logCallback) {
+            $logCallback('DEBUG: Raw customers response structure: ' . json_encode($customers));
+        }
 
         if (!isset($customers->data) || !is_array($customers->data)) {
-            if ($logCallback) $logCallback("ERROR: No customer data in response. Available keys: " . implode(', ', array_keys((array)$customers)));
+            if ($logCallback) {
+                $logCallback('ERROR: No customer data in response. Available keys: ' . implode(', ', array_keys((array)$customers)));
+            }
             return null;
         }
 
         $customerCount = count($customers->data);
-        if ($logCallback) $logCallback("Checking $customerCount customer organizations");
+        if ($logCallback) {
+            $logCallback("Checking $customerCount customer organizations");
+        }
 
         // Search through each customer organization
         for ($index = 0; $index < $customerCount; $index++) {
@@ -634,7 +678,9 @@ class EnhanceApi
             $customer_org_id = $customer->id ?? null;
             $customer_name = $customer->name ?? 'Unknown';
 
-            if ($logCallback) $logCallback("Checking customer $index: '$customer_name' (ID: $customer_org_id)");
+            if ($logCallback) {
+                $logCallback("Checking customer $index: '$customer_name' (ID: $customer_org_id)");
+            }
 
             if (!$customer_org_id) {
                 continue;
@@ -644,13 +690,17 @@ class EnhanceApi
             $membersResponse = $this->apiRequest("orgs/{$customer_org_id}/members", [], 'GET');
 
             if ($membersResponse->errors()) {
-                if ($logCallback) $logCallback("ERROR getting members for customer $index: " . serialize($membersResponse->errors()));
+                if ($logCallback) {
+                    $logCallback("ERROR getting members for customer $index: " . serialize($membersResponse->errors()));
+                }
                 continue;
             }
 
             $members = $membersResponse->response();
             if (!isset($members->data) || !is_array($members->data)) {
-                if ($logCallback) $logCallback("No members data for customer $index");
+                if ($logCallback) {
+                    $logCallback("No members data for customer $index");
+                }
                 continue;
             }
 
@@ -658,10 +708,14 @@ class EnhanceApi
             foreach ($members->data as $memberIndex => $member) {
                 $memberLoginId = $member->login->id ?? null;
 
-                if ($logCallback) $logCallback("Member {$index}-{$memberIndex} has login ID: $memberLoginId");
+                if ($logCallback) {
+                    $logCallback("Member {$index}-{$memberIndex} has login ID: $memberLoginId");
+                }
 
                 if ($memberLoginId === $loginId) {
-                    if ($logCallback) $logCallback("FOUND! Customer organization '$customer_name' contains login ID $loginId");
+                    if ($logCallback) {
+                        $logCallback("FOUND! Customer organization '$customer_name' contains login ID $loginId");
+                    }
 
                     return [
                         'customer_org_id' => $customer_org_id,
@@ -672,7 +726,9 @@ class EnhanceApi
             }
         }
 
-        if ($logCallback) $logCallback("Login ID $loginId not found in any customer organization");
+        if ($logCallback) {
+            $logCallback("Login ID $loginId not found in any customer organization");
+        }
         return null;
     }
 
@@ -743,7 +799,7 @@ class EnhanceApi
         $endpoints = [
             "orgs/{$customer_org_id}/logins",
             "logins?orgId={$customer_org_id}",
-            "logins"
+            'logins'
         ];
 
         $lastResponse = null;

@@ -1,9 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
+
 use Blesta\Core\Util\Filters\Common\Filter;
 use Blesta\Core\Util\Input\Fields\InputFields;
-use \Loader;
-use \Language;
+use Loader;
+use Language;
 
 /**
  * Package Filters
@@ -53,12 +55,12 @@ class PackageFilters extends Filter
             $fields->fieldSelect(
                 'filters[module_id]',
                 ['' => Language::_('Util.filters.package_filters.any', true)] + $modules,
-                isset($vars['module_id']) ? $vars['module_id'] : null,
+                $vars['module_id'] ?? null,
                 ['id' => 'module_id', 'class' => 'form-control']
             )
         );
         $fields->setField($module);
-        
+
         // Set package group ID filter
         $package_groups = $this->Form->collapseObjectArray($this->PackageGroups->getAll($options['company_id']), 'name', 'id');
         $package_group = $fields->label(
@@ -80,7 +82,7 @@ class PackageFilters extends Filter
         $name->attach(
             $fields->fieldText(
                 'filters[name]',
-                isset($vars['name']) ? $vars['name'] : null,
+                $vars['name'] ?? null,
                 [
                     'id' => 'name',
                     'class' => 'form-control stretch',
@@ -105,7 +107,7 @@ class PackageFilters extends Filter
             $fields->fieldSelect(
                 'filters[assigned_services]',
                 $assigned_service_options,
-                isset($vars['assigned_services']) ? $vars['assigned_services'] : null,
+                $vars['assigned_services'] ?? null,
                 ['id' => 'assigned_services', 'class' => 'form-control']
             )
         );

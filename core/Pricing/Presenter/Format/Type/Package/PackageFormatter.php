@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Format\Type\Package;
 
 use Blesta\Core\Pricing\Presenter\Format\Type\Item\AbstractItemFormatter;

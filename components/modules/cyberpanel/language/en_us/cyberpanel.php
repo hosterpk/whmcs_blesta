@@ -10,11 +10,15 @@ $lang['Cyberpanel.module_row_plural'] = 'Servers';
 $lang['Cyberpanel.module_group'] = 'Server Group';
 $lang['Cyberpanel.tab_client_actions'] = 'Actions';
 
+$lang['Cyberpanel.back_to_manage'] = 'Back';
+
 // Module management
 $lang['Cyberpanel.add_module_row'] = 'Add Server';
 $lang['Cyberpanel.add_module_group'] = 'Add Server Group';
 $lang['Cyberpanel.manage.module_rows_title'] = 'Servers';
 $lang['Cyberpanel.manage.module_groups_title'] = 'Server Groups';
+$lang['Cyberpanel.manage.tab_rows'] = 'Servers';
+$lang['Cyberpanel.manage.tab_groups'] = 'Server Groups';
 $lang['Cyberpanel.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Cyberpanel.manage.module_rows_heading.hostname'] = 'Hostname';
 $lang['Cyberpanel.manage.module_rows_heading.options'] = 'Options';

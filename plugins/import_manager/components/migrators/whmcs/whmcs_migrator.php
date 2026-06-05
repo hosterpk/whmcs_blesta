@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generic WHMCS Migrator
  *
@@ -521,9 +522,7 @@ class WhmcsMigrator extends Migrator
 
             $vars = [
                 'client_id' => $this->mappings['clients'][$note->userid],
-                'staff_id' => isset($this->mappings['staff'][$note->adminid])
-                    ? $this->mappings['staff'][$note->adminid]
-                    : 0,
+                'staff_id' => $this->mappings['staff'][$note->adminid] ?? 0,
                 'title' => $title,
                 'description' => trim($title) == trim($note->note) ? null : $note->note,
                 'stickied' => $note->sticky ? 1 : 0,
@@ -1061,7 +1060,7 @@ class WhmcsMigrator extends Migrator
 
             $client_id = $this->mappings['clients'][$credit->userid];
             $total_credit = $this->Transactions->getTotalCredit($client_id, $credit->currency);
-            $credit_diff = round($total_credit-$credit->credit, 4);
+            $credit_diff = round($total_credit - $credit->credit, 4);
 
             // We have excess credit, so consume it
             if ($credit_diff > 0) {
@@ -1094,7 +1093,7 @@ class WhmcsMigrator extends Migrator
                 // Create transaction to hold the credit diff
                 $vars = [
                     'client_id' => $client_id,
-                    'amount' => -1*$credit_diff,
+                    'amount' => -1 * $credit_diff,
                     'currency' => $credit->currency,
                     'type' => 'other',
                     'transaction_type_id' => $this->getTransactionTypeId('in_house_credit'),
@@ -1171,7 +1170,7 @@ class WhmcsMigrator extends Migrator
         $this->mappings['package_group_id'] = $package_group_id;
 
         $products = $this->WhmcsProducts->get()->fetchAll();
-        $i=1;
+        $i = 1;
         $this->local->begin();
         foreach ($products as $product) {
             if (!isset($this->mappings['modules'][$product->servertype])) {
@@ -1325,12 +1324,14 @@ class WhmcsMigrator extends Migrator
             );
 
             // Add TLD to domain manager
-            if (!isset($this->mappings['tld'][$tld->extension])
+            if (
+                !isset($this->mappings['tld'][$tld->extension])
                 && $this->PluginManager->isInstalled('domains', Configure::get('Blesta.company_id'))
             ) {
                 $this->local->duplicate('package_id', '=', $this->mappings['packages'][$tld->extension . $registrar])->
                     insert(
-                        'domains_tlds', [
+                        'domains_tlds',
+                        [
                             'tld' => $tld->extension,
                             'company_id' => Configure::get('Blesta.company_id'),
                             'package_id' => $this->mappings['packages'][$tld->extension . $registrar]
@@ -1342,7 +1343,8 @@ class WhmcsMigrator extends Migrator
             // Add package to domain manager
             if ($this->PluginManager->isInstalled('domains', Configure::get('Blesta.company_id'))) {
                 $this->local->insert(
-                    'domains_packages', [
+                    'domains_packages',
+                    [
                         'tld_id' => $this->mappings['tld'][$tld->extension],
                         'package_id' => $this->mappings['packages'][$tld->extension . $registrar]
                     ]
@@ -1409,7 +1411,7 @@ class WhmcsMigrator extends Migrator
                     'company_id' => Configure::get('Blesta.company_id'),
                     'label' => $this->decode($option->optionname),
                     'name' => $this->decode($option->optionname),
-                    'type' => isset($option_types[$option->optiontype]) ? $option_types[$option->optiontype] : 'select',
+                    'type' => $option_types[$option->optiontype] ?? 'select',
                     'values' => $values,
                     'groups' => $groups
                 ];
@@ -1477,7 +1479,7 @@ class WhmcsMigrator extends Migrator
             }
 
             $mapping = $this->getModuleMapping(
-                isset($modules[$package->module_id]) ? $modules[$package->module_id] : 'generic_server'
+                $modules[$package->module_id] ?? 'generic_server'
             );
 
             // Get currency this client is invoiced in
@@ -1486,20 +1488,18 @@ class WhmcsMigrator extends Migrator
             if ($package->module_row > 0) {
                 $module_row_id = $package->module_row;
             } else {
-                if (isset($mapping['module_row_key'])
-                    && isset($servers[$service->server]->{$mapping['module_row_key']})) {
-                    $module_row_id = $this->getModuleRowId(
-                        $package->module_id,
-                        $servers[$service->server]->{$mapping['module_row_key']},
-                        null
-                    );
-                } else {
-                    $module_row_id = $this->getModuleRowId(
-                        $package->module_id,
-                        null,
-                        isset($modules[$package->module_id]) ? $modules[$package->module_id] : null
-                    );
-                }
+                $module_row_id =
+                    isset($mapping['module_row_key'])
+                    && isset($servers[$service->server]->{$mapping['module_row_key']})
+                 ? $this->getModuleRowId(
+                     $package->module_id,
+                     $servers[$service->server]->{$mapping['module_row_key']},
+                     null
+                 ) : $this->getModuleRowId(
+                     $package->module_id,
+                     null,
+                     $modules[$package->module_id] ?? null
+                 );
             }
             if (!$module_row_id) {
                 continue;
@@ -1555,19 +1555,23 @@ class WhmcsMigrator extends Migrator
         $this->local->begin();
         foreach ($options as $option) {
             // Ensure parent service and the option value exist
-            if (!isset($this->mappings['services'][$option->relid])
-                || !isset($this->mappings['option_values'][$option->optionid])) {
+            if (
+                !isset($this->mappings['services'][$option->relid])
+                || !isset($this->mappings['option_values'][$option->optionid])
+            ) {
                 continue;
             }
 
             $currency = $this->getCurrency($this->mappings['clients'][$option->userid]);
             $value_id = $this->mappings['option_values'][$option->optionid];
-            if (($pricing = $this->getOptionPricing(
+            if (
+                ($pricing = $this->getOptionPricing(
                     $this->WhmcsServices->getTerm($option->billingcycle),
                     $value_id,
                     $currency
                 )
-            )) {
+                )
+            ) {
                 $vars = [
                     'service_id' => $this->mappings['services'][$option->relid],
                     'option_pricing_id' => $pricing->id,
@@ -1775,7 +1779,8 @@ class WhmcsMigrator extends Migrator
             // Add domain to domain manager
             if ($this->PluginManager->isInstalled('domains', Configure::get('Blesta.company_id'))) {
                 $this->local->insert(
-                    'domains_domains', [
+                    'domains_domains',
+                    [
                         'service_id' => $service_id,
                         'expiration_date' => $this->getValidDate($domain->nextinvoicedate, 'Y-m-d H:i:s', true),
                         'registration_date' => $this->getValidDate($domain->registrationdate)
@@ -2013,9 +2018,7 @@ class WhmcsMigrator extends Migrator
         foreach ($categories as $category) {
             $vars = [
                 'company_id' => Configure::get('Blesta.company_id'),
-                'parent_id' => isset($this->mappings['support_response_categories'][$category->parentid])
-                    ? $this->mappings['support_response_categories'][$category->parentid]
-                    : null,
+                'parent_id' => $this->mappings['support_response_categories'][$category->parentid] ?? null,
                 'name' => $this->decode($category->name)
             ];
             $this->local->insert('support_response_categories', $vars);
@@ -2311,9 +2314,7 @@ class WhmcsMigrator extends Migrator
         foreach ($events as $event) {
             $vars = [
                 'company_id' => Configure::get('Blesta.company_id'),
-                'staff_id' => isset($this->mappings['staff'][$event->adminid])
-                    ? $this->mappings['staff'][$event->adminid]
-                    : 0,
+                'staff_id' => $this->mappings['staff'][$event->adminid] ?? 0,
                 'shared' => 0,
                 'title' => $this->decode($event->title . ' ' . $event->desc),
                 'url' => null,
@@ -2336,9 +2337,7 @@ class WhmcsMigrator extends Migrator
         foreach ($events as $event) {
             $vars = [
                 'company_id' => Configure::get('Blesta.company_id'),
-                'staff_id' => isset($this->mappings['staff'][$event->admin])
-                    ? $this->mappings['staff'][$event->admin]
-                    : 0,
+                'staff_id' => $this->mappings['staff'][$event->admin] ?? 0,
                 'shared' => 0,
                 'title' => $this->decode($event->title . ' ' . $event->description),
                 'url' => null,
@@ -2507,7 +2506,7 @@ class WhmcsMigrator extends Migrator
             // Key derivation
             $key = sha1(md5(md5($key)) . md5($key));
             $temp_key = null;
-            for ($i=0; $i<strlen($key); $i+=2) {
+            for ($i = 0; $i < strlen($key); $i += 2) {
                 $temp_key .= chr(hexdec($key[$i] . $key[$i + 1]));
             }
             $key = $temp_key;
@@ -2519,18 +2518,18 @@ class WhmcsMigrator extends Migrator
 
             // Calculate final key
             $z = null;
-            for ($i=0; $i<$key_length; $i++) {
+            for ($i = 0; $i < $key_length; $i++) {
                 $z .= chr(ord($key_seed[$i]) ^ ord($key[$i]));
             }
 
             // Decrypt
-            for ($i=0; $i<strlen($y); $i++) {
+            for ($i = 0; $i < strlen($y); $i++) {
                 // Generate new key schedule for each block
                 if ($i != 0 && $i % $key_length == 0) {
                     $temp = sha1($z . substr($x, $i - $key_length, $key_length));
                     $z = null;
-                    for ($j=0; $j<strlen($temp); $j+=2) {
-                        $z .= chr(hexdec($temp[$j] . $temp[$j+1]));
+                    for ($j = 0; $j < strlen($temp); $j += 2) {
+                        $z .= chr(hexdec($temp[$j] . $temp[$j + 1]));
                     }
                 }
 
@@ -2554,7 +2553,7 @@ class WhmcsMigrator extends Migrator
     {
         $new_key = str_repeat(chr(0), 16);
         for ($i = 0, $len = strlen($key); $i < $len; $i++) {
-            $new_key[$i%16] = $new_key[$i%16] ^ $key[$i];
+            $new_key[$i % 16] = $new_key[$i % 16] ^ $key[$i];
         }
         return $new_key;
     }
@@ -2577,7 +2576,7 @@ class WhmcsMigrator extends Migrator
         $aes->setKeyLength(256);
         $aes->disablePadding();
 
-        $aes->setKey(hash("sha256", $gateway . ':' . $key . ':' . $this->settings['key']));
+        $aes->setKey(hash('sha256', $gateway . ':' . $key . ':' . $this->settings['key']));
 
         $setting = $aes->decrypt($this->hexToBinary($value));
 
@@ -2676,7 +2675,7 @@ class WhmcsMigrator extends Migrator
      */
     private function hexToBinary($hex_input)
     {
-        if (function_exists("hex2bin")) {
+        if (function_exists('hex2bin')) {
             return hex2bin($hex_input);
         }
 
@@ -2685,14 +2684,14 @@ class WhmcsMigrator extends Migrator
             return false;
         }
 
-        if (strspn($hex_input, "0123456789abcdefABCDEF") != $length) {
+        if (strspn($hex_input, '0123456789abcdefABCDEF') != $length) {
             return false;
         }
 
-        $output = "";
+        $output = '';
         $i = 0;
         while ($i < $length) {
-            $output .= pack("H*", substr($hex_input, $i, 2));
+            $output .= pack('H*', substr($hex_input, $i, 2));
             $i += 2;
         }
 
@@ -2781,7 +2780,7 @@ class WhmcsMigrator extends Migrator
                 'term' => $term['term'],
                 'period' => $term['period'],
                 'currency' => $currency ? $currency : 'USD',
-                'price' => $amount !== null ? $amount : 0,
+                'price' => $amount ?? 0,
             ]
         ];
         $pricing_id = $this->addPackagePricing($pricing, $package->id);
@@ -2883,7 +2882,7 @@ class WhmcsMigrator extends Migrator
         }
 
         // Get currency this client is invoiced in
-        return isset($currencies[$client_id]) ? $currencies[$client_id] : 'USD';
+        return $currencies[$client_id] ?? 'USD';
     }
 
     /**
@@ -2987,38 +2986,38 @@ class WhmcsMigrator extends Migrator
     private function getDataFormatters()
     {
         return [
-            'numeric' => function($value) {
+            'numeric' => function ($value) {
                 return is_numeric($value) ? (int)$value : preg_replace('/[^0-9]+/', '', $value);
             },
-            'map_field' => function($value, $mapped_type, $default) {
-                return isset($this->mappings[$mapped_type][$value]) ? $this->mappings[$mapped_type][$value] : $default;
+            'map_field' => function ($value, $mapped_type, $default) {
+                return $this->mappings[$mapped_type][$value] ?? $default;
             },
-            'map_value' => function($value, $value_map, $default) {
-                return isset($value_map[$value]) ? $value_map[$value] : $default;
+            'map_value' => function ($value, $value_map, $default) {
+                return $value_map[$value] ?? $default;
             },
-            'decode' => function($value) {
+            'decode' => function ($value) {
                 return $this->decode($value);
             },
-            'if_set' => function($value, $default) {
-                return isset($value) ? $value : $default;
+            'if_set' => function ($value, $default) {
+                return $value ?? $default;
             },
-            'if_empty' => function($value, $default) {
+            'if_empty' => function ($value, $default) {
                 return empty($value) ? $default : $value;
             },
-            'date' => function($value) {
+            'date' => function ($value) {
                 return $this->getValidDate($value);
             },
-            'truncate' => function($value, $max_length) {
+            'truncate' => function ($value, $max_length) {
                 $string = $this->DataStructure->create('string');
                 return $string->truncate($value, ['length' => $max_length]);
             },
-            'strip_tags' => function($value) {
+            'strip_tags' => function ($value) {
                 return strip_tags($value);
             },
-            'constant' => function($value, $constant) {
+            'constant' => function ($value, $constant) {
                 return $constant;
             },
-            'custom' => function($value, $custom_function, $params = []) {
+            'custom' => function ($value, $custom_function, $params = []) {
                 return call_user_func_array($custom_function, array_merge([$value], $params));
             }
         ];
@@ -3108,7 +3107,7 @@ class WhmcsMigrator extends Migrator
                     'body_text' => ['field' => 'message', 'formatters' => ['decode' => [], 'strip_tags' => []]],
                     'body_html' => ['field' => 'message', 'formatters' => ['decode' => []]],
                     'sent' => ['formatters' => ['constant' => [1]]],
-                    'error' =>['formatters' => ['constant' => [null]]],
+                    'error' => ['formatters' => ['constant' => [null]]],
                     'date_sent' => ['field' => 'date', 'formatters' => ['date' => []]]
                 ];
             default:
@@ -3135,11 +3134,7 @@ class WhmcsMigrator extends Migrator
                 ->orWhere('countries.alt_name', 'LIKE', '%' . $country . '%')
                 ->fetch();
 
-            if (function_exists('mb_detect_encoding') && mb_detect_encoding($country) == 'UTF-8') {
-                $country = isset($country_code->alpha2) ? $country_code->alpha2 : mb_strtoupper(mb_substr($country, 0, 2));
-            } else {
-                $country = isset($country_code->alpha2) ? $country_code->alpha2 : strtoupper(substr($country, 0, 2));
-            }
+            $country = function_exists('mb_detect_encoding') && mb_detect_encoding($country) == 'UTF-8' ? $country_code->alpha2 ?? mb_strtoupper(mb_substr($country, 0, 2)) : $country_code->alpha2 ?? strtoupper(substr($country, 0, 2));
         }
 
         return $country;
@@ -3185,11 +3180,7 @@ class WhmcsMigrator extends Migrator
 
         // There is no matching state
         if (!empty($state)) {
-            if (function_exists('mb_detect_encoding') && mb_detect_encoding($state) == 'UTF-8') {
-                return mb_strtoupper(mb_substr($state, 0, 3));
-            } else {
-                return strtoupper(substr($state, 0, 3));
-            }
+            return function_exists('mb_detect_encoding') && mb_detect_encoding($state) == 'UTF-8' ? mb_strtoupper(mb_substr($state, 0, 3)) : strtoupper(substr($state, 0, 3));
         }
 
         return null;
@@ -3242,7 +3233,7 @@ class WhmcsMigrator extends Migrator
         ];
 
         $language = strtolower(trim($whmcs_language));
-        return isset($language_map[$language]) ? $language_map[$language] : 'en_us';
+        return $language_map[$language] ?? 'en_us';
     }
 
     /**

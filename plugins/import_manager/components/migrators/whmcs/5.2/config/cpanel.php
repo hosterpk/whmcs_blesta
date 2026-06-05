@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('cpanel.map', [
     'module' => 'cpanel',
     'module_row_key' => 'hostname',
@@ -6,7 +7,9 @@ Configure::set('cpanel.map', [
         (object)['key' => 'host_name', 'value' => (object)['module' => 'hostname'], 'alternate_value' => (object)['module' => 'ipaddress'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'user_name', 'value' => (object)['module' => 'username'], 'serialized' => 0, 'encrypted' => 1],
         (object)['key' => 'key', 'value' => (object)['module' => 'accesshash'], 'serialized' => 0, 'encrypted' => 1],
-        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) { return ($value == 'on' ? 'true' : 'false');}],
+        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) {
+            return ($value == 'on' ? 'true' : 'false');
+        }],
         (object)['key' => 'account_limit', 'value' => (object)['module' => 'maxaccounts'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'name_servers', 'value' => [(object)['module' => 'nameserver1'], (object)['module' => 'nameserver2'], (object)['module' => 'nameserver3'], (object)['module' => 'nameserver4'], (object)['module' => 'nameserver5']], 'serialized' => 1, 'encrypted' => 0],
         (object)['key' => 'notes', 'value' => null, 'serialized' => 0, 'encrypted' => 0],

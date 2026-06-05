@@ -1,0 +1,121 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'addservice_addon_form']);
+$this->Form->fieldHidden('order_info', (isset($order_info) ? $order_info : null));
+$this->Form->fieldHidden('package_group_id', (isset($vars->package_group_id) ? $vars->package_group_id : null));
+?>
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.addservice_addon.basic_heading');?>
+</h6>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.addservice_addon.field_term', true), 'pricing_id', ['class' => 'form-label']);
+        $this->Form->fieldSelect('pricing_id', ['' => $this->_('AppController.select.please', true)] + (array)(isset($terms) ? $terms : null), (isset($vars->pricing_id) ? $vars->pricing_id : null), ['id' => 'pricing_id', 'class' => 'form-select']);
+        ?>
+    </div>
+    <?php
+    if (!empty($module_row_fields)) {
+    ?>
+    <div class="col-12">
+        <?php
+        $this->Form->label((isset($module_row_name) ? $module_row_name : null), 'module_row_id', ['class' => 'form-label']);
+        $this->Form->fieldSelect('module_row_id', (array)(isset($module_row_fields) ? $module_row_fields : []), (isset($vars->module_row_id) ? $vars->module_row_id : null), ['id' => 'module_row_id', 'class' => 'form-select']);
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+</div>
+
+<?php
+if (isset($input_html)) {
+    $module_field_html = $input_html->generate(null, $this->view);
+?>
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.addservice_addon.module_heading', false, (isset($module_name) ? $module_name : null));?>
+</h6>
+<?php if (trim($module_field_html)) { ?>
+<div class="mb-4">
+    <?php echo $module_field_html;?>
+</div>
+<?php } else { ?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.addservice_basic.no_module_options');?></p>
+</div>
+<?php
+    }
+}
+?>
+
+<div class="package-options">
+    <?php
+    if (isset($vars->configoptions)) {
+        foreach ($vars->configoptions as $key => $value) {
+            $this->Form->fieldHidden('configoptions[' . $key . ']', $value);
+        }
+    }
+    ?>
+</div>
+
+<?php
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var pricingId = document.getElementById('pricing_id');
+    var packageOptions = document.querySelector('.package-options');
+
+    function fetchPackageOptions() {
+        var pricingIdValue = pricingId ? pricingId.value : null;
+
+        if (pricingIdValue && packageOptions) {
+            var form = pricingId.closest('form');
+            var fields = form.querySelectorAll('[name^="configoptions"]');
+            var params = new URLSearchParams();
+            fields.forEach(function(field) {
+                if (field.type === 'checkbox' && !field.checked) return;
+                params.append(field.name, field.value);
+            });
+
+            fetch(baseUri + 'clients/packageoptions/' + pricingIdValue + '?' + params.toString(), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.text())
+            .then(text => {
+                if (packageOptions && text) {
+                    try { text = JSON.parse(text); } catch(e) { /* use raw text */ }
+                    packageOptions.innerHTML = text;
+                    packageOptions.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(function(attr) {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+
+    fetchPackageOptions();
+
+    if (pricingId) {
+        pricingId.addEventListener('change', fetchPackageOptions);
+    }
+})();
+</script>
+<!-- WIDGET_FOOTER -->
+<div class="d-flex justify-content-end gap-2">
+    <?php
+    $this->Form->fieldSubmit('submit_edit', $this->_('AdminClients.addservice_confirm.field_edit', true), ['class' => 'btn btn-secondary', 'form' => 'addservice_addon_form']);
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.addservice_basic.field_continue', true), ['class' => 'btn btn-primary', 'form' => 'addservice_addon_form']);
+    ?>
+</div>

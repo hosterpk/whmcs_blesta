@@ -1,0 +1,91 @@
+<?php /** @var View $this **/ ?>
+
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'enable_gateway_restrictions',
+                    'true',
+                    ($vars['enable_gateway_restrictions'] ?? 'false') == 'true',
+                    ['id' => 'enable_gateway_restrictions', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="enable_gateway_restrictions" class="form-check-label">
+                    <?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.field_enable_gateway_restrictions');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.enable_gateway_restrictions', true));?>"></i>
+                </label>
+            </div>
+
+            <?php if (!empty($gateways)) { ?>
+                <div class="table-responsive mb-3" id="gateway_restrictions">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 80px;"><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.heading_enable');?></th>
+                                <th><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.heading_gateway');?></th>
+                                <th><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.heading_type');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $i = 0;
+                            foreach ($gateways as $gateway) {
+                            ?>
+                                <tr<?php echo ($i % 2 == 1) ? ' class="table-secondary"' : '';?>>
+                                    <td class="text-center">
+                                        <?php
+                                        $this->Form->fieldCheckbox(
+                                            'allowed_gateways[]',
+                                            $gateway->id,
+                                            in_array($gateway->id, ($vars['allowed_gateways'] ?? [])),
+                                            ['id' => 'gateway_' . $gateway->class, 'class' => 'form-check-input gateway-checkbox']
+                                        );
+                                        ?>
+                                    </td>
+                                    <td><?php echo $this->Html->safe($gateway->name);?></td>
+                                    <td><?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.text_gateway_type_' . $gateway->type);?></td>
+                                </tr>
+                            <?php
+                                $i++;
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php } else { ?>
+                <div class="alert alert-info">
+                    <?php $this->_('AdminCompanyClientoptions.gatewayrestrictions.no_gateways_text');?>
+                </div>
+            <?php } ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const enableRestrictions = document.getElementById('enable_gateway_restrictions');
+    const gatewayCheckboxes = document.querySelectorAll('.gateway-checkbox');
+
+    function toggleGatewayCheckboxes() {
+        gatewayCheckboxes.forEach(checkbox => {
+            checkbox.disabled = !enableRestrictions.checked;
+        });
+    }
+
+    // Initial state
+    setTimeout(toggleGatewayCheckboxes, 500);
+
+    // Handle enable restrictions checkbox
+    if (enableRestrictions) {
+        enableRestrictions.addEventListener('change', toggleGatewayCheckboxes);
+    }
+
+    // Handle use company settings change (if it exists)
+    const useCompanySettings = document.getElementById('use_company_settings');
+    if (useCompanySettings) {
+        useCompanySettings.addEventListener('change', function() {
+            setTimeout(toggleGatewayCheckboxes, 500);
+        });
+    }
+});
+</script>

@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('plesk.map', [
     'module' => 'plesk',
     'module_row_key' => 'hostname',
@@ -9,7 +10,7 @@ Configure::set('plesk.map', [
         (object)['key' => 'username', 'value' => (object)['module' => 'username'], 'serialized' => 0, 'encrypted' => 1],
         (object)['key' => 'password', 'value' => (object)['module' => 'password'], 'serialized' => 0, 'encrypted' => 1],
         (object)['key' => 'account_limit', 'value' => (object)['module' => 'maxaccounts'], 'serialized' => 0, 'encrypted' => 0],
-        (object)['key' => 'panel_version', 'value' => '', 'serialized' => 0, 'encrypted' => 0, 'callback' => function($value, $row_meta) {
+        (object)['key' => 'panel_version', 'value' => '', 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value, $row_meta) {
             $version = '';
             if (isset($row_meta['type'])) {
                 $version = abs((int)filter_var($row_meta['type'], FILTER_SANITIZE_NUMBER_INT));

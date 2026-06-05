@@ -1,0 +1,196 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "contact_type",
+            "type": "enum('primary','billing','other')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "primary",
+            "extra": null,
+            "max_length": 7
+        },
+        {
+            "name": "contact_type_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "first_name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "last_name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "title",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "company",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "email",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "address1",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "address2",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "city",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "state",
+            "type": "varchar(3)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "zip",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "country",
+            "type": "varchar(2)",
+            "nullable": false,
+            "key": null,
+            "default": "US",
+            "extra": null,
+            "max_length": 2
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id",
+                "contact_type"
+            ]
+        },
+        {
+            "name": "contact_type",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "contact_type"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "user_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "user_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

@@ -1,162 +1,112 @@
-            <div class="title_row first">
-                <h3><?php $this->_("OrderTypeDomain.settings.domain_group_title");?></h3>
+<?php /** @var View $this */ ?>
+
+<h6 class="form-section-header"><?php $this->_("OrderTypeDomain.settings.domain_group_title");?></h6>
+
+<div class="mb-3">
+    <?php
+    $this->Form->fieldSelect(
+        'meta[domain_group]',
+        ($package_groups ?? null),
+        ($vars->meta['domain_group'] ?? null),
+        ['id' => 'meta_domain_group', 'class' => 'form-select']
+    );
+    ?>
+</div>
+
+<h6 class="form-section-header"><?php $this->_("OrderTypeDomain.settings.free_domain_title");?></h6>
+
+<div class="mb-3">
+    <div class="form-check">
+        <?php
+        $this->Form->fieldCheckbox('meta[free_domain]', '1', ($vars->meta['free_domain'] ?? null) == '1', ['id' => 'free_domain', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('OrderTypeDomain.settings.field_free_domain', true), 'free_domain', ['class' => 'form-check-label']);
+        ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo nl2br($this->_('OrderTypeDomain.settings.tooltip_free_domain', true));?>"></i>
+    </div>
+</div>
+
+<?php $free_domain_display = (($vars->meta['free_domain'] ?? null) == '1') ? 'block' : 'none'; ?>
+
+<div id="free_domain_tlds" class="mb-4" style="display: <?php echo $free_domain_display; ?>;">
+    <div class="dual-select-container">
+        <div class="dual-select-panel">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.text_assigned_tlds', true), 'assigned_tlds', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('assigned_search', ($vars->meta['assigned_search'] ?? ''), ['id' => 'assigned_search', 'class' => 'form-control form-control-sm mb-2 domain-search', 'data-target' => 'assigned_tlds', 'placeholder' => $this->_('OrderTypeDomain.settings.field_search', true)]);?>
+            <?php $this->Form->fieldMultiSelect('meta[tlds][]', ($vars->meta['tlds'] ?? null), [], ['id' => 'assigned_tlds', 'class' => 'form-select dual-select-list domain-assigned']);?>
+        </div>
+        <div class="dual-select-controls">
+            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn domain-move-left" data-from="available_tlds" data-to="assigned_tlds" title="<?php $this->_('OrderTypeDomain.settings.text_assigned_tlds');?>"><i class="bi bi-arrow-left"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn domain-move-right" data-from="assigned_tlds" data-to="available_tlds" title="<?php $this->_('OrderTypeDomain.settings.text_available_tlds');?>"><i class="bi bi-arrow-right"></i></button>
+        </div>
+        <div class="dual-select-panel">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.text_available_tlds', true), 'available_tlds', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('available_search', ($vars->meta['available_search'] ?? ''), ['id' => 'available_search', 'class' => 'form-control form-control-sm mb-2 domain-search', 'data-target' => 'available_tlds', 'placeholder' => $this->_('OrderTypeDomain.settings.field_search', true)]);?>
+            <?php $this->Form->fieldMultiSelect(null, ($tlds ?? null), [], ['id' => 'available_tlds', 'class' => 'form-select dual-select-list']);?>
+        </div>
+    </div>
+</div>
+
+<div id="free_domain_packages" class="mb-4" style="display: <?php echo $free_domain_display; ?>;">
+    <div class="dual-select-container">
+        <div class="dual-select-panel">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.text_assigned_package_groups', true), 'domain_assigned_packages', ['class' => 'form-label']);?>
+            <div class="dual-select-dropzone">
+                <div class="drag-list" id="domain_assigned_packages">
+                    <?php foreach ((array)($vars->meta['package_groups'] ?? []) as $id => $group) { ?>
+                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id); ?>" draggable="true">
+                        <?php echo $this->Html->safe($group); ?>
+                        <input type="hidden" name="meta[package_groups][]" value="<?php echo $this->Html->safe($id); ?>">
+                    </div>
+                    <?php } ?>
+                </div>
             </div>
-
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->fieldSelect("meta[domain_group]", ($package_groups ?? null), ($vars->meta['domain_group'] ?? null));
-                        ?>
-                    </li>
-                </ul>
+        </div>
+        <div class="dual-select-controls">
+            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn domain-move-left" data-from="domain_available_packages" data-to="domain_assigned_packages" title="<?php $this->_('OrderTypeDomain.settings.text_assigned_package_groups');?>"><i class="bi bi-arrow-left"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn domain-move-right" data-from="domain_assigned_packages" data-to="domain_available_packages" title="<?php $this->_('OrderTypeDomain.settings.text_available_package_groups');?>"><i class="bi bi-arrow-right"></i></button>
+        </div>
+        <div class="dual-select-panel">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.text_available_package_groups', true), 'domain_available_packages', ['class' => 'form-label']);?>
+            <div class="dual-select-dropzone">
+                <div class="drag-list" id="domain_available_packages">
+                    <?php foreach ((array)($eligible_package_groups ?? []) as $id => $group) { ?>
+                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id); ?>" draggable="true">
+                        <?php echo $this->Html->safe($group); ?>
+                        <input type="hidden" name="domain_available_packages[]" value="<?php echo $this->Html->safe($id); ?>">
+                    </div>
+                    <?php } ?>
+                </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="title_row first">
-                <h3><?php $this->_("OrderTypeDomain.settings.free_domain_title");?></h3>
+<div id="free_domain_term" class="mb-4" style="display: <?php echo $free_domain_display; ?>;">
+    <label class="form-label fw-semibold"><?php $this->_('OrderTypeDomain.settings.text_term');?></label>
+    <div class="row g-3 align-items-end" style="max-width: 700px;">
+        <div class="col-md-3">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.heading_term', true), 'term', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('meta[term]', ($vars->meta['term'] ?? '1'), ['id' => 'term', 'class' => 'form-control']);?>
+        </div>
+        <div class="col-md-3">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.heading_period', true), 'period', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldSelect('meta[period]', ($pricing_periods ?? null), ($vars->meta['period'] ?? 'year'), ['id' => 'period', 'class' => 'form-select']);?>
+        </div>
+        <div class="col-md-6">
+            <?php $this->Form->label($this->_('OrderTypeDomain.settings.heading_options', true), null, ['class' => 'form-label']);?>
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('meta[limit_term]', '1', ($vars->meta['limit_term'] ?? null) == '1', ['id' => 'limit_term', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('OrderTypeDomain.settings.field_limit_term', true), 'limit_term', ['class' => 'form-check-label']);
+                ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo nl2br($this->_('OrderTypeDomain.settings.tooltip_limit_term', true));?>"></i>
             </div>
-
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->fieldCheckbox('meta[free_domain]', '1', ($vars->meta['free_domain'] ?? null) == '1', ['id' => 'free_domain']);
-                        $this->Form->label($this->_('OrderTypeDomain.settings.field_free_domain', true), 'free_domain', ['class' => 'inline']);
-                        ?>
-                        <span class="tooltip block"><?php $this->_('AppController.tooltip.text');?><div><?php echo nl2br($this->_('OrderTypeDomain.settings.tooltip_free_domain', true));?></div></span>
-                    </li>
-                    <li id="free_domain_tlds" style="display: none;">
-                        <table>
-                            <tr>
-                                <td><?php $this->Form->label($this->_('OrderTypeDomain.settings.text_assigned_tlds', true));?></td>
-                                <td></td>
-                                <td><?php $this->Form->label($this->_('OrderTypeDomain.settings.text_available_tlds', true));?></td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <?php $this->Form->fieldText('assigned_search', ($vars->meta['assigned_search'] ?? ''), ['id' => 'assigned_search', 'class' => 'search', 'placeholder' => $this->_('OrderTypeDomain.settings.field_search', true)]);?>
-                                    <?php $this->Form->fieldMultiSelect('meta[tlds][]', ($vars->meta['tlds'] ?? null), [], ['class' => 'assigned']);?>
-                                </td>
-                                <td><a href="#" class="move_left">&nbsp;</a> &nbsp; <a href="#" class="move_right">&nbsp;</a></td>
-                                <td>
-                                    <?php $this->Form->fieldText('available_search', ($vars->meta['available_search'] ?? ''), ['id' => 'available_search', 'class' => 'search', 'placeholder' => $this->_('OrderTypeDomain.settings.field_search', true)]);?>
-                                    <?php $this->Form->fieldMultiSelect(null, ($tlds ?? null), [], ['class' => 'available']);?>
-                                </td>
-                            </tr>
-                        </table>
-                    </li>
-                    <li id="free_domain_packages" style="display: none;">
-                        <table>
-                            <tr>
-                                <td><?php $this->Form->label($this->_('OrderTypeDomain.settings.text_assigned_package_groups', true));?></td>
-                                <td></td>
-                                <td><?php $this->Form->label($this->_('OrderTypeDomain.settings.text_available_package_groups', true));?></td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <?php $this->Form->fieldMultiSelect('meta[package_groups][]', ($vars->meta['package_groups'] ?? null), [], ['class' => 'assigned']);?>
-                                </td>
-                                <td><a href="#" class="move_left">&nbsp;</a> &nbsp; <a href="#" class="move_right">&nbsp;</a></td>
-                                <td>
-                                    <?php $this->Form->fieldMultiSelect(null, ($eligible_package_groups ?? null), [], ['class' => 'available']);?>
-                                </td>
-                            </tr>
-                        </table>
-                    </li>
-                    <li id="free_domain_term" style="display: none;">
-                        <?php $this->Form->label($this->_('OrderTypeDomain.settings.text_term', true));?>
-                        <table class="table mt-1" style="max-width: 545px;">
-                            <tr class="heading_row">
-                                <td><?php $this->Form->label($this->_('OrderTypeDomain.settings.heading_term', true), 'term');?></td>
-                                <td><?php $this->Form->label($this->_('OrderTypeDomain.settings.heading_period', true), 'period');?></td>
-                                <td class="last"><?php $this->Form->label($this->_('OrderTypeDomain.settings.heading_options', true), 'period');?></td>
-                            </tr>
-                            <tr>
-                                <td class="small"><?php $this->Form->fieldText('meta[term]', ($vars->meta['term'] ?? '1'), ['id' => 'term', 'class' => 'stretch']);?></td>
-                                <td class="small"><?php $this->Form->fieldSelect('meta[period]', ($pricing_periods ?? null), ($vars->meta['period'] ?? 'year'), ['id' => 'period']);?></td>
-                                <td class="last medium">
-                                    <?php
-                                    $this->Form->fieldCheckbox('meta[limit_term]', '1', ($vars->meta['limit_term'] ?? null) == '1', ['id' => 'limit_term']);
-                                    $this->Form->label($this->_('OrderTypeDomain.settings.field_limit_term', true), 'limit_term', ['class' => 'inline']);
-                                    ?>
-                                    <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php echo nl2br($this->_('OrderTypeDomain.settings.tooltip_limit_term', true));?></div></span>
-
-                                    <br>
-                                    <?php
-                                    $this->Form->fieldCheckbox('meta[first_term]', '1', ($vars->meta['first_term'] ?? null) == '1', ['id' => 'first_term']);
-                                    $this->Form->label($this->_('OrderTypeDomain.settings.field_first_term', true), 'first_term', ['class' => 'inline']);
-                                    ?>
-                                </td>
-                            </tr>
-                        </table>
-                    </li>
-                </ul>
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('meta[first_term]', '1', ($vars->meta['first_term'] ?? null) == '1', ['id' => 'first_term', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('OrderTypeDomain.settings.field_first_term', true), 'first_term', ['class' => 'form-check-label']);
+                ?>
             </div>
-
-<script type="text/javascript">
-    $(document).ready(function() {
-        var initialized = false;
-        // Toggle free domain options
-        function toggleFreeDomain() {
-            if ($('#free_domain').is(':checked')) {
-                $('#free_domain_tlds').show();
-                $('#free_domain_packages').show();
-                $('#free_domain_term').show();
-                if (initialized) {
-                    $('#limit_term').prop('checked', true);
-                }
-            } else {
-                $('#free_domain_tlds').hide();
-                $('#free_domain_packages').hide();
-                $('#free_domain_term').hide();
-                if (initialized) {
-                    $('#limit_term').prop('checked', false);
-                }
-            }
-        }
-        toggleFreeDomain();
-        initialized = true;
-        $(document).on('change','#free_domain', toggleFreeDomain);
-
-        // Move packages from right to left
-        $('.move_left').click(function() {
-            $(this).parent().parent().find('select.available option:selected').appendTo(
-                $(this).parent().parent().find('select.assigned')
-            );
-
-            return false;
-        });
-
-        // Move packages from left to right
-        $('.move_right').click(function() {
-            $(this).parent().parent().find('select.assigned option:selected').appendTo(
-                $(this).parent().parent().find('select.available')
-            );
-
-            return false;
-        });
-
-        // Submit assigned TLDS
-        $('#order_form').submit(function() {
-            $('select.assigned option').removeClass('hidden').prop('disabled', false);
-            $('select.assigned option').prop('selected', true);
-        });
-
-        // Search box for TLDs
-        $('.search').on('input', function() {
-            var search = $(this).val();
-
-            if (search === '') {
-                $(this).parent().find('select option').removeClass('hidden').prop('disabled', false);
-            } else {
-                $(this).parent().find('select option').addClass('hidden').prop('disabled', true);
-                $(this).parent().find('select option:contains(' + search + ')').removeClass('hidden').prop('disabled', false);
-
-                // Safari doesn't hide the option element but instead hides only the text inside, so we move all the "hidden" options to the bottom (╯°□°)╯︵ ┻━┻
-                if (navigator.vendor.includes('Apple')) {
-                    $(this).parent().find('select option:not(.hidden)').insertBefore($(this).parent().find('select').find('option:eq(0)'));
-                }
-            }
-        });
-    });
-</script>
+        </div>
+    </div>
+</div>

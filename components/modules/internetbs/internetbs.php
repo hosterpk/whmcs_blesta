@@ -84,6 +84,14 @@ class Internetbs extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -119,6 +127,14 @@ class Internetbs extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -324,8 +340,8 @@ class Internetbs extends RegistrarModule
             $this->processResponse($api, $response);
 
             return ($response->status() == 200);
-        } catch (Exception $e) {
-            // Trap any errors encountered, could not validate connection
+        } catch (\Throwable $e) {
+            $this->log('validateConnection', serialize(['error' => $e->getMessage()]), 'output', false);
         }
 
         return false;
@@ -380,7 +396,7 @@ class Internetbs extends RegistrarModule
         // Build meta data to return
         $meta = [];
         if ($this->Input->validates($vars)) {
-            if (!isset($vars['meta'] )) {
+            if (!isset($vars['meta'])) {
                 return [];
             }
 
@@ -429,7 +445,7 @@ class Internetbs extends RegistrarModule
         // Build meta data to return
         $meta = [];
         if ($this->Input->validates($vars)) {
-            if (!isset($vars['meta'] )) {
+            if (!isset($vars['meta'])) {
                 return [];
             }
 
@@ -590,9 +606,7 @@ class Internetbs extends RegistrarModule
             return;
         }
 
-        if (isset($vars['Domain'])) {
-            $tld = $this->getTld($vars['Domain']);
-        }
+        $tld = $this->getTld($vars['Domain'] ?? $vars['domain'] ?? '');
 
         // Build input fields
         $whois_fields = Configure::get('Internetbs.whois_fields');
@@ -700,10 +714,10 @@ class Internetbs extends RegistrarModule
                         $vars[$key] = !empty($client->zip) ? $client->zip : '00000';
                         break;
                     case 'telHostingAccount':
-                        $vars[$key] = $this->generateUsername($vars['Domain']);
+                        $vars[$key] = $this->generateUsername($vars['Domain'] ?? $vars['domain'] ?? '');
                         break;
                     case 'telHostingPassword':
-                        $vars[$key] = substr(base64_encode(md5($vars['Domain'])), 0, 12);
+                        $vars[$key] = substr(base64_encode(md5($vars['Domain'] ?? $vars['domain'] ?? '')), 0, 12);
                         break;
                     case 'clientIp':
                         $requestor = $this->getFromContainer('requestor');
@@ -722,9 +736,9 @@ class Internetbs extends RegistrarModule
 
             // Register or transfer domain
             if (isset($vars['transfer']) || isset($vars['transferAuthInfo'])) {
-                $this->transferDomain($vars['Domain'], $row->id ?? null, $params);
+                $this->transferDomain($vars['Domain'] ?? $vars['domain'] ?? '', $row->id ?? null, $params);
             } else {
-                $this->registerDomain($vars['Domain'], $row->id ?? null, $params);
+                $this->registerDomain($vars['Domain'] ?? $vars['domain'] ?? '', $row->id ?? null, $params);
             }
         }
 
@@ -732,7 +746,7 @@ class Internetbs extends RegistrarModule
         return [
             [
                 'key' => 'domain',
-                'value' => $vars['Domain'],
+                'value' => $vars['Domain'] ?? $vars['domain'] ?? '',
                 'encrypted' => 0
             ]
         ];
@@ -949,25 +963,21 @@ class Internetbs extends RegistrarModule
             'Ns_list' => true
         ];
 
-        if (isset($vars['epp_code']) || isset($vars['transferAuthInfo'])) {
-            $supported_fields = array_keys(
-                array_merge(
-                    Configure::get('Internetbs.whois_fields'),
-                    Configure::get('Internetbs.transfer_fields'),
-                    (array) Configure::get('Internetbs.domain_fields' . $tld)
-                )
-            );
-        } else {
-            $supported_fields = array_keys(
-                array_merge(
-                    Configure::get('Internetbs.whois_fields'),
-                    Configure::get('Internetbs.domain_fields'),
-                    (array) Configure::get('Internetbs.domain_fields' . $tld),
-                    Configure::get('Internetbs.nameserver_fields'),
-                    $domain_field_basics
-                )
-            );
-        }
+        $supported_fields = isset($vars['epp_code']) || isset($vars['transferAuthInfo']) ? array_keys(
+            array_merge(
+                Configure::get('Internetbs.whois_fields'),
+                Configure::get('Internetbs.transfer_fields'),
+                (array) Configure::get('Internetbs.domain_fields' . $tld)
+            )
+        ) : array_keys(
+            array_merge(
+                Configure::get('Internetbs.whois_fields'),
+                Configure::get('Internetbs.domain_fields'),
+                (array) Configure::get('Internetbs.domain_fields' . $tld),
+                Configure::get('Internetbs.nameserver_fields'),
+                $domain_field_basics
+            )
+        );
 
         foreach ($vars as $key => $value) {
             if (!in_array($key, $supported_fields)) {
@@ -2057,19 +2067,15 @@ class Internetbs extends RegistrarModule
             $extension_fields = (array) Configure::get('Internetbs.domain_fields' . $tld);
             if ($extension_fields) {
                 // Set the fields
-                if ($client) {
-                    $fields = array_merge(
-                        Configure::get('Internetbs.nameserver_fields'),
-                        Configure::get('Internetbs.domain_fields'),
-                        $extension_fields
-                    );
-                } else {
-                    $fields = array_merge(
-                        Configure::get('Internetbs.domain_fields'),
-                        Configure::get('Internetbs.nameserver_fields'),
-                        $extension_fields
-                    );
-                }
+                $fields = $client ? array_merge(
+                    Configure::get('Internetbs.nameserver_fields'),
+                    Configure::get('Internetbs.domain_fields'),
+                    $extension_fields
+                ) : array_merge(
+                    Configure::get('Internetbs.domain_fields'),
+                    Configure::get('Internetbs.nameserver_fields'),
+                    $extension_fields
+                );
 
                 if ($client) {
                     // We should already have the domain name don't make editable
@@ -2081,7 +2087,7 @@ class Internetbs extends RegistrarModule
                 $module_fields = new ModuleFields();
 
                 // Allow AJAX requests
-                $ajax = $module_fields->fieldHidden('allow_ajax', 'true', ['id'=>'internetbs_allow_ajax']);
+                $ajax = $module_fields->fieldHidden('allow_ajax', 'true', ['id' => 'internetbs_allow_ajax']);
                 $module_fields->setField($ajax);
                 $please_select = ['' => Language::_('AppController.select.please', true)];
 
@@ -2441,7 +2447,7 @@ class Internetbs extends RegistrarModule
         );
 
         if ($cache) {
-            $response = unserialize(base64_decode($cache));
+            $response = safe_unserialize(base64_decode($cache));
         }
 
         // Get remote price list
@@ -2465,7 +2471,8 @@ class Internetbs extends RegistrarModule
             $response = $price_list->response();
 
             // Save pricing in cache
-            if (Configure::get('Caching.on')
+            if (
+                Configure::get('Caching.on')
                 && is_writable(CACHEDIR)
                 && $price_list->status() == 200
             ) {
@@ -2476,7 +2483,7 @@ class Internetbs extends RegistrarModule
                         strtotime(Configure::get('Blesta.cache_length')) - time(),
                         Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'internetbs' . DS
                     );
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Write to cache failed, so disable caching
                     Configure::set('Caching.on', false);
                 }

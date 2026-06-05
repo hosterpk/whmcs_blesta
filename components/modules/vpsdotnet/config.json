@@ -1,5 +1,5 @@
 {
-    "version": "2.12.0",
+    "version": "3.0.0",
     "name": "Vpsdotnet.name",
     "description": "Vpsdotnet.description",
     "authors": [
@@ -34,5 +34,6 @@
             "vpsdotnet_id",
             "vpsdotnet_password"
         ]
-    }
+    },
+    "icon": "bi-cloud"
 }

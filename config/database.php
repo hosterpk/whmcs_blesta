@@ -3,6 +3,9 @@
  * Initializes all database profiles, and sets the desired database profile
  * to be the active profile.
  *
+ * @copyright Copyright (c) 2010, Phillips Data, Inc.
+ * @license http://www.blesta.com/license/ The Blesta License Agreement
+ * @link http://www.blesta.com/ Blesta
  */
 
 // Lazy connecting will only establish a connection to the database if one is

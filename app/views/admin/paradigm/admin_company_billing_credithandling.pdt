@@ -1,0 +1,34 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyBilling.credithandling.boxtitle_credithandling', true), ['id' => 'admin_company_billing_credithandling']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <?php echo (isset($credit_form) ? $credit_form : null); ?>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyBilling.credithandling.field.submit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+        <?php $this->Form->end(); ?>
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

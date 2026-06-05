@@ -294,8 +294,8 @@ class CoinPayments extends NonmerchantGateway
             if (isset($_SERVER['HTTP_HMAC']) && !empty($_SERVER['HTTP_HMAC'])) {
                 $request = file_get_contents('php://input');
                 if ($request !== false && !empty($request)) {
-                    if ((isset($post['merchant']) ? $post['merchant'] : null) == trim((isset($this->meta['merchant_id']) ? $this->meta['merchant_id'] : null))) {
-                        $hmac = hash_hmac('sha512', $request, trim((isset($this->meta['ipn_secret']) ? $this->meta['ipn_secret'] : null)));
+                    if ((isset($post['merchant']) ? $post['merchant'] : null) == trim($this->meta['merchant_id'] ?? '')) {
+                        $hmac = hash_hmac('sha512', $request, trim($this->meta['ipn_secret'] ?? ''));
                         if ($hmac !== $_SERVER['HTTP_HMAC']) {
                             $error_msg = 'HMAC signature does not match';
                         }
@@ -312,8 +312,8 @@ class CoinPayments extends NonmerchantGateway
             if ((isset($post['ipn_mode']) ? $post['ipn_mode'] : null) == 'httpauth'
                 && !(isset($_SERVER['PHP_AUTH_USER'])
                     && isset($_SERVER['PHP_AUTH_PW'])
-                    && $_SERVER['PHP_AUTH_USER'] == trim((isset($this->meta['merchant_id']) ? $this->meta['merchant_id'] : null))
-                    && $_SERVER['PHP_AUTH_PW'] == trim((isset($this->meta['ipn_secret']) ? $this->meta['ipn_secret'] : null)))
+                    && $_SERVER['PHP_AUTH_USER'] == trim($this->meta['merchant_id'] ?? '')
+                    && $_SERVER['PHP_AUTH_PW'] == trim($this->meta['ipn_secret'] ?? ''))
             ) {
                     $error_msg = 'Invalid merchant id/ipn secret';
             } else {

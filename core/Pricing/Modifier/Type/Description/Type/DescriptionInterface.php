@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Description\Type;
 
 /**
@@ -20,5 +21,5 @@ interface DescriptionInterface
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    public function get(array $meta, array $oldMeta = null);
+    public function get(array $meta, ?array $oldMeta = null);
 }

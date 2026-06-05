@@ -1,0 +1,90 @@
+{
+    "columns": [
+        {
+            "name": "code",
+            "type": "char(3)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "format",
+            "type": "enum('#,###.##','#.###,##','# ###.##','# ###,##','#,##,###.##','# ###','#.###','#,###','####.##','####,##')",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 11
+        },
+        {
+            "name": "precision",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "4",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "prefix",
+            "type": "varchar(10)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 10
+        },
+        {
+            "name": "suffix",
+            "type": "varchar(10)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 10
+        },
+        {
+            "name": "exchange_rate",
+            "type": "decimal(21,6)",
+            "nullable": false,
+            "key": null,
+            "default": "0.000000",
+            "extra": null,
+            "precision": 21,
+            "scale": 6
+        },
+        {
+            "name": "exchange_updated",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "code",
+                "company_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

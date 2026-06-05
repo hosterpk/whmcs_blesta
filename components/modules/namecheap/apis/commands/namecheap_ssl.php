@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Namecheap SSL Management
  *

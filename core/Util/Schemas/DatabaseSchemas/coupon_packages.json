@@ -1,0 +1,36 @@
+{
+    "columns": [
+        {
+            "name": "coupon_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "package_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "coupon_id",
+                "package_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

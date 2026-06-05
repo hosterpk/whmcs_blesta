@@ -63,12 +63,15 @@ $lang['Solusvm.module_row'] = 'SolusVM Master Server';
 $lang['Solusvm.module_row_plural'] = 'Servers';
 $lang['Solusvm.module_group'] = 'SolusVM Master Group';
 
+$lang['Solusvm.back_to_manage'] = 'Back';
 
 // Module management
 $lang['Solusvm.add_module_row'] = 'Add Server';
 $lang['Solusvm.add_module_group'] = 'Add Server Group';
 $lang['Solusvm.manage.module_rows_title'] = 'SolusVM Master Servers';
 $lang['Solusvm.manage.module_groups_title'] = 'SolusVM Master Server Groups';
+$lang['Solusvm.manage.tab_rows'] = 'Servers';
+$lang['Solusvm.manage.tab_groups'] = 'Server Groups';
 $lang['Solusvm.manage.module_rows_heading.server_label'] = 'Server Label';
 $lang['Solusvm.manage.module_rows_heading.host'] = 'Hostname';
 $lang['Solusvm.manage.module_rows_heading.options'] = 'Options';

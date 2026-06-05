@@ -1,0 +1,49 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "expire",
+            "type": "datetime",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "value",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        }
+    ],
+    "indexes": [
+        {
+            "name": "expire",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "expire"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

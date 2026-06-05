@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Exception;
+use Loader;
+
 /**
  * Marketplace
  *
@@ -73,7 +80,7 @@ class Marketplace extends AppModel
             if ($http->responseCode() == '200') {
                 return json_decode($result);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // An exception occured... nothing we need to do about it
             echo $e->getMessage();
         }

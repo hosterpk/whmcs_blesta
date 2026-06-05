@@ -1,0 +1,153 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyModules.addgroup.boxtitle_add', true, $module->getName(), $module->moduleRowName()), ['id' => 'admin_company_modules_addgroup']);
+            ?>
+
+            <?php $this->Form->create(null, ['id' => 'add_group', 'class' => 'disable-on-submit']);?>
+
+            <div class="mb-3">
+                <label for="name" class="form-label">
+                    <?php $this->_('AdminCompanyModules.addgroup.text_name');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'name',
+                    (isset($vars->name) ? $vars->name : null),
+                    ['id' => 'name', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="add_order" class="form-label">
+                    <?php $this->_('AdminCompanyModules.addgroup.text_order');?>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'add_order',
+                    (isset($module_add_order) ? $module_add_order : null),
+                    (isset($vars->add_order) ? $vars->add_order : null),
+                    ['id' => 'add_order', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label for="assigned" class="form-label">
+                            <?php $this->_('AdminCompanyModules.addgroup.assigned', false, $module->moduleRowNamePlural());?>
+                        </label>
+                        <?php
+                        $this->Form->fieldMultiSelect(
+                            'module_rows[]',
+                            [],
+                            (isset($vars->module_rows) ? $vars->module_rows : null),
+                            ['id' => 'assigned', 'class' => 'form-select', 'size' => '10']
+                        );
+                        ?>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-center justify-content-center">
+                        <div class="d-flex flex-column gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary move-left">
+                                <i class="bi bi-arrow-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary move-right">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="available" class="form-label">
+                            <?php $this->_('AdminCompanyModules.addgroup.available', false, $module->moduleRowNamePlural());?>
+                        </label>
+                        <?php
+                        $this->Form->fieldMultiSelect(
+                            'available[]',
+                            (isset($module_rows) ? $module_rows : null),
+                            [],
+                            ['id' => 'available', 'class' => 'form-select', 'size' => '10']
+                        );
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-check mb-3">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'force_limits',
+                    '1',
+                    (isset($vars->force_limits) ? $vars->force_limits : null) == '1',
+                    ['id' => 'force_limits', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="force_limits" class="form-check-label">
+                    <?php $this->_('AdminCompanyModules.addgroup.force_limits', false, $module->moduleRowName());?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyModules.addgroup.tooltip_force_limits', true, $module->moduleRowName()));?>"></i>
+                </label>
+            </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                echo $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyModules.addgroup.btn_add', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+
+            <?php $this->Form->end();?>
+            <?php $this->Widget->end();?>
+        </div>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    const assignedSelect = document.getElementById('assigned');
+    const availableSelect = document.getElementById('available');
+    const moveLeftButton = document.querySelector('.move-left');
+    const moveRightButton = document.querySelector('.move-right');
+    const form = document.getElementById('add_group');
+
+    if (!assignedSelect || !availableSelect || !moveLeftButton || !moveRightButton) return;
+
+    // Move module row from right to left
+    moveLeftButton.addEventListener('click', function() {
+        const selectedOptions = Array.from(availableSelect.selectedOptions);
+        selectedOptions.forEach(option => {
+            assignedSelect.appendChild(option);
+        });
+    });
+
+    // Move module row from left to right
+    moveRightButton.addEventListener('click', function() {
+        const selectedOptions = Array.from(assignedSelect.selectedOptions);
+        selectedOptions.forEach(option => {
+            availableSelect.appendChild(option);
+        });
+    });
+
+    // Select all assigned values on submit
+    if (form) {
+        form.addEventListener('submit', function() {
+            Array.from(assignedSelect.options).forEach(option => {
+                option.selected = true;
+            });
+        });
+    }
+
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

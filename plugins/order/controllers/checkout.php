@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order System checkout controller
  *
@@ -60,19 +61,57 @@ class Checkout extends OrderFormController
             $this->SessionCart->setData('tos_accepted', true);
         }
 
+        // Clear stale recurring consent when no order exists yet (prevents carry-over from abandoned orders)
+        if (!$order) {
+            $this->SessionCart->setData('recurring_consent_accepted', false);
+        }
+
+        // Record recurring consent acceptance
+        if (!empty($this->post) && (($this->post['agree_recurring_consent'] ?? 'false') == 'true')) {
+            $this->SessionCart->setData('recurring_consent_accepted', true);
+
+            // Auto-set save_details when recurring consent is given
+            $this->post['save_details'] = 'true';
+        }
+
+        // Determine if cart has recurring items
+        $totals_recurring = $summary['totals_recurring'] ?? [];
+        $has_recurring_items = !empty($totals_recurring);
+
         // Verify that terms of service have been accepted
-        if (!$order
+        $tos_error = !$order
             && $this->order_form->require_tos
-            && !$this->SessionCart->getData('tos_accepted', false)
-        ) {
+            && !$this->SessionCart->getData('tos_accepted', false);
+
+        // Verify that recurring consent has been given
+        $recurring_consent_error = !$order
+            && ($this->order_form->require_recurring_consent ?? false)
+            && $has_recurring_items
+            && !$this->SessionCart->getData('recurring_consent_accepted', false);
+
+        if ($tos_error || $recurring_consent_error) {
             if (!empty($this->post)) {
-                $this->setMessage(
-                    'error',
-                    Language::_('Checkout.!error.invalid_agree_tos', true),
-                    false,
-                    null,
-                    false
-                );
+                $vars = (object)$this->post;
+            }
+            if (!empty($this->post) && !isset($this->post['set_vars'])) {
+                if ($tos_error) {
+                    $this->setMessage(
+                        'error',
+                        Language::_('Checkout.!error.invalid_agree_tos', true),
+                        false,
+                        null,
+                        false
+                    );
+                }
+                if ($recurring_consent_error) {
+                    $this->setMessage(
+                        'error',
+                        Language::_('Checkout.!error.invalid_agree_recurring_consent', true),
+                        false,
+                        null,
+                        false
+                    );
+                }
             }
         } else {
             if (!$order) {
@@ -122,10 +161,12 @@ class Checkout extends OrderFormController
 
         // Set the contact info partial to the view
         $this->setContactView($vars);
+        // When recurring consent is active, hide the "Save Payment Details" checkbox
+        $save_account = !(($this->order_form->require_recurring_consent ?? false) && $has_recurring_items);
         // Set the CC info partial to the view
-        $this->setCcView($vars, false, true);
+        $this->setCcView($vars, false, $save_account);
         // Set the ACH info partial to the view
-        $this->setAchView($vars, false, true);
+        $this->setAchView($vars, false, $save_account);
 
         // Set the total available credit that can be applied to the invoices
         $total_credit = $this->Transactions->getTotalCredit($this->client->id, $currency);
@@ -159,11 +200,16 @@ class Checkout extends OrderFormController
         $totals = $summary['totals'] ?? false;
         $totals_section = (isset($order->order_number) ? $this->getTotals($order->order_number, true) : '');
 
+        // Fetch recurring totals and periods for recurring consent display
+        $periods = $this->getPricingPeriods();
+
         $this->set(
             compact(
                 'vars',
                 'cart',
                 'totals',
+                'totals_recurring',
+                'periods',
                 'payment_accounts',
                 'require_passphrase',
                 'payment_types',
@@ -197,8 +243,10 @@ class Checkout extends OrderFormController
         }
 
         // If order number given, verify it belongs to this client
-        if (isset($this->get[1]) && (!($order = $this->OrderOrders->getByNumber($this->get[1])) ||
-            !isset($this->client) || $order->client_id != $this->client->id)) {
+        if (
+            isset($this->get[1]) && (!($order = $this->OrderOrders->getByNumber($this->get[1])) ||
+            !isset($this->client) || $order->client_id != $this->client->id)
+        ) {
             $this->redirect($this->base_uri . 'order/main/index/' . $this->order_form->label);
         }
 
@@ -215,7 +263,8 @@ class Checkout extends OrderFormController
         );
 
         // Fraud detection
-        if (!empty($order_settings['antifraud'])
+        if (
+            !empty($order_settings['antifraud'])
             && (!isset($order_settings['antifraud_frequency'])
                 || $order_settings['antifraud_frequency'] == 'always')
         ) {
@@ -242,7 +291,8 @@ class Checkout extends OrderFormController
             'key'
         );
 
-        if (($settings['email_verification'] ?? false) == 'true'
+        if (
+            ($settings['email_verification'] ?? false) == 'true'
             && ($settings['prevent_unverified_payments'] ?? false) == 'true'
             && ($email_verification = $this->EmailVerifications->getByContactId($this->client->contact_id))
             && $email_verification->verified == 0
@@ -260,7 +310,8 @@ class Checkout extends OrderFormController
                         'url' => $this->base_uri . 'client/verify/send/?sid=' . rawurlencode(
                             $this->EmailVerifications->systemEncrypt(
                                 'c=' . $email_verification->contact_id . '|t=' . $time . '|h=' . substr($hash, -16)
-                            )) . '&redirect=' . urlencode(
+                            )
+                        ) . '&redirect=' . urlencode(
                             $this->base_uri . 'order/cart/index/' . $this->order_form->label
                         ),
                         'label' => Language::_('Checkout.!info.unverified_email_button', true),
@@ -340,8 +391,10 @@ class Checkout extends OrderFormController
      */
     private function processPaymentForOrder($order, $invoice)
     {
-        if (!isset($this->post['set_vars'])
-            && (!empty($this->post['payment_account']) || !empty($this->post['payment_type']))) {
+        if (
+            !isset($this->post['set_vars'])
+            && (!empty($this->post['payment_account']) || !empty($this->post['payment_type']))
+        ) {
             $this->processPayment($order, $invoice);
 
             // If payment error occurred display error and allow repayment
@@ -392,11 +445,13 @@ class Checkout extends OrderFormController
             $this->redirect($this->base_uri . 'order/main/index/' . $this->order_form->label);
         }
 
-        $order_number = ($order_number !== null ? $order_number : (isset($this->get[1]) ? $this->get[1] : null));
+        $order_number = ($order_number ?? ($this->get[1] ?? null));
 
         // If order number given, verify it belongs to this client
-        if ($order_number === null || !($order = $this->OrderOrders->getByNumber($order_number)) ||
-            !isset($this->client) || $order->client_id != $this->client->id) {
+        if (
+            $order_number === null || !($order = $this->OrderOrders->getByNumber($order_number)) ||
+            !isset($this->client) || $order->client_id != $this->client->id
+        ) {
             $this->redirect($this->base_uri . 'order/main/index/' . $this->order_form->label);
         }
 
@@ -475,8 +530,10 @@ class Checkout extends OrderFormController
     {
         $this->uses(['Order.OrderOrders', 'Invoices']);
 
-        if (!isset($this->get[1]) || !($order = $this->OrderOrders->getByNumber($this->get[1])) ||
-            !isset($this->client) || $order->client_id != $this->client->id) {
+        if (
+            !isset($this->get[1]) || !($order = $this->OrderOrders->getByNumber($this->get[1])) ||
+            !isset($this->client) || $order->client_id != $this->client->id
+        ) {
             $this->redirect($this->base_uri . 'order/main/index/' . $this->order_form->label);
         }
 
@@ -614,14 +671,17 @@ class Checkout extends OrderFormController
                 : 'accepted'
             ),
             'coupon' => $this->SessionCart->getData('coupon'),
-            'ip_address' => $requestor->ip_address
+            'ip_address' => $requestor->ip_address,
+            'recurring_consent_date' => $this->SessionCart->getData('recurring_consent_accepted', false)
+                ? date('c')
+                : null
         ];
 
         // Attempt to add the order
         $order = $this->OrderOrders->add($details, $items);
 
         // Add affiliate referral
-        $affiliate_code = isset($_COOKIE['affiliate_code']) ? $_COOKIE['affiliate_code'] : null;
+        $affiliate_code = $_COOKIE['affiliate_code'] ?? null;
 
         if (!empty($order) && !empty($affiliate_code)) {
             // Get invoice collection
@@ -633,7 +693,7 @@ class Checkout extends OrderFormController
 
             // Get excluded packages
             $settings = $this->OrderAffiliateCompanySettings->getSetting($this->company_id, 'excluded_packages');
-            $excluded_packages = isset($settings->value) ? (array)\Blesta\Core\Util\Common\Classes\Model::safeUnserialize($settings->value) : [];
+            $excluded_packages = isset($settings->value) ? (array)safe_unserialize($settings->value) : [];
 
             // Remove the excluded packages from the collection
             foreach ($collection as $item) {
@@ -646,7 +706,6 @@ class Checkout extends OrderFormController
                     if (in_array($service->package_pricing->package_id, $excluded_packages)) {
                         $collection->remove($item);
                     }
-
                 }
             }
             $totals = $presenter->totals();
@@ -657,7 +716,7 @@ class Checkout extends OrderFormController
             }
 
             // Validate if the affiliate code, does not belong to the current user
-            if ((isset($affiliate->client_id) ? $affiliate->client_id : null) == $order->client_id || empty($affiliate)) {
+            if (($affiliate->client_id ?? null) == $order->client_id || empty($affiliate)) {
                 return $order;
             }
 
@@ -764,7 +823,7 @@ class Checkout extends OrderFormController
             } else {
                 // Set the new payment account details
                 // Fetch the contact we're about to set the payment account for
-                $this->post['contact_id'] = (isset($this->post['contact_id']) ? $this->post['contact_id'] : 0);
+                $this->post['contact_id'] = ($this->post['contact_id'] ?? 0);
                 $contact = $this->Contacts->get($this->post['contact_id']);
 
                 if ($this->post['contact_id'] == 'none' || !$contact || ($contact->client_id != $this->client->id)) {
@@ -845,7 +904,8 @@ class Checkout extends OrderFormController
         $this->uses(['Order.OrderOrders', 'Invoices', 'Payments']);
 
         // If order number given, verify it belongs to this client
-        if (!$this->isAjax()
+        if (
+            !$this->isAjax()
             || (isset($this->get[1])
                 && ($order = $this->OrderOrders->getByNumber($this->get[1]))
                 && (!isset($this->client) || $order->client_id != $this->client->id)
@@ -863,6 +923,19 @@ class Checkout extends OrderFormController
         // Apply credits to the order, if applicable
         if (($this->post['apply_credit'] ?? 'false') == 'true') {
             $invoice = $this->applyCreditsToOrder($order, $invoice, false);
+        }
+
+        // When recurring consent is active, ensure save_details is set for the authorization flow.
+        // Check POST directly as well, since on the first submit the AJAX pre-auth fires
+        // before index() has a chance to set the session flag.
+        $consent_given = $this->SessionCart->getData('recurring_consent_accepted', false)
+            || (($this->post['agree_recurring_consent'] ?? 'false') == 'true');
+        if (
+            ($this->order_form->require_recurring_consent ?? false)
+            && !empty($summary['totals_recurring'])
+            && $consent_given
+        ) {
+            $this->post['save_details'] = 'true';
         }
 
         // Authorize a payment transaction
@@ -980,7 +1053,8 @@ class Checkout extends OrderFormController
         if ($gateway) {
             $gateway_obj = $this->Gateways->create($gateway->class, $gateway->type);
 
-            if ($type == 'ach'
+            if (
+                $type == 'ach'
                 && $gateway_obj instanceof MerchantAchVerification
                 && !empty($account_id)
                 && ($account = $this->Accounts->getAch($account_id))
@@ -993,7 +1067,8 @@ class Checkout extends OrderFormController
         }
 
         // Authorize CC payment
-        if ((isset($vars['payment_account']) && substr($vars['payment_account'], 0, 2) == 'cc')
+        if (
+            (isset($vars['payment_account']) && substr($vars['payment_account'], 0, 2) == 'cc')
             || (isset($vars['payment_type']) && $vars['payment_type'] == 'cc')
         ) {
             // Attempt to authorize the payment. This may not be supported by the current merchant gateway
@@ -1051,8 +1126,9 @@ class Checkout extends OrderFormController
         // Since we support gateway custom forms, we can't guarantee that these fields will be set
         if ($type == 'cc') {
             $account['card_number'] = $vars['number'] ?? null;
-            $account['card_exp'] = (isset($vars['expiration_year']) && isset($vars['expiration_month'])) ?
-                $vars['expiration_year'] . $vars['expiration_month'] : null;
+            $account['card_exp'] = (isset($vars['expiration_year']) && isset($vars['expiration_month']))
+                ? $vars['expiration_year'] . $vars['expiration_month']
+                : null;
             $account['card_security_code'] = $vars['security_code'] ?? null;
             $account['reference_id'] = $vars['reference_id'] ?? null;
             $account['client_reference_id'] = $vars['client_reference_id'] ?? null;
@@ -1082,9 +1158,9 @@ class Checkout extends OrderFormController
             // Set an option for no contact
             $no_contact = [
                 (object)[
-                    'id'=>'none',
-                    'first_name'=>Language::_('Checkout.setcontactview.text_none', true),
-                    'last_name'=>''
+                    'id' => 'none',
+                    'first_name' => Language::_('Checkout.setcontactview.text_none', true),
+                    'last_name' => ''
                 ]
             ];
 
@@ -1247,10 +1323,12 @@ class Checkout extends OrderFormController
                 // Skip this payment account if it is expecting a different
                 // merchant gateway, one is not available, or the payment
                 // method is not supported by the gateway
-                if (!$merchant_gateway
-                    || ($merchant_gateway &&
-                        (
-                            ($account->gateway_id && $account->gateway_id != $merchant_gateway->id)
+                if (
+                    !$merchant_gateway
+                    || ($merchant_gateway
+                        && (
+                            ($account->gateway_id
+                            && $account->gateway_id != $merchant_gateway->id)
                             || ($account->reference_id
                                 && !in_array('MerchantCcOffsite', $merchant_gateway->info['interfaces'])
                             )
@@ -1258,7 +1336,8 @@ class Checkout extends OrderFormController
                                 && !in_array('MerchantCc', $merchant_gateway->info['interfaces'])
                             )
                         )
-                    )) {
+                    )
+                ) {
                     continue;
                 }
 
@@ -1292,7 +1371,8 @@ class Checkout extends OrderFormController
                 // Skip this payment account if it is expecting a different
                 // merchant gateway, one is not available, or the payment
                 // method is not supported by the gateway
-                if (!$merchant_gateway
+                if (
+                    !$merchant_gateway
                     || ($merchant_gateway
                         && (
                             ($account->gateway_id && $account->gateway_id != $merchant_gateway->id)
@@ -1303,7 +1383,8 @@ class Checkout extends OrderFormController
                                 && !in_array('MerchantAch', $merchant_gateway->info['interfaces'])
                             )
                         )
-                    )) {
+                    )
+                ) {
                     continue;
                 }
 

@@ -1,0 +1,282 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "parent_service_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "package_group_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "id_format",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "id_value",
+            "type": "int",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "pricing_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "staff_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "module_row_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "coupon_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "qty",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "override_price",
+            "type": "decimal(19,4)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "override_currency",
+            "type": "varchar(3)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "status",
+            "type": "enum('active','canceled','pending','suspended','in_review')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "pending",
+            "extra": null,
+            "max_length": 9
+        },
+        {
+            "name": "suspension_reason",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "cancellation_reason",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_renews",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_last_renewed",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_paid_through",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_suspended",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_canceled",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id"
+            ]
+        },
+        {
+            "name": "id_format",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "id_format"
+            ]
+        },
+        {
+            "name": "id_value",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "id_value"
+            ]
+        },
+        {
+            "name": "module_row_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "module_row_id"
+            ]
+        },
+        {
+            "name": "package_group_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "package_group_id"
+            ]
+        },
+        {
+            "name": "parent_service_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "parent_service_id"
+            ]
+        },
+        {
+            "name": "pricing_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "pricing_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "status",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "status"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

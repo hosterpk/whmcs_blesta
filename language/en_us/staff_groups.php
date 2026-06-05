@@ -84,6 +84,7 @@ $lang['StaffGroups.permissions.admin_tools_logs'] = 'Logs';
 $lang['StaffGroups.permissions.admin_tools_utilities'] = 'Utilities';
 $lang['StaffGroups.permissions.admin_tools_provisioning'] = 'Service Queue';
 $lang['StaffGroups.permissions.admin_tools_blacklist'] = 'Blacklist';
+$lang['StaffGroups.permissions.admin_tools_integritycheck'] = 'System Integrity Check';
 $lang['StaffGroups.permissions.admin_tools_servicechanges'] = 'Service Changes';
 
 $lang['StaffGroups.permissions.admin_packages_add'] = 'Add Package';
@@ -142,6 +143,7 @@ $lang['StaffGroups.permissions.admin_company_emails_addsignature'] = 'Add Email 
 $lang['StaffGroups.permissions.admin_company_emails_editsignature'] = 'Edit Email Signature';
 $lang['StaffGroups.permissions.admin_company_emails_deletesignature'] = 'Delete Email Signature';
 $lang['StaffGroups.permissions.admin_company_emails_deleteattachment'] = 'Delete Email Attachment';
+$lang['StaffGroups.permissions.admin_company_emails_restoresnapshot'] = 'Restore Email Template Snapshot';
 $lang['StaffGroups.permissions.admin_company_emails_htmltemplates'] = 'HTML Templates';
 $lang['StaffGroups.permissions.admin_company_emails_addhtmltemplate'] = 'Add HTML Template';
 $lang['StaffGroups.permissions.admin_company_emails_edithtmltemplate'] = 'Edit HTML Template';
@@ -188,6 +190,7 @@ $lang['StaffGroups.permissions.admin_system_api'] = 'API Access';
 $lang['StaffGroups.permissions.admin_system_upgrade'] = 'Upgrade Options';
 $lang['StaffGroups.permissions.admin_system_help'] = 'Help';
 $lang['StaffGroups.permissions.admin_system_marketplace'] = 'Marketplace';
+$lang['StaffGroups.permissions.admin_system_ai'] = 'AI';
 
 $lang['StaffGroups.permissions.admin_company_general_contacttypes'] = 'Contact Types';
 $lang['StaffGroups.permissions.admin_company_general_addcontacttype'] = 'Add Contact Type';

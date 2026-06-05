@@ -1,5 +1,7 @@
 <?php
+
 namespace Blesta\Core\Util\Input\Fields;
+
 use Blesta\Core\Util\Input\Fields\Common\FieldsInterface;
 use Blesta\Core\Util\Input\Fields\Common\FieldInterface;
 
@@ -80,7 +82,7 @@ class InputFields implements FieldsInterface
      * @return InputField An InputField object to be passed into one of the various field methods to assign this
      *  label to that field
      */
-    public function label($name, $for = null, array $attributes = null, $preserve_tags = false)
+    public function label($name, $for = null, ?array $attributes = null, $preserve_tags = false)
     {
         $label = new InputField('label');
         $label->setParam('name', $name);
@@ -117,7 +119,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldText($name, $value = null, $attributes = [], FieldInterface $label = null)
+    public function fieldText($name, $value = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldText');
         $field->setParam('name', $name);
@@ -146,7 +148,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldNumber($name, $value = null, $min = null, $max = null, $step = null, $attributes = [], FieldInterface $label = null)
+    public function fieldNumber($name, $value = null, $min = null, $max = null, $step = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldNumber');
         $field->setParam('name', $name);
@@ -162,7 +164,7 @@ class InputFields implements FieldsInterface
 
         return $field;
     }
-    
+
     /**
      * Creates a hidden input field
      *
@@ -195,7 +197,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldImage($name, $value = null, $attributes = [], FieldInterface $label = null)
+    public function fieldImage($name, $value = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldImage');
         $field->setParam('name', $name);
@@ -221,7 +223,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldReset($name, $value = null, $attributes = [], FieldInterface $label = null)
+    public function fieldReset($name, $value = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldReset');
         $field->setParam('name', $name);
@@ -253,7 +255,7 @@ class InputFields implements FieldsInterface
         $value = null,
         $checked = false,
         $attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     ) {
         $field = new InputField('fieldCheckbox');
         $field->setParam('name', $name);
@@ -281,7 +283,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldRadio($name, $value = null, $checked = false, $attributes = [], FieldInterface $label = null)
+    public function fieldRadio($name, $value = null, $checked = false, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldRadio');
         $field->setParam('name', $name);
@@ -308,7 +310,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldTextarea($name, $value = null, $attributes = [], FieldInterface $label = null)
+    public function fieldTextarea($name, $value = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldTextarea');
         $field->setParam('name', $name);
@@ -333,7 +335,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldPassword($name, $attributes = [], FieldInterface $label = null)
+    public function fieldPassword($name, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldPassword');
         $field->setParam('name', $name);
@@ -357,7 +359,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldFile($name, $attributes = [], FieldInterface $label = null)
+    public function fieldFile($name, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldFile');
         $field->setParam('name', $name);
@@ -391,7 +393,7 @@ class InputFields implements FieldsInterface
         $selected_value = null,
         $attributes = [],
         $option_attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     ) {
         $field = new InputField('fieldSelect');
         $field->setParam('name', $name);
@@ -428,7 +430,7 @@ class InputFields implements FieldsInterface
         $selected_values = [],
         $attributes = [],
         $option_attributes = [],
-        FieldInterface $label = null
+        ?FieldInterface $label = null
     ) {
         $field = new InputField('fieldMultiSelect');
         $field->setParam('name', $name);
@@ -456,7 +458,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldButton($name, $value = null, $attributes = [], FieldInterface $label = null)
+    public function fieldButton($name, $value = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldButton');
         $field->setParam('name', $name);
@@ -482,7 +484,7 @@ class InputFields implements FieldsInterface
      * @see InputFields::label()
      * @see InputField::attach()
      */
-    public function fieldSubmit($name, $value = null, $attributes = [], FieldInterface $label = null)
+    public function fieldSubmit($name, $value = null, $attributes = [], ?FieldInterface $label = null)
     {
         $field = new InputField('fieldSubmit');
         $field->setParam('name', $name);
@@ -496,5 +498,3 @@ class InputFields implements FieldsInterface
         return $field;
     }
 }
-
-

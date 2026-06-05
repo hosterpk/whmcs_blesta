@@ -1,52 +1,71 @@
-        <?php
-        $this->Widget->clear();
-        $this->Widget->create($this->_('GoGetSSL.edit_row.box_title', true));
-        ?>
-        <div class="inner">
-            <?php
-            $this->Form->create();
-            ?>
-            <div class="title_row first">
-                <h3><?php $this->_('GoGetSSL.edit_row.basic_title');?></h3>
-            </div>
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('GoGetSSL.row_meta.gogetssl_name', true), 'gogetssl_name');
-                        $this->Form->fieldText('gogetssl_name', (isset($vars->gogetssl_name) ? $vars->gogetssl_name : null), ['id' => 'gogetssl_name']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('GoGetSSL.row_meta.api_username', true), 'api_username');
-                        $this->Form->fieldText('api_username', (isset($vars->api_username) ? $vars->api_username : null), ['id' => 'api_username']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('GoGetSSL.row_meta.api_password', true), 'api_password');
-                        $this->Form->fieldText('api_password', (isset($vars->api_password) ? $vars->api_password : null), ['id' => 'api_password']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->fieldCheckbox('sandbox', 'true', (isset($vars->sandbox) ? $vars->sandbox : null) == 'true', ['id' => 'sandbox']);
-                        $this->Form->label($this->_('GoGetSSL.row_meta.sandbox', true), 'sandbox', ['class' => 'inline']);
-                        ?>
-                    </li>
-                </ul>
-            </div>
+<?php /** @var View $this **/ ?>
 
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('GoGetSSL.edit_row.add_btn', true), ['class' => 'btn btn-primary float-right']);
-                ?>
-            </div>
-            <?php
-            $this->Form->end();
-            ?>
+<?php
+$this->Widget->clear();
+$this->Widget->setLinkButtons([
+    [
+        'name' => $this->_('Gogetssl.back_to_manage', true),
+        'icon' => 'bi bi-arrow-left me-1',
+        'attributes' => ['href' => $this->base_uri . 'settings/company/modules/manage/' . $module->id],
+    ],
+]);
+
+$this->Widget->create($this->_('GoGetSSL.edit_row.box_title', true));
+?>
+        <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+    <h6 class="form-section-header"><?php $this->_('GoGetSSL.edit_row.basic_title'); ?></h6>
+
+    <div class="mb-3">
+        <label for="gogetssl_name" class="form-label">
+            <?php $this->_('GoGetSSL.row_meta.gogetssl_name'); ?>
+        </label>
+        <?php $this->Form->fieldText('gogetssl_name', isset($vars->gogetssl_name) ? $vars->gogetssl_name : null, [
+            'id' => 'gogetssl_name',
+            'class' => 'form-control',
+        ]); ?>
+    </div>
+
+    <div class="mb-3">
+        <label for="api_username" class="form-label">
+            <?php $this->_('GoGetSSL.row_meta.api_username'); ?>
+        </label>
+        <?php $this->Form->fieldText('api_username', isset($vars->api_username) ? $vars->api_username : null, [
+            'id' => 'api_username',
+            'class' => 'form-control',
+        ]); ?>
+    </div>
+
+    <div class="mb-3">
+        <label for="api_password" class="form-label">
+            <?php $this->_('GoGetSSL.row_meta.api_password'); ?>
+        </label>
+        <?php $this->Form->fieldText('api_password', isset($vars->api_password) ? $vars->api_password : null, [
+            'id' => 'api_password',
+            'class' => 'form-control',
+        ]); ?>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <?php $this->Form->fieldCheckbox(
+                'sandbox',
+                'true',
+                (isset($vars->sandbox) ? $vars->sandbox : null) == 'true',
+                ['id' => 'sandbox', 'class' => 'form-check-input'],
+            ); ?>
+            <label for="sandbox" class="form-check-label">
+                <?php $this->_('GoGetSSL.row_meta.sandbox'); ?>
+            </label>
         </div>
-        <?php
-        $this->Widget->end();
-        ?>
+    </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php $this->Form->fieldSubmit('save', $this->_('GoGetSSL.edit_row.add_btn', true), [
+            'class' => 'btn btn-primary',
+        ]); ?>
+    </div>
+
+        <?php $this->Form->end(); ?>
+        <?php $this->Widget->end();
+?>

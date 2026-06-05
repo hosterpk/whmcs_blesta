@@ -1,75 +1,89 @@
-        <?php
-        echo (isset($message) ? $message : null);
+<?php /** @var View $this **/ ?>
 
-        $links = [
-            [
-                'name' => $this->_('AdminMain.index.boxtitle_client', true, (isset($client->id_code) ? $this->Html->safe($client->id_code) : null), (isset($client->first_name) ? $this->Html->safe($client->first_name) : null), (isset($client->last_name) ? $this->Html->safe($client->last_name) : null)),
-                'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/view/' . (isset($client->id) ? $client->id : null))]
-            ]
-        ];
-        $link_buttons = [
-            [
-                'icon' => 'fa fa-plus',
-                'name' => '',
-                'attributes' => [
-                    'href' => $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/add/' . $client->id),
-                    'title' => $this->_('AdminMain.index.categorylink_adddocument', true)
-                ]
-            ]
-        ];
+<?php
+echo (isset($message) ? $message : null);
 
-        $this->Widget->clear();
-        $this->Widget->setLinks($links);
-        $this->Widget->setLinkButtons($link_buttons);
-        $this->Widget->create($this->_('AdminMain.index.boxtitle_documents', true), ['id'=>'admin_main'], (isset($render_section) ? $render_section : null));
+$link_buttons = [
+    [
+        'icon' => 'bi bi-arrow-left me-1',
+        'name' => $this->_('AdminMain.index.link_client', true, ($client->id_code ?? null)),
+        'attributes' => [
+            'href' => $this->base_uri . 'clients/view/' . ($client->id ?? null)
+        ]
+    ],
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'href' => $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/add/' . ($client->id ?? null)),
+            'title' => $this->_('AdminMain.index.categorylink_adddocument', true)
+        ]
+    ]
+];
 
-        if ((isset($documents) ? $documents : false) && ($num_documents = count($documents)) > 0) {
-        ?>
-        <table class="table">
-            <tr class="heading_row">
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/index/' . (isset($client->id) ? $client->id : null) . '/?sort=name&order=' . ($sort == 'name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'name' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_name');?></a></span></td>
-                <td><?php $this->_('AdminMain.index.heading_description');?></td>
-                <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/index/' . (isset($client->id) ? $client->id : null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'date_added' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_date_added');?></a></span></td>
-                <td class="last"><?php $this->_('AdminMain.index.heading_options');?></td>
+$this->Widget->clear();
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminMain.index.boxtitle_documents', true), ['id' => 'admin_main'], ($render_section ?? null));
+
+if (($documents ?? false) && ($num_documents = count($documents)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+        <thead>
+            <tr>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/index/' . ($client->id ?? null) . '/?sort=name&order=' . ($sort == 'name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminMain.index.heading_name');?>
+                        <?php if ($sort == 'name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th><?php $this->_('AdminMain.index.heading_description');?></th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/index/' . ($client->id ?? null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminMain.index.heading_date_added');?>
+                        <?php if ($sort == 'date_added') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th class="text-end" style="width: 100px;"><?php $this->_('AdminMain.index.heading_options');?></th>
             </tr>
-            <?php
-            $i=0;
-            foreach ($documents as $document) {
-            ?>
-            <tr class="<?php echo $this->Html->concat(' ', ($i++%2 == 1) ? 'odd_row' : '');?>">
-                <td><?php echo (isset($document->name) ? $this->Html->safe($document->name) : null);?></td>
-                <td><?php echo (isset($document->description) ? $this->Html->safe($document->description) : null);?></td>
+        </thead>
+        <tbody>
+            <?php foreach ($documents as $document) { ?>
+            <tr>
+                <td><?php echo ($document->name ?? null) ? $this->Html->safe($document->name) : null;?></td>
+                <td><?php echo ($document->description ?? null) ? $this->Html->safe($document->description) : null;?></td>
                 <td><?php echo $this->Date->cast($document->date_added);?></td>
-                <td>
-                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/download/' . (isset($document->id) ? $document->id : null));?>"><?php $this->_('AdminMain.index.option_download');?></a>,
-                    <?php
-                    $this->Form->create($this->base_uri . 'plugin/client_documents/admin_main/delete/' . (isset($document->id) ? $document->id : null));
-                    $this->Form->fieldHidden('id', (isset($document->id) ? $document->id : null));
-                    ?>
-                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/delete/' . (isset($document->id) ? $document->id : null));?>" class="manage" rel="<?php $this->_('AdminMain.modal.delete_document');?>"><?php $this->_('AdminMain.index.option_delete');?></a>
-                    <?php
-                    $this->Form->end();
-                    ?>
+                <td class="text-end">
+                    <div class="d-flex gap-1 justify-content-end">
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/client_documents/admin_main/download/' . ($document->id ?? null));?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminMain.index.option_download');?>">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <?php
+                        $this->Form->create($this->base_uri . 'plugin/client_documents/admin_main/delete/' . ($document->id ?? null), ['class' => 'd-inline']);
+                        $this->Form->fieldHidden('id', ($document->id ?? null));
+                        ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete" data-confirm-message="<?php echo $this->Html->safe($this->_('AdminMain.modal.delete_document', true));?>" title="<?php $this->_('AdminMain.index.option_delete');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php
+                        $this->Form->end();
+                        ?>
+                    </div>
                 </td>
             </tr>
-            <?php
-            }
-            ?>
-        </table>
-        <?php
-        } else {
-        ?>
-        <div class="empty_section">
-            <div class="empty_box">
-                <?php $this->_('AdminMain.index.no_results');?>
-            </div>
-        </div>
-        <?php
-        }
-        $this->Widget->end();
-        ?>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#admin_main a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->Html->safe($this->base_uri);?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
-    });
-</script>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+<?php
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminMain.index.no_results');?></p>
+</div>
+<?php
+}
+$this->Widget->end();
+?>

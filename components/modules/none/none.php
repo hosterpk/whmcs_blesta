@@ -11,7 +11,6 @@
  */
 class None extends Module
 {
-
     /**
      * Initializes the module
      */

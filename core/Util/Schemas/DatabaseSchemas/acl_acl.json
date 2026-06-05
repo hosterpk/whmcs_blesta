@@ -1,0 +1,55 @@
+{
+    "columns": [
+        {
+            "name": "aro_id",
+            "type": "int",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "aco_id",
+            "type": "int",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "action",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "permission",
+            "type": "enum('allow','deny')",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 5
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "aro_id",
+                "aco_id",
+                "action"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

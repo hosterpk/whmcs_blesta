@@ -21,15 +21,8 @@ class AdminCompanyBilling extends AdminController
         parent::preAction();
 
 
-        $this->uses(['Companies', 'Navigation']);
+        $this->uses(['Companies']);
         $this->components(['SettingsCollection']);
-
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**
@@ -608,7 +601,7 @@ class AdminCompanyBilling extends AdminController
             }
 
             if ($this->Input->validates($this->post)) {
-                $this->post['late_fees'] = base64_encode(json_encode($this->post['late_fees']));
+                $this->post['late_fees'] = base64_encode(serialize($this->post['late_fees']));
 
                 // Update settings
                 $fields = ['late_fee_total_amount', 'late_fees'];
@@ -624,7 +617,7 @@ class AdminCompanyBilling extends AdminController
         }
 
         $vars = (array) $this->SettingsCollection->fetchSettings($this->Companies, $this->company_id);
-        $vars['late_fees'] = isset($vars['late_fees']) ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($vars['late_fees'])) : [];
+        $vars['late_fees'] = isset($vars['late_fees']) ? safe_unserialize(base64_decode($vars['late_fees'])) : [];
 
         // Set variables for the partial billing late fees form template
         $form_fields = [
@@ -904,12 +897,6 @@ class AdminCompanyBilling extends AdminController
 
         $this->set('vars', $vars);
         $this->set('periods', $this->CouponTerms->getPeriods());
-
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
-        $this->Javascript->setInline(
-            'Date.firstDayOfWeek=' . ($company_settings['calendar_begins'] == 'sunday' ? 0 : 1) . ';'
-        );
     }
 
     /**
@@ -1154,12 +1141,6 @@ class AdminCompanyBilling extends AdminController
         $this->set('vars', $vars);
         $this->set('coupon', $coupon);
         $this->set('periods', $this->CouponTerms->getPeriods());
-
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
-        $this->Javascript->setInline(
-            'Date.firstDayOfWeek=' . ($company_settings['calendar_begins'] == 'sunday' ? 0 : 1) . ';'
-        );
     }
 
     /**

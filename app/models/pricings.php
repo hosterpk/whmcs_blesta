@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use stdClass;
+
 /**
  * Pricing management
  *
@@ -307,7 +314,7 @@ class Pricings extends AppModel
                 'valid' => [
                     'if_set' => true,
                     'rule' => [
-                        function($price, $period) {
+                        function ($price, $period) {
                             // The renewal price may not be set for the onetime period
                             return ($period != 'onetime' || $price === null);
                         },

@@ -1,0 +1,297 @@
+<?php
+echo (isset($message) ? $message : null);
+?>
+
+<div class="calendar-container">
+    <!-- Custom Toolbar -->
+    <div class="calendar-toolbar">
+        <div class="calendar-toolbar-left">
+            <button class="calendar-nav-btn" id="calendarToday">
+                <i class="bi bi-calendar-day me-1"></i>
+                <span class="btn-text"><?php $this->_('AdminMain.calendar.category_today');?></span>
+            </button>
+            <button class="calendar-nav-btn" id="calendarPrev">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="calendar-nav-btn" id="calendarNext">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="calendar-toolbar-center">
+            <h2 class="calendar-date-display" id="calendarDateDisplay"></h2>
+        </div>
+
+        <div class="calendar-toolbar-right">
+            <div class="view-switcher">
+                <button class="calendar-nav-btn<?php echo ((isset($show_view) ? $show_view : 'dayGridMonth') == 'dayGridMonth') ? ' active' : '';?>" data-calendar-view="dayGridMonth">
+                    <i class="bi bi-grid-3x3 me-1"></i>
+                    <span class="btn-text"><?php $this->_('AdminMain.calendar.category_month');?></span>
+                </button>
+                <button class="calendar-nav-btn<?php echo ((isset($show_view) ? $show_view : '') == 'timeGridWeek') ? ' active' : '';?>" data-calendar-view="timeGridWeek">
+                    <i class="bi bi-calendar-week me-1"></i>
+                    <span class="btn-text"><?php $this->_('AdminMain.calendar.category_week');?></span>
+                </button>
+                <button class="calendar-nav-btn<?php echo ((isset($show_view) ? $show_view : '') == 'timeGridDay') ? ' active' : '';?>" data-calendar-view="timeGridDay">
+                    <i class="bi bi-calendar-day me-1"></i>
+                    <span class="btn-text"><?php $this->_('AdminMain.calendar.category_day');?></span>
+                </button>
+                <button class="calendar-nav-btn" data-calendar-view="listWeek">
+                    <i class="bi bi-list-ul me-1"></i>
+                    <span class="btn-text"><?php $this->_('AdminMain.calendar.category_list');?></span>
+                </button>
+            </div>
+            <button class="calendar-nav-btn calendar-add-btn" id="addEventBtn">
+                <i class="bi bi-plus-lg me-1"></i>
+                <span class="btn-text"><?php $this->_('AdminMain.calendar.categorylink_addevent');?></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden CSRF form -->
+    <?php
+    $this->Form->create(null, ['id' => 'calendar_form']);
+    $this->Form->end();
+    ?>
+
+    <!-- FullCalendar container -->
+    <div id="calendar"></div>
+</div>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
+        var baseUri = <?php echo json_encode($this->Html->safe($this->base_uri, true));?>;
+        var initialView = <?php echo json_encode(isset($show_view) ? $show_view : 'dayGridMonth');?>;
+        var initialDate = new Date(<?php echo 1000 * strtotime(
+            (isset($show_year) ? $show_year : date('Y')) . '-' .
+            (isset($show_month) ? $show_month : date('m')) . '-' .
+            (isset($show_day) ? $show_day : date('d'))
+        );?>);
+        var firstDay = <?php echo (isset($calendar_start_day) ? $this->Html->safe($calendar_start_day) : '0');?>;
+        var calendarLocale = <?php echo json_encode(substr(Configure::get('Blesta.language'), 0, 2));?>;
+        var timeInterval = <?php echo json_encode(isset($calendar_time_interval) ? $calendar_time_interval : '30');?>;
+        var addEventTitle = <?php echo json_encode($this->_('AdminMain.addevent.boxtitle_addevent', true));?>;
+        var editEventTitle = <?php echo json_encode($this->_('AdminMain.editevent.boxtitle_editevent', true));?>;
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: initialView,
+            initialDate: initialDate,
+            headerToolbar: false,
+            firstDay: firstDay,
+            locale: calendarLocale,
+            slotLabelFormat: {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: false
+            },
+            slotDuration: '00:' + timeInterval + ':00',
+            slotLabelInterval: '01:00:00',
+            timeZone: 'UTC',
+            selectable: true,
+            editable: true,
+            eventStartEditable: true,
+            eventDurationEditable: true,
+            eventResizableFromStart: true,
+            navLinks: true,
+            nowIndicator: true,
+            dayMaxEvents: true,
+            eventSources: [
+                {
+                    url: baseUri + 'main/getevents/',
+                    method: 'GET'
+                }
+            ],
+
+            // Navigate to day view when a navLink day is clicked
+            navLinkDayClick: function(date) {
+                calendar.changeView('timeGridDay', date);
+                updateViewSwitcher('timeGridDay');
+            },
+
+            // Date selection -> open add event modal
+            select: function(info) {
+                openAddEventModal(info.start, info.allDay, info.end);
+                calendar.unselect();
+            },
+
+            // Event click -> open edit event modal (only if editable)
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                if (info.event.startEditable) {
+                    openEditEventModal(info.event.id);
+                }
+            },
+
+            // Drag & drop
+            eventDrop: function(info) {
+                updateEventRange(info.event);
+            },
+
+            // Resize
+            eventResize: function(info) {
+                updateEventRange(info.event);
+            },
+
+            // Update date display after any navigation
+            datesSet: function(info) {
+                var display = document.getElementById('calendarDateDisplay');
+                if (display) {
+                    display.textContent = info.view.title;
+                }
+            }
+        });
+
+        calendar.render();
+
+        // --- Toolbar button handlers ---
+
+        document.getElementById('calendarToday').addEventListener('click', function() {
+            calendar.today();
+        });
+
+        document.getElementById('calendarPrev').addEventListener('click', function() {
+            calendar.prev();
+        });
+
+        document.getElementById('calendarNext').addEventListener('click', function() {
+            calendar.next();
+        });
+
+        // View switcher
+        var viewButtons = document.querySelectorAll('[data-calendar-view]');
+        viewButtons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var view = btn.getAttribute('data-calendar-view');
+                calendar.changeView(view);
+                updateViewSwitcher(view);
+            });
+        });
+
+        function updateViewSwitcher(activeView) {
+            viewButtons.forEach(function(b) {
+                b.classList.toggle('active', b.getAttribute('data-calendar-view') === activeView);
+            });
+        }
+
+        // Add Event button
+        document.getElementById('addEventBtn').addEventListener('click', function() {
+            openAddEventModal(null, null, null);
+        });
+
+        // Responsive: auto-switch to list view on mobile
+        if (window.innerWidth < 768 && initialView !== 'listWeek') {
+            calendar.changeView('listWeek');
+            updateViewSwitcher('listWeek');
+        }
+
+        // --- Modal functions ---
+
+        function openAddEventModal(dateStart, allDay, dateEnd) {
+            var calendarView = calendar.getCurrentData().viewSpec.singleUnit;
+            var url = baseUri + 'main/addevent/' + calendarView + '/';
+            var data = {};
+
+            if (dateStart != null) {
+                data.start = dateStart.toString();
+                if (allDay != null) {
+                    data.all_day = allDay ? 1 : 0;
+                }
+                if (dateEnd != null) {
+                    data.end = dateEnd.toString();
+                }
+            }
+
+            showFormModal(addEventTitle, url, data);
+        }
+
+        function openEditEventModal(eventId) {
+            var calendarView = calendar.getCurrentData().viewSpec.singleUnit;
+            var url = baseUri + 'main/editevent/' + eventId + '/' + calendarView + '/';
+            showFormModal(editEventTitle, url, {});
+        }
+
+        function showFormModal(title, url, data) {
+            var modalEl = document.createElement('div');
+            modalEl.className = 'modal fade';
+            modalEl.innerHTML =
+                '<div class="modal-dialog modal-lg">' +
+                '<div class="modal-content">' +
+                '<div class="modal-header">' +
+                '<h5 class="modal-title">' + escapeHtml(title) + '</h5>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+                '</div>' +
+                '<div class="modal-body">' +
+                '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>' +
+                '</div>' +
+                '<div class="modal-footer" style="display:none;"></div>' +
+                '</div>' +
+                '</div>';
+
+            document.body.appendChild(modalEl);
+            var modal = new bootstrap.Modal(modalEl);
+
+            blestaRequest('GET', url, data, function(html) {
+                var body = modalEl.querySelector('.modal-body');
+                body.innerHTML = html;
+
+                // Move button actions into modal-footer
+                var actions = body.querySelector('.modal-footer-actions');
+                var footer = modalEl.querySelector('.modal-footer');
+                if (actions && footer) {
+                    footer.appendChild(actions);
+                    footer.style.display = '';
+                }
+
+                // Re-execute inline scripts (innerHTML does not run <script> tags)
+                body.querySelectorAll('script').forEach(function(oldScript) {
+                    var newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(function(attr) {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            });
+
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                modalEl.remove();
+            });
+
+            modal.show();
+        }
+
+        // --- AJAX event range update (drag/drop, resize) ---
+
+        function updateEventRange(event) {
+            var csrfToken = document.querySelector('#calendar_form input[name="_csrf_token"]');
+            var data = {
+                start_date: event.start ? event.start.toISOString() : '',
+                end_date: event.end ? event.end.toISOString() : (event.start ? event.start.toISOString() : ''),
+                all_day: event.allDay ? 1 : 0
+            };
+            if (csrfToken) {
+                data._csrf_token = csrfToken.value;
+            }
+
+            blestaRequest('POST', baseUri + 'main/editeventrange/' + event.id, data,
+                function(response) {
+                    // success
+                },
+                function(error) {
+                    // error - refetch events
+                    calendar.refetchEvents();
+                },
+                {dataType: 'json'}
+            );
+        }
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    });
+</script>

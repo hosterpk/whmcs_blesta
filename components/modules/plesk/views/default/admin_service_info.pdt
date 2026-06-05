@@ -1,28 +1,36 @@
-    <table class="table">
-        <tr class="heading_row">
-            <td class="fixed_small center border_none"><i class="fas fa-level-up-alt fa-rotate-90"></i></td>
-            <td class="border_left"><?php $this->_('Plesk.service_info.username');?></td>
-            <td><?php $this->_('Plesk.service_info.password');?></td>
-            <td class="last"><?php $this->_('Plesk.service_info.server');?></td>
-            <td class="last"><?php $this->_('Plesk.service_info.options');?></td>
+<?php /** @var View $this **/ ?>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th><i class="bi bi-arrow-up"></i></th>
+            <th><?php $this->_('Plesk.service_info.username'); ?></th>
+            <th><?php $this->_('Plesk.service_info.password'); ?></th>
+            <th><?php $this->_('Plesk.service_info.server'); ?></th>
+            <th><?php $this->_('Plesk.service_info.options'); ?></th>
         </tr>
+    </thead>
+    <tbody>
         <tr>
             <td></td>
-            <td><?php echo (isset($service_fields->plesk_username) ? $this->Html->safe($service_fields->plesk_username) : null);?></td>
-            <td><?php echo (isset($service_fields->plesk_password) ? $this->Html->safe($service_fields->plesk_password) : null);?></td>
-            <td><?php echo (isset($module_row->meta->ip_address) ? $this->Html->safe($module_row->meta->ip_address) : null);?></td>
+            <td><?php echo isset($service_fields->plesk_username)
+                ? $this->Html->safe($service_fields->plesk_username)
+                : null; ?></td>
+            <td><?php echo isset($service_fields->plesk_password)
+                ? $this->Html->safe($service_fields->plesk_password)
+                : null; ?></td>
+            <td><?php echo isset($module_row->meta->ip_address)
+                ? $this->Html->safe($module_row->meta->ip_address)
+                : null; ?></td>
             <td>
-                <?php
-                if ($sso_url ?? null) {
-                ?>
-                    <a href="<?php echo $this->Html->safe($sso_url);?>" target="_blank"><?php $this->_('Plesk.service_info.option_login');?></a>
-                <?php
-                } else {
-                ?>
-                    <span class="text-muted"><?php $this->_('Plesk.service_info.login_unavailable');?></span>
-                <?php
-                }
-                ?>
+                <?php if ($sso_url ?? null) { ?>
+                <a href="<?php echo $this->Html->safe($sso_url); ?>" target="_blank"><?php $this->_(
+    'Plesk.service_info.option_login',
+); ?></a>
+                <?php } else { ?>
+                <span class="text-muted"><?php $this->_('Plesk.service_info.login_unavailable'); ?></span>
+                <?php } ?>
             </td>
         </tr>
-    </table>
+    </tbody>
+</table>

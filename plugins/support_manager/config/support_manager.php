@@ -256,3 +256,13 @@ Department: {ticket.department_name}
 Configure::set('SupportManager.image_mime_types', ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'ico']);
 Configure::set('SupportManager.thumbnails_per_row', 6);
 
+// System Staff ID
+// Staff ID used for system-generated replies (AI, automated actions, etc.)
+// This should match the value used in SupportManagerTickets model
+Configure::set('SupportManager.system_staff_id', 0);
+
+// AI Debug Logging
+// Set to true to enable verbose debug logging for AI features (includes prompts, ticket context, tool calls, etc.)
+// WARNING: Debug logs may contain sensitive ticket data and should only be enabled during development
+Configure::set('SupportManager.ai_debug_logging', false);
+

@@ -1,7 +1,8 @@
 {
-	"version": "2.8.4",
+	"version": "3.0.0",
 	"name": "FeedReaderPlugin.name",
 	"description": "FeedReaderPlugin.description",
+	"icon": "bi bi-rss-fill",
 	"authors": [
 		{
 			"name": "Phillips Data, Inc.",

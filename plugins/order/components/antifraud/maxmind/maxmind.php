@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Maxmind Fraud Detection
  *
@@ -69,7 +70,7 @@ class Maxmind implements FraudDetect
             $server->attach(
                 $fields->fieldText(
                     'maxmind_server',
-                    (isset($vars->maxmind_server) ? $vars->maxmind_server : 'minfraud.maxmind.com'),
+                    ($vars->maxmind_server ?? 'minfraud.maxmind.com'),
                     ['id' => 'maxmind_server']
                 )
             )
@@ -79,7 +80,7 @@ class Maxmind implements FraudDetect
         $key = $fields->label(Language::_('Maxmind.settings.field_key', true), 'maxmind_key');
         $fields->setField(
             $key->attach(
-                $fields->fieldText('maxmind_key', (isset($vars->maxmind_key) ? $vars->maxmind_key : null), ['id' => 'maxmind_key'])
+                $fields->fieldText('maxmind_key', ($vars->maxmind_key ?? null), ['id' => 'maxmind_key'])
             )
         );
 
@@ -92,7 +93,7 @@ class Maxmind implements FraudDetect
             $reject_score->attach(
                 $fields->fieldText(
                     'maxmind_reject_score',
-                    (isset($vars->maxmind_reject_score) ? $vars->maxmind_reject_score : '80'),
+                    ($vars->maxmind_reject_score ?? '80'),
                     ['id' => 'maxmind_reject_score']
                 )
             )
@@ -107,7 +108,7 @@ class Maxmind implements FraudDetect
             $review_score->attach(
                 $fields->fieldText(
                     'maxmind_review_score',
-                    (isset($vars->maxmind_review_score) ? $vars->maxmind_review_score : '10'),
+                    ($vars->maxmind_review_score ?? '10'),
                     ['id' => 'maxmind_review_score']
                 )
             )
@@ -119,7 +120,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_free_email',
                 'allow',
-                (isset($vars->maxmind_free_email) ? $vars->maxmind_free_email : 'allow') == 'allow',
+                ($vars->maxmind_free_email ?? 'allow') == 'allow',
                 ['id' => 'maxmind_free_email_allow'],
                 $fields->label(Language::_('Maxmind.settings.option_allow', true), 'maxmind_free_email_allow')
             )
@@ -128,7 +129,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_free_email',
                 'review',
-                (isset($vars->maxmind_free_email) ? $vars->maxmind_free_email : null) == 'review',
+                ($vars->maxmind_free_email ?? null) == 'review',
                 ['id' => 'maxmind_free_email_review'],
                 $fields->label(Language::_('Maxmind.settings.option_review', true), 'maxmind_free_email_review')
             )
@@ -137,7 +138,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_free_email',
                 'reject',
-                (isset($vars->maxmind_free_email) ? $vars->maxmind_free_email : null) == 'reject',
+                ($vars->maxmind_free_email ?? null) == 'reject',
                 ['id' => 'maxmind_free_email_reject'],
                 $fields->label(Language::_('Maxmind.settings.option_reject', true), 'maxmind_free_email_reject')
             )
@@ -153,7 +154,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_country_mismatch',
                 'allow',
-                (isset($vars->maxmind_country_mismatch) ? $vars->maxmind_country_mismatch : 'allow') == 'allow',
+                ($vars->maxmind_country_mismatch ?? 'allow') == 'allow',
                 ['id' => 'maxmind_country_mismatch_allow'],
                 $fields->label(Language::_('Maxmind.settings.option_allow', true), 'maxmind_country_mismatch_allow')
             )
@@ -162,7 +163,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_country_mismatch',
                 'review',
-                (isset($vars->maxmind_country_mismatch) ? $vars->maxmind_country_mismatch : null) == 'review',
+                ($vars->maxmind_country_mismatch ?? null) == 'review',
                 ['id' => 'maxmind_country_mismatch_review'],
                 $fields->label(Language::_('Maxmind.settings.option_review', true), 'maxmind_country_mismatch_review')
             )
@@ -171,7 +172,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_country_mismatch',
                 'reject',
-                (isset($vars->maxmind_country_mismatch) ? $vars->maxmind_country_mismatch : null) == 'reject',
+                ($vars->maxmind_country_mismatch ?? null) == 'reject',
                 ['id' => 'maxmind_country_mismatch_reject'],
                 $fields->label(Language::_('Maxmind.settings.option_reject', true), 'maxmind_country_mismatch_reject')
             )
@@ -187,7 +188,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_risky_country',
                 'allow',
-                (isset($vars->maxmind_risky_country) ? $vars->maxmind_risky_country : 'allow') == 'allow',
+                ($vars->maxmind_risky_country ?? 'allow') == 'allow',
                 ['id' => 'maxmind_risky_country_allow'],
                 $fields->label(Language::_('Maxmind.settings.option_allow', true), 'maxmind_risky_country_allow')
             )
@@ -196,7 +197,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_risky_country',
                 'review',
-                (isset($vars->maxmind_risky_country) ? $vars->maxmind_risky_country : null) == 'review',
+                ($vars->maxmind_risky_country ?? null) == 'review',
                 ['id' => 'maxmind_risky_country_review'],
                 $fields->label(Language::_('Maxmind.settings.option_review', true), 'maxmind_risky_country_review')
             )
@@ -205,7 +206,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_risky_country',
                 'reject',
-                (isset($vars->maxmind_risky_country) ? $vars->maxmind_risky_country : null) == 'reject',
+                ($vars->maxmind_risky_country ?? null) == 'reject',
                 ['id' => 'maxmind_risky_country_reject'],
                 $fields->label(Language::_('Maxmind.settings.option_reject', true), 'maxmind_risky_country_reject')
             )
@@ -218,7 +219,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_anon_proxy',
                 'allow',
-                (isset($vars->maxmind_anon_proxy) ? $vars->maxmind_anon_proxy : 'allow') == 'allow',
+                ($vars->maxmind_anon_proxy ?? 'allow') == 'allow',
                 ['id' => 'maxmind_anon_proxy_allow'],
                 $fields->label(Language::_('Maxmind.settings.option_allow', true), 'maxmind_anon_proxy_allow')
             )
@@ -227,7 +228,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_anon_proxy',
                 'review',
-                (isset($vars->maxmind_anon_proxy) ? $vars->maxmind_anon_proxy : null) == 'review',
+                ($vars->maxmind_anon_proxy ?? null) == 'review',
                 ['id' => 'maxmind_anon_proxy_review'],
                 $fields->label(Language::_('Maxmind.settings.option_review', true), 'maxmind_anon_proxy_review')
             )
@@ -236,7 +237,7 @@ class Maxmind implements FraudDetect
             $fields->fieldRadio(
                 'maxmind_anon_proxy',
                 'reject',
-                (isset($vars->maxmind_anon_proxy) ? $vars->maxmind_anon_proxy : null) == 'reject',
+                ($vars->maxmind_anon_proxy ?? null) == 'reject',
                 ['id' => 'maxmind_anon_proxy_reject'],
                 $fields->label(Language::_('Maxmind.settings.option_reject', true), 'maxmind_anon_proxy_reject')
             )
@@ -306,20 +307,26 @@ class Maxmind implements FraudDetect
             $status = $this->options['maxmind_free_email'];
         }
 
-        if ($status != 'reject' && $result->countryMatch == 'No'
-            && $this->options['maxmind_country_mismatch'] != 'allow') {
+        if (
+            $status != 'reject' && $result->countryMatch == 'No'
+            && $this->options['maxmind_country_mismatch'] != 'allow'
+        ) {
             $this->setError($this->options['maxmind_country_mismatch'], 'country_mismatch');
             $status = $this->options['maxmind_country_mismatch'];
         }
 
-        if ($status != 'reject' && $result->highRiskCountry == 'Yes'
-            && $this->options['maxmind_risky_country'] != 'allow') {
+        if (
+            $status != 'reject' && $result->highRiskCountry == 'Yes'
+            && $this->options['maxmind_risky_country'] != 'allow'
+        ) {
             $this->setError($this->options['maxmind_risky_country'], 'risky_country');
             $status = $this->options['maxmind_risky_country'];
         }
 
-        if ($status != 'reject' && $result->anonymousProxy == 'Yes'
-            && $this->options['maxmind_anon_proxy'] != 'allow') {
+        if (
+            $status != 'reject' && $result->anonymousProxy == 'Yes'
+            && $this->options['maxmind_anon_proxy'] != 'allow'
+        ) {
             $this->setError($this->options['maxmind_anon_proxy'], 'anon_proxy');
             $status = $this->options['maxmind_anon_proxy'];
         }

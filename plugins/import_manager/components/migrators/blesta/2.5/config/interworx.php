@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('interworx.map', [
     'module' => 'interworx',
     'module_row_key' => 'hostn',

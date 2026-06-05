@@ -1,5 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Exception;
+use Language;
+use Loader;
+use ReflectionClass;
+use stdClass;
+
 /**
  * Invoice template manager. Handles fetches invoice templates
  *
@@ -38,7 +47,7 @@ class InvoiceTemplateManager extends AppModel
 
                     try {
                         $template = $this->loadTemplate($temp->class);
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         // Template could not be loaded
                         continue;
                     }
@@ -87,12 +96,14 @@ class InvoiceTemplateManager extends AppModel
                 $ext = '.php';
                 if (substr($file, -strlen($ext)) == $ext) {
                     $name = substr($file, 0, -4);
-                    if (in_array(substr($name, -2), $exclude_types)
+                    if (
+                        in_array(substr($name, -2), $exclude_types)
                         && file_exists($dir . substr($name, 0, -2) . $ext)
                     ) {
                         continue;
                     }
-                    if (in_array(substr($name, -1), $exclude_types)
+                    if (
+                        in_array(substr($name, -1), $exclude_types)
                         && file_exists($dir . substr($name, 0, -1) . $ext)
                     ) {
                         continue;

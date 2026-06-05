@@ -124,3 +124,8 @@ $lang['AdminCompanyPlugins.settings.actions_description'] = 'Actions define what
 $lang['AdminCompanyPlugins.settings.actions_uri'] = 'URI: %1$s'; // %1$s is the URI of the plugin action
 $lang['AdminCompanyPlugins.settings.actions_heading_sub'] = 'Sub Options';
 $lang['AdminCompanyPlugins.settings.actions_heading_secondary'] = 'Secondary Options';
+
+
+// Filter
+$lang['AdminCompanyPlugins.text_filter_placeholder'] = 'Filter plugins...';
+$lang['AdminCompanyPlugins.text_filter_no_results'] = 'No matching plugins found.';

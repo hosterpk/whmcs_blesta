@@ -1,3 +1,0 @@
-<?php
-$this->Form->label($this->_('AdminReports.index.field_report_type', true), 'type');
-$this->Form->fieldSelect('type', (isset($types) ? $types : null), (isset($type) ? $type : null), ['id' => 'type']);

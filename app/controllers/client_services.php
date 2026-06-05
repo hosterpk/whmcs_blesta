@@ -404,7 +404,7 @@ class ClientServices extends ClientController
      * @param array|bool|null $errors An array of error messages (optional)
      * @param array $messages An array of any other messages keyed by type (optional)
      */
-    private function setServiceTabMessages($errors = null, array $messages = null)
+    private function setServiceTabMessages($errors = null, ?array $messages = null)
     {
         // Prioritize error messages over any other messages
         if (!empty($errors)) {
@@ -754,22 +754,20 @@ class ClientServices extends ClientController
             }
 
             if ($this->Users->auth($username, ['password' => $this->post['password']])) {
+                $past_due_invoices = $this->Invoices->getAllWithService($service->id, null, 'past_due');
+
                 // Cancel the service
                 switch ($this->post['cancel']) {
                     case 'now':
-                        if (
+                        if (empty($past_due_invoices) && (
                             $this->client->settings['clients_cancel_options'] == 'now'
                             || $this->client->settings['clients_cancel_options'] == 'both'
-                        ) {
+                        )) {
                             $this->Services->cancel($service->id, $data);
                         }
                         break;
                     case 'term':
-                        // Fetch open invoices associated to this service
-                        $invoices = $this->Invoices->getAllWithService($service->id);
-
-                        // Cancel at end of service term
-                        if (empty($invoices) && (
+                        if (empty($past_due_invoices) && (
                             $this->client->settings['clients_cancel_options'] == 'end_of_term'
                             || $this->client->settings['clients_cancel_options'] == 'both'
                         )) {
@@ -872,7 +870,7 @@ class ClientServices extends ClientController
         }
 
         $this->set('service', $service);
-        $this->set('invoices', $this->Invoices->getAllWithService($service->id));
+        $this->set('past_due_invoices', $this->Invoices->getAllWithService($service->id, null, 'past_due'));
         $this->set('package', $this->Packages->get($service->package->id));
         $this->set('vars', $vars);
         $this->set('clients_cancel_options', $clients_cancel_options);
@@ -2364,9 +2362,12 @@ class ClientServices extends ClientController
         // Determine what the new service totals would be once upgraded
         $recurServiceData = null;
         if ($pricing->period != 'onetime') {
-            // Add the service coupon to vars for renewal price calculation
+            // Add the service coupon to vars for renewal price calculation.
+            // Flag from_service so the pricing system applies limit_recurring
+            // semantics (the coupon is already bound to this existing service).
             if (!empty($service->coupon_id)) {
                 $vars['coupon_id'] = $service->coupon_id;
+                $vars['from_service'] = '1';
             }
 
             $presenter_options = [
@@ -2459,7 +2460,7 @@ class ClientServices extends ClientController
      * @param PresenterInterface $recurPresenter An instance of the PresenterInterface representing a renewing service
      * @return string The totals partial template
      */
-    private function totals(PresenterInterface $presenter, $currency, PresenterInterface $recurPresenter = null)
+    private function totals(PresenterInterface $presenter, $currency, ?PresenterInterface $recurPresenter = null)
     {
         $pricingFactory = $this->getFromContainer('pricing');
         $arrayMerge = $pricingFactory->arrayMerge();

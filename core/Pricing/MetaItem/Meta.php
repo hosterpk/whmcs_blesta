@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\MetaItem;
 
 use Blesta\Core\Pricing\MetaItem\MetaItemInterface;

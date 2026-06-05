@@ -1,123 +1,129 @@
+<?php /** @var View $this **/ ?>
 
-        <?php
-        if ($enabled ?? false) {
-        ?>
-            <div class="title_row first">
-                <h3><?php $this->_('RealtimeRegister.tab_dns.heading');?></h3>
-            </div>
-            
-            <div class="pad">
-                <table class="table">
-                    <tbody>
-                        <tr class="heading_row">
-                            <td><?php $this->_('RealtimeRegister.tab_dns.heading_name');?></td>
-                            <td><?php $this->_('RealtimeRegister.tab_dns.heading_type');?></td>
-                            <td><?php $this->_('RealtimeRegister.tab_dns.heading_content');?></td>
-                            <td><?php $this->_('RealtimeRegister.tab_dns.heading_ttl');?></td>
-                            <td><?php $this->_('RealtimeRegister.tab_dns.heading_priority');?></td>
-                            <td class="last"><?php $this->_('RealtimeRegister.tab_dns.heading_options');?></td>
-                        </tr>
+<?php if ($enabled ?? false) { ?>
+<h6 class="form-section-header"><?php $this->_('RealtimeRegister.tab_dns.heading'); ?></h6>
 
+<div class="mb-3">
+    <table class="table">
+        <thead>
+            <tr>
+                <th><?php $this->_('RealtimeRegister.tab_dns.heading_name'); ?></th>
+                <th><?php $this->_('RealtimeRegister.tab_dns.heading_type'); ?></th>
+                <th><?php $this->_('RealtimeRegister.tab_dns.heading_content'); ?></th>
+                <th><?php $this->_('RealtimeRegister.tab_dns.heading_ttl'); ?></th>
+                <th><?php $this->_('RealtimeRegister.tab_dns.heading_priority'); ?></th>
+                <th><?php $this->_('RealtimeRegister.tab_dns.heading_options'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <?php if (!empty($dns_records)) {
+                foreach ($dns_records as $record) { ?>
+            <tr>
+                <td><?php echo $this->Html->safe($record->name ?? ''); ?></td>
+                <td><?php echo $this->Html->safe($record->type ?? ''); ?></td>
+                <td><?php echo $this->Html->safe($record->content ?? ''); ?></td>
+                <td><?php echo $this->Html->safe($record->ttl ?? ''); ?></td>
+                <td><?php echo $this->Html->safe($record->prio ?? ''); ?></td>
+                <td>
                     <?php
-                    if (!empty($dns_records)) {
-                        foreach ($dns_records as $record) {
+                    $this->Form->create();
+                    $this->Form->fieldHidden('action', 'delete');
+                    $this->Form->fieldHidden('name', $record->name ?? '');
+                    $this->Form->fieldHidden('type', $record->type ?? '');
                     ?>
-                        <tr>
-                            <td><?php echo $this->Html->safe($record->name ?? '');?></td>
-                            <td><?php echo $this->Html->safe($record->type ?? '');?></td>
-                            <td><?php echo $this->Html->safe($record->content ?? '');?></td>
-                            <td><?php echo $this->Html->safe($record->ttl ?? '');?></td>
-                            <td><?php echo $this->Html->safe($record->prio ?? '');?></td>
-                            <td>
-                                <?php
-                                $this->Form->create();
-                                $this->Form->fieldHidden('action', 'delete');
-                                $this->Form->fieldHidden('name', $record->name ?? '');
-                                $this->Form->fieldHidden('type', $record->type ?? '');
-                                ?>
-                                <button class="btn btn-light btn-xs" type="submit">
-                                    <i class="fas fa-ban"></i> <?php $this->_('RealtimeRegister.tab_dns.field_delete');?>
-                                </button>
-                                <?php
-                                $this->Form->end();
-                                ?>
-                            </td>
-                        </tr>
-                    <?php
-                        }
-                    } else {
-                    ?>
-                        <tr>
-                            <td colspan="6">
-                                <div class="empty_section">
-                                    <div class="empty_box"><?php $this->_('RealtimeRegister.tab_dns.text_no_dns_records');?></div>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php
-                    }
-                    ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <?php
-            $this->Form->create();
-            $this->Form->fieldHidden('action', 'add');
-            ?>
-            <div class="title_row">
-                <h3><?php $this->_('RealtimeRegister.tab_dns.heading_add_record');?></h3>
-            </div>
-
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('RealtimeRegister.tab_dns.field_name', true), 'name');
-                        $this->Form->fieldText('name', ($vars->name ?? ''), ['id' => 'name', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_dns.field_name', true)]);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('RealtimeRegister.tab_dns.field_type', true), 'type');
-                        $this->Form->fieldSelect('type', $record_types ?? [], ($vars->type ?? ''), ['id' => 'type', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_dns.field_type', true)]);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('RealtimeRegister.tab_dns.field_content', true), 'content');
-                        $this->Form->fieldTextArea('content', ($vars->content ?? ''), ['id' => 'content', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_dns.field_content', true)]);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('RealtimeRegister.tab_dns.field_ttl', true), 'ttl');
-                        $this->Form->fieldText('ttl', ($vars->ttl ?? '3600'), ['id' => 'ttl', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_dns.field_ttl', true)]);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('RealtimeRegister.tab_dns.field_prio', true), 'prio');
-                        $this->Form->fieldText('prio', ($vars->ttl ?? ''), ['id' => 'prio', 'class' => 'form-control', 'placeholder' => $this->_('RealtimeRegister.tab_dns.field_prio', true)]);
-                        ?>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('RealtimeRegister.tab_dns.field_add', true), ['class' => 'btn btn-primary float-right']);
+                    <button class="btn btn-sm btn-outline-danger" type="submit" title="<?php $this->_('RealtimeRegister.tab_dns.field_delete'); ?>">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <?php $this->Form->end(); ?>
+                </td>
+            </tr>
+                <?php }
+            } else {
                 ?>
-            </div>
-            <?php
-            $this->Form->end();
-            ?>
-        <?php
-        } else {
-        ?>
-            <div class="empty_section">
-                <div class="empty_box"><?php $this->_('RealtimeRegister.tab_dns.text_dns_disabled');?></div>
-            </div>
-        <?php
-        }
-        ?>
+            <tr>
+                <td colspan="6">
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p class="mt-3 mb-0"><?php $this->_('RealtimeRegister.tab_dns.text_no_dns_records'); ?></p>
+                    </div>
+                </td>
+            </tr>
+                        <?php
+            } ?>
+        </tbody>
+    </table>
+</div>
+
+                    <?php
+                    $this->Form->create();
+                    $this->Form->fieldHidden('action', 'add');
+                    ?>
+<h6 class="form-section-header"><?php $this->_('RealtimeRegister.tab_dns.heading_add_record'); ?></h6>
+
+<div>
+    <div class="mb-3">
+    <?php
+    $this->Form->label($this->_('RealtimeRegister.tab_dns.field_name', true), 'name', ['class' => 'form-label']);
+    $this->Form->fieldText('name', $vars->name ?? '', [
+        'id' => 'name',
+        'class' => 'form-control',
+        'placeholder' => $this->_('RealtimeRegister.tab_dns.field_name', true),
+    ]);
+    ?>
+    </div>
+    <div class="mb-3">
+    <?php
+    $this->Form->label($this->_('RealtimeRegister.tab_dns.field_type', true), 'type', ['class' => 'form-label']);
+    $this->Form->fieldSelect('type', $record_types ?? [], $vars->type ?? '', [
+        'id' => 'type',
+        'class' => 'form-select',
+        'placeholder' => $this->_('RealtimeRegister.tab_dns.field_type', true),
+    ]);
+    ?>
+    </div>
+    <div class="mb-3">
+    <?php
+    $this->Form->label($this->_('RealtimeRegister.tab_dns.field_content', true), 'content', ['class' => 'form-label']);
+    $this->Form->fieldTextArea('content', $vars->content ?? '', [
+        'id' => 'content',
+        'class' => 'form-control',
+        'placeholder' => $this->_('RealtimeRegister.tab_dns.field_content', true),
+    ]);
+    ?>
+    </div>
+    <div class="mb-3">
+    <?php
+    $this->Form->label($this->_('RealtimeRegister.tab_dns.field_ttl', true), 'ttl', ['class' => 'form-label']);
+    $this->Form->fieldText('ttl', $vars->ttl ?? '3600', [
+        'id' => 'ttl',
+        'class' => 'form-control',
+        'placeholder' => $this->_('RealtimeRegister.tab_dns.field_ttl', true),
+    ]);
+    ?>
+    </div>
+    <div class="mb-3">
+    <?php
+    $this->Form->label($this->_('RealtimeRegister.tab_dns.field_prio', true), 'prio', ['class' => 'form-label']);
+    $this->Form->fieldText('prio', $vars->ttl ?? '', [
+        'id' => 'prio',
+        'class' => 'form-control',
+        'placeholder' => $this->_('RealtimeRegister.tab_dns.field_prio', true),
+    ]);
+    ?>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end">
+    <?php $this->Form->fieldSubmit('save', $this->_('RealtimeRegister.tab_dns.field_add', true), [
+        'class' => 'btn btn-primary'
+    ]); ?>
+</div>
+                    <?php $this->Form->end(); ?>
+<?php } else { ?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('RealtimeRegister.tab_dns.text_dns_disabled'); ?></p>
+</div>
+<?php }
+?>

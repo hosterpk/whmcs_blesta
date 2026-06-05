@@ -1,0 +1,226 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyCurrencies.setup.boxtitle_setup', true), ['id' => 'admin_company_currencies_setup']);
+            ?>
+            <?php
+            $this->Form->create(null, ['class' => 'disable-on-submit']);
+            ?>
+
+                    <!-- General Settings -->
+                    <h6 class="form-section-header"><?php $this->_('AdminCompanyCurrencies.setup.heading_general');?></h6>
+
+                    <div class="mb-3">
+                        <label for="default_currency" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.default_currency');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.default_currency', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'default_currency',
+                            (isset($currencies) ? $currencies : null),
+                            (isset($vars['default_currency']) ? $vars['default_currency'] : null),
+                            ['id' => 'default_currency', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'show_currency_code',
+                            'true',
+                            ((isset($vars['show_currency_code']) ? $vars['show_currency_code'] : null) == 'true'),
+                            ['id' => 'show_currency_code', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="show_currency_code" class="form-check-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.show_currency_code');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.show_currency_code', true));?>"></i>
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'client_set_currency',
+                            'true',
+                            ((isset($vars['client_set_currency']) ? $vars['client_set_currency'] : null) == 'true'),
+                            ['id' => 'client_set_currency', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="client_set_currency" class="form-check-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.client_set_currency');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.client_set_currency', true));?>"></i>
+                        </label>
+                    </div>
+
+                    <!-- Multi-Currency Settings -->
+                    <h6 class="form-section-header"><?php $this->_('AdminCompanyCurrencies.setup.heading_multicurrency');?></h6>
+
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'multi_currency_pricing',
+                            'package',
+                            ((isset($vars['multi_currency_pricing']) ? $vars['multi_currency_pricing'] : 'package') == 'package'),
+                            ['id' => 'multi_currency_pricing', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="multi_currency_pricing" class="form-check-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.multi_currency_pricing');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.multi_currency_pricing', true));?>"></i>
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'exchange_rates_auto_update',
+                            'true',
+                            ((isset($vars['exchange_rates_auto_update']) ? $vars['exchange_rates_auto_update'] : null) == 'true'),
+                            ['id' => 'exchange_rates_auto_update', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="exchange_rates_auto_update" class="form-check-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.exchange_rates_auto_update');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.exchange_rates_auto_update', true));?>"></i>
+                        </label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="exchange_rates_processor" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.exchange_rates_processor');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.exchange_rates_processor', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'exchange_rates_processor',
+                            array_merge(['' => Language::_('AppController.select.please', true)], $this->Form->collapseObjectArray((isset($exchange_rate_processor_data) ? $exchange_rate_processor_data : null), 'name', 'processor')),
+                            (isset($vars['exchange_rates_processor']) ? $vars['exchange_rates_processor'] : null),
+                            ['id' => 'exchange_rates_processor', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3" id="erp_key" style="display: none;">
+                        <label for="exchange_rates_processor_key" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.exchange_rates_processor_key');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.exchange_rates_processor_key', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'exchange_rates_processor_key',
+                            (isset($vars['exchange_rates_processor_key']) ? $vars['exchange_rates_processor_key'] : null),
+                            ['id' => 'exchange_rates_processor_key', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><?php $this->_('AdminCompanyCurrencies.setup.field.last_updated');?></label>
+                        <div>
+                            <?php echo $this->Html->safe($exchange_rate_last_updated ?? '');?>
+                            <?php $this->_('AdminCompanyCurrencies.setup.open_parenthesis');?><a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/currencies/updaterates/');?>"><?php $this->_('AdminCompanyCurrencies.setup.text_update_now');?></a><?php $this->_('AdminCompanyCurrencies.setup.closed_parenthesis');?>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="exchange_rates_padding" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.setup.field.exchange_rates_padding');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.exchange_rates_padding', true));?>"></i>
+                        </label>
+                        <div class="input-group" style="max-width: 200px;">
+                            <?php
+                            $this->Form->fieldText(
+                                'exchange_rates_padding',
+                                (isset($vars['exchange_rates_padding']) ? $vars['exchange_rates_padding'] : null),
+                                ['id' => 'exchange_rates_padding', 'class' => 'form-control']
+                            );
+                            ?>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminCompanyCurrencies.setup.field.setupsubmit', true),
+                        ['class' => 'btn btn-primary']
+                    );
+                    ?>
+                </div>
+                <?php
+                $this->Form->end();
+                ?>
+            <?php $this->Widget->end(); ?>
+        </div>
+
+        <script>
+        /**
+         * Toggle exchange rate processor API key field
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            const processorSelect = document.getElementById('exchange_rates_processor');
+            const erpKeyField = document.getElementById('erp_key');
+
+            if (!processorSelect || !erpKeyField) return;
+
+            // Create array of processors that require keys
+            const requiresKey = [
+                <?php
+                $processor_keys = [];
+                foreach ((isset($exchange_rate_processor_data) ? $exchange_rate_processor_data : []) as $data) {
+                    if ($data->requires_key) {
+                        $processor_keys[] = '"' . $this->Html->safe($data->processor) . '"';
+                    }
+                }
+                echo implode(',', $processor_keys);
+                ?>
+            ];
+
+            function toggleErpKey() {
+                if (requiresKey.includes(processorSelect.value)) {
+                    erpKeyField.style.display = 'block';
+                } else {
+                    erpKeyField.style.display = 'none';
+                }
+            }
+
+            // Initialize on page load
+            toggleErpKey();
+
+            // Update when selection changes
+            processorSelect.addEventListener('change', toggleErpKey);
+        });
+        </script>

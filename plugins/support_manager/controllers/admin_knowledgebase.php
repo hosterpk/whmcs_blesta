@@ -108,6 +108,14 @@ class AdminKnowledgebase extends SupportManagerKbController
         $default_lang = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'language');
         $default_lang = (isset($default_lang['value']) ? $default_lang['value'] : '');
 
+        // Fetch the categories and calculate item counts
+        $categories = $this->SupportManagerKbCategories->getAll($this->company_id, $current_category_id);
+        foreach ($categories as &$cat) {
+            $subcategory_count = count($this->SupportManagerKbCategories->getAll($this->company_id, $cat->id));
+            $article_count = count($this->SupportManagerKbArticles->getAll($this->company_id, $cat->id));
+            $cat->item_count = $subcategory_count + $article_count;
+        }
+
         // Fetch the articles
         $articles = $this->SupportManagerKbArticles->getAll($this->company_id, $current_category_id);
 
@@ -117,20 +125,16 @@ class AdminKnowledgebase extends SupportManagerKbController
             $article->uri_title = $this->getArticleTitleUri($article);
         }
 
-        $this->set('categories', $this->SupportManagerKbCategories->getAll($this->company_id, $current_category_id));
-        $this->set('articles', $articles);
+        // Build the article list partial
+        $vars = [
+            'categories' => $categories,
+            'articles' => $articles,
+            'current_category' => $category
+        ];
+
+        $this->set('article_list', $this->partial('admin_knowledgebase_article_list', $vars));
         $this->set('current_category', $category);
         $this->set('default_language', $default_lang);
-        $this->set(
-            'bread_crumbs',
-            $this->partial(
-                'admin_knowledgebase_breadcrumbs_list',
-                [
-                    'current_category' => $category,
-                    'categories' => $this->getBreadCrumbs(($category ? $category->id : null))
-                ]
-            )
-        );
     }
 
     /**

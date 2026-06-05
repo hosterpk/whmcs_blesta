@@ -1,0 +1,124 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyGeneral.humanverification.boxtitle_humanverification', true), ['id' => 'admin_company_general_humanverification']);
+            ?>
+                    <?php
+                    $this->Form->create(null, ['class' => 'disable-on-submit']);
+                    ?>
+
+                    <!-- CAPTCHA Provider Selection -->
+                    <h6 class="form-section-header"><?php $this->_('AdminCompanyGeneral.humanverification.heading_captcha_provider');?></h6>
+
+                    <div class="mb-4">
+                        <label for="captcha" class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.humanverification.field_captcha');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.captcha', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'captcha',
+                            $captchas,
+                            (isset($vars['captcha']) ? $vars['captcha'] : null),
+                            ['id' => 'captcha', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                    <!-- Provider-Specific Options -->
+                    <?php
+                    foreach ($options as $captcha_id => $input_html) {
+                    ?>
+                    <div class="captcha-options captcha-<?php echo $this->Html->safe($captcha_id);?>" style="display: none;">
+                        <?php
+                        // Show CAPTCHA provider fields
+                        if (isset($input_html) && ($captcha_field_html = $input_html->generate(null, $this->view))) {
+                            echo $captcha_field_html;
+                        }
+                        ?>
+                    </div>
+                    <?php
+                    }
+                    ?>
+
+                    <!-- Enabled Forms Section -->
+                    <h6 class="form-section-header"><?php $this->_('AdminCompanyGeneral.humanverification.heading_enabled_forms');?></h6>
+
+                    <?php
+                    foreach ($forms as $form) {
+                    ?>
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'captcha_enabled_forms[' . $form . ']',
+                            '1',
+                            (isset($vars['captcha_enabled_forms'][$form]) ? $vars['captcha_enabled_forms'][$form] : null) == '1',
+                            ['id' => 'captcha_enabled_forms_' . $form, 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="captcha_enabled_forms_<?php echo $form;?>" class="form-check-label">
+                            <?php $this->_('AdminCompanyGeneral.humanverification.field_captcha_enabled_forms_' . $form);?>
+                        </label>
+                    </div>
+                    <?php
+                    }
+                    ?>
+
+                </div>
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminCompanyGeneral.humanverification.field_submit', true),
+                        ['class' => 'btn btn-primary']
+                    );
+                    ?>
+                </div>
+                <?php
+                $this->Form->end();
+                ?>
+<?php
+$this->Widget->end();
+?>
+        </div>
+
+        <script>
+        /**
+         * CAPTCHA provider option toggling
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            const captchaSelect = document.getElementById('captcha');
+            if (!captchaSelect) return;
+
+            function updateCaptchaOptions() {
+                const selectedCaptcha = captchaSelect.value;
+
+                // Hide all CAPTCHA options
+                document.querySelectorAll('.captcha-options').forEach(function(element) {
+                    element.style.display = 'none';
+                });
+
+                // Show selected CAPTCHA options
+                if (selectedCaptcha) {
+                    const selectedOptions = document.querySelector('.captcha-' + selectedCaptcha);
+                    if (selectedOptions) {
+                        selectedOptions.style.display = 'block';
+                    }
+                }
+            }
+
+            // Initialize on page load
+            updateCaptchaOptions();
+
+            // Update when selection changes
+            captchaSelect.addEventListener('change', updateCaptchaOptions);
+        });
+        </script>

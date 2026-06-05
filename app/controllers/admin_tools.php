@@ -1,7 +1,8 @@
 <?php
 
 use Blesta\Core\Util\Filters\LogFilters;
-use Blesta\Core\Util\Filters\ServiceChangesFilters;
+use Blesta\Core\Util\Filters\SystemLogFilters;
+use Blesta\Core\Util\LogReader\SystemLogReader;
 
 /**
  * Admin Tools
@@ -26,6 +27,9 @@ class AdminTools extends AppController
         if (substr($this->action, 0, 3) == 'log') {
             $this->action = 'logs';
         }
+        if ($this->action == 'integritycheck') {
+            $this->action = 'utilities';
+        }
 
         $this->requireLogin();
         $this->action = $orig_action;
@@ -35,14 +39,6 @@ class AdminTools extends AppController
 
         Loader::loadModels($this, ['Companies', 'Transactions']);
 
-        // Sets the JS libraries for this page
-        $calendar_begins = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'calendar_begins')
-            ->value;
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
-        $this->Javascript->setInline(
-            'Date.firstDayOfWeek=' . ($calendar_begins == 'sunday' ? 0 : 1) . ';'
-        );
     }
 
     /**
@@ -935,6 +931,83 @@ class AdminTools extends AppController
     }
 
     /**
+     * List system file log data
+     */
+    public function logSystem()
+    {
+        $page = (isset($this->get[0]) ? (int) $this->get[0] : 1);
+
+        // Set filters from post input
+        $post_filters = [];
+        if (isset($this->post['filters'])) {
+            $post_filters = $this->post['filters'];
+            unset($this->post['filters']);
+
+            foreach ($post_filters as $filter => $value) {
+                // Skip array filters (like levels) from empty check
+                if (!is_array($value) && empty($value)) {
+                    unset($post_filters[$filter]);
+                }
+            }
+        }
+
+        // Apply default filters when no filters have been submitted
+        if (empty($post_filters)) {
+            $post_filters['levels'] = SystemLogFilters::DEFAULT_LEVELS;
+            $post_filters['start_date'] = date('Y-m-d');
+        }
+
+        // Get the log directory from system settings
+        $this->uses(['Settings']);
+        $log_dir_setting = $this->Settings->getSetting('log_dir');
+        $log_dir = $log_dir_setting ? $log_dir_setting->value : '';
+
+        $system_logs = [];
+        $total_results = 0;
+        $log_dir_valid = !empty($log_dir) && is_dir($log_dir) && is_readable($log_dir);
+
+        if ($log_dir_valid) {
+            $per_page = Configure::get('Blesta.results_per_page') ?? 25;
+            $reader = new SystemLogReader($log_dir, $per_page);
+            $system_logs = $reader->getEntries($page, $post_filters);
+            $total_results = $reader->getEntryCount($post_filters);
+        }
+
+        // Set the input field filters for the widget
+        $log_filters = new SystemLogFilters();
+        $filter_options = [
+            'language' => Configure::get('Blesta.language'),
+            'company_id' => Configure::get('Blesta.company_id')
+        ];
+        $this->set('filters', $log_filters->getFilters($filter_options, $post_filters));
+        $this->set(
+            'level_checkbox_html',
+            $log_filters->getLevelCheckboxHtml(
+                $filter_options,
+                $post_filters['levels'] ?? SystemLogFilters::DEFAULT_LEVELS
+            )
+        );
+
+        $this->set('filter_vars', $post_filters);
+        $this->set('system_logs', $system_logs);
+        $this->set('log_dir_valid', $log_dir_valid);
+        $this->set('link_tabs', $this->getLogNames());
+
+        // Overwrite default pagination settings
+        $settings = array_merge(
+            Configure::get('Blesta.pagination'),
+            [
+                'total_results' => $total_results,
+                'uri' => $this->base_uri . 'tools/logs/system/[p]/',
+                'params' => []
+            ]
+        );
+        $this->setPagination($this->get, $settings);
+
+        return $this->renderAjaxWidgetIfAsync(isset($this->get[0]));
+    }
+
+    /**
      * Retrieves a list of link tabs for use in templates
      */
     private function getLogNames()
@@ -952,6 +1025,7 @@ class AdminTools extends AppController
             ['name' => Language::_('AdminTools.getlognames.text_transactions', true), 'uri' => 'transactions'],
             ['name' => Language::_('AdminTools.getlognames.text_cron', true), 'uri' => 'cron'],
             ['name' => Language::_('AdminTools.getlognames.text_invoice_delivery', true), 'uri' => 'invoicedelivery'],
+            ['name' => Language::_('AdminTools.getlognames.text_system', true), 'uri' => 'system'],
         ];
     }
 
@@ -1002,6 +1076,33 @@ class AdminTools extends AppController
      */
     public function utilities()
     {
+        // Handle clear file cache request
+        if (isset($this->post['clear_file_cache'])) {
+            $company_id = Configure::get('Blesta.company_id');
+
+            // Clear views cache (has subdirectories per client)
+            Cache::emptyCache($company_id . DS . 'views' . DS);
+            $view_dirs = glob(CACHEDIR . $company_id . DS . 'views' . DS . '*', GLOB_ONLYDIR) ?: [];
+            foreach ($view_dirs as $view_dir) {
+                Cache::emptyCache($company_id . DS . 'views' . DS . basename($view_dir) . DS);
+            }
+
+            // Clear nav cache (has subdirectories per staff ID)
+            $nav_dirs = glob(CACHEDIR . $company_id . DS . 'nav' . DS . '*', GLOB_ONLYDIR) ?: [];
+            foreach ($nav_dirs as $nav_dir) {
+                Cache::emptyCache($company_id . DS . 'nav' . DS . basename($nav_dir) . DS);
+            }
+
+            // Clear plugins cache (has subdirectories per plugin)
+            $plugin_dirs = glob(CACHEDIR . $company_id . DS . 'plugins' . DS . '*', GLOB_ONLYDIR) ?: [];
+            foreach ($plugin_dirs as $plugin_dir) {
+                Cache::emptyCache($company_id . DS . 'plugins' . DS . basename($plugin_dir) . DS);
+            }
+
+            $this->flashMessage('message', Language::_('AdminTools.!success.cache_cleared', true));
+            $this->redirect($this->base_uri . 'tools/utilities/');
+        }
+
         if (!isset($this->Record)) {
             Loader::loadComponents($this, ['Record']);
         }
@@ -1063,7 +1164,7 @@ class AdminTools extends AppController
             }
 
             // Set success message and redirect
-            $this->flashMessage('success', Language::_('AdminTools.!success.collation_updated'));
+            $this->flashMessage('message', Language::_('AdminTools.!success.collation_updated', true));
             $this->redirect($this->base_uri . 'tools/utilities/');
         }
 
@@ -1093,6 +1194,182 @@ class AdminTools extends AppController
         $this->set('all_tables_utf8mb4', empty($non_utf8mb4_tables) && empty($non_utf8mb4_columns));
         $this->set('utf8mb4_requirements_met', $utf8mb4_requirements_met);
         $this->set('config_charset_mb4', $config_charset_mb4);
+    }
+
+    /**
+     * System Integrity Check — verifies installed files against a shipped manifest.json
+     */
+    public function integrityCheck()
+    {
+        $manifest_path = ROOTWEBDIR . 'manifest.json';
+
+        // Handle AJAX batch check request
+        if (isset($this->post['batch_check'])) {
+            $this->outputAsJson($this->integrityCheckBatch($manifest_path));
+            return false;
+        }
+
+        // Handle download report
+        if (isset($this->post['download_report'])) {
+            $this->integrityCheckDownload($manifest_path);
+            return;
+        }
+
+        // Pass CSRF token and manifest info for the JS-driven check
+        $this->set('csrf_token', $this->Form->getCsrfToken());
+        $this->set('manifest_exists', file_exists($manifest_path));
+
+        if (file_exists($manifest_path)) {
+            $manifest = json_decode(file_get_contents($manifest_path));
+            if ($manifest && !empty($manifest->files)) {
+                $this->set('manifest_total', count($manifest->files));
+                $this->set('manifest_version', $manifest->version ?? null);
+                $this->set('manifest_date', $manifest->generated_at ?? null);
+            }
+        }
+    }
+
+    /**
+     * Processes a batch of manifest files and returns results as JSON
+     *
+     * @param string $manifest_path Path to the manifest.json file
+     * @return array JSON response with batch results
+     */
+    private function integrityCheckBatch($manifest_path)
+    {
+        $binary_extensions = [
+            'png', 'jpg', 'jpeg', 'gif', 'ico', 'bmp', 'svg', 'webp',
+            'woff', 'woff2', 'ttf', 'eot', 'otf',
+            'zip', 'gz', 'tar', 'phar',
+            'pdf', 'swf', 'exe', 'dll', 'so',
+            'mp3', 'mp4', 'wav', 'ogg',
+            'p12', 'pem', 'crt', 'key'
+        ];
+
+        if (!file_exists($manifest_path)) {
+            return ['error' => Language::_('AdminTools.integritycheck.text_manifest_not_found', true)];
+        }
+
+        $manifest = json_decode(file_get_contents($manifest_path));
+        if (!$manifest || empty($manifest->files)) {
+            return ['error' => Language::_('AdminTools.integritycheck.text_manifest_not_found', true)];
+        }
+
+        $offset = max(0, (int) ($this->post['offset'] ?? 0));
+        $batch_size = 500;
+        $total = count($manifest->files);
+        $batch = array_slice($manifest->files, $offset, $batch_size);
+
+        $modified = [];
+        $missing = [];
+        $ok_count = 0;
+
+        foreach ($batch as $entry) {
+            $full_path = ROOTWEBDIR . str_replace('/', DS, $entry->path);
+
+            if (!file_exists($full_path)) {
+                $missing[] = [
+                    'path' => $entry->path,
+                    'category' => strpos($entry->path, 'vendors/') === 0 ? 'vendor' : 'core',
+                ];
+                continue;
+            }
+
+            // Try hash_file first (fast path — works for most unmodified files)
+            $hash = hash_file('sha256', $full_path);
+
+            // If mismatch on a text file, retry with line ending normalization
+            if ($hash !== $entry->sha256) {
+                $ext = strtolower(pathinfo($entry->path, PATHINFO_EXTENSION));
+                if (!in_array($ext, $binary_extensions)) {
+                    $content = file_get_contents($full_path);
+                    $content = str_replace(["\r\n", "\r"], "\n", $content);
+                    $hash = hash('sha256', $content);
+                }
+            }
+
+            if ($hash !== $entry->sha256) {
+                $modified[] = [
+                    'path' => $entry->path,
+                    'category' => strpos($entry->path, 'vendors/') === 0 ? 'vendor' : 'core',
+                ];
+            } else {
+                $ok_count++;
+            }
+        }
+
+        $next_offset = $offset + $batch_size;
+
+        return [
+            'modified' => $modified,
+            'missing' => $missing,
+            'ok_count' => $ok_count,
+            'processed' => min($next_offset, $total),
+            'total' => $total,
+            'done' => $next_offset >= $total,
+            'manifest_version' => $manifest->version ?? null,
+            'manifest_date' => $manifest->generated_at ?? null,
+        ];
+    }
+
+    /**
+     * Generates and downloads a plain text integrity check report
+     *
+     * @param string $manifest_path Path to the manifest.json file
+     */
+    private function integrityCheckDownload($manifest_path)
+    {
+        $this->components(['Download']);
+
+        $modified = json_decode($this->post['modified_files'] ?? '[]');
+        $missing = json_decode($this->post['missing_files'] ?? '[]');
+        $ok_count = (int) ($this->post['ok_count'] ?? 0);
+        $total = (int) ($this->post['total_count'] ?? 0);
+
+        $manifest_version = 'Unknown';
+        $manifest_date = 'Unknown';
+        if (file_exists($manifest_path)) {
+            $manifest = json_decode(file_get_contents($manifest_path));
+            if ($manifest) {
+                $manifest_version = $manifest->version ?? 'Unknown';
+                $manifest_date = $manifest->generated_at ?? 'Unknown';
+            }
+        }
+
+        $report = "Blesta System Integrity Check Report\n";
+        $report .= "Generated: " . date('Y-m-d H:i:s') . "\n";
+        $report .= "Manifest Version: " . $manifest_version . "\n";
+        $report .= "Manifest Generated: " . $manifest_date . "\n\n";
+        $report .= "Summary: " . $total . " files checked, "
+            . count($modified) . " modified, "
+            . count($missing) . " missing, "
+            . $ok_count . " OK\n";
+
+        if (!empty($modified)) {
+            $report .= "\nMODIFIED FILES:\n";
+            foreach ($modified as $file) {
+                $label = ($file->category ?? '') === 'vendor' ? ' [Vendor]' : '';
+                $report .= "  " . ($file->path ?? '') . $label . "\n";
+            }
+        }
+
+        if (!empty($missing)) {
+            $report .= "\nMISSING FILES:\n";
+            foreach ($missing as $file) {
+                $label = ($file->category ?? '') === 'vendor' ? ' [Vendor]' : '';
+                $report .= "  " . ($file->path ?? '') . $label . "\n";
+            }
+        }
+
+        if (empty($modified) && empty($missing)) {
+            $report .= "\nAll files match the manifest.\n";
+        }
+
+        $this->Download->downloadData(
+            'integrity-check-' . date('Y-m-d-His') . '.txt',
+            $report
+        );
+        exit;
     }
 
     /**
@@ -1284,8 +1561,8 @@ class AdminTools extends AppController
                 $settings = array_merge(
                     Configure::get('Blesta.pagination'),
                     [
-                        'total_results' => $this->Services->getPendingCancelationCount(true, true),
-                        'uri' => $this->base_uri . 'tools/changes/cancelation/[p]/',
+                        'total_results' => $this->ServiceChanges->getListCount(['pending', 'error']),
+                        'uri' => $this->base_uri . 'tools/provisioning/changes/[p]/',
                         'params' => ['sort' => $sort, 'order' => $order]
                     ]
                 );
@@ -1303,7 +1580,7 @@ class AdminTools extends AppController
 
         $this->setPagination($this->get, $settings);
 
-        return $this->renderAjaxWidgetIfAsync(isset($this->get[0]) || isset($this->get['sort']));
+        return $this->renderAjaxWidgetIfAsync(isset($this->get[1]) || isset($this->get['sort']));
     }
 
     /**
@@ -1489,7 +1766,12 @@ class AdminTools extends AppController
         $void_invoice = ($this->post['void_invoice'] ?? null) == 'true';
         $this->ServiceChanges->cancel($service_change->id, $void_invoice);
 
-        $this->flashMessage('message', Language::_('AdminTools.!success.service_changes_canceled', true));
+        if (($errors = $this->ServiceChanges->errors())) {
+            $this->flashMessage('error', $errors);
+        } else {
+            $this->flashMessage('message', Language::_('AdminTools.!success.service_changes_canceled', true));
+        }
+
         $this->redirect($this->base_uri . 'tools/provisioning/changes/');
     }
 

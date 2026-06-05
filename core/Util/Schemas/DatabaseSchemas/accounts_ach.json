@@ -1,0 +1,204 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "contact_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "first_name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "last_name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "address1",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "address2",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "city",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "state",
+            "type": "varchar(3)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "zip",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "country",
+            "type": "varchar(2)",
+            "nullable": false,
+            "key": null,
+            "default": "US",
+            "extra": null,
+            "max_length": 2
+        },
+        {
+            "name": "account",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "routing",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "last4",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "type",
+            "type": "enum('checking','savings')",
+            "nullable": false,
+            "key": null,
+            "default": "checking",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "gateway_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_reference_id",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "reference_id",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive','unverified')",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 10
+        }
+    ],
+    "indexes": [
+        {
+            "name": "contact_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "contact_id"
+            ]
+        },
+        {
+            "name": "gateway_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "gateway_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "status",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "status"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

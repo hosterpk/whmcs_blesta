@@ -1,12 +1,19 @@
 <?php
-use Symfony\Component\Mime\Address;
-use Symfony\Component\Mime\Part\DataPart;
-use Symfony\Component\Mailer\Transport\NullTransport;
-use Symfony\Component\Mailer\Transport\TransportInterface;
-use Symfony\Component\Mailer\Mailer as SymfonyMailer;
-use Symfony\Component\Mime\Email as SymfonyEmail;
+
+namespace Blesta\Components\Email;
+
 use Blesta\Core\Util\Common\Traits\Container;
 use Blesta\Core\Util\Components\Component;
+use Exception;
+use InvalidArgumentException;
+use Loader;
+use ReflectionClass;
+use Symfony\Component\Mailer\Mailer as SymfonyMailer;
+use Symfony\Component\Mailer\Transport\NullTransport;
+use Symfony\Component\Mailer\Transport\TransportInterface;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email as SymfonyEmail;
+use Symfony\Component\Mime\Part\DataPart;
 
 /**
  * A wrapper component for Symfony Mailer.

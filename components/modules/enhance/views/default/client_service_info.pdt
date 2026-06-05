@@ -1,34 +1,40 @@
-    <div class="table-responsive">
-        <table class="table table-curved table-striped">
-            <thead>
-                <tr>
-                    <th><i class="fas fa-share fa-flip-vertical"></i></th>
-                    <th><?php $this->_('Enhance.service_info.username'); ?></th>
-                    <th><?php $this->_('Enhance.service_info.email'); ?></th>
-                    <th><?php $this->_('Enhance.service_info.password'); ?></th>
-                    <th><?php $this->_('Enhance.service_info.options'); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td></td>
-                    <td><?php echo (isset($service_fields->username) ? $this->Html->safe($service_fields->username) : null); ?></td>
-                    <td><?php echo (isset($service_fields->customer_email) ? $this->Html->safe($service_fields->customer_email) : null); ?></td>
-                    <td><?php echo (isset($service_fields->password) ? $this->Html->safe($service_fields->password) : null); ?></td>
-                    <td>
-                        <?php
-                        if ((isset($login_url) ? $login_url : null)) {
-                        ?>
-                        <a href="<?php echo (isset($login_url) ? $this->Html->safe($login_url) : null);?>" target="_blank"><?php $this->_('Enhance.service_info.option_login');?></a>
-                        <?php
-                        } else {
-                        ?>
-                        <a href="https://<?php echo (isset($module_row->meta->hostname) ? $this->Html->safe($module_row->meta->hostname) : ''); ?>:2087" target="_blank"><?php $this->_('Enhance.service_info.option_login');?></a>
-                        <?php
-                        }
-                        ?>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+<?php /** @var View $this **/ ?>
+
+<div class="table-responsive">
+    <table class="table table-curved table-striped">
+        <thead>
+            <tr>
+                <th><i class="fas fa-share fa-flip-vertical"></i></th>
+                <th><?php $this->_('Enhance.service_info.username'); ?></th>
+                <th><?php $this->_('Enhance.service_info.email'); ?></th>
+                <th><?php $this->_('Enhance.service_info.password'); ?></th>
+                <th><?php $this->_('Enhance.service_info.options'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td></td>
+                <td><?php echo isset($service_fields->username)
+                    ? $this->Html->safe($service_fields->username)
+                    : null; ?></td>
+                <td><?php echo isset($service_fields->customer_email)
+                    ? $this->Html->safe($service_fields->customer_email)
+                    : null; ?></td>
+                <td><?php echo isset($service_fields->password)
+                    ? $this->Html->safe($service_fields->password)
+                    : null; ?></td>
+                <td>
+                    <?php if ($login_url ?? null) { ?>
+                    <a href="<?php echo isset($login_url)
+                        ? $this->Html->safe($login_url)
+                        : null; ?>" target="_blank"><?php $this->_('Enhance.service_info.option_login'); ?></a>
+                    <?php } else { ?>
+                    <a href="https://<?php echo isset($module_row->meta->hostname)
+                        ? $this->Html->safe($module_row->meta->hostname)
+                        : ''; ?>:2087" target="_blank"><?php $this->_('Enhance.service_info.option_login'); ?></a>
+                    <?php } ?>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,44 @@
+{
+    "columns": [
+        {
+            "name": "package_group_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "lang",
+            "type": "varchar(5)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 5
+        },
+        {
+            "name": "description",
+            "type": "mediumtext",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 16777215
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "package_group_id",
+                "lang"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

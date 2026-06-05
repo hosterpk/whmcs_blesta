@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 /**
@@ -550,7 +551,7 @@ abstract class Migrator
      */
     protected function getModuleMapping($module, $module_type = 'server')
     {
-        return array('module' => '');
+        return ['module' => ''];
     }
 
     /**
@@ -659,7 +660,8 @@ abstract class Migrator
         } else {
             // Get value
             if (is_object($meta_row_value)) {
-                if (isset($meta_row_value->module)
+                if (
+                    isset($meta_row_value->module)
                     && array_key_exists(strtolower($meta_row_value->module), $row)
                 ) {
                     $parsed_value = $row[strtolower($meta_row_value->module)];
@@ -716,7 +718,7 @@ abstract class Migrator
                 'class' => $mapping['module']
             ];
             $module_id = $this->ModuleManager->add($vars);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Module couldn't be added
         }
         $this->mappings['modules'][$module] = (int) $module_id;

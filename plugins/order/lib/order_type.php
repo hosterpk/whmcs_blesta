@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Type abstract class that all order types must extend.
  *
@@ -272,8 +273,10 @@ abstract class OrderType
      */
     protected function isAjax()
     {
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])
-            && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        if (
+            isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+            && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
+        ) {
             return true;
         }
         return false;

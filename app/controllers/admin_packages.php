@@ -66,7 +66,7 @@ class AdminPackages extends AppController
                 }
             }
         }
-        
+
         if (isset($post_filters['package_group_id'])
             && ($package_group = $this->PackageGroups->get($post_filters['package_group_id']))
         ) {
@@ -435,6 +435,7 @@ class AdminPackages extends AppController
                     }
                 }
 
+                $this->decodeEmailContentTemplateTags($data);
                 $this->Packages->add($data);
                 $package_errors = $this->Packages->errors();
             }
@@ -490,7 +491,7 @@ class AdminPackages extends AppController
 
         // Fetch all available package option groups
         $package_option_groups = $this->Form->collapseObjectArray(
-            $this->PackageOptionGroups->getAll($this->company_id),
+            $this->PackageOptionGroups->getAll($this->company_id, ['hidden' => 0]),
             'name',
             'id'
         );
@@ -524,6 +525,14 @@ class AdminPackages extends AppController
         $this->set('package_option_groups', $package_option_groups);
         $this->set('plugins', $plugins);
         $this->set('vars', $vars);
+
+        // Check if AI package description feature is enabled
+        $settings = $this->SettingsCollection->fetchSystemSettings($this->Settings);
+        $ai_feature_enabled = !empty($settings['ai_enabled'])
+            && $settings['ai_enabled'] === 'true'
+            && !empty($settings['ai_feature_package_descriptions'])
+            && $settings['ai_feature_package_descriptions'] === 'true';
+        $this->set('ai_feature_enabled', $ai_feature_enabled);
 
         $this->set('module_email_tags', $this->getWelcomeTags());
 
@@ -643,6 +652,7 @@ class AdminPackages extends AppController
                 }
             }
 
+            $this->decodeEmailContentTemplateTags($data);
             $this->Packages->edit($package->id, $data);
             unset($data);
 
@@ -712,13 +722,26 @@ class AdminPackages extends AppController
 
         // Fetch all available package option groups
         $package_option_groups = $this->Form->collapseObjectArray(
-            $this->PackageOptionGroups->getAll($this->company_id),
+            $this->PackageOptionGroups->getAll($this->company_id, ['hidden' => (int) $package->hidden]),
             'name',
             'id'
         );
         $vars->option_groups = (isset($vars->option_groups)
             && is_array($vars->option_groups) ? $vars->option_groups : []
         );
+
+        // Ensure already-assigned hidden groups are included so they aren't silently dropped on save
+        if (!$package->hidden) {
+            foreach ($vars->option_groups as $group_id) {
+                if (!isset($package_option_groups[$group_id])
+                    && ($group = $this->PackageOptionGroups->get($group_id))
+                    && $group->company_id == $this->company_id
+                ) {
+                    $package_option_groups[$group_id] = $group->name;
+                }
+            }
+        }
+
         $vars->option_groups = $this->getSelectedSwappableOptions($package_option_groups, $vars->option_groups);
 
         // Fetch all plugin groups
@@ -745,6 +768,14 @@ class AdminPackages extends AppController
         $this->set('package_option_groups', $package_option_groups);
         $this->set('plugins', $plugins);
         $this->set('vars', $vars);
+
+        // Check if AI package description feature is enabled
+        $settings = $this->SettingsCollection->fetchSystemSettings($this->Settings);
+        $ai_feature_enabled = !empty($settings['ai_enabled'])
+            && $settings['ai_enabled'] === 'true'
+            && !empty($settings['ai_feature_package_descriptions'])
+            && $settings['ai_feature_package_descriptions'] === 'true';
+        $this->set('ai_feature_enabled', $ai_feature_enabled);
 
         $this->set('module_email_tags', $this->getWelcomeTags());
 
@@ -1149,5 +1180,558 @@ class AdminPackages extends AppController
         }
 
         return $plugins;
+    }
+
+    /**
+     * AJAX endpoint to generate package description using AI
+     */
+    public function generateDescription()
+    {
+        // Only accept AJAX POST requests
+        if (!$this->isAjax()) {
+            header('HTTP/1.0 403 Forbidden');
+            return false;
+        }
+
+        $this->uses(['Settings']);
+        $this->components(['SettingsCollection', 'BlestaAi']);
+
+        $response = [
+            'success' => false,
+            'error' => 'Invalid request'
+        ];
+
+        // Check if AI is enabled and package descriptions feature is enabled
+        $settings = $this->SettingsCollection->fetchSystemSettings($this->Settings);
+
+        if (empty($settings['ai_enabled']) || $settings['ai_enabled'] !== 'true') {
+            $response['error'] = Language::_('AdminPackages.ai.error_disabled', true);
+            echo json_encode($response);
+            return false;
+        }
+
+        if (empty($settings['ai_feature_package_descriptions'])
+            || $settings['ai_feature_package_descriptions'] !== 'true') {
+            $response['error'] = Language::_('AdminPackages.ai.error_feature_disabled', true);
+            echo json_encode($response);
+            return false;
+        }
+
+        try {
+            $ai = new BlestaAi($settings['ai_api_key']);
+
+            // Get parameters
+            $prompt = $this->post['prompt'] ?? '';
+            $package_name = $this->post['package_name'] ?? '';
+            $module_name = $this->post['module_name'] ?? null;
+            $pricing = $this->post['pricing'] ?? null;
+            $language = $this->post['language'] ?? 'en_us';
+            $generate_html = ($this->post['generate_html'] ?? 'true') === 'true';
+            $generate_text = ($this->post['generate_text'] ?? 'true') === 'true';
+            $tone = $this->post['tone'] ?? 'professional';
+
+            // Determine output format
+            $output_format = 'html'; // default
+            if ($generate_text && !$generate_html) {
+                $output_format = 'text';
+            } elseif ($generate_html && !$generate_text) {
+                $output_format = 'html';
+            }
+
+            if (empty($prompt)) {
+                $response['error'] = Language::_('AdminPackages.ai.error_prompt_required', true);
+                echo json_encode($response);
+                return false;
+            }
+
+            // Parse pricing if provided
+            $pricing_info = null;
+            if ($pricing && is_string($pricing)) {
+                $pricing_info = json_decode($pricing, true);
+            }
+
+            // Build context-aware system prompt
+            $system_prompt = $this->buildPackageDescriptionSystemPrompt(
+                $settings['ai_global_prompt'] ?? '',
+                $package_name,
+                $module_name,
+                $pricing_info,
+                $language,
+                $tone,
+                $output_format
+            );
+
+            // Create conversation
+            $conversation_id = $ai->createConversation(
+                Configure::get('Blesta.company_id'),
+                $this->Session->read('blesta_staff_id'),
+                $settings['ai_default_model'] ?? 'openai/gpt-5.2',
+                'Package Description Generation - ' . date('Y-m-d H:i:s'),
+                'package_description'
+            );
+
+            // Single API call to generate description in the requested format
+            $user_prompt = "Generate a package description based on the following request:\n\n" . $prompt;
+
+            $ai_response = $ai->chat($conversation_id, $user_prompt, [
+                'system_prompt' => $system_prompt,
+                'temperature' => 0.7
+            ]);
+
+            // Parse the JSON response with shared parser
+            $parser = new \Blesta\Core\Util\AI\AiResponseParser();
+            $sanitizer = new \Blesta\Core\Util\AI\AiContentSanitizer();
+
+            $parsed = $parser->parse($ai_response['content'], ['feedback', 'description']);
+
+            // Build response with the generated content in the appropriate field
+            $response = [
+                'success' => true,
+                'feedback' => $parsed['feedback'] ?? null,
+                'html' => null,
+                'text' => null,
+                'conversation_id' => $conversation_id,
+                'raw' => $parsed['raw'] ?? null,
+                'full_prompt' => "=== SYSTEM PROMPT ===\n" . $system_prompt . "\n\n=== USER PROMPT ===\n" . $user_prompt
+            ];
+
+            // Set the content in the appropriate field based on format
+            if ($output_format === 'html') {
+                $response['html'] = isset($parsed['description'])
+                    ? $this->sanitizeHtml($parsed['description'])
+                    : null;
+            } else {
+                $response['text'] = isset($parsed['description'])
+                    ? $sanitizer->sanitizeText($parsed['description'])
+                    : null;
+            }
+
+        } catch (Exception $e) {
+            $response['error'] = $e->getMessage();
+        }
+
+        echo json_encode($response);
+        return false;
+    }
+
+    /**
+     * AJAX endpoint to preview the AI prompt without generating content
+     */
+    public function previewPrompt()
+    {
+        // Only accept AJAX POST requests
+        if (!$this->isAjax()) {
+            header('HTTP/1.0 403 Forbidden');
+            return false;
+        }
+
+        $this->uses(['Settings']);
+        $this->components(['SettingsCollection']);
+
+        $response = [
+            'success' => false,
+            'error' => 'Invalid request'
+        ];
+
+        // Check if AI is enabled
+        $settings = $this->SettingsCollection->fetchSystemSettings($this->Settings);
+
+        if (empty($settings['ai_enabled']) || $settings['ai_enabled'] !== 'true') {
+            $response['error'] = Language::_('AdminPackages.ai.error_disabled', true);
+            echo json_encode($response);
+            return false;
+        }
+
+        // Get parameters
+        $prompt = $this->post['prompt'] ?? '';
+        $package_name = $this->post['package_name'] ?? '';
+        $module_name = $this->post['module_name'] ?? null;
+        $pricing = $this->post['pricing'] ?? null;
+        $language = $this->post['language'] ?? 'en_us';
+        $generate_html = ($this->post['generate_html'] ?? 'true') === 'true';
+        $generate_text = ($this->post['generate_text'] ?? 'true') === 'true';
+        $tone = $this->post['tone'] ?? 'professional';
+        $content_type = $this->post['content_type'] ?? 'description'; // 'description' or 'email'
+
+        // Determine output format
+        $output_format = 'html';
+        if ($generate_text && !$generate_html) {
+            $output_format = 'text';
+        } elseif ($generate_html && !$generate_text) {
+            $output_format = 'html';
+        }
+
+        // Parse pricing if provided
+        $pricing_info = null;
+        if ($pricing && is_string($pricing)) {
+            $pricing_info = json_decode($pricing, true);
+        }
+
+        // Build the system prompt based on content type
+        if ($content_type === 'email') {
+            $email_tags = $this->post['email_tags'] ?? '';
+            $system_prompt = $this->buildEmailSystemPrompt(
+                $settings['ai_global_prompt'] ?? '',
+                $package_name,
+                $module_name,
+                $email_tags,
+                $language,
+                $tone
+            );
+            $user_prompt = "Generate a welcome email based on the following request:\n\n" . $prompt;
+        } else {
+            $system_prompt = $this->buildPackageDescriptionSystemPrompt(
+                $settings['ai_global_prompt'] ?? '',
+                $package_name,
+                $module_name,
+                $pricing_info,
+                $language,
+                $tone,
+                $output_format
+            );
+            $user_prompt = "Generate a package description based on the following request:\n\n" . $prompt;
+        }
+
+        $response = [
+            'success' => true,
+            'full_prompt' => "=== SYSTEM PROMPT ===\n" . $system_prompt . "\n\n=== USER PROMPT ===\n" . $user_prompt
+        ];
+
+        echo json_encode($response);
+        return false;
+    }
+
+    /**
+     * Builds a context-aware system prompt for package description generation
+     *
+     * @param string $global_prompt The global AI system prompt
+     * @param string $package_name The package name
+     * @param string $module_name The module name
+     * @param array $pricing_info Array of pricing information
+     * @param string $language The language code
+     * @param string $tone The tone (professional, casual, technical)
+     * @param string $output_format The output format ('html' or 'text')
+     * @return string The formatted system prompt
+     */
+    private function buildPackageDescriptionSystemPrompt(
+        $global_prompt,
+        $package_name,
+        $module_name,
+        $pricing_info,
+        $language,
+        $tone,
+        $output_format = 'html'
+    ) {
+        $prompt = $global_prompt . "\n\n";
+        $prompt .= "You are generating package descriptions for Blesta, a billing and client management platform.\n";
+        $prompt .= "Your task is to create compelling, professional package descriptions that highlight features and benefits.\n\n";
+
+        $prompt .= "Package Context:\n";
+        if ($package_name) {
+            $prompt .= "- Name: " . $package_name . "\n";
+        }
+        if ($module_name) {
+            $prompt .= "- Service Type/Module: " . $module_name . "\n";
+        }
+        if ($pricing_info && is_array($pricing_info) && count($pricing_info) > 0) {
+            $prompt .= "- Pricing Tiers: " . implode(', ', array_filter($pricing_info)) . "\n";
+        }
+
+        $prompt .= "\nOutput Requirements:\n";
+        $prompt .= "- Language: " . $language . "\n";
+        $prompt .= "- Tone: " . $tone . "\n";
+        $prompt .= "- Output format: " . $output_format . "\n";
+        $prompt .= "- You MUST respond with valid JSON only, no other text\n\n";
+
+        $prompt .= "Response Format (JSON):\n";
+        $prompt .= "{\n";
+        $prompt .= "  \"feedback\": \"Any clarifying questions, assumptions made, or suggestions for improvement\",\n";
+
+        if ($output_format === 'html') {
+            $prompt .= "  \"description\": \"HTML formatted description with semantic markup, bullet points for features\"\n";
+        } else {
+            $prompt .= "  \"description\": \"Markdown formatted description with headings, lists, and emphasis\"\n";
+        }
+
+        $prompt .= "}\n\n";
+
+        $prompt .= "CRITICAL: The 'description' field must contain ONLY the package description content - no preamble, ";
+        $prompt .= "explanations, comments, or context. Any commentary, notes, assumptions, or suggestions MUST go in the 'feedback' field.\n\n";
+
+        $prompt .= "Guidelines:\n";
+        $prompt .= "- Focus on benefits, not just features\n";
+        $prompt .= "- Use clear, concise language\n";
+        $prompt .= "- Highlight what makes this package valuable to customers\n";
+
+        if ($output_format === 'html') {
+            $prompt .= "- Use semantic HTML tags (p, ul, li, strong, em, h3, h4)\n";
+        } else {
+            $prompt .= "- Use proper Markdown syntax: headings (#, ##), lists (-, *), and emphasis (**, *)\n";
+        }
+
+        $prompt .= "- Be accurate and professional\n";
+        $prompt .= "- Avoid making promises about specific technical details unless explicitly mentioned\n";
+        $prompt .= "- Put ALL assumptions, clarifying questions, or suggestions in the 'feedback' field, NOT in 'description'\n";
+
+        return $prompt;
+    }
+
+    /**
+     * Decode CKEditor's URL-encoded template tags in href attributes within
+     * each language's email_content[*][html] entry before saving.
+     *
+     * CKEditor percent-encodes { and } only inside href values, which corrupts
+     * H2O template tags placed inside link URLs (e.g. {client_url}). Restore them.
+     *
+     * @param array $data POST data, modified by reference
+     */
+    private function decodeEmailContentTemplateTags(array &$data)
+    {
+        if (empty($data['email_content']) || !is_array($data['email_content'])) {
+            return;
+        }
+
+        $sanitizer = new \Blesta\Core\Util\AI\AiContentSanitizer();
+        foreach ($data['email_content'] as &$content) {
+            if (is_array($content) && !empty($content['html'])) {
+                $content['html'] = $sanitizer->decodeHrefTemplateTags($content['html']);
+            }
+        }
+    }
+
+    /**
+     * Sanitizes HTML output from AI for package content
+     *
+     * Uses HTMLPurifier for security-focused sanitization. Allows tags
+     * appropriate for package descriptions and welcome emails.
+     *
+     * @param string $html The HTML content to sanitize
+     * @return string The sanitized HTML
+     */
+    private function sanitizeHtml($html)
+    {
+        if (empty($html)) {
+            return '';
+        }
+
+        $sanitizer = new \Blesta\Core\Util\AI\AiContentSanitizer();
+        $html = $sanitizer->extractFromCodeFences($html);
+        $html = $sanitizer->stripCodeFences($html);
+
+        return $sanitizer->purifyHtml(
+            $html,
+            [
+                'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'span', 'div',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'a[href|title|target]',
+                'ul', 'ol', 'li',
+                'table[width|cellpadding|cellspacing|border]',
+                'thead', 'tbody', 'tfoot', 'tr', 'td[colspan|rowspan]', 'th[colspan|rowspan]',
+                'img[src|alt|width|height]',
+                'blockquote', 'hr'
+            ],
+            [
+                'color', 'background-color', 'background',
+                'font-size', 'font-family', 'font-weight', 'font-style',
+                'text-align', 'text-decoration',
+                'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+                'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+                'border', 'border-color', 'border-width', 'border-style',
+                'width', 'height', 'max-width',
+                'line-height', 'vertical-align'
+            ]
+        );
+    }
+
+    /**
+     * AJAX endpoint to generate package welcome email using AI
+     */
+    public function generateEmail()
+    {
+        // Only accept AJAX POST requests
+        if (!$this->isAjax()) {
+            header('HTTP/1.0 403 Forbidden');
+            return false;
+        }
+
+        $this->components(['SettingsCollection', 'BlestaAi']);
+
+        $response = [
+            'success' => false,
+            'error' => 'Invalid request'
+        ];
+
+        // Check if AI is enabled and package descriptions feature is enabled
+        $settings = $this->SettingsCollection->fetchSystemSettings($this->Settings);
+
+        if (empty($settings['ai_enabled']) || $settings['ai_enabled'] !== 'true') {
+            $response['error'] = Language::_('AdminPackages.ai.error_disabled', true);
+            echo json_encode($response);
+            return false;
+        }
+
+        if (empty($settings['ai_feature_package_descriptions'])
+            || $settings['ai_feature_package_descriptions'] !== 'true') {
+            $response['error'] = Language::_('AdminPackages.ai.error_feature_disabled', true);
+            echo json_encode($response);
+            return false;
+        }
+
+        try {
+            $ai = new BlestaAi($settings['ai_api_key']);
+
+            // Get parameters
+            $prompt = $this->post['prompt'] ?? '';
+            $package_name = $this->post['package_name'] ?? '';
+            $module_name = $this->post['module_name'] ?? null;
+            $email_tags = $this->post['email_tags'] ?? null;
+            $language = $this->post['language'] ?? 'en_us';
+            $generate_html = ($this->post['generate_html'] ?? 'true') === 'true';
+            $generate_text = ($this->post['generate_text'] ?? 'true') === 'true';
+            $tone = $this->post['tone'] ?? 'professional';
+
+            if (empty($prompt)) {
+                $response['error'] = Language::_('AdminPackages.ai.error_prompt_required', true);
+                echo json_encode($response);
+                return false;
+            }
+
+            // Build context-aware system prompt for email (now with JSON mandate)
+            $system_prompt = $this->buildEmailSystemPrompt(
+                $settings['ai_global_prompt'] ?? '',
+                $package_name,
+                $module_name,
+                $email_tags,
+                $language,
+                $tone
+            );
+
+            // Create conversation
+            $conversation_id = $ai->createConversation(
+                Configure::get('Blesta.company_id'),
+                $this->Session->read('blesta_staff_id'),
+                $settings['ai_default_model'] ?? 'openai/gpt-5.2',
+                'Package Email Generation - ' . date('Y-m-d H:i:s'),
+                'package_email'
+            );
+
+            // Build user prompt with format guidance
+            $user_prompt = $prompt;
+            if ($generate_html && $generate_text) {
+                $user_prompt .= "\n\nGenerate both an HTML and a plain text version of this welcome email.";
+            } elseif ($generate_html) {
+                $user_prompt .= "\n\nGenerate the HTML version only. Set the 'text' field to null in your response.";
+            } else {
+                $user_prompt .= "\n\nGenerate the plain text version only. Set the 'html' field to null in your response.";
+            }
+
+            // Single API call with structured JSON response
+            $ai_response = $ai->chat($conversation_id, $user_prompt, [
+                'system_prompt' => $system_prompt,
+                'temperature' => 0.7
+            ]);
+
+            // Parse structured response
+            $parser = new \Blesta\Core\Util\AI\AiResponseParser();
+            $sanitizer = new \Blesta\Core\Util\AI\AiContentSanitizer();
+
+            $parsed = $parser->parse($ai_response['content'], ['html', 'text', 'feedback']);
+
+            $generated = [];
+
+            if ($generate_html && !empty($parsed['html'])) {
+                $html = $this->sanitizeHtml($parsed['html']);
+                $html = $sanitizer->unescapeTemplateTags($html);
+                $generated['html'] = $sanitizer->decodeHrefTemplateTags($html);
+            }
+
+            if ($generate_text && !empty($parsed['text'])) {
+                $generated['text'] = $sanitizer->sanitizeText($parsed['text']);
+            }
+
+            $response = [
+                'success' => true,
+                'html' => $generated['html'] ?? null,
+                'text' => $generated['text'] ?? null,
+                'feedback' => $parsed['feedback'] ?? null,
+                'conversation_id' => $conversation_id,
+                'full_prompt' => "=== SYSTEM PROMPT ===\n" . $system_prompt . "\n\n=== USER PROMPT ===\n" . $user_prompt
+            ];
+
+        } catch (Exception $e) {
+            $response['error'] = $e->getMessage();
+        }
+
+        echo json_encode($response);
+        return false;
+    }
+
+    /**
+     * Builds a context-aware system prompt for email generation
+     *
+     * @param string $global_prompt The global AI system prompt
+     * @param string $package_name The package name
+     * @param string $module_name The module name
+     * @param string $email_tags Available email tags/variables
+     * @param string $language The language code
+     * @param string $tone The tone (professional, casual, technical)
+     * @return string The formatted system prompt
+     */
+    private function buildEmailSystemPrompt(
+        $global_prompt,
+        $package_name,
+        $module_name,
+        $email_tags,
+        $language,
+        $tone
+    ) {
+        $prompt = $global_prompt . "\n\n";
+        $prompt .= "You are generating welcome email templates for Blesta packages.\n";
+        $prompt .= "Your task is to create professional, welcoming emails that help new customers get started.\n\n";
+
+        $prompt .= "Package Context:\n";
+        if ($package_name) {
+            $prompt .= "- Package Name: " . $package_name . "\n";
+        }
+        if ($module_name) {
+            $prompt .= "- Service Type/Module: " . $module_name . "\n";
+        }
+        if ($email_tags) {
+            $prompt .= "- Available Email Tags (use these for dynamic content): " . $email_tags . "\n";
+        }
+
+        $prompt .= "\nOutput Requirements:\n";
+        $prompt .= "- Language: " . $language . "\n";
+        $prompt .= "- Tone: " . $tone . "\n";
+        $prompt .= "- You MUST respond with valid JSON only, no other text\n\n";
+
+        $prompt .= "Response Format (JSON):\n";
+        $prompt .= "{\n";
+        $prompt .= "  \"html\": \"Complete HTML email body with inline styles, or null if not requested\",\n";
+        $prompt .= "  \"text\": \"Complete plain text email body with no HTML tags, or null if not requested\",\n";
+        $prompt .= "  \"feedback\": \"Any clarifying questions, assumptions made, or suggestions for improvement\"\n";
+        $prompt .= "}\n\n";
+
+        $prompt .= "CRITICAL: The 'html' and 'text' fields must contain ONLY the email body content. ";
+        $prompt .= "Any commentary, notes, or suggestions MUST go in the 'feedback' field.\n\n";
+
+        $prompt .= "Guidelines:\n";
+        $prompt .= "- Start with a warm welcome message\n";
+        $prompt .= "- Include key information about the service\n";
+        $prompt .= "- Provide clear next steps for the customer\n";
+        $prompt .= "- Use email tags where appropriate for personalization\n";
+        $prompt .= "- Keep the email concise but informative\n";
+        $prompt .= "- Be professional and customer-focused\n";
+        $prompt .= "- Avoid making promises about technical details unless explicitly mentioned\n";
+        $prompt .= "- For the HTML version: Use ONLY inline styles (style attribute). Do NOT use <style> tags or CSS blocks\n";
+        $prompt .= "- For the text version: Do NOT include any HTML tags\n";
+        $prompt .= "- Both versions should have identical content, just different formatting\n";
+        $prompt .= "- IMPORTANT: Tags that represent collections (e.g., name_servers, ip_addresses) MUST use H2O loop syntax to iterate over all items\n";
+
+        // Append H2O template syntax reference for loops, conditionals, and filters
+        $contextBuilder = new \Blesta\Core\Util\AI\EmailTagContextBuilder();
+        $prompt .= $contextBuilder->getH2oSyntaxReference();
+
+        return $prompt;
     }
 }

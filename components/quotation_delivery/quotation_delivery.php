@@ -465,7 +465,7 @@ class QuotationDelivery extends InvoiceDelivery
      *  - language The language to use (optional, defaults to the quotation client's language, or the
      *    system's language otherwise)
      */
-    public function downloadQuotations(array $quotation_ids, array $options = null)
+    public function downloadQuotations(array $quotation_ids, ?array $options = null)
     {
         // Fetch quotations
         $quotations = $this->getQuotations($quotation_ids, true);
@@ -504,7 +504,7 @@ class QuotationDelivery extends InvoiceDelivery
      *    or the system's language otherwise)
      * @return object The object containing the build quotations
      */
-    private function buildQuotations(array $quotations, $include_address = true, array $options = null)
+    private function buildQuotations(array $quotations, $include_address = true, ?array $options = null)
     {
         $client_id = null;
 

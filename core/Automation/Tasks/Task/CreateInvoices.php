@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -150,9 +151,7 @@ class CreateInvoices extends AbstractTask
                         null,
                         'default_currency'
                     );
-                    $default_currency = (isset($client_default_currency['value'])
-                        ? $client_default_currency['value']
-                        : null
+                    $default_currency = ($client_default_currency['value'] ?? null
                     );
 
                     // Build individual invoices for each service
@@ -199,7 +198,7 @@ class CreateInvoices extends AbstractTask
                                 $inv_due_date = $service->date_renews;
                             }
                         }
-                        
+
                         // Create the invoice for all services
                         $output .= $this->invoiceServices(
                             $client_id,

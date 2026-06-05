@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Items;
 
 use Blesta\Core\Pricing\Presenter\Items\Invoice\InvoiceItems;
@@ -35,8 +36,8 @@ class ServiceFactory
         PricingFactory $pricingFactory,
         ItemFactory $itemFactory,
         ItemInterface $settings,
-        ItemCollection $taxes = null,
-        ItemInterface $options = null
+        ?ItemCollection $taxes = null,
+        ?ItemInterface $options = null
     ) {
         return new InvoiceItems($pricingFactory, $itemFactory, $settings, $taxes, $options);
     }
@@ -55,8 +56,8 @@ class ServiceFactory
         PricingFactory $pricingFactory,
         ItemFactory $itemFactory,
         ItemInterface $settings,
-        ItemCollection $taxes = null,
-        ItemInterface $options = null
+        ?ItemCollection $taxes = null,
+        ?ItemInterface $options = null
     ) {
         return new InvoiceDataItems($pricingFactory, $itemFactory, $settings, $taxes, $options);
     }
@@ -76,9 +77,9 @@ class ServiceFactory
         PricingFactory $pricingFactory,
         ItemFactory $itemFactory,
         ItemInterface $settings,
-        ItemCollection $taxes = null,
-        ItemCollection $discounts = null,
-        ItemInterface $options = null
+        ?ItemCollection $taxes = null,
+        ?ItemCollection $discounts = null,
+        ?ItemInterface $options = null
     ) {
         return new ServiceItems($pricingFactory, $itemFactory, $settings, $taxes, $discounts, $options);
     }
@@ -98,9 +99,9 @@ class ServiceFactory
         PricingFactory $pricingFactory,
         ItemFactory $itemFactory,
         ItemInterface $settings,
-        ItemCollection $taxes = null,
-        ItemCollection $discounts = null,
-        ItemInterface $options = null
+        ?ItemCollection $taxes = null,
+        ?ItemCollection $discounts = null,
+        ?ItemInterface $options = null
     ) {
         return new ServiceDataItems($pricingFactory, $itemFactory, $settings, $taxes, $discounts, $options);
     }

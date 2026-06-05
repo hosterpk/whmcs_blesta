@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Captcha;
 
 use Blesta\Core\Util\Captcha\Common\CaptchaInterface;
@@ -85,11 +86,11 @@ class Captcha
         $success = false;
         switch ($company_settings['captcha']) {
             case 'recaptcha':
-                $response = (isset($post['g-recaptcha-response']) ? $post['g-recaptcha-response'] : '');
+                $response = ($post['g-recaptcha-response'] ?? '');
                 $success = $captcha->verify(['response' => $response]);
                 break;
             case 'internalcaptcha':
-                $response = (isset($post['phrase']) ? $post['phrase'] : '');
+                $response = ($post['phrase'] ?? '');
                 $success = $captcha->verify(['response' => $response]);
                 break;
             default:
@@ -120,9 +121,9 @@ class Captcha
         );
 
         if (isset($company_settings['captcha_enabled_forms'])) {
-            $company_settings['captcha_enabled_forms'] = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($company_settings['captcha_enabled_forms']);
+            $company_settings['captcha_enabled_forms'] = safe_unserialize($company_settings['captcha_enabled_forms']);
         }
-        
+
         $form_enabled = isset($company_settings['captcha_enabled_forms'][$form])
             ? (bool) $company_settings['captcha_enabled_forms'][$form]
             : false;
@@ -156,7 +157,7 @@ class Captcha
                         'class' => $class,
                         'id' => strtolower($class)
                     ];
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Nothing to do
                 }
             }

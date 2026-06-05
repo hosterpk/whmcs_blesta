@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generic Csv Migrator.
  *
@@ -44,7 +45,7 @@ class CsvMigrator extends Migrator
                 $this->{$action}();
                 $this->endTimer($action);
                 $this->debug("-----------------\n");
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $errors[] = $action . ': ' . $e->getMessage() . ' on line ' . $e->getLine();
                 $this->logException($e);
             }
@@ -145,7 +146,8 @@ class CsvMigrator extends Migrator
             $contact_id = $this->local->lastInsertId();
 
             // Add contact phone number
-            if (isset($user[$this->mappings['remote_fields']['phone']])
+            if (
+                isset($user[$this->mappings['remote_fields']['phone']])
                 && $user[$this->mappings['remote_fields']['phone']] != ''
             ) {
                 $vars = [

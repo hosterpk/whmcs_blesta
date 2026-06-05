@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'centoswebpanel_response.php';
@@ -35,6 +36,11 @@ class CentoswebpanelApi
      * @var bool Use ssl in all the api requests
      */
     private $use_ssl;
+
+    /**
+     * @var Blesta\Core\ServiceProviders\Logger Container logger
+     */
+    private $logger;
 
     /**
      * Initializes the class.
@@ -81,7 +87,7 @@ class CentoswebpanelApi
                 $url .= empty($params) ? '' : '?' . http_build_query($params);
                 break;
             case 'POST':
-                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
                 curl_setopt($ch, CURLOPT_POST, 1);
             default:
                 curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));

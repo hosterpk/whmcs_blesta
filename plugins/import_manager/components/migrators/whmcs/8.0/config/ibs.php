@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('ibs.map', [
     'module' => 'internetbs',
     'module_row_key' => 'username',
@@ -10,7 +11,9 @@ Configure::set('ibs.map', [
             'value' => (object)['module' => 'testmode'],
             'serialized' => 0,
             'encrypted' => 0,
-            'callback' => function ($value) { return ($value == 'on' ? 'true' : 'false'); }
+            'callback' => function ($value) {
+                return ($value == 'on' ? 'true' : 'false');
+            }
         ]
     ],
     'package_meta' => [

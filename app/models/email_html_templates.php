@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use stdClass;
+
 /**
  * Email HTML templates
  *
@@ -101,7 +108,7 @@ class EmailHtmlTemplates extends AppModel
      * @param int $company_id The ID of the company to fetch the HTML template groups
      * @return array An array of objects, each one representing the group
      */
-    public function getGroups(int $company_id = null)
+    public function getGroups(?int $company_id = null)
     {
         if (is_null($company_id)) {
             $company_id = Configure::get('Blesta.company_id');

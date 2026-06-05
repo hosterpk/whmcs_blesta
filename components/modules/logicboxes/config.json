@@ -1,5 +1,5 @@
 {
-    "version": "2.14.2",
+    "version": "3.0.0",
     "type": "registrar",
     "name": "Logicboxes.name",
     "description": "Logicboxes.description",
@@ -28,5 +28,6 @@
     "features": {
         "dns_management": 1,
         "id_protection": 1
-    }
+    },
+    "icon": "bi-globe"
 }

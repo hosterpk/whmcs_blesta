@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'plesk_response.php';
@@ -35,6 +36,7 @@ class PleskApi
      * @var string The port to use when connecting
      */
     private $port;
+    private $logger;
 
     /**
      * Sets the connection details

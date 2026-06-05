@@ -146,9 +146,9 @@ class SupportManagerDepartments extends SupportManagerModel
                     'description' => $fields['description'][$i] ?? null,
                     'visibility' => $fields['visibility'][$i] ?? 'client',
                     'type' => $fields['type'][$i] ?? 'text',
-                    'min' => $fields['min'][$i] ?? null,
-                    'max' => $fields['max'][$i] ?? null,
-                    'step' => $fields['step'][$i] ?? null,
+                    'min' => ($fields['min'][$i] ?? '') !== '' ? $fields['min'][$i] : null,
+                    'max' => ($fields['max'][$i] ?? '') !== '' ? $fields['max'][$i] : null,
+                    'step' => ($fields['step'][$i] ?? '') !== '' ? $fields['step'][$i] : null,
                     'client_add' => (int) $fields['client_add'][$i] ?? 0,
                     'required' => (int) $fields['required'][$i] ?? 0,
                     'encrypted' => (int) $fields['encrypted'][$i] ?? 0,
@@ -330,9 +330,9 @@ class SupportManagerDepartments extends SupportManagerModel
                     'description' => $fields['description'][$i] ?? null,
                     'visibility' => $fields['visibility'][$i] ?? 'client',
                     'type' => $fields['type'][$i] ?? 'text',
-                    'min' => $fields['min'][$i] ?? null,
-                    'max' => $fields['max'][$i] ?? null,
-                    'step' => $fields['step'][$i] ?? null,
+                    'min' => ($fields['min'][$i] ?? '') !== '' ? $fields['min'][$i] : null,
+                    'max' => ($fields['max'][$i] ?? '') !== '' ? $fields['max'][$i] : null,
+                    'step' => ($fields['step'][$i] ?? '') !== '' ? $fields['step'][$i] : null,
                     'client_add' => (int) $fields['client_add'][$i] ?? 0,
                     'required' => (int) $fields['required'][$i] ?? 0,
                     'encrypted' => (int) $fields['encrypted'][$i] ?? 0,
@@ -476,17 +476,17 @@ class SupportManagerDepartments extends SupportManagerModel
             if (!empty($department->fields)) {
                 foreach ($department->fields as &$field) {
                     if (!empty($field->options)) {
-                        $field->options = unserialize($field->options);
+                        $field->options = safe_unserialize($field->options);
                     }
                 }
             }
         }
 
         if (!empty($department->reminder_ticket_status)) {
-            $department->reminder_ticket_status = unserialize($department->reminder_ticket_status);
+            $department->reminder_ticket_status = safe_unserialize($department->reminder_ticket_status);
         }
         if (!empty($department->reminder_ticket_priority)) {
-            $department->reminder_ticket_priority = unserialize($department->reminder_ticket_priority);
+            $department->reminder_ticket_priority = safe_unserialize($department->reminder_ticket_priority);
         }
 
         return $department;
@@ -946,8 +946,13 @@ class SupportManagerDepartments extends SupportManagerModel
                     'if_set' => isset($vars['oauth2_user']),
                     'rule' => [[$this, 'validateEmailCredential'], (isset($vars['method']) ? $vars['method'] : null)],
                     'message' => $this->_('SupportManagerDepartments.!error.password.format'),
-                    'post_format' => [[$this, 'systemEncrypt']],
                     'last' => true
+                ],
+                'encrypt' => [
+                    'if_set' => true,
+                    'rule' => true,
+                    'message' => '',
+                    'post_format' => [[$this, 'systemEncrypt']],
                 ]
             ],
             'port' => [

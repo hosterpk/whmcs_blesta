@@ -1157,7 +1157,7 @@ class GatewayPayments extends Component
      * @return object An object representing the transaction if attempted, void otherwise.
      *  Check GatewayPayments::errors(), as some transactions may be attempted and yet still produce errors
      */
-    public function capturePayment($client_id, $transaction_id, $amount = null, array $options = null)
+    public function capturePayment($client_id, $transaction_id, $amount = null, ?array $options = null)
     {
         $default_options = [
             'invoices' => null,
@@ -1369,7 +1369,7 @@ class GatewayPayments extends Component
      * @return mixed An object representing the transaction if attempted, void otherwise.
      *  Check GatewayPayments::errors(), as some transactions may be attempted and yet still produce errors
      */
-    public function refundPayment($client_id, $transaction_id, $amount = null, array $options = null)
+    public function refundPayment($client_id, $transaction_id, $amount = null, ?array $options = null)
     {
         $default_options = [
             'invoices' => null,
@@ -1552,7 +1552,7 @@ class GatewayPayments extends Component
      * @return mixed An object representing the transaction if attempted, void otherwise.
      *  Check GatewayPayments::errors(), as some transactions may be attempted and yet still produce errors
      */
-    public function voidPayment($client_id, $transaction_id, array $options = null)
+    public function voidPayment($client_id, $transaction_id, ?array $options = null)
     {
         $default_options = [
             'invoices' => null,
@@ -2151,7 +2151,7 @@ class GatewayPayments extends Component
      *  apply amount
      * @return array A numerically indexed array containing the 'invoice_id' and 'amount' keys
      */
-    private function invoiceArrayToAmounts(array $invoices = null)
+    private function invoiceArrayToAmounts(?array $invoices = null)
     {
         $amounts = [];
         if (!empty($invoices)) {

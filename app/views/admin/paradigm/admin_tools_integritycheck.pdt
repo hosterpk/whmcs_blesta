@@ -1,0 +1,307 @@
+<?php /** @var View $this **/ ?>
+
+        <?php
+        echo (isset($message) ? $message : null);
+
+        $this->Widget->clear();
+        $this->Widget->create(
+            $this->_('AdminTools.integritycheck.boxtitle_integritycheck', true),
+            ['id' => 'admin_tools_integritycheck'],
+            ($render_section ?? null)
+        );
+        ?>
+
+        <!-- Pre-check description -->
+        <div id="integrity_precheck">
+            <?php if (!($manifest_exists ?? false)) { ?>
+            <div class="alert alert-danger mb-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <?php $this->_('AdminTools.integritycheck.text_manifest_not_found');?>
+            </div>
+            <?php } else { ?>
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                <?php $this->_('AdminTools.integritycheck.text_description');?>
+            </div>
+            <?php } ?>
+        </div>
+
+        <!-- Progress (hidden initially) -->
+        <div id="integrity_progress" class="d-none">
+            <div class="pad">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    <span><?php $this->_('AdminTools.integritycheck.text_checking');?></span>
+                </div>
+                <div class="progress" style="height: 20px;">
+                    <div id="integrity_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <small id="integrity_progress_text" class="text-secondary mt-1 d-block"></small>
+            </div>
+        </div>
+
+        <!-- Results (hidden initially) -->
+        <div id="integrity_results" class="d-none">
+            <div class="pad">
+                <p class="text-secondary mb-3" id="integrity_manifest_info"></p>
+
+                <!-- Summary cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body py-3">
+                                <div class="fs-3 fw-bold" id="integrity_total">0</div>
+                                <small class="text-secondary"><?php $this->_('AdminTools.integritycheck.text_total_files');?></small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body py-3">
+                                <div class="fs-3 fw-bold text-success" id="integrity_ok">0</div>
+                                <small class="text-secondary"><?php $this->_('AdminTools.integritycheck.text_ok');?></small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body py-3">
+                                <div class="fs-3 fw-bold text-warning" id="integrity_modified_count">0</div>
+                                <small class="text-secondary"><?php $this->_('AdminTools.integritycheck.status_modified');?></small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card text-center">
+                            <div class="card-body py-3">
+                                <div class="fs-3 fw-bold text-danger" id="integrity_missing_count">0</div>
+                                <small class="text-secondary"><?php $this->_('AdminTools.integritycheck.status_missing');?></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No issues message -->
+                <div id="integrity_no_issues" class="alert alert-success d-none">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <?php $this->_('AdminTools.integritycheck.text_no_issues');?>
+                </div>
+
+                <!-- Results table -->
+                <div id="integrity_table_wrapper" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th><?php $this->_('AdminTools.integritycheck.heading_status');?></th>
+                                    <th><?php $this->_('AdminTools.integritycheck.heading_file');?></th>
+                                    <th><?php $this->_('AdminTools.integritycheck.heading_category');?></th>
+                                </tr>
+                            </thead>
+                            <tbody id="integrity_table_body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <?php $this->Widget->footer(); ?>
+        <!-- Footer buttons -->
+        <div id="integrity_footer_precheck" class="d-flex justify-content-end">
+            <button type="button" id="integrity_run_btn" class="btn btn-primary"<?php echo !($manifest_exists ?? false) ? ' disabled' : '';?>>
+                <i class="bi bi-shield-check me-2"></i><?php $this->_('AdminTools.integritycheck.field_run_check');?>
+            </button>
+        </div>
+        <div id="integrity_footer_results" class="d-none d-flex justify-content-end gap-2">
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'tools/integritycheck/');?>" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-repeat me-2"></i><?php $this->_('AdminTools.integritycheck.field_run_again');?>
+            </a>
+            <button type="button" id="integrity_download_btn" class="btn btn-outline-primary">
+                <i class="bi bi-download me-2"></i><?php $this->_('AdminTools.integritycheck.field_download_report');?>
+            </button>
+        </div>
+
+        <?php
+        $this->Widget->end();
+        ?>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var csrfToken = '<?php echo ($csrf_token ?? '');?>';
+                var baseUri = '<?php echo $this->Html->safe($this->base_uri);?>';
+                var checkUrl = baseUri + 'tools/integritycheck/';
+
+                var allModified = [];
+                var allMissing = [];
+                var okCount = 0;
+                var totalFiles = 0;
+
+                var labels = {
+                    modified: '<?php echo $this->Html->safe($this->_('AdminTools.integritycheck.status_modified', true));?>',
+                    missing: '<?php echo $this->Html->safe($this->_('AdminTools.integritycheck.status_missing', true));?>',
+                    core: '<?php echo $this->Html->safe($this->_('AdminTools.integritycheck.category_core', true));?>',
+                    vendor: '<?php echo $this->Html->safe($this->_('AdminTools.integritycheck.category_vendor', true));?>'
+                };
+
+                document.getElementById('integrity_run_btn').addEventListener('click', function() {
+                    this.disabled = true;
+                    document.getElementById('integrity_precheck').classList.add('d-none');
+                    document.getElementById('integrity_progress').classList.remove('d-none');
+                    allModified = [];
+                    allMissing = [];
+                    okCount = 0;
+                    totalFiles = 0;
+                    processBatch(0);
+                });
+
+                function processBatch(offset) {
+                    var formData = new FormData();
+                    formData.append('_csrf_token', csrfToken);
+                    formData.append('batch_check', '1');
+                    formData.append('offset', offset);
+
+                    fetch(checkUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (data.error) {
+                            document.getElementById('integrity_progress').classList.add('d-none');
+                            document.getElementById('integrity_precheck').innerHTML =
+                                '<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-triangle me-2"></i>' + data.error + '</div>';
+                            document.getElementById('integrity_precheck').classList.remove('d-none');
+                            document.getElementById('integrity_run_btn').disabled = false;
+                            return;
+                        }
+
+                        allModified = allModified.concat(data.modified || []);
+                        allMissing = allMissing.concat(data.missing || []);
+                        okCount += data.ok_count || 0;
+                        totalFiles = data.total || 0;
+
+                        // Update progress
+                        var processed = data.processed || 0;
+                        var pct = totalFiles > 0 ? Math.round((processed / totalFiles) * 100) : 0;
+                        var bar = document.getElementById('integrity_progress_bar');
+                        bar.style.width = pct + '%';
+                        bar.textContent = pct + '%';
+                        bar.setAttribute('aria-valuenow', pct);
+                        document.getElementById('integrity_progress_text').textContent =
+                            processed + ' / ' + totalFiles + ' files checked...';
+
+                        if (!data.done) {
+                            processBatch(processed);
+                        } else {
+                            showResults(data);
+                        }
+                    })
+                    .catch(function(err) {
+                        document.getElementById('integrity_progress').classList.add('d-none');
+                        document.getElementById('integrity_precheck').innerHTML =
+                            '<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-triangle me-2"></i><?php echo $this->Html->safe($this->_('AdminTools.integritycheck.text_error', true));?></div>';
+                        document.getElementById('integrity_precheck').classList.remove('d-none');
+                        document.getElementById('integrity_run_btn').disabled = false;
+                    });
+                }
+
+                function showResults(data) {
+                    document.getElementById('integrity_progress').classList.add('d-none');
+
+                    // Manifest info
+                    if (data.manifest_version) {
+                        document.getElementById('integrity_manifest_info').textContent =
+                            '<?php echo $this->Html->safe($this->_('AdminTools.integritycheck.text_manifest_version', true));?>'
+                            .replace('%1$s', data.manifest_version).replace('%2$s', data.manifest_date || '');
+                    }
+
+                    // Summary counts
+                    document.getElementById('integrity_total').textContent = totalFiles;
+                    document.getElementById('integrity_ok').textContent = okCount;
+                    document.getElementById('integrity_modified_count').textContent = allModified.length;
+                    document.getElementById('integrity_missing_count').textContent = allMissing.length;
+
+                    var hasIssues = allModified.length > 0 || allMissing.length > 0;
+
+                    if (!hasIssues) {
+                        document.getElementById('integrity_no_issues').classList.remove('d-none');
+                    } else {
+                        var tbody = document.getElementById('integrity_table_body');
+                        tbody.innerHTML = '';
+
+                        allModified.forEach(function(file) {
+                            tbody.appendChild(buildRow('modified', file));
+                        });
+                        allMissing.forEach(function(file) {
+                            tbody.appendChild(buildRow('missing', file));
+                        });
+
+                        document.getElementById('integrity_table_wrapper').classList.remove('d-none');
+                    }
+
+                    document.getElementById('integrity_results').classList.remove('d-none');
+                    document.getElementById('integrity_footer_precheck').classList.add('d-none');
+                    document.getElementById('integrity_footer_results').classList.remove('d-none');
+                }
+
+                function buildRow(status, file) {
+                    var tr = document.createElement('tr');
+
+                    var tdStatus = document.createElement('td');
+                    var badge = document.createElement('span');
+                    badge.className = 'badge bg-' + (status === 'modified' ? 'warning' : 'danger');
+                    badge.textContent = labels[status];
+                    tdStatus.appendChild(badge);
+
+                    var tdFile = document.createElement('td');
+                    var code = document.createElement('code');
+                    code.textContent = file.path;
+                    tdFile.appendChild(code);
+
+                    var tdCat = document.createElement('td');
+                    if (file.category === 'vendor') {
+                        var span = document.createElement('span');
+                        span.className = 'text-secondary';
+                        span.textContent = labels.vendor;
+                        tdCat.appendChild(span);
+                    } else {
+                        tdCat.textContent = labels.core;
+                    }
+
+                    tr.appendChild(tdStatus);
+                    tr.appendChild(tdFile);
+                    tr.appendChild(tdCat);
+                    return tr;
+                }
+
+                // Download report
+                document.getElementById('integrity_download_btn').addEventListener('click', function() {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = checkUrl;
+
+                    var fields = {
+                        '_csrf_token': csrfToken,
+                        'download_report': '1',
+                        'modified_files': JSON.stringify(allModified),
+                        'missing_files': JSON.stringify(allMissing),
+                        'ok_count': okCount,
+                        'total_count': totalFiles
+                    };
+
+                    for (var key in fields) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = fields[key];
+                        form.appendChild(input);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+                });
+            });
+        </script>

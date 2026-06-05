@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Type\Cron;
 
 /**
@@ -12,5 +13,4 @@ namespace Blesta\Core\Automation\Type\Cron;
  */
 class Task extends AbstractCron
 {
-
 }

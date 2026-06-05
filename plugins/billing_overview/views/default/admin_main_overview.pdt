@@ -1,220 +1,338 @@
-        <?php
-        $this->Form->create();
-        ?>
-        <div class="billing_top_row">
-            <div class="billing_settings">
-                <?php
-                $num_statistics = count((isset($statistics) ? $statistics : []));
-                $statistics_mid_point = round($num_statistics / 2);
-                ?>
-                <ul class="left_box">
-                    <?php
-                    for ($i = 0; $i < $statistics_mid_point; ++$i) {
-                    ?>
-                    <li class="<?php echo (isset($statistics[$i]['class']) ? $this->Html->safe($statistics[$i]['class']) : null);?>">
-                        <div>
-                            <?php
-                            if (!empty($statistics[$i]['icon'])) {
-                            ?>
-                            <i class="<?php echo (isset($statistics[$i]['icon']) ? $this->Html->safe($statistics[$i]['icon']) : null);?>"></i>
-                            <?php
-                            }
-                            ?>
-                            <span><?php echo (isset($statistics[$i]['name']) ? $this->Html->safe($statistics[$i]['name']) : null);?></span>
-                            <span class="value <?php echo (isset($statistics[$i]['value_class']) ? $this->Html->safe($statistics[$i]['value_class']) : null);?>"><?php echo (isset($statistics[$i]['value']) ? $this->Html->safe($statistics[$i]['value']) : null);?></span>
-                        </div>
-                    </li>
-                    <?php
-                    }
-                    ?>
-                </ul>
-
-                <ul class="right_box">
-                    <?php
-                    for ($i = $statistics_mid_point; $i < $num_statistics; ++$i) {
-                    ?>
-                    <li class="<?php echo (isset($statistics[$i]['class']) ? $this->Html->safe($statistics[$i]['class']) : null);?>">
-                        <div>
-                            <?php
-                            if (!empty($statistics[$i]['icon'])) {
-                            ?>
-                            <i class="<?php echo (isset($statistics[$i]['icon']) ? $this->Html->safe($statistics[$i]['icon']) : null);?>"></i>
-                            <?php
-                            }
-                            ?>
-                            <span><?php echo (isset($statistics[$i]['name']) ? $this->Html->safe($statistics[$i]['name']) : null);?></span>
-                            <span class="value <?php echo (isset($statistics[$i]['value_class']) ? $this->Html->safe($statistics[$i]['value_class']) : null);?>"><?php echo (isset($statistics[$i]['value']) ? $this->Html->safe($statistics[$i]['value']) : null);?></span>
-                        </div>
-                    </li>
-                    <?php
-                    }
-                    ?>
-                </ul>
-            </div>
-        </div>
-
-        <div class="billing_bottom_row">
-            <div class="currency">
-                <ul>
-                    <li class="inline-block"><?php $this->Form->fieldSelect('currency', (isset($currencies) ? $currencies : []), (isset($vars['currency']) ? $vars['currency'] : null), ['id' => 'currency']);?></li>
-                    <li class="inline-block"><?php $this->Form->fieldSelect('graph_date', (isset($graph_dates) ? $graph_dates : []), (isset($vars['graph_date']) ? $vars['graph_date'] : null), ['id' => 'graph_date']);?></li>
-                </ul>
-            </div>
-
-            <div class="graphs">
-                <?php
-                // Create a section for each graph
-                foreach ((isset($graphs['graphs']) ? $graphs['graphs'] : []) as $graph_type => $graph) {
-                ?>
-                <div class="graph_box">
-                    <h5><?php echo (isset($graph['name']) ? $this->Html->safe($graph['name']) : null);?></h5>
-                    <svg id="<?php echo (isset($graph_type) ? $this->Html->safe($graph_type) : null);?>" class="graph"></svg>
-                </div>
-                <div class="clear"></div>
-                <?php
-                }
-                ?>
-            </div>
-        </div>
-        <?php
-        $this->Form->end();
-        ?>
-
-<script type="text/javascript">
-$(document).ready(function() {
-    billingOverviewInitialize();
-});
-
-function billingOverviewInitialize() {
-    // Retrieve the required scripts
-    $.when(
-        $.ajax({
-            url: '<?php echo $this->Html->safe(VENDORWEBDIR . 'd3/d3.min.js');?>',
-            dataType: "script",
-            cache: true,
-            ifModified: false
-        }),
-        $.Deferred(function(deferred) {
-            $(deferred.resolve);
-        })
-    ).done(function() {
-        $.ajax({
-            url: '<?php echo $this->Html->safe(VENDORWEBDIR . 'nvd3/nv.d3.min.js');?>',
-            dataType: "script",
-            cache: true,
-            ifModified: false
-        }).done(function() {
-            buildBillingOverviewGraphs();
-        });
-    });
-}
-
-function buildBillingOverviewGraphs() {
-    var chart;
-    var points;
-    var colors = d3.scale.category20c().range();
-
-    <?php
-    foreach ((isset($graphs['graphs']) ? $graphs['graphs'] : []) as $graph_type => $graph) {
-    ?>
-    nv.addGraph(function() {
-        points = [
+<?php
+$this->Form->create();
+?>
+<div class="row">
+    <!-- Left Column: Statistics -->
+    <div class="col-md-6 mb-3 mb-md-0">
+        <ul class="status-list">
             <?php
-            // Build the line name and point values
-            foreach ($graph['data'] as $i => $data) {
+            $num_statistics = count((isset($statistics) ? $statistics : []));
+            $statistics_mid_point = ceil($num_statistics / 2);
+
+            for ($i = 0; $i < $statistics_mid_point; ++$i) {
+                if (!isset($statistics[$i])) continue;
             ?>
-            {
-                "key":"<?php echo str_replace('"', '\"', (isset($data['name']) ? $data['name'] : null));?>",
-                "disabled":<?php echo (isset($data['disabled']) ? $data['disabled'] : null) === false ? 'false' : 'true';?>,
-                "values":<?php echo (isset($data['points']) ? $data['points'] : '[]');?>
-            }<?php echo isset($graph['data'][$i + 1]) ? ',' : '';?>
+            <li class="status-list-item">
+                <span>
+                    <?php
+                    if (!empty($statistics[$i]['icon'])) {
+                    ?>
+                    <i class="bi <?php echo (isset($statistics[$i]['icon']) ? $this->Html->safe($statistics[$i]['icon']) : null);?> me-2"></i>
+                    <?php
+                    }
+                    ?>
+                    <?php echo (isset($statistics[$i]['name']) ? $this->Html->safe($statistics[$i]['name']) : null);?>
+                </span>
+                <strong class="value <?php echo (isset($statistics[$i]['value_class']) ? $this->Html->safe($statistics[$i]['value_class']) : null);?>"><?php echo (isset($statistics[$i]['value']) ? $this->Html->safe($statistics[$i]['value']) : null);?></strong>
+            </li>
             <?php
             }
             ?>
-        ];
+        </ul>
+    </div>
 
-        chart = nv.models.stackedAreaChart()
-            // Allows some interactive functionality, and also  displays all items in tooltip
-            .useInteractiveGuideline(true)
-            .x(function(d) { return d[0] })
-            .y(function(d) { return d[1] })
-            .controlLabels({stacked: "Stacked"})
-            .duration(300);
+    <!-- Right Column: Statistics -->
+    <div class="col-md-6">
+        <ul class="status-list">
+            <?php
+            for ($i = $statistics_mid_point; $i < $num_statistics; ++$i) {
+                if (!isset($statistics[$i])) continue;
+            ?>
+            <li class="status-list-item">
+                <span>
+                    <?php
+                    if (!empty($statistics[$i]['icon'])) {
+                    ?>
+                    <i class="bi <?php echo (isset($statistics[$i]['icon']) ? $this->Html->safe($statistics[$i]['icon']) : null);?> me-2"></i>
+                    <?php
+                    }
+                    ?>
+                    <?php echo (isset($statistics[$i]['name']) ? $this->Html->safe($statistics[$i]['name']) : null);?>
+                </span>
+                <strong class="value <?php echo (isset($statistics[$i]['value_class']) ? $this->Html->safe($statistics[$i]['value_class']) : null);?>"><?php echo (isset($statistics[$i]['value']) ? $this->Html->safe($statistics[$i]['value']) : null);?></strong>
+            </li>
+            <?php
+            }
+            ?>
+        </ul>
+    </div>
+</div>
 
-        // Format the axes
-        chart.xAxis.tickFormat(function(d) {
-            // The timestamps given are already local,
-            // so offset them for display by setting them to UTC
-            // to avoid d3's locale date formatting
-            return d3.time.format.utc('%b %d')(new Date(d));
-        });
-        chart.yAxis.tickFormat(function(d) {
-            var txt = document.createElement("textarea");
-            txt.innerHTML = '<?php echo (isset($currency->prefix) ? $this->Html->safe($currency->prefix) : null);?>';
-            return txt.value + d3.format('.2s')(d);
-        });
+<!-- Currency and Date Selector -->
+<div class="card-filter-bar mt-3">
+    <div class="d-flex justify-content-end align-items-center gap-2">
+        <?php $this->Form->fieldSelect('currency', (isset($currencies) ? $currencies : []), (isset($vars['currency']) ? $vars['currency'] : null), ['id' => 'currency', 'class' => 'form-select form-select-sm', 'style' => 'width: auto;']);?>
+        <?php $this->Form->fieldSelect('graph_date', (isset($graph_dates) ? $graph_dates : []), (isset($vars['graph_date']) ? $vars['graph_date'] : null), ['id' => 'graph_date', 'class' => 'form-select form-select-sm', 'style' => 'width: auto;']);?>
+    </div>
+</div>
 
-        // Use a different format for tooltip values than the y-axis format
-        chart.interactiveLayer.tooltip.valueFormatter(function(d,i) {
-          return '<?php echo (isset($currency->prefix) ? $this->Html->safe($currency->prefix) : null);?>'
-            + d3.format('<?php echo $this->Html->safe(',.' . (isset($currency->precision) ? $currency->precision : 2) . 'f');?>')(d);
-        });
+<!-- Charts Section -->
+<?php
+$graph_list = (isset($graphs['graphs']) ? $graphs['graphs'] : []);
+if (!empty($graph_list)) {
+    foreach ($graph_list as $graph_type => $graph) {
+?>
+<div class="graph-section">
+    <h6 class="my-3"><?php echo (isset($graph['name']) ? $this->Html->safe($graph['name']) : null);?></h6>
+    <div id="<?php echo (isset($graph_type) ? $this->Html->safe($graph_type) : null);?>"
+         class="billing-overview-chart"
+         data-chart-type="<?php echo (isset($graph_type) ? $this->Html->safe($graph_type) : null);?>"
+         data-chart-data="<?php echo $this->Html->safe(json_encode((isset($graph['data']) ? $graph['data'] : [])));?>"
+         data-currency-prefix="<?php echo (isset($currency->prefix) ? $this->Html->safe($currency->prefix) : null);?>"
+         data-currency-precision="<?php echo (isset($currency->precision) ? $this->Html->safe($currency->precision) : 2);?>"
+         data-show-legend="<?php echo (isset($graphs['settings']['show_legend']) ? $graphs['settings']['show_legend'] : 0);?>"></div>
+</div>
+<?php
+    }
+}
+?>
+<?php
+$this->Form->end();
+?>
 
-        chart.legend.vers('furious');
-        // Set line colors
-        chart.color(function (d, i) {
-            return colors[i % colors.length];
-        });
-        // Line interpolation between points
-        chart.interpolate("basis");
-        // Message to display if there is no data
-        chart.noData("There is no data to display");
-        // Hide the ability to switch from stacked, stream, expanded
-        chart.showControls(true);
-        // Show the x axis
-        chart.showXAxis(true);
-        // Show the y axis
-        chart.showYAxis(true);
-        // Force minimum Y-axis value
-        chart.forceY([0]);
-        // Show legend
-        chart.showLegend(<?php echo (((isset($graphs['settings']['show_legend']) ? $graphs['settings']['show_legend'] : 0) == 1) ? 'true' : 'false');?>);
-        // Show total in graph
-        chart.showTotalInTooltip(true);
-        // Set total language
-        chart.totalLabel('<?php $this->_('AppController.graphs.label.total');?>');
-        // Set control label language
-        chart.controlLabels({
-            "stacked":"<?php $this->_('AppController.graphs.control_label.stacked');?>",
-            "stream":"<?php $this->_('AppController.graphs.control_label.stream');?>",
-            "expanded":"<?php $this->_('AppController.graphs.control_label.expanded');?>"
-        });
-        chart.margin({
-            "top":30,
-            "right":25,
-            "bottom":50,
-            "left":35
-        });
+<script type="text/javascript">
+if (typeof window.BillingOverview === 'undefined') {
+    window.BillingOverview = {
+        charts: {},
+        baseUri: '<?php echo $this->Html->safe($this->base_uri);?>',
 
-        d3.select('#<?php echo (isset($graph_type) ? $this->Html->safe($graph_type) : null);?>')
-            .datum(points)
-            .transition()
-            .duration(1000)
-            .call(chart)
-            .each('start', function() {
-                setTimeout(function() {
-                    d3.selectAll('#<?php echo (isset($graph_type) ? $this->Html->safe($graph_type) : null);?> *').each(function() {
-                        if(this.__transition__)
-                            this.__transition__.duration = 1;
-                    })
-                }, 0)
+        getCurrentTheme: function() {
+            return document.documentElement.getAttribute('data-theme') || 'dark';
+        },
+
+        getBaseChartOptions: function() {
+            var isDark = this.getCurrentTheme() === 'dark';
+
+            return {
+                chart: {
+                    background: 'transparent',
+                    foreColor: isDark ? '#a0a0a0' : '#666666',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: true,
+                            selection: true,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: true,
+                            reset: true
+                        }
+                    }
+                },
+                theme: {
+                    mode: isDark ? 'dark' : 'light'
+                },
+                grid: {
+                    borderColor: isDark ? '#2a2a2a' : '#e0e0e0',
+                    strokeDashArray: 3
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light'
+                },
+                legend: {
+                    labels: {
+                        colors: isDark ? '#a0a0a0' : '#666666'
+                    }
+                },
+                xaxis: {
+                    labels: {
+                        style: {
+                            colors: isDark ? '#a0a0a0' : '#666666'
+                        }
+                    },
+                    axisBorder: {
+                        color: isDark ? '#2a2a2a' : '#e0e0e0'
+                    },
+                    axisTicks: {
+                        color: isDark ? '#2a2a2a' : '#e0e0e0'
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: isDark ? '#a0a0a0' : '#666666'
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            };
+        },
+
+        createStackedAreaChart: function(container) {
+            var chartDataStr = container.getAttribute('data-chart-data');
+            var currencyPrefix = container.getAttribute('data-currency-prefix') || '';
+            var currencyPrecision = parseInt(container.getAttribute('data-currency-precision') || '2', 10);
+            var showLegend = container.getAttribute('data-show-legend') === '1';
+
+            if (!chartDataStr) return null;
+
+            var data;
+            try {
+                data = JSON.parse(chartDataStr);
+            } catch (e) {
+                return null;
+            }
+
+            var categories = [];
+            var series = [];
+
+            if (data.length > 0 && data[0].points) {
+                var points = typeof data[0].points === 'string' ? JSON.parse(data[0].points) : data[0].points;
+                points.forEach(function(point) {
+                    var date = new Date(point[0]);
+                    categories.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                });
+            }
+
+            var colors = ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#dc3545', '#6f42c1'];
+
+            data.forEach(function(seriesData) {
+                if (seriesData.disabled) return;
+
+                var points = typeof seriesData.points === 'string' ? JSON.parse(seriesData.points) : seriesData.points;
+                var values = points.map(function(point) { return point[1]; });
+
+                series.push({
+                    name: seriesData.name,
+                    data: values
+                });
             });
 
-        nv.utils.windowResize(chart.update);
-        return chart;
-    });
-    <?php
-    }
-    ?>
+            var options = this.getBaseChartOptions();
+            options.chart.type = 'area';
+            options.chart.stacked = true;
+            options.chart.height = 280;
+            options.series = series;
+            options.xaxis.categories = categories;
+            options.stroke = {
+                curve: 'smooth', width: 2
+            };
+            options.fill = {
+                type: 'gradient',
+                gradient: {
+                    opacityFrom: 0.6,
+                    opacityTo: 0.1
+                }
+            };
+            options.colors = colors;
+            options.legend.show = showLegend;
+
+            options.yaxis.labels.formatter = function(value) {
+                if (value >= 1000000) {
+                    return currencyPrefix + (value / 1000000).toFixed(1) + 'M';
+                } else if (value >= 1000) {
+                    return currencyPrefix + (value / 1000).toFixed(1) + 'K';
+                }
+                return currencyPrefix + value.toFixed(0);
+            };
+
+            options.tooltip.y = {
+                formatter: function(value) {
+                    return currencyPrefix + value.toFixed(currencyPrecision);
+                }
+            };
+
+            return options;
+        },
+
+        destroyCharts: function() {
+            var self = this;
+            Object.keys(self.charts).forEach(function(chartId) {
+                if (self.charts[chartId]) {
+                    try {
+                        self.charts[chartId].destroy();
+                    } catch (e) {}
+                }
+            });
+            self.charts = {};
+        },
+
+        initChartsFromDataAttributes: function() {
+            var self = this;
+            self.destroyCharts();
+
+            document.querySelectorAll('.billing-overview-chart[data-chart-data]').forEach(function(container) {
+                var chartType = container.getAttribute('data-chart-type');
+                if (!chartType) return;
+
+                try {
+                    var options = self.createStackedAreaChart(container);
+                    if (options) {
+                        var chart = new ApexCharts(container, options);
+                        chart.render();
+                        self.charts[chartType] = chart;
+                    }
+                } catch (e) {
+                    console.error('Failed to initialize chart:', e);
+                }
+            });
+        },
+
+        init: function() {
+            var self = this;
+
+            if (typeof ApexCharts !== 'undefined') {
+                self.initChartsFromDataAttributes();
+            }
+
+            if (!self.themeObserver) {
+                self.themeObserver = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.attributeName === 'data-theme') {
+                            Object.keys(self.charts).forEach(function(chartId) {
+                                if (self.charts[chartId]) {
+                                    var baseOptions = self.getBaseChartOptions();
+                                    self.charts[chartId].updateOptions({
+                                        chart: baseOptions.chart,
+                                        theme: baseOptions.theme,
+                                        grid: baseOptions.grid,
+                                        tooltip: baseOptions.tooltip,
+                                        legend: baseOptions.legend,
+                                        xaxis: baseOptions.xaxis,
+                                        yaxis: baseOptions.yaxis
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
+                self.themeObserver.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['data-theme']
+                });
+            }
+
+            if (!self.domObserver) {
+                self.domObserver = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            mutation.addedNodes.forEach(function(node) {
+                                if (node.nodeType === 1) {
+                                    var charts = node.querySelectorAll ? node.querySelectorAll('.billing-overview-chart[data-chart-data]') : [];
+                                    if (charts.length > 0 || (node.classList && node.classList.contains('billing-overview-chart'))) {
+                                        setTimeout(function() {
+                                            self.initChartsFromDataAttributes();
+                                        }, 100);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                });
+
+                self.domObserver.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+    };
 }
+
+window.BillingOverview.init();
 </script>

@@ -1,0 +1,721 @@
+        <?php
+        echo ($message ?? null);
+
+        $this->Form->create(null, ['id' => 'ai_settings', 'class' => 'disable-on-submit']);
+        $this->Widget->clear();
+        $this->Widget->setStyleSheet($this->view_dir . 'css/support.css', ['id' => 'support_manager_styles']);
+        $this->Widget->create($this->_('AdminMain.ai.boxtitle_settings', true), ['id' => 'admin_main_ai']);
+        ?>
+            <?php
+            // AI Configuration Not Set Warning
+            if (!$ai_configured) {
+            ?>
+            <div class="alert alert-warning d-flex align-items-start mb-4">
+                <i class="bi bi-exclamation-triangle me-3 mt-1" style="font-size: 1.25rem;"></i>
+                <div>
+                    <strong><?php $this->_('AdminMain.ai.warning_not_configured_title');?></strong>
+                    <p class="mb-2"><?php $this->_('AdminMain.ai.warning_not_configured_text');?></p>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/system/ai/');?>" class="btn btn-sm btn-warning">
+                        <i class="bi bi-gear me-1"></i><?php $this->_('AdminMain.ai.button_configure_ai');?>
+                    </a>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+
+            <!-- AI Features Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminMain.ai.heading_features');?></h6>
+
+            <!-- Enable AI Features -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'sm_ai_enabled',
+                        'true',
+                        ($vars->sm_ai_enabled ?? 'false') == 'true',
+                        ['id' => 'sm_ai_enabled', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="sm_ai_enabled">
+                        <strong><?php $this->_('AdminMain.ai.field_enabled');?></strong>
+                        <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_enabled_desc');?></small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Model Configuration Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminMain.ai.heading_model');?></h6>
+
+            <!-- Override Default Model -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'sm_ai_override_model',
+                        'true',
+                        ($vars->sm_ai_override_model ?? 'false') == 'true',
+                        ['id' => 'sm_ai_override_model', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="sm_ai_override_model">
+                        <strong><?php $this->_('AdminMain.ai.field_override_model');?></strong>
+                        <small class="d-block text-muted">
+                            <?php echo Language::_('AdminMain.ai.field_override_model_desc', true, $system_defaults['model'] ?? 'claude-3-5-sonnet-20241022');?>
+                        </small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- AI Model Selection -->
+            <div class="mb-4" id="modelSelectionSection" style="display: none;">
+                <label for="sm_ai_model" class="form-label">
+                    <?php $this->_('AdminMain.ai.field_model');?>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                            data-bs-toggle="popover"
+                            data-bs-placement="top"
+                            data-bs-content="<?php $this->_('AdminMain.ai.field_model_tooltip');?>">
+                        <i class="bi bi-info-circle text-secondary"></i>
+                    </button>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'sm_ai_model',
+                    $model_options ?? [],
+                    ($vars->sm_ai_model ?? 'claude-3-5-sonnet-20241022'),
+                    ['id' => 'sm_ai_model', 'class' => 'form-select']
+                );
+                ?>
+                <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_model_desc');?></small>
+            </div>
+
+            <!-- Model Parameters Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminMain.ai.heading_parameters');?></h6>
+
+            <!-- Override Max Tokens -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'sm_ai_override_max_tokens',
+                        'true',
+                        ($vars->sm_ai_override_max_tokens ?? 'false') == 'true',
+                        ['id' => 'sm_ai_override_max_tokens', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="sm_ai_override_max_tokens">
+                        <strong><?php $this->_('AdminMain.ai.field_override_max_tokens');?></strong>
+                        <small class="d-block text-muted">
+                            <?php Language::_('AdminMain.ai.field_override_max_tokens_desc', false, $system_defaults['max_tokens'] ?? '4000');?>
+                        </small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Max Tokens Input -->
+            <div class="mb-4" id="maxTokensSection" style="display: none;">
+                <label for="sm_ai_max_tokens" class="form-label">
+                    <?php $this->_('AdminMain.ai.field_max_tokens');?>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                            data-bs-toggle="popover"
+                            data-bs-placement="top"
+                            data-bs-content="<?php $this->_('AdminMain.ai.field_max_tokens_tooltip');?>">
+                        <i class="bi bi-info-circle text-secondary"></i>
+                    </button>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'sm_ai_max_tokens',
+                    ($vars->sm_ai_max_tokens ?? '4000'),
+                    ['id' => 'sm_ai_max_tokens', 'class' => 'form-control', 'type' => 'number', 'min' => '0', 'max' => '128000', 'step' => '100']
+                );
+                ?>
+                <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_max_tokens_desc');?></small>
+            </div>
+
+            <!-- Override Temperature -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'sm_ai_override_temperature',
+                        'true',
+                        ($vars->sm_ai_override_temperature ?? 'false') == 'true',
+                        ['id' => 'sm_ai_override_temperature', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="sm_ai_override_temperature">
+                        <strong><?php $this->_('AdminMain.ai.field_override_temperature');?></strong>
+                        <small class="d-block text-muted">
+                            <?php Language::_('AdminMain.ai.field_override_temperature_desc', false, $system_defaults['temperature'] ?? '1.0');?>
+                        </small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Temperature Input -->
+            <div class="mb-4" id="temperatureSection" style="display: none;">
+                <label for="sm_ai_temperature" class="form-label">
+                    <?php $this->_('AdminMain.ai.field_temperature');?>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                            data-bs-toggle="popover"
+                            data-bs-placement="top"
+                            data-bs-content="<?php $this->_('AdminMain.ai.field_temperature_tooltip');?>">
+                        <i class="bi bi-info-circle text-secondary"></i>
+                    </button>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'sm_ai_temperature',
+                    ($vars->sm_ai_temperature ?? '1.0'),
+                    ['id' => 'sm_ai_temperature', 'class' => 'form-control', 'type' => 'number', 'min' => '0.0', 'max' => '2.0', 'step' => '0.1']
+                );
+                ?>
+                <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_temperature_desc');?></small>
+            </div>
+
+            <!-- System Prompt Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminMain.ai.heading_system_prompt');?></h6>
+
+            <!-- System Prompt -->
+            <div class="mb-4">
+                <label for="sm_ai_system_prompt" class="form-label">
+                    <?php $this->_('AdminMain.ai.field_system_prompt');?>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                            data-bs-toggle="popover"
+                            data-bs-placement="top"
+                            data-bs-content="<?php $this->_('AdminMain.ai.field_system_prompt_tooltip');?>">
+                        <i class="bi bi-info-circle text-secondary"></i>
+                    </button>
+                </label>
+                <?php
+                $default_prompt = "You are a helpful AI assistant for a professional support ticket system. Your role is to assist support staff by:\n1. Analyzing ticket sentiment and urgency\n2. Suggesting appropriate responses based on ticket history\n3. Categorizing tickets into appropriate departments\n4. Identifying common issues and providing relevant knowledge base articles\n5. Drafting professional responses that maintain the company's tone\n\nAlways prioritize accuracy, professionalism, and customer satisfaction. If you're unsure about technical details, acknowledge it and recommend human review.";
+
+                $this->Form->fieldTextarea(
+                    'sm_ai_system_prompt',
+                    ($vars->sm_ai_system_prompt ?? $default_prompt),
+                    ['id' => 'sm_ai_system_prompt', 'class' => 'form-control', 'rows' => '8']
+                );
+                ?>
+                <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_system_prompt_desc');?></small>
+            </div>
+
+            <!-- Experimental Features Section -->
+            <h6 class="form-section-header">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                <?php $this->_('AdminMain.ai.heading_experimental');?>
+            </h6>
+            <div class="mb-3">
+                <!-- AI Analysis Trigger -->
+                <div class="mb-4">
+                    <label for="sm_ai_analyze_trigger" class="form-label">
+                        <?php $this->_('AdminMain.ai.field_analyze_trigger');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_analyze_trigger_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <?php
+                    $analyze_trigger_options = [
+                        'every_reply' => Language::_('AdminMain.ai.option_every_reply', true),
+                        'ticket_opened' => Language::_('AdminMain.ai.option_ticket_opened', true)
+                    ];
+                    $this->Form->fieldSelect(
+                        'sm_ai_analyze_trigger',
+                        $analyze_trigger_options,
+                        ($vars->sm_ai_analyze_trigger ?? 'every_reply'),
+                        ['id' => 'sm_ai_analyze_trigger', 'class' => 'form-select']
+                    );
+                    ?>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_analyze_trigger_desc');?></small>
+                </div>
+
+                <!-- Max Queue Age -->
+                <div class="mb-4">
+                    <label for="sm_ai_max_queue_age_hours" class="form-label">
+                        <?php $this->_('AdminMain.ai.field_max_queue_age_hours');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_max_queue_age_hours_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <?php
+                    $this->Form->fieldText(
+                        'sm_ai_max_queue_age_hours',
+                        ($vars->sm_ai_max_queue_age_hours ?? '24'),
+                        [
+                            'id' => 'sm_ai_max_queue_age_hours',
+                            'class' => 'form-control',
+                            'type' => 'number',
+                            'min' => '1',
+                            'max' => '8760',
+                            'step' => '1'
+                        ]
+                    );
+                    ?>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_max_queue_age_hours_desc');?></small>
+                </div>
+            </div>
+
+            <!-- AI Tools Section -->
+            <h6 class="form-section-header">
+                <i class="bi bi-wrench-adjustable me-2"></i>
+                <?php $this->_('AdminMain.ai.heading_replies');?>
+            </h6>
+
+            <!-- Auto-Reply Feature -->
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'sm_ai_auto_reply_enabled',
+                        'true',
+                        ($vars->sm_ai_auto_reply_enabled ?? 'false') == 'true',
+                        ['id' => 'sm_ai_auto_reply_enabled', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="sm_ai_auto_reply_enabled">
+                        <strong><?php $this->_('AdminMain.ai.field_auto_reply_enabled');?></strong>
+                        <span class="badge bg-warning text-dark ms-2"><?php $this->_('AdminMain.ai.badge_experimental');?></span>
+                        <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_auto_reply_enabled_desc');?></small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Auto-Reply Settings -->
+            <div id="autoReplySettings" style="display: none;">
+                <!-- AI Assistant Display Name -->
+                <div class="mb-4">
+                    <label for="sm_ai_assistant_name" class="form-label">
+                        <?php $this->_('AdminMain.ai.field_assistant_name');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_assistant_name_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <?php
+                    $this->Form->fieldText(
+                        'sm_ai_assistant_name',
+                        ($vars->sm_ai_assistant_name ?? ''),
+                        [
+                            'id' => 'sm_ai_assistant_name',
+                            'class' => 'form-control',
+                            'placeholder' => Language::_('AdminMain.ai.field_assistant_name_placeholder', true)
+                        ]
+                    );
+                    ?>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_assistant_name_desc');?></small>
+                </div>
+
+                <!-- Confidence Threshold -->
+                <div class="mb-4">
+                    <label for="sm_ai_confidence_threshold" class="form-label">
+                        <?php $this->_('AdminMain.ai.field_confidence_threshold');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_confidence_threshold_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <div class="row align-items-center">
+                        <div class="col-md-9">
+                            <input type="range" class="form-range" id="sm_ai_confidence_threshold_slider" min="60" max="100" step="1" value="<?php echo $this->Html->safe($vars->sm_ai_confidence_threshold ?? '70');?>">
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <?php
+                                $this->Form->fieldText(
+                                    'sm_ai_confidence_threshold',
+                                    ($vars->sm_ai_confidence_threshold ?? '70'),
+                                    ['id' => 'sm_ai_confidence_threshold', 'class' => 'form-control', 'type' => 'number', 'min' => '60', 'max' => '100', 'step' => '1']
+                                );
+                                ?>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_confidence_threshold_desc');?></small>
+                </div>
+
+                <!-- Human Review Queue -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'sm_ai_require_human_review',
+                            'true',
+                            ($vars->sm_ai_require_human_review ?? 'true') == 'true',
+                            ['id' => 'sm_ai_require_human_review', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label class="form-check-label" for="sm_ai_require_human_review">
+                            <strong><?php $this->_('AdminMain.ai.field_require_human_review');?></strong>
+                            <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_require_human_review_desc');?></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- AI Reply Disclaimer -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'sm_ai_show_disclaimer',
+                            'true',
+                            ($vars->sm_ai_show_disclaimer ?? 'true') == 'true',
+                            ['id' => 'sm_ai_show_disclaimer', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label class="form-check-label" for="sm_ai_show_disclaimer">
+                            <strong><?php $this->_('AdminMain.ai.field_add_ai_disclaimer');?></strong>
+                            <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_add_ai_disclaimer_desc');?></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Custom Disclaimer Text -->
+                <div class="mb-4" id="customDisclaimerSection" style="display: none;">
+                    <label for="sm_ai_custom_disclaimer" class="form-label">
+                        <?php $this->_('AdminMain.ai.field_custom_disclaimer');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_custom_disclaimer_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <?php
+                    $this->Form->fieldTextarea(
+                        'sm_ai_custom_disclaimer',
+                        ($vars->sm_ai_custom_disclaimer ?? ''),
+                        [
+                            'id' => 'sm_ai_custom_disclaimer',
+                            'class' => 'form-control',
+                            'rows' => '3',
+                            'placeholder' => Language::_('AdminMain.ai.field_custom_disclaimer_placeholder', true)
+                        ]
+                    );
+                    ?>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_custom_disclaimer_desc');?></small>
+                </div>
+
+                <!-- Restricted Departments -->
+                <div class="mb-4">
+                    <label class="form-label">
+                        <?php $this->_('AdminMain.ai.field_restricted_departments');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_restricted_departments_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <div class="row g-2">
+                        <?php
+                        // Parse saved departments if they exist
+                        // May be a JSON string (from DB) or an array (from a failed form submission)
+                        $selected_departments = [];
+                        if (!empty($vars->sm_ai_auto_reply_departments)) {
+                            if (is_array($vars->sm_ai_auto_reply_departments)) {
+                                $selected_departments = $vars->sm_ai_auto_reply_departments;
+                            } else {
+                                $decoded = json_decode($vars->sm_ai_auto_reply_departments, true);
+                                $selected_departments = is_array($decoded) ? $decoded : [];
+                            }
+                        }
+
+                        // Display department checkboxes
+                        foreach ($departments as $dept) {
+                            $is_checked = in_array($dept->id, $selected_departments);
+                            ?>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <?php
+                                    $this->Form->fieldCheckbox(
+                                        'sm_ai_auto_reply_departments[]',
+                                        $dept->id,
+                                        $is_checked,
+                                        ['id' => 'dept_' . $dept->id, 'class' => 'form-check-input']
+                                    );
+                                    ?>
+                                    <label class="form-check-label" for="dept_<?php echo $this->Html->safe($dept->id);?>">
+                                        <?php echo $this->Html->safe($dept->name);?>
+                                    </label>
+                                </div>
+                            </div>
+                            <?php
+                        }
+                        ?>
+                    </div>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_restricted_departments_desc');?></small>
+                </div>
+            </div>
+
+            <!-- AI Tools Section -->
+            <h6 class="form-section-header">
+                <i class="bi bi-wrench-adjustable me-2"></i>
+                <?php $this->_('AdminMain.ai.heading_tools');?>
+            </h6>
+
+            <!-- Enable Tools Feature -->
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'sm_ai_tools_enabled',
+                        'true',
+                        ($vars->sm_ai_tools_enabled ?? 'false') == 'true',
+                        ['id' => 'sm_ai_tools_enabled', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="sm_ai_tools_enabled">
+                        <strong><?php $this->_('AdminMain.ai.field_tools_enabled');?></strong>
+                        <span class="badge bg-warning text-dark ms-2"><?php $this->_('AdminMain.ai.badge_experimental');?></span>
+                        <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_tools_enabled_desc');?></small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- AI Tools Settings (Hidden by default) -->
+            <div id="toolsSettings" style="display: none;">
+                <!-- Available Tools -->
+                <div class="mb-4">
+                <label class="form-label">
+                    <strong><?php $this->_('AdminMain.ai.field_tools_available');?></strong>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                            data-bs-toggle="popover"
+                            data-bs-placement="top"
+                            data-bs-content="<?php $this->_('AdminMain.ai.field_tools_available_tooltip');?>">
+                        <i class="bi bi-info-circle text-secondary"></i>
+                    </button>
+                </label>
+
+                <!-- Tool: Change Priority -->
+                <div class="mb-3 ps-3 border-start border-info">
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'sm_ai_tool_change_priority',
+                            'true',
+                            ($vars->sm_ai_tool_change_priority ?? 'false') == 'true',
+                            ['id' => 'sm_ai_tool_change_priority', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label class="form-check-label" for="sm_ai_tool_change_priority">
+                            <strong><?php $this->_('AdminMain.ai.field_tool_change_priority');?></strong>
+                            <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_tool_change_priority_desc');?></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tool: Close Ticket -->
+                <div class="mb-3 ps-3 border-start border-warning">
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'sm_ai_tool_close_ticket',
+                            'true',
+                            ($vars->sm_ai_tool_close_ticket ?? 'false') == 'true',
+                            ['id' => 'sm_ai_tool_close_ticket', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label class="form-check-label" for="sm_ai_tool_close_ticket">
+                            <strong><?php $this->_('AdminMain.ai.field_tool_close_ticket');?></strong>
+                            <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_tool_close_ticket_desc');?></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tool: Assign Staff -->
+                <div class="mb-3 ps-3 border-start border-success">
+                    <div class="form-check">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'sm_ai_tool_assign_staff',
+                            'true',
+                            ($vars->sm_ai_tool_assign_staff ?? 'false') == 'true',
+                            ['id' => 'sm_ai_tool_assign_staff', 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label class="form-check-label" for="sm_ai_tool_assign_staff">
+                            <strong><?php $this->_('AdminMain.ai.field_tool_assign_staff');?></strong>
+                            <small class="d-block text-muted"><?php $this->_('AdminMain.ai.field_tool_assign_staff_desc');?></small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+                <!-- Tool Usage Instructions -->
+                <div class="mb-4">
+                    <label for="sm_ai_tool_instructions" class="form-label">
+                        <?php $this->_('AdminMain.ai.field_tool_instructions');?>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1"
+                                data-bs-toggle="popover"
+                                data-bs-placement="top"
+                                data-bs-content="<?php $this->_('AdminMain.ai.field_tool_instructions_tooltip');?>">
+                            <i class="bi bi-info-circle text-secondary"></i>
+                        </button>
+                    </label>
+                    <?php
+                    $this->Form->fieldTextarea(
+                        'sm_ai_tool_instructions',
+                        ($vars->sm_ai_tool_instructions ?? ''),
+                        [
+                            'id' => 'sm_ai_tool_instructions',
+                            'class' => 'form-control',
+                            'rows' => '6'
+                        ]
+                    );
+                    ?>
+                    <small class="form-text text-muted"><?php $this->_('AdminMain.ai.field_tool_instructions_desc');?></small>
+                </div>
+            </div>
+        <?php
+        $this->Widget->footer();
+        ?>
+            <div class="d-flex justify-content-end gap-2">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminMain.ai.field_submit', true), ['class' => 'btn btn-primary']);
+            ?>
+            </div>
+        <?php
+        $this->Widget->end();
+        ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize popovers
+            const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            popoverTriggerList.map(function (popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
+            });
+
+            // Override Model toggle
+            const overrideModelCheckbox = document.getElementById('sm_ai_override_model');
+            const modelSelectionSection = document.getElementById('modelSelectionSection');
+
+            if (overrideModelCheckbox && modelSelectionSection) {
+                function toggleModelSelection() {
+                    if (overrideModelCheckbox.checked) {
+                        modelSelectionSection.style.display = 'block';
+                    } else {
+                        modelSelectionSection.style.display = 'none';
+                    }
+                }
+
+                toggleModelSelection();
+                overrideModelCheckbox.addEventListener('change', toggleModelSelection);
+            }
+
+            // Override Max Tokens toggle
+            const overrideMaxTokensCheckbox = document.getElementById('sm_ai_override_max_tokens');
+            const maxTokensSection = document.getElementById('maxTokensSection');
+
+            if (overrideMaxTokensCheckbox && maxTokensSection) {
+                function toggleMaxTokens() {
+                    if (overrideMaxTokensCheckbox.checked) {
+                        maxTokensSection.style.display = 'block';
+                    } else {
+                        maxTokensSection.style.display = 'none';
+                    }
+                }
+
+                toggleMaxTokens();
+                overrideMaxTokensCheckbox.addEventListener('change', toggleMaxTokens);
+            }
+
+            // Override Temperature toggle
+            const overrideTemperatureCheckbox = document.getElementById('sm_ai_override_temperature');
+            const temperatureSection = document.getElementById('temperatureSection');
+
+            if (overrideTemperatureCheckbox && temperatureSection) {
+                function toggleTemperature() {
+                    if (overrideTemperatureCheckbox.checked) {
+                        temperatureSection.style.display = 'block';
+                    } else {
+                        temperatureSection.style.display = 'none';
+                    }
+                }
+
+                toggleTemperature();
+                overrideTemperatureCheckbox.addEventListener('change', toggleTemperature);
+            }
+
+            // Auto-Reply settings toggle
+            const autoReplyCheckbox = document.getElementById('sm_ai_auto_reply_enabled');
+            const autoReplySettings = document.getElementById('autoReplySettings');
+            const confidenceThresholdSlider = document.getElementById('sm_ai_confidence_threshold_slider');
+            const confidenceThresholdValue = document.getElementById('sm_ai_confidence_threshold');
+
+            if (autoReplyCheckbox && autoReplySettings) {
+                function toggleAutoReplySettings() {
+                    if (autoReplyCheckbox.checked) {
+                        autoReplySettings.style.display = 'block';
+                    } else {
+                        autoReplySettings.style.display = 'none';
+                    }
+                }
+
+                toggleAutoReplySettings();
+                autoReplyCheckbox.addEventListener('change', toggleAutoReplySettings);
+            }
+
+            // Custom Disclaimer toggle
+            const addDisclaimerCheckbox = document.getElementById('sm_ai_show_disclaimer');
+            const customDisclaimerSection = document.getElementById('customDisclaimerSection');
+
+            if (addDisclaimerCheckbox && customDisclaimerSection) {
+                function toggleCustomDisclaimer() {
+                    if (addDisclaimerCheckbox.checked) {
+                        customDisclaimerSection.style.display = 'block';
+                    } else {
+                        customDisclaimerSection.style.display = 'none';
+                    }
+                }
+
+                toggleCustomDisclaimer();
+                addDisclaimerCheckbox.addEventListener('change', toggleCustomDisclaimer);
+            }
+
+            // Tools settings toggle
+            const toolsEnabledCheckbox = document.getElementById('sm_ai_tools_enabled');
+            const toolsSettings = document.getElementById('toolsSettings');
+
+            if (toolsEnabledCheckbox && toolsSettings) {
+                function toggleToolsSettings() {
+                    if (toolsEnabledCheckbox.checked) {
+                        toolsSettings.style.display = 'block';
+                    } else {
+                        toolsSettings.style.display = 'none';
+                    }
+                }
+
+                toggleToolsSettings();
+                toolsEnabledCheckbox.addEventListener('change', toggleToolsSettings);
+            }
+
+            // Sync confidence threshold slider and number input
+            if (confidenceThresholdSlider && confidenceThresholdValue) {
+                confidenceThresholdSlider.addEventListener('input', function() {
+                    confidenceThresholdValue.value = this.value;
+                });
+
+                confidenceThresholdValue.addEventListener('input', function() {
+                    confidenceThresholdSlider.value = this.value;
+                });
+            }
+
+            // Set tool instructions placeholder with proper newlines
+            const toolInstructionsTextarea = document.getElementById('sm_ai_tool_instructions');
+            if (toolInstructionsTextarea) {
+                toolInstructionsTextarea.placeholder = "Example:\n- Assign technical issues related to Linux servers to John, Windows servers to Dave\n- Only close tickets that are clearly spam, auto-responses, or the customer indicates that the ticket is resolved in the latest reply\n- Increase priority for urgent issues mentioning 'down' or 'offline' to Emergency status\n- Decrease priority of Emergency tickets if they are not actual emergencies";
+            }
+        });
+        </script>

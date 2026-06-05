@@ -1,5 +1,5 @@
 {
-    "version": "2.8.0",
+    "version": "3.0.0",
     "name": "CWatch.name",
     "description": "CWatch.description",
     "authors": [
@@ -21,7 +21,17 @@
     },
     "email_tags": {
         "module": [],
-        "package": ["type", "package", "acl"],
-        "service": ["cwatch_email", "cwatch_firstname", "cwatch_lastname", "cwatch_country"]
-    }
+        "package": [
+            "type",
+            "package",
+            "acl"
+        ],
+        "service": [
+            "cwatch_email",
+            "cwatch_firstname",
+            "cwatch_lastname",
+            "cwatch_country"
+        ]
+    },
+    "icon": "bi-shield-check"
 }

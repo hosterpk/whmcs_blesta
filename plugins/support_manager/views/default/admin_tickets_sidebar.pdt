@@ -1,0 +1,102 @@
+<?php
+/**
+ * Ticket Listing Sidebar Filters
+ *
+ * @var View $this
+ * @var array $filter_vars Current filter values
+ * @var array $priorities List of ticket priorities
+ * @var array $departments List of departments
+ * @var array $staff List of staff members
+ * @var array $time_options List of time options for last reply filter
+ */
+?>
+<div class="side-content-section">
+    <h6 class="side-content-title">
+        <i class="bi bi-funnel"></i>
+        <?php $this->_('AdminTickets.index.heading_filters');?>
+    </h6>
+
+    <form id="ticket_filters">
+        <!-- Ticket Number -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.index.field_ticket_number');?></label>
+            <input type="text" name="filters[ticket_number]" class="form-control form-control-sm" placeholder="<?php $this->_('AdminTickets.index.placeholder_ticket_number');?>" value="<?php echo $this->Html->safe($filter_vars['ticket_number'] ?? '');?>">
+        </div>
+
+        <!-- Summary -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.index.field_summary');?></label>
+            <input type="text" name="filters[summary]" class="form-control form-control-sm" placeholder="<?php $this->_('AdminTickets.index.placeholder_summary');?>" value="<?php echo $this->Html->safe($filter_vars['summary'] ?? '');?>">
+        </div>
+
+        <!-- Priority -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.index.field_priority');?></label>
+            <select name="filters[priority]" class="form-select form-select-sm">
+                <option value=""><?php $this->_('AdminTickets.index.any');?></option>
+                <?php
+                foreach ($priorities as $key => $value) {
+                ?>
+                <option value="<?php echo $this->Html->safe($key);?>"<?php echo ($filter_vars['priority'] ?? '') == $key ? ' selected="selected"' : '';?>><?php echo $this->Html->safe($value);?></option>
+                <?php
+                }
+                ?>
+            </select>
+        </div>
+
+        <!-- Department -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.index.field_department_id');?></label>
+            <select name="filters[department_id]" class="form-select form-select-sm">
+                <option value=""><?php $this->_('AdminTickets.index.any');?></option>
+                <?php
+                foreach ($departments as $key => $value) {
+                ?>
+                <option value="<?php echo $this->Html->safe($key);?>"<?php echo ($filter_vars['department_id'] ?? '') == $key ? ' selected="selected"' : '';?>><?php echo $this->Html->safe($value);?></option>
+                <?php
+                }
+                ?>
+            </select>
+        </div>
+
+        <!-- Assigned To -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.index.field_assigned_staff');?></label>
+            <select name="filters[assigned_staff]" class="form-select form-select-sm">
+                <option value=""><?php $this->_('AdminTickets.index.any');?></option>
+                <?php
+                foreach ($staff as $key => $value) {
+                ?>
+                <option value="<?php echo $this->Html->safe($key);?>"<?php echo ($filter_vars['assigned_staff'] ?? '') == $key ? ' selected="selected"' : '';?>><?php echo $this->Html->safe($value);?></option>
+                <?php
+                }
+                ?>
+            </select>
+        </div>
+
+        <!-- Last Reply -->
+        <div class="mb-3">
+            <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.index.field_last_reply');?></label>
+            <select name="filters[last_reply]" class="form-select form-select-sm">
+                <option value=""><?php $this->_('AdminTickets.index.any');?></option>
+                <?php
+                foreach ($time_options as $key => $value) {
+                ?>
+                <option value="<?php echo $this->Html->safe($key);?>"<?php echo ($filter_vars['last_reply'] ?? '') == $key ? ' selected="selected"' : '';?>><?php echo $this->Html->safe($value);?></option>
+                <?php
+                }
+                ?>
+            </select>
+        </div>
+
+        <!-- Filter Actions -->
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-sm btn-primary" id="apply_filters">
+                <i class="bi bi-funnel-fill me-2"></i><?php $this->_('AdminTickets.index.field_apply_filters');?>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="clear_filters">
+                <i class="bi bi-x-circle me-2"></i><?php $this->_('AdminTickets.index.field_clear_filters');?>
+            </button>
+        </div>
+    </form>
+</div>

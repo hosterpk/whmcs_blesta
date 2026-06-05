@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Exception;
+use Language;
+use Loader;
+
 /**
  * Tax providers management
  *
@@ -59,7 +66,7 @@ class TaxProviders extends AppModel
                             return new $class();
                         }
                     }
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // The tax provider could not be loaded, try the next
                     continue;
                 }
@@ -94,7 +101,7 @@ class TaxProviders extends AppModel
                         $filename = rtrim($tax, '.php');
                         $providers[$filename] = new $class();
                     }
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // The tax provider could not be loaded, try the next
                     continue;
                 }
@@ -150,7 +157,7 @@ class TaxProviders extends AppModel
 
                         $countries = array_merge($countries, (new $class())->getCountries());
                     }
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // The tax provider could not be loaded, try the next
                     continue;
                 }

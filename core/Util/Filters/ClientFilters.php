@@ -1,10 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
 
 use Blesta\Core\Util\Input\Fields\InputFields;
 use Blesta\Core\Util\Filters\Common\Filter;
-use \Loader;
-use \Language;
+use Loader;
+use Language;
 
 /**
  * Client Filters
@@ -56,7 +57,7 @@ class ClientFilters extends Filter
         $contact_name->attach(
             $fields->fieldText(
                 'filters[contact_name]',
-                isset($vars['contact_name']) ? $vars['contact_name'] : null,
+                $vars['contact_name'] ?? null,
                 [
                     'id' => 'contact_name',
                     'class' => 'form-control stretch',
@@ -74,7 +75,7 @@ class ClientFilters extends Filter
         $contact_email->attach(
             $fields->fieldText(
                 'filters[contact_email]',
-                isset($vars['contact_email']) ? $vars['contact_email'] : null,
+                $vars['contact_email'] ?? null,
                 [
                     'id' => 'contact_email',
                     'class' => 'form-control stretch',
@@ -92,7 +93,7 @@ class ClientFilters extends Filter
         $contact_company->attach(
             $fields->fieldText(
                 'filters[contact_company]',
-                isset($vars['contact_company']) ? $vars['contact_company'] : null,
+                $vars['contact_company'] ?? null,
                 [
                     'id' => 'contact_company',
                     'class' => 'form-control stretch',
@@ -116,7 +117,7 @@ class ClientFilters extends Filter
             $fields->fieldSelect(
                 'filters[contact_country]',
                 ['' => Language::_('Util.filters.client_filters.any', true)] + $countries,
-                isset($vars['contact_country']) ? $vars['contact_country'] : null,
+                $vars['contact_country'] ?? null,
                 ['id' => 'contact_country', 'class' => 'form-control']
             )
         );
@@ -136,7 +137,7 @@ class ClientFilters extends Filter
             $fields->fieldSelect(
                 'filters[client_group_id]',
                 ['' => Language::_('Util.filters.client_filters.any', true)] + $client_groups,
-                isset($vars['client_group_id']) ? $vars['client_group_id'] : null,
+                $vars['client_group_id'] ?? null,
                 ['id' => 'client_group_id', 'class' => 'form-control']
             )
         );
@@ -152,7 +153,7 @@ class ClientFilters extends Filter
             $fields->fieldSelect(
                 'filters[invoice_method]',
                 ['' => Language::_('Util.filters.client_filters.any', true)] + $invoice_methods,
-                isset($vars['invoice_method']) ? $vars['invoice_method'] : null,
+                $vars['invoice_method'] ?? null,
                 ['id' => 'invoice_method', 'class' => 'form-control']
             )
         );
@@ -166,7 +167,7 @@ class ClientFilters extends Filter
         $last_seen->attach(
             $fields->fieldText(
                 'filters[last_seen_start_date]',
-                isset($vars['last_seen_start_date']) ? $vars['last_seen_start_date'] : null,
+                $vars['last_seen_start_date'] ?? null,
                 [
                     'id' => 'last_seen_start_date',
                     'class' => 'date form-control',
@@ -177,7 +178,7 @@ class ClientFilters extends Filter
         $last_seen->attach(
             $fields->fieldText(
                 'filters[last_seen_end_date]',
-                isset($vars['last_seen_end_date']) ? $vars['last_seen_end_date'] : null,
+                $vars['last_seen_end_date'] ?? null,
                 [
                     'id' => 'last_seen_end_date',
                     'class' => 'date form-control',
@@ -189,9 +190,18 @@ class ClientFilters extends Filter
 
         $fields->setHtml('
             <script type="text/javascript">
-                $(document).ready(function () {
-                    $(this).blestaBindDatePicker();
-                });
+                (function() {
+                    function bindDates() {
+                        if (typeof blestaBindDatePicker === "function") {
+                            blestaBindDatePicker();
+                        }
+                    }
+                    if (document.readyState === "loading") {
+                        document.addEventListener("DOMContentLoaded", bindDates);
+                    } else {
+                        bindDates();
+                    }
+                })();
             </script>
         ');
 

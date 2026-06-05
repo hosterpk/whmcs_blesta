@@ -11,7 +11,11 @@ $html_lang = (!empty($language) ? substr($language, 0, 2) : 'en');
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <?php
-        if (!empty($client_icon)) {
+        if (!empty($favicon_client)) {
+        ?>
+        <link rel="shortcut icon" href="<?php echo $this->Html->safe($favicon_client);?>" />
+        <?php
+        } elseif (!empty($client_icon)) {
         ?>
         <link rel="shortcut icon" href="<?php echo $this->Html->safe($client_icon);?>" />
         <?php
@@ -300,6 +304,18 @@ $html_lang = (!empty($language) ? substr($language, 0, 2) : 'en');
                 }
                 ?>
             </div>
+
+            <?php
+            if (Configure::get('System.debug')) {
+            ?>
+            <div class="row">
+                <div class="col-md-12">
+                    <?php view('partials/client_query_logger', $this);?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
 
             <div class="container-fluid">
                 <div class="row footer">

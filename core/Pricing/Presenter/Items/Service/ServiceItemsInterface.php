@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Items\Service;
 
 use Blesta\Items\Item\ItemInterface;

@@ -1,0 +1,453 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$timeline_now = ($timeline_now ?? (time() * 1000));
+$timeline_start = $timeline_now - (24 * 60 * 60 * 1000);
+$timeline_series = ($timeline_series ?? []);
+?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminCompanyAutomation.index.boxtitle_timeline', true), ['id' => 'admin_company_automation_timeline']);
+?>
+    <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshTimeline">
+            <i class="bi bi-arrow-clockwise"></i> <?php $this->_('AdminCompanyAutomation.index.field_refresh_timeline');?>
+        </button>
+    </div>
+
+    <?php if (!empty($timeline_series)) { ?>
+        <div id="automationTimelineChart" style="min-height: 220px;"></div>
+    <?php } else { ?>
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-bar-chart-line" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0">
+                <?php $this->_('AdminCompanyAutomation.index.text_timeline_empty');?>
+            </p>
+        </div>
+    <?php } ?>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-2">
+            <div style="width: 14px; height: 14px; background-color: #198754; border-radius: 2px;"></div>
+            <span class="small"><?php $this->_('AdminCompanyAutomation.index.text_timeline_completed');?></span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div style="width: 14px; height: 14px; background-color: #ffc107; border-radius: 2px;"></div>
+            <span class="small"><?php $this->_('AdminCompanyAutomation.index.text_timeline_running');?></span>
+        </div>
+    </div>
+<?php
+$this->Widget->end();
+?>
+
+<?php
+// Build tabs array for task types
+$tabs = [];
+if (!empty($task_types)) {
+    foreach ((isset($task_types) ? $task_types : []) as $type => $name) {
+        $tabs[] = [
+            'name' => $name,
+            'current' => ((isset($tab) ? $tab : null) == $type),
+            'attributes' => [
+                'href' => $this->Html->safe($this->base_uri . 'settings/company/automation/index/' . $type . '/')
+            ]
+        ];
+    }
+}
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->create($this->_('AdminCompanyAutomation.index.boxtitle_automation', true), ['id' => 'admin_company_automation']);
+?>
+    <?php
+    if (!empty($vars)) {
+    ?>
+        <?php
+        $this->Form->create(null, ['class' => 'disable-on-submit']);
+
+        // Set the title heading for this group of tasks
+        $first_group = true;
+        foreach ((isset($vars) ? $vars : []) as $group) {
+            // Display group name if available
+            if (!empty($group['name'])) {
+                if (!$first_group) {
+                    echo '<hr class="my-4">';
+                }
+        ?>
+        <h5 class="mb-3"><?php echo $this->Html->safe($group['name']);?></h5>
+        <?php
+                $first_group = false;
+            }
+
+            // Display each task in the group
+            foreach ((isset($group['tasks']) ? $group['tasks'] : null) as $task) {
+                $task_run_id = (isset($task->task_run_id) ? $task->task_run_id : null);
+        ?>
+        <div class="border rounded p-3 mb-3">
+            <h5 class="mb-2"><?php echo $this->Html->safe($task->real_name);?></h5>
+
+            <?php
+            if (!empty($task->real_description)) {
+            ?>
+            <p class="text-muted mb-2">
+                <?php echo $this->Html->safe($task->real_description);?>
+            </p>
+            <?php
+            }
+            ?>
+
+            <div class="d-flex align-items-center mb-3 text-muted">
+                <i class="bi bi-calendar-event me-2"></i>
+                <div>
+                    <small>
+                        <?php $this->_('AdminCompanyAutomation.index.text_task_lastran');?>
+                        <?php
+                        // Last time the cron task ran
+                        if (!empty($task->last_ran)) {
+                            if (!empty($task->is_stalled) && $task->is_stalled) {
+                        ?>
+                        <span class="text-danger fw-semibold">
+                        <?php
+                            }
+
+                            echo $this->Html->safe($task->last_ran);
+
+                            if (!empty($task->is_stalled) && $task->is_stalled) {
+                        ?>
+                        </span>
+                        <?php
+                            }
+                        } else {
+                            $this->_('AdminCompanyAutomation.index.no_cron_lastran');
+                        }
+
+                        // Task has not completed - show spinner
+                        if (!empty($task->is_running) && $task->is_running) {
+                        ?>
+                            <span class="spinner-border spinner-border-sm ms-1" role="status">
+                                <span class="visually-hidden">Running...</span>
+                            </span>
+                        <?php
+                        }
+
+                        // Task is stalled - show clear task link
+                        if (!empty($task->is_stalled) && $task->is_stalled) {
+                        ?>
+                            <span class="ms-2">
+                                <?php
+                                $this->Form->create(
+                                    $this->base_uri . 'settings/company/automation/cleartask/' . (isset($tab) ? $tab : null),
+                                    [
+                                        'id' => 'clear_task_form_' . $task_run_id,
+                                        'class' => 'd-inline disable-on-submit'
+                                    ]
+                                );
+                                $this->Form->fieldHidden('run_id', $task_run_id);
+                                ?>
+                                <a href="#" class="text-warning modal-confirm-warning"
+                                   data-confirm-message="<?php echo $this->Html->safe($this->_('AdminCompanyAutomation.index.confirm_clear_task', true));?>"
+                                   data-confirm-title="<?php echo $this->Html->safe($this->_('AdminCompanyAutomation.index.option_clear_task', true));?>"
+                                   data-confirm-button="<?php echo $this->Html->safe($this->_('AdminCompanyAutomation.index.option_clear_task', true));?>">
+                                    <?php $this->_('AdminCompanyAutomation.index.option_clear_task');?>
+                                </a>
+                                <?php
+                                $this->Form->end();
+                                ?>
+                            </span>
+                        <?php
+                        }
+                        ?>
+                    </small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-check mb-3">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'enabled[' . $task_run_id . ']',
+                            '1',
+                            (($task->enabled ?? null) == '1'),
+                            ['id' => 'enabled_' . $task_run_id, 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="<?php echo 'enabled_' . $task_run_id;?>" class="form-check-label">
+                            <?php $this->_('AdminCompanyAutomation.index.field_enabled');?>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <?php
+                    if (!empty($task->time)) {
+                        // Time-based task
+                    ?>
+                    <div class="mb-3">
+                        <label for="<?php echo 'time_' . $task_run_id;?>" class="form-label">
+                            <i class="bi bi-clock me-1"></i><?php $this->_('AdminCompanyAutomation.index.text_starttime');?>
+                        </label>
+                        <div class="input-group">
+                            <?php
+                            $this->Form->fieldSelect(
+                                'time[' . $task_run_id . ']',
+                                ($time_values ?? null),
+                                ($task->time ?? null),
+                                ['id' => 'time_' . $task_run_id, 'class' => 'form-select']
+                            );
+                            ?>
+                            <span class="input-group-text">
+                                <?php echo $this->Html->safe($company_timezone);?>
+                            </span>
+                        </div>
+                    </div>
+                    <?php
+                    } else {
+                        // Interval-based task
+                    ?>
+                    <div class="mb-3">
+                        <label for="<?php echo 'interval_' . $task_run_id;?>" class="form-label">
+                            <i class="bi bi-clock-history me-1"></i><?php $this->_('AdminCompanyAutomation.index.text_interval');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'interval[' . $task_run_id . ']',
+                            ($task->supported_intervals ?? null),
+                            ($task->interval ?? null),
+                            ['id' => 'interval_' . $task_run_id, 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                </div>
+            </div>
+        </div>
+        <?php
+            }
+        }
+        ?>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit(
+            'save',
+            $this->_('AdminCompanyAutomation.index.field_automationsubmit', true),
+            ['class' => 'btn btn-primary']
+        );
+        ?>
+    </div>
+    <?php
+    $this->Form->end();
+    } else {
+        // No automation tasks available
+    ?>
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-3 mb-0"><?php $this->_('AdminCompanyAutomation.index.no_results');?></p>
+        </div>
+    <?php
+    }
+    ?>
+<?php
+$this->Widget->end();
+?>
+
+<?php
+if (!empty($timeline_series)) {
+$this->Javascript->setInline(
+"
+(function() {
+    if (typeof ApexCharts === 'undefined') {
+        return;
+    }
+
+    var container = document.querySelector('#automationTimelineChart');
+    if (!container) {
+        return;
+    }
+
+    var timelineSeries = " . json_encode($timeline_series) . ";
+    var timelineNow = " . (int) $timeline_now . ";
+    var timelineStart = " . (int) $timeline_start . ";
+
+    function getCurrentTheme() {
+        return document.documentElement.getAttribute('data-theme') || 'dark';
+    }
+
+    function themeColor(darkColor, lightColor) {
+        return getCurrentTheme() === 'dark' ? darkColor : lightColor;
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    var chart = new ApexCharts(container, {
+        series: timelineSeries,
+        chart: {
+            type: 'rangeBar',
+            height: 220,
+            background: 'transparent',
+            toolbar: {
+                show: true,
+                tools: {
+                    download: true,
+                    selection: false,
+                    zoom: true,
+                    zoomin: true,
+                    zoomout: true,
+                    pan: false,
+                    reset: true
+                }
+            }
+        },
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                barHeight: '60%',
+                rangeBarGroupRows: true
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        legend: {
+            show: false
+        },
+        xaxis: {
+            type: 'datetime',
+            min: timelineStart,
+            max: timelineNow,
+            labels: {
+                datetimeUTC: false,
+                format: 'HH:mm',
+                style: {
+                    colors: themeColor('#a0a0a0', '#666666')
+                }
+            }
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    colors: themeColor('#a0a0a0', '#666666')
+                }
+            }
+        },
+        grid: {
+            borderColor: themeColor('#2a2a2a', '#e0e0e0'),
+            xaxis: {
+                lines: {
+                    show: true
+                }
+            }
+        },
+        tooltip: {
+            theme: getCurrentTheme(),
+            custom: function(context) {
+                var data = context.w.config.series[context.seriesIndex].data[context.dataPointIndex];
+                var taskName = context.w.config.series[context.seriesIndex].name;
+                var start = new Date(data.y[0]);
+                var status = data.status || 'completed';
+                var duration = data.duration || 0;
+                var hasEndTime = data.hasEndTime !== false;
+                var statusColor = status === 'running' ? '#ffc107' : '#198754';
+                var endTimeDisplay = hasEndTime
+                    ? '<div>End: ' + new Date(data.y[1]).toLocaleString() + '</div>'
+                    : '<div>End: " . addslashes($this->_('AdminCompanyAutomation.index.text_timeline_not_finished', true)) . "</div>';
+
+                return '<div class=\"apexcharts-tooltip-custom p-2\" style=\"background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 4px;\">'
+                    + '<div style=\"font-weight: 600; margin-bottom: 0.5rem;\">' + escapeHtml(taskName) + '</div>'
+                    + '<div style=\"font-size: 0.875rem;\">'
+                    + '<div>Start: ' + start.toLocaleString() + '</div>'
+                    + endTimeDisplay
+                    + '<div>Status: <span style=\"text-transform: capitalize; color: ' + statusColor + '; font-weight: 600;\">' + escapeHtml(status) + '</span></div>'
+                    + '<div>Duration: ' + duration + 's</div>'
+                    + '</div>'
+                    + '</div>';
+            }
+        }
+    });
+
+    chart.render();
+
+    function resizeChart() {
+        chart.updateOptions({
+            chart: {
+                width: '100%'
+            }
+        }, false, false);
+    }
+
+    // Handle delayed layout shifts (e.g. sidebar collapse after initial paint)
+    [50, 200, 500, 900].forEach(function(delay) {
+        setTimeout(resizeChart, delay);
+    });
+
+    window.addEventListener('load', function() {
+        setTimeout(resizeChart, 150);
+    });
+
+    if (typeof ResizeObserver !== 'undefined') {
+        var resizeTimeout;
+        var resizeObserver = new ResizeObserver(function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(resizeChart, 100);
+        });
+        resizeObserver.observe(container);
+        if (container.parentElement) {
+            resizeObserver.observe(container.parentElement);
+        }
+    }
+
+    var refresh = document.getElementById('refreshTimeline');
+    if (refresh) {
+        refresh.addEventListener('click', function() {
+            window.location.reload();
+        });
+    }
+
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'data-theme') {
+                chart.updateOptions({
+                    tooltip: {
+                        theme: getCurrentTheme()
+                    },
+                    xaxis: {
+                        labels: {
+                            style: {
+                                colors: themeColor('#a0a0a0', '#666666')
+                            }
+                        }
+                    },
+                    yaxis: {
+                        labels: {
+                            style: {
+                                colors: themeColor('#a0a0a0', '#666666')
+                            }
+                        }
+                    },
+                    grid: {
+                        borderColor: themeColor('#2a2a2a', '#e0e0e0')
+                    }
+                });
+            }
+        });
+    });
+
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
+})();
+"
+);
+}
+?>

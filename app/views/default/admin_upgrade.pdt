@@ -1,30 +1,43 @@
-<div class="container">
-    <div class="card">
-        <div class="card-header p-3 h3">
-            <i class="fas fa-upload"></i>
-            Blesta Upgrader
-            <img class="float-right blesta-logo" src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" />
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="card bg-light p-3">
-                        <h4>Upgrade via Web Browser</h4>
-                        <p class="m-0">
-                            <a href="<?php echo $this->Html->safe($this->base_uri . 'upgrade/process/');?>" class="btn btn-success btn-block btn-lg">
-                                <i class="fas fa-arrow-right"></i> Continue with Upgrade
-                            </a>
-                        </p>
-                    </div>
-                </div>
+<?php /** @var View $this **/ ?>
 
-                <div class="col-lg-6">
-                    <div class="card bg-light p-3">
-                        <h4>Upgrade via CLI</h4>
-                        <p>
-                            To upgrade via the command line, run the following from your Blesta installation directory:
-                        </p>
-                        <pre class="rounded bg-dark text-light p-2 m-0">php ./index.php <?php echo Configure::get('Route.admin');?>/upgrade</pre>
+<div class="installer-container">
+    <div class="installer-header-section">
+        <img src="<?php echo $this->view_dir . 'images/logo.svg';?>" alt="Blesta" class="installer-logo installer-logo-dark">
+        <img src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" class="installer-logo installer-logo-light">
+        <div class="logo-divider"></div>
+        <div class="installer-label">Upgrader</div>
+    </div>
+
+    <div class="installer-content">
+        <div class="row g-4">
+            <!-- Upgrade via Web Browser -->
+            <div class="col-12 col-lg-6">
+                <div class="install-method-card">
+                    <h2>Upgrade via Web Browser</h2>
+                    <p>The easiest way to upgrade Blesta. This guided upgrade wizard will walk you through the process step by step.</p>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'upgrade/process/');?>" class="btn btn-continue">
+                        <span>Continue with Upgrade</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Upgrade via CLI -->
+            <div class="col-12 col-lg-6">
+                <div class="install-method-card">
+                    <h2>Upgrade via CLI</h2>
+                    <p class="cli-instructions">To upgrade via the command line, run:</p>
+                    <div class="code-block-wrapper">
+                        <div class="code-block" id="cli-command"><code>cd</code> <span class="path"><?php echo DOCROOTDIR;?></span><br><code>php</code> <span class="path"><?php echo '.' . DS . str_replace(DOCROOTDIR, '', ROOTWEBDIR);?>index.php</span> <span class="command"><?php echo Configure::get('Route.admin');?>/upgrade</span></div>
+                        <button class="copy-code-btn" id="copy-btn" title="Copy to clipboard">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Advanced users can use the CLI for automated or scripted upgrades.
+                        </small>
                     </div>
                 </div>
             </div>

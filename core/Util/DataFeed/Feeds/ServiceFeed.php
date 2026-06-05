@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\DataFeed\Feeds;
 
 use Blesta\Core\Util\DataFeed\Common\AbstractDataFeed;
@@ -109,21 +110,26 @@ class ServiceFeed extends AbstractDataFeed
             <div class="title_row"><h3>' . Language::_('ServiceFeed.getOptionFields.title_row_example_code', true) . '</h3></div>
             <div class="pad">
                 <small>' . Language::_('ServiceFeed.getOptionFields.example_code_active', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/service/count/"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/service/count/"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('ServiceFeed.getOptionFields.example_code_pending', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/service/count/?status=pending"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/service/count/?status=pending"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('ServiceFeed.getOptionFields.example_code_module', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/service/count/?module=cpanel,plesk"&gt;&lt;/script&gt;</pre>
-                <h4 class="mb-1"><a id="service_count_params" href="#" class="show_content"><i class="fas fa-chevron-down"></i> ' . Language::_('ServiceFeed.getOptionFields.params', true) . '</a></h4>
-                <div id="service_count_params_content" class="pad_top mb-2 hidden">
-                    <div>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/service/count/?module=cpanel,plesk"&gt;&lt;/script&gt;</pre>
+                <p class="mb-1">
+                    <a class="collapse-trigger" data-bs-toggle="collapse" href="#service_count_params_content" role="button" aria-expanded="false" aria-controls="service_count_params_content">
+                        <i class="bi bi-chevron-down"></i>
+                        ' . Language::_('ServiceFeed.getOptionFields.params', true) . '
+                    </a>
+                </p>
+                <div class="collapse mb-2" id="service_count_params_content">
+                    <div class="collapse-content">
                         <table class="table table-striped">
                             <thead>
-                                <tr class="heading_row">
-                                    <td>' . Language::_('ServiceFeed.getOptionFields.header_name', true) . '</td>
-                                    <td>' . Language::_('ServiceFeed.getOptionFields.header_description', true) . '</td>
+                                <tr>
+                                    <th>' . Language::_('ServiceFeed.getOptionFields.header_name', true) . '</th>
+                                    <th>' . Language::_('ServiceFeed.getOptionFields.header_description', true) . '</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -139,11 +145,6 @@ class ServiceFeed extends AbstractDataFeed
                         </table>
                     </div>
                 </div>
-                <script>
-                    $(document).ready(function () {
-                        $(this).blestaBindToggleEvent("#service_count_params", "#service_count_params_content");
-                    });
-                </script>
             </div>
         ');
 

@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
+use Blesta\Core\Util\Input\Fields\InputFields;
 use PhillipsData\PrioritySchedule\ScheduleInterface;
 use PhillipsData\PrioritySchedule\FirstAvailable;
 use PhillipsData\PrioritySchedule\RoundRobin;
@@ -246,6 +248,19 @@ abstract class Module
             return $this->config->logo;
         }
         return 'views/default/images/logo.png';
+    }
+
+    /**
+     * Returns the icon class for this extension, if set in config.json
+     *
+     * @return string|null The Bootstrap icon class, or null if not set
+     */
+    public function getIcon()
+    {
+        if (isset($this->config->icon)) {
+            return $this->config->icon;
+        }
+        return null;
     }
 
     /**
@@ -951,12 +966,12 @@ abstract class Module
      * javascript to execute when the page is rendered with these fields.
      *
      * @param $vars stdClass A stdClass object representing a set of post fields
-     * @return ModuleFields A ModuleFields object, containg the fields to render
+     * @return InputFields A InputFields object, containing the fields to render
      *  as well as any additional HTML markup to include
      */
     public function getPackageFields($vars = null)
     {
-        return new ModuleFields();
+        return new InputFields();
     }
 
     /**
@@ -1008,12 +1023,12 @@ abstract class Module
      *
      * @param stdClass $package A stdClass object representing the selected package
      * @param $vars stdClass A stdClass object representing a set of post fields
-     * @return ModuleFields A ModuleFields object, containg the fields to render
+     * @return InputFields A InputFields object, containing the fields to render
      *  as well as any additional HTML markup to include
      */
     public function getAdminAddFields($package, $vars = null)
     {
-        return new ModuleFields();
+        return new InputFields();
     }
 
     /**
@@ -1021,12 +1036,12 @@ abstract class Module
      *
      * @param stdClass $package A stdClass object representing the selected package
      * @param $vars stdClass A stdClass object representing a set of post fields
-     * @return ModuleFields A ModuleFields object, containg the fields to render
+     * @return InputFields A InputFields object, containing the fields to render
      *  as well as any additional HTML markup to include
      */
     public function getClientAddFields($package, $vars = null)
     {
-        return new ModuleFields();
+        return new InputFields();
     }
 
     /**
@@ -1034,12 +1049,12 @@ abstract class Module
      *
      * @param stdClass $package A stdClass object representing the selected package
      * @param $vars stdClass A stdClass object representing a set of post fields
-     * @return ModuleFields A ModuleFields object, containg the fields to render
+     * @return InputFields A InputFields object, containing the fields to render
      *  as well as any additional HTML markup to include
      */
     public function getAdminEditFields($package, $vars = null)
     {
-        return new ModuleFields();
+        return new InputFields();
     }
 
     /**
@@ -1280,7 +1295,7 @@ abstract class Module
     }
 
     /**
-     * Converts an array to a ModuleFields object
+     * Converts an array to a InputFields object
      *
      * @param array An array of key/value pairs where each key is the field name and each value is array consisting of:
      *
@@ -1289,15 +1304,15 @@ abstract class Module
      *  - options A key/value array where each key is the option value and each value
      *      is the option name, or a string to set as the default value for hidden and text inputs
      *  - attributes A key/value array
-     * @param ModuleFields $fields An existing ModuleFields object to append fields to,
+     * @param InputFields $fields An existing InputFields object to append fields to,
      *  null to create create a new object
-     * @param stdClass $vars A stdClass object of input key/value pairs
-     * @return ModuleFields A ModuleFields object containing the fields
+     * @param null $vars A stdClass object of input key/value pairs
+     * @return InputFields A InputFields object containing the fields
      */
-    protected function arrayToModuleFields($arr, ModuleFields $fields = null, $vars = null)
+    protected function arrayToInputFields($arr, InputFields $fields = null, $vars = null)
     {
         if ($fields == null) {
-            $fields = new ModuleFields();
+            $fields = new InputFields();
         }
 
         foreach ($arr as $name => $field) {
@@ -1375,6 +1390,20 @@ abstract class Module
         }
 
         return $fields;
+    }
+
+    /**
+     * Backwards-compatible alias for arrayToInputFields()
+     *
+     * @param array $arr An array of key/value pairs
+     * @param InputFields $fields An existing InputFields object to append fields to
+     * @param null $vars A stdClass object of input key/value pairs
+     * @return InputFields A InputFields object containing the fields
+     * @deprecated Use arrayToInputFields() instead
+     */
+    protected function arrayToModuleFields($arr, InputFields $fields = null, $vars = null)
+    {
+        return $this->arrayToInputFields($arr, $fields, $vars);
     }
 
     /**

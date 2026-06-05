@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Transaction management
  *
@@ -48,7 +56,12 @@ class Transactions extends AppModel
     public function add(array $vars)
     {
         // Trigger the Transactions.addBefore event
-        extract($this->executeAndParseEvent('Transactions.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Transactions.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $rules = $this->getTransactionRules($vars);
 
@@ -103,7 +116,12 @@ class Transactions extends AppModel
     public function edit($transaction_id, array $vars, $staff_id = null)
     {
         // Trigger the Transactions.editBefore event
-        extract($this->executeAndParseEvent('Transactions.editBefore', compact('transaction_id', 'staff_id', 'vars')));
+        $event = $this->executeAndParseEvent('Transactions.editBefore', compact('transaction_id', 'staff_id', 'vars'));
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $rules = $this->getTransactionRules($vars);
         unset($rules['client_id']);
@@ -193,9 +211,14 @@ class Transactions extends AppModel
         }
 
         // Trigger the Transactions.get event
-        extract($this->executeAndParseEvent('Transactions.get', [
+        $event = $this->executeAndParseEvent('Transactions.get', [
             'transaction' => $transaction
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $transaction;
     }
@@ -335,7 +358,10 @@ class Transactions extends AppModel
      */
     public function getListCount($client_id = null, $status = 'approved', array $filters = [])
     {
-        $this->Record = $this->getTransactions(array_merge(['client_id' => $client_id, 'status' => $status], $filters));
+        $this->Record = $this->getTransactions(
+            array_merge(['client_id' => $client_id, 'status' => $status], $filters),
+            true
+        );
 
         return $this->Record->numResults();
     }
@@ -381,7 +407,7 @@ class Transactions extends AppModel
         $this->Record->open()
             ->like(
                 "REPLACE(clients.id_format, '"
-                . $this->replacement_keys['clients']['ID_VALUE_TAG']
+                . ($this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}')
                 . "', clients.id_value)",
                 '%' . $query . '%',
                 true,
@@ -417,40 +443,55 @@ class Transactions extends AppModel
      *      approved/declined/void/error/pending/refunded/returned)
      * @return Record The partially constructed query Record object
      */
-    private function getTransactions(array $filters = [])
+    private function getTransactions(array $filters = [], $count = false)
     {
         if (empty($filters['status'])) {
             $filters['status'] = 'approved';
         }
 
-        $fields = ['transactions.id', 'transactions.client_id', 'transactions.amount',
-            'transactions.currency', 'transactions.type', 'transactions.transaction_type_id', 'transactions.account_id',
-            'transactions.gateway_id', 'transactions.reference_id', 'transactions.message', 'transactions.transaction_id',
-            'transactions.parent_transaction_id', 'transactions.status', 'transactions.date_added',
-            'SUM(IFNULL(transaction_applied.amount,?))' => 'applied_amount',
-            'transaction_types.name' => 'type_name', 'transaction_types.is_lang' => 'type_is_lang',
-            'gateways.name' => 'gateway_name',
-            'gateways.type' => 'gateway_type',
-            'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code',
-            'contacts.first_name' => 'client_first_name',
-            'contacts.last_name' => 'client_last_name',
-            'contacts.company' => 'client_company'
-        ];
+        // Determine whether we can use a simplified count query that skips
+        // joins only needed for display or for specific filters
+        $simple_count = $count
+            && empty($filters['applied_status'])
+            && empty($filters['payment_type']);
+
+        $fields = $simple_count ? ['transactions.*'] : ['transactions.id', 'transactions.client_id', 'transactions.amount',
+                'transactions.currency', 'transactions.type', 'transactions.transaction_type_id', 'transactions.account_id',
+                'transactions.gateway_id', 'transactions.reference_id', 'transactions.message', 'transactions.transaction_id',
+                'transactions.parent_transaction_id', 'transactions.status', 'transactions.date_added',
+                'SUM(IFNULL(transaction_applied.amount,?))' => 'applied_amount',
+                'transaction_types.name' => 'type_name', 'transaction_types.is_lang' => 'type_is_lang',
+                'gateways.name' => 'gateway_name',
+                'gateways.type' => 'gateway_type',
+                'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code',
+                'contacts.first_name' => 'client_first_name',
+                'contacts.last_name' => 'client_last_name',
+                'contacts.company' => 'client_company'
+            ];
 
         // Filter based on company ID
         $company_id = Configure::get('Blesta.company_id');
 
-        $this->Record->select($fields)
-            ->appendValues([0, $this->replacement_keys['clients']['ID_VALUE_TAG']])
-            ->from('transactions')
-            ->innerJoin('clients', 'clients.id', '=', 'transactions.client_id', false)
-            ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false)
-            ->on('contacts.contact_type', '=', 'primary')
-            ->innerJoin('contacts', 'contacts.client_id', '=', 'clients.id', false)
-            ->leftJoin('transaction_types', 'transactions.transaction_type_id', '=', 'transaction_types.id', false)
-            ->leftJoin('gateways', 'transactions.gateway_id', '=', 'gateways.id', false)
-            ->leftJoin('transaction_applied', 'transactions.id', '=', 'transaction_applied.transaction_id', false)
-            ->where('client_groups.company_id', '=', $company_id);
+        $this->Record->select($fields);
+
+        if ($simple_count) {
+            // No bound values needed — we skipped SUM and REPLACE
+            $this->Record->from('transactions')
+                ->innerJoin('clients', 'clients.id', '=', 'transactions.client_id', false)
+                ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false)
+                ->where('client_groups.company_id', '=', $company_id);
+        } else {
+            $this->Record->appendValues([0, $this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'])
+                ->from('transactions')
+                ->innerJoin('clients', 'clients.id', '=', 'transactions.client_id', false)
+                ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false)
+                ->on('contacts.contact_type', '=', 'primary')
+                ->innerJoin('contacts', 'contacts.client_id', '=', 'clients.id', false)
+                ->leftJoin('transaction_types', 'transactions.transaction_type_id', '=', 'transaction_types.id', false)
+                ->leftJoin('gateways', 'transactions.gateway_id', '=', 'gateways.id', false)
+                ->leftJoin('transaction_applied', 'transactions.id', '=', 'transaction_applied.transaction_id', false)
+                ->where('client_groups.company_id', '=', $company_id);
+        }
 
         // Filter on payment type
         if (!empty($filters['payment_type'])) {
@@ -531,7 +572,10 @@ class Transactions extends AppModel
             $this->Record->where('transactions.status', '=', $filters['status']);
         }
 
-        $this->Record->group('transactions.id');
+        // Simple counts don't need GROUP BY — no joins that produce duplicate rows
+        if (!$simple_count) {
+            $this->Record->group('transactions.id');
+        }
 
         // Get transactions for a specific client
         if (!empty($filters['client_id'])) {
@@ -570,7 +614,7 @@ class Transactions extends AppModel
             'transactions.transaction_id' => 'transaction_number', 'transactions.parent_transaction_id'
         ];
 
-        $this->Record->select($fields)->appendValues([$this->replacement_keys['invoices']['ID_VALUE_TAG']])->
+        $this->Record->select($fields)->appendValues([$this->replacement_keys['invoices']['ID_VALUE_TAG'] ?? '{num}'])->
             from('transactions')->
             innerJoin('transaction_applied', 'transactions.id', '=', 'transaction_applied.transaction_id', false)->
             innerJoin('invoices', 'transaction_applied.invoice_id', '=', 'invoices.id', false)->
@@ -743,8 +787,10 @@ class Transactions extends AppModel
      */
     public function getStatusCount($client_id = null, $status = 'approved', array $filters = [])
     {
-        return $this->getTransactions(array_merge($filters, ['client_id' => $client_id, 'status' => $status]))
-            ->numResults();
+        return $this->getTransactions(
+            array_merge($filters, ['client_id' => $client_id, 'status' => $status]),
+            true
+        )->numResults();
     }
 
     /**
@@ -761,10 +807,17 @@ class Transactions extends AppModel
      */
     public function apply($transaction_id, array $vars)
     {
-        extract($this->executeAndParseEvent(
+        $this->Input->setErrors([]);
+
+        $event = $this->executeAndParseEvent(
             'Transactions.applyBefore',
             ['transaction_id' => $transaction_id, 'vars' => $vars]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!isset($this->Invoices)) {
             Loader::loadModels($this, ['Invoices']);
@@ -830,6 +883,8 @@ class Transactions extends AppModel
      */
     public function applyFromCredits($client_id, $currency = null, array $amounts = [])
     {
+        $this->Input->setErrors([]);
+
         if (!isset($this->Invoices)) {
             Loader::loadModels($this, ['Invoices']);
         }
@@ -861,7 +916,7 @@ class Transactions extends AppModel
             // Fetch the associated invoices to apply credits to
             $invoices = [];
             foreach ($amounts as $amount) {
-                $invoice = $this->Invoices->get((isset($amount['invoice_id']) ? $amount['invoice_id'] : null));
+                $invoice = $this->Invoices->get(($amount['invoice_id'] ?? null));
                 if (!$invoice || $invoice->currency != $currency) {
                     $this->Input->setErrors([
                         'currency' => [
@@ -892,7 +947,9 @@ class Transactions extends AppModel
         // Unapply the transaction if an error occurred
         if ($errors && $last_transaction_id) {
             foreach ($apply_amounts as $transaction_id => $trans_amounts) {
-                $invoice_ids = array_map(function ($value) { return $value['invoice_id']; }, $trans_amounts);
+                $invoice_ids = array_map(function ($value) {
+                    return $value['invoice_id'];
+                }, $trans_amounts);
                 $this->unapply($transaction_id, $invoice_ids);
 
                 if ($last_transaction_id == $transaction_id) {
@@ -943,7 +1000,7 @@ class Transactions extends AppModel
         // Set specific amounts to apply to each invoice, if any are given. Assumed to be matching currency
         $amounts_to_apply = [];
         foreach ($amounts as $amount) {
-            $amounts_to_apply[(isset($amount['invoice_id']) ? $amount['invoice_id'] : null)] = (isset($amount['amount']) ? $amount['amount'] : 0);
+            $amounts_to_apply[($amount['invoice_id'] ?? null)] = ($amount['amount'] ?? 0);
         }
 
         // Set all apply amounts for each invoice and credit
@@ -1042,7 +1099,7 @@ class Transactions extends AppModel
                     'message' => $this->_('Transactions.!error.transaction_id.exists')
                 ],
                 'currency_matches' => [
-                    'rule' => [[$this, 'validateCurrencyAmounts'], (array) (isset($vars['amounts']) ? $vars['amounts'] : [])],
+                    'rule' => [[$this, 'validateCurrencyAmounts'], (array) ($vars['amounts'] ?? [])],
                     'message' => $this->_('Transactions.!error.transaction_id.currency_matches')
                 ]
             ],
@@ -1095,7 +1152,7 @@ class Transactions extends AppModel
      * @param array $invoices A numerically indexed array of invoice IDs to
      *  unapply this transaction from, or null to unapply this transaction from any and all invoices
      */
-    public function unApply($transaction_id, array $invoices = null)
+    public function unApply($transaction_id, ?array $invoices = null)
     {
         if (!isset($this->Invoices)) {
             Loader::loadModels($this, ['Invoices']);
@@ -1137,11 +1194,7 @@ class Transactions extends AppModel
 
         // Set a real_name to the language definition, if applicable
         foreach ($transaction_types as &$payment_type) {
-            if ($payment_type->is_lang == '1') {
-                $payment_type->real_name = $this->_('_PaymentTypes.' . $payment_type->name, true);
-            } else {
-                $payment_type->real_name = $payment_type->name;
-            }
+            $payment_type->real_name = $payment_type->is_lang == '1' ? $this->_('_PaymentTypes.' . $payment_type->name, true) : $payment_type->name;
         }
 
         return $transaction_types;
@@ -1159,11 +1212,7 @@ class Transactions extends AppModel
 
         // Set a real_name to the language definition, if applicable
         if ($transaction_type) {
-            if ($transaction_type->is_lang == '1') {
-                $transaction_type->real_name = $this->_('_PaymentTypes.' . $transaction_type->name, true);
-            } else {
-                $transaction_type->real_name = $transaction_type->name;
-            }
+            $transaction_type->real_name = $transaction_type->is_lang == '1' ? $this->_('_PaymentTypes.' . $transaction_type->name, true) : $transaction_type->name;
         }
 
         return $transaction_type;
@@ -1450,7 +1499,7 @@ class Transactions extends AppModel
      */
     private function getTransactionRules(array $vars = [])
     {
-        $currency = (isset($vars['currency']) ? $vars['currency'] : null);
+        $currency = ($vars['currency'] ?? null);
 
         $rules = [
             'client_id' => [

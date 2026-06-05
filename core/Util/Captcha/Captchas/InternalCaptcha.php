@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Captcha\Captchas;
 
 use Blesta\Core\Util\Captcha\Common\AbstractCaptcha;
@@ -111,9 +112,7 @@ class InternalCaptcha extends AbstractCaptcha
         // Attempt to verify the captcha was accepted
         try {
             $phrase = $this->Session->read('phrase');
-            $success = (isset($data['response'])
-                    ? $data['response']
-                    : (isset($data['phrase']) ? $data['phrase'] : null)
+            $success = ($data['response'] ?? ($data['phrase'] ?? null)
                 ) === $phrase;
         } catch (RuntimeException $e) {
             // Internal captcha could not process the request due to missing data

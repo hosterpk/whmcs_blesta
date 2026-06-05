@@ -22,7 +22,7 @@ class Api extends AppController
     const FORBIDDEN = 'The requested resource is not accessible.';
     const UNSUPPORTED_FORMAT = 'The format requested is not supported by the server.';
     const MAINTENANCE_MODE = 'The requested resource is currently unavailable due to maintenance.';
-    const INTERNAL_ERROR = 'An unexpected error occured.';
+    const INTERNAL_ERROR = 'An unexpected error occurred.';
     const BAD_REQUEST = 'The request cannot be fulfilled due to bad syntax.';
 
     /**
@@ -61,19 +61,26 @@ class Api extends AppController
     private $request_method = 'POST';
 
     /**
+     * @var array List of endpoints that are not protected by authentication
+     */
+    private $unprotected_endpoints = [
+        'notifications'
+    ];
+
+    /**
      * Verify that the request is properly formatted, and ensure the requester
      * is authorized.
      */
     public function preAction()
     {
         // Detect the request method if given, otherwise default to POST
-        $this->request_method = isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'POST';
+        $this->request_method = $_SERVER['REQUEST_METHOD'] ?? 'POST';
 
         // Authorize the API user
         $authorized = $this->authenticate();
 
         // Ensure that the request is formatted correctly
-        if (isset($this->get[0]) && isset($this->get[1])) {
+        if (isset($this->get[0]) && isset($this->get[1]) && !in_array($this->action, $this->unprotected_endpoints)) {
             $this->model = '';
             $fields = explode('.', $this->get[0]);
             foreach ($fields as $i => $field) {
@@ -103,7 +110,7 @@ class Api extends AppController
 
             // Slice off [0] and [1] from $this->get, and move everything else down
             array_splice($this->get, 0, 2);
-        } else {
+        } elseif (!in_array($this->action, $this->unprotected_endpoints)) {
             // No resource given
             $this->response(self::NOT_FOUND);
         }
@@ -133,6 +140,7 @@ class Api extends AppController
         if (!method_exists($this->{$this->model_name}, $this->method)) {
             $this->response(self::NOT_FOUND);
         }
+
         // Ensure method is callable
         if (!Router::isCallable($this->{$this->model_name}, $this->method, 'Model')) {
             $this->response(self::FORBIDDEN);
@@ -164,6 +172,82 @@ class Api extends AppController
 
         // The request was successful, return the response
         $this->response(self::OK, $response);
+    }
+
+    /**
+     * Handle notifications API endpoints
+     *
+     * Supports the following endpoints:
+     * - GET /api/notifications - Fetch all notifications for the current user
+     * - POST /api/notifications/{id}/read - Mark a notification as read
+     * - POST /api/notifications/read-all - Mark all notifications as read
+     * - GET /api/notifications/count - Get unread count for the current user
+     * - DELETE /api/notifications/{id}/delete - Delete a notification
+     */
+    public function notifications()
+    {
+        // Load related models
+        $this->uses(['Notifications', 'Staff', 'Clients']);
+
+        // Load the Session component
+        $this->components(['Session']);
+
+        // Prime the company
+        $company = $this->getCompany();
+        $this->primeCompany($this->Companies->get($company->id));
+        if (!$company) {
+            $this->response(self::NOT_FOUND);
+        }
+
+        // Get the current user from the session
+        $user_id = $this->Session->read('blesta_id');
+        if (!$user_id || !is_numeric($user_id)) {
+            $this->response(self::UNAUTHORIZED);
+        }
+
+        // Determine the user type (client, staff, or null)
+        $user_type = null;
+        if ($user_id) {
+            // Check if it's a staff member
+            $staff = $this->Staff->getByUserId($user_id);
+            if ($staff) {
+                $user_type = 'staff';
+            } else {
+                // Check if it's a client
+                $client = $this->Clients->getByUserId($user_id);
+                if ($client) {
+                    $user_type = 'client';
+                }
+            }
+        }
+        if (!$user_type) {
+            $this->response(self::UNAUTHORIZED);
+        }
+
+        // Parse endpoint and optional ID
+        $notification_id = isset($this->get[0]) && is_numeric($this->get[0]) ? (int) $this->get[0] : null;
+        $endpoint = (is_null($notification_id) ? ($this->get[0] ?? null) : ($this->get[1] ?? null)) ?? 'fetch';
+
+        // Route to the appropriate handler
+        switch ($endpoint) {
+            case 'fetch':
+                $this->fetchNotifications($user_id, $user_type);
+                break;
+            case 'read':
+                $this->markNotificationRead($user_id, $user_type, $notification_id);
+                break;
+            case 'read-all':
+                $this->markAllRead($user_id, $user_type);
+                break;
+            case 'count':
+                $this->getUnreadCount($user_id, $user_type);
+                break;
+            case 'delete':
+                $this->deleteNotification($user_id, $user_type, $notification_id);
+                break;
+            default:
+                $this->response(self::NOT_FOUND);
+        }
     }
 
     /**
@@ -308,11 +392,17 @@ class Api extends AppController
         $api_user = null;
         $api_key = null;
 
+        // Check if the endpoint is exempt from authentication
+        if (in_array($this->action, $this->unprotected_endpoints)) {
+            return true;
+        }
+
+        // Authenticate the user based on the authentication mode
         switch ($this->getAuthMode()) {
             case 'headers':
                 $headers = $this->getHeaders();
-                $api_user = isset($headers['BLESTA-API-USER']) ? $headers['BLESTA-API-USER'] : null;
-                $api_key = isset($headers['BLESTA-API-KEY']) ? $headers['BLESTA-API-KEY'] : null;
+                $api_user = $headers['BLESTA-API-USER'] ?? null;
+                $api_key = $headers['BLESTA-API-KEY'] ?? null;
 
                 $this->put = [];
                 if ($this->request_method == 'PUT') {
@@ -328,7 +418,7 @@ class Api extends AppController
                         $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
                     }
 
-                    $parts = explode(':', base64_decode(substr($auth, 6)));
+                    $parts = explode(':', base64_decode(substr($auth ?? '', 6)));
                     if (count($parts) == 2) {
                         [$_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']] = $parts;
                     }
@@ -445,5 +535,142 @@ class Api extends AppController
         }
 
         return $parsed_headers;
+    }
+
+    /**
+     * Fetch all notifications for the current user
+     *
+     * @param int $user_id The current user ID
+     * @param string $user_type The user type (client, staff, or null)
+     */
+    private function fetchNotifications($user_id, $user_type)
+    {
+        if ($this->request_method !== 'GET') {
+            $this->response(self::BAD_REQUEST, 'Notifications can only be fetched using GET requests');
+        }
+
+        $filters = ['user_id' => $user_id];
+
+        // Get all notifications for user
+        $notifications = $this->Notifications->getAll($filters);
+
+        // Get counts
+        $total_count = $this->Notifications->getListCount($filters);
+        $unread_filters = $filters + ['read' => 0];
+        $unread_count = $this->Notifications->getListCount($unread_filters);
+
+        // Get current template
+        $template = $this->getTemplate($user_type == 'staff' ? 'admin' : 'client');
+
+        // Generate pre-rendered notifications bar
+        $html = AppController::renderPartialView(
+            'partials/notifications',
+            ['notifications' => json_decode(json_encode($notifications)), 'notifications_count' => $unread_count],
+            ($user_type == 'staff' ? 'admin' : 'client') . DS . ($template->dir ?? 'default'),
+            true
+        );
+
+        $response = [
+            'notifications' => $notifications,
+            'count' => $total_count,
+            'unread_count' => $unread_count,
+            'html' => $html
+        ];
+
+        $this->response(self::OK, $response);
+    }
+
+    /**
+     * Mark a notification as read
+     *
+     * @param int $user_id The current user ID
+     * @param string $user_type The user type (client, staff, or null)
+     * @param int $notification_id The notification ID
+     */
+    private function markNotificationRead($user_id, $user_type, $notification_id)
+    {
+        if ($this->request_method !== 'POST') {
+            $this->response(self::BAD_REQUEST, 'Notifications can only be marked as read using POST requests');
+        }
+
+        if (!$notification_id) {
+            $this->response(self::BAD_REQUEST, 'Notification ID is required');
+        }
+
+        // Verify notification belongs to user
+        $notification = $this->Notifications->get($notification_id);
+        if (!$notification || $notification->user_id != $user_id) {
+            $this->response(self::NOT_FOUND);
+        }
+
+        $this->Notifications->markAsRead($notification_id);
+        $this->response(self::OK, ['success' => true]);
+    }
+
+    /**
+     * Mark all notifications as read for the current user
+     *
+     * @param int $user_id The current user ID
+     * @param string $user_type The user type (client, staff, or null)
+     */
+    private function markAllRead($user_id, $user_type)
+    {
+        if ($this->request_method !== 'POST') {
+            $this->response(self::BAD_REQUEST, 'Notifications can only be marked as read using POST requests');
+        }
+
+        $filters = ['user_id' => $user_id, 'read' => 0];
+        $unread_notifications = $this->Notifications->getAll($filters);
+
+        $count = 0;
+        foreach ($unread_notifications as $notification) {
+            $this->Notifications->markAsRead($notification->id);
+            $count++;
+        }
+
+        $this->response(self::OK, ['success' => true, 'count' => $count]);
+    }
+
+    /**
+     * Get the unread count for the current user
+     *
+     * @param int $user_id The current user ID
+     * @param string $user_type The user type (client, staff, or null)
+     */
+    private function getUnreadCount($user_id, $user_type)
+    {
+        if ($this->request_method !== 'GET') {
+            $this->response(self::BAD_REQUEST, 'Notifications can only be fetched using GET requests');
+        }
+
+        $unread_count = $this->Notifications->getUnreadCount($user_id);
+        $this->response(self::OK, ['unread_count' => $unread_count]);
+    }
+
+    /**
+     * Delete a notification
+     *
+     * @param int $user_id The current user ID
+     * @param string $user_type The user type (client, staff, or null)
+     * @param int $notification_id The notification ID
+     */
+    private function deleteNotification($user_id, $user_type, $notification_id)
+    {
+        if ($this->request_method !== 'DELETE') {
+            $this->response(self::BAD_REQUEST, 'Notifications can only be deleted using DELETE requests');
+        }
+
+        if (!$notification_id) {
+            $this->response(self::BAD_REQUEST, 'Notification ID is required');
+        }
+
+        // Verify notification belongs to user
+        $notification = $this->Notifications->get($notification_id);
+        if (!$notification || $notification->user_id != $user_id) {
+            $this->response(self::NOT_FOUND);
+        }
+
+        $this->Notifications->delete($notification_id);
+        $this->response(self::OK, ['success' => true]);
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\GeoIp;
 
 use Loader;
@@ -87,15 +88,11 @@ class GeoIp extends AbstractGeoIp
      */
     public function getLocation()
     {
-        if (!$this->database) {
-            $locations = (array) geoip_record_by_name($this->getIp());
-        } else {
-            $locations = (array) geoip_record_by_addr($this->database, $this->getIp());
-        }
+        $locations = !$this->database ? (array) geoip_record_by_name($this->getIp()) : (array) geoip_record_by_addr($this->database, $this->getIp());
 
         // UTF-8 encode the retrieved ISO 8859-1 strings
         foreach ($locations as $key => &$value) {
-            $value = utf8_encode($value);
+            $value = mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
         }
 
         return $locations;

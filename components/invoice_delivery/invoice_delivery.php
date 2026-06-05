@@ -508,7 +508,7 @@ class InvoiceDelivery extends Component
      *  - language The language to use (optional, defaults to the invoice client's language, or the
      *    system's language otherwise)
      */
-    public function downloadInvoices(array $invoice_ids, array $options = null)
+    public function downloadInvoices(array $invoice_ids, ?array $options = null)
     {
         // Fetch invoices
         $invoices = $this->getInvoices($invoice_ids, true);
@@ -627,7 +627,7 @@ class InvoiceDelivery extends Component
      *    or the system's language otherwise)
      * @return object The object containing the build invoices
      */
-    private function buildInvoices(array $invoices, $include_address = true, array $options = null)
+    private function buildInvoices(array $invoices, $include_address = true, ?array $options = null)
     {
         $client_id = null;
         $client = null;

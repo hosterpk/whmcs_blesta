@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -87,7 +88,8 @@ class TransitionQuotations extends AbstractTask
 
         $expired_quotations = $this->Quotations->getAll(null, 'expired');
         foreach ($expired_quotations as $expired_quotation) {
-            if (strtotime(date('c'))
+            if (
+                strtotime(date('c'))
                 > strtotime($expired_quotation->date_expires . ' +' . $quotation_dead_days . 'days')
             ) {
                 $this->Quotations->updateStatus($expired_quotation->id, 'dead');

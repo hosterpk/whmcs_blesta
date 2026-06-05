@@ -1,5 +1,9 @@
 <?php
+
+namespace Blesta\Helpers\Color;
+
 use Blesta\Core\Util\Helpers\Helper;
+use Illuminate\Support\Str;
 
 /**
  * Color helper
@@ -120,6 +124,119 @@ class Color extends Helper
         }
 
         return $this->color;
+    }
+
+    /**
+     * Sets the current color from various formats (hex, RGB string, or RGB array)
+     *
+     * @param mixed $color The color in hex format, RGB string format, or RGB array
+     * @return Color $this
+     */
+    public function from($color)
+    {
+        $this->color = [0,0,0];
+
+        if (is_array($color)) {
+            if (count($color) === 3) {
+                // Check if each value is an integer between 0 and 255
+                foreach ($color as $value) {
+                    if (!is_int($value) || $value < 0 || $value > 255) {
+                        return $this;
+                    }
+                }
+
+                $this->rgb($color);
+            }
+        }
+
+        if (is_string($color) && $this->isValidColor($color)) {
+            $color = ltrim($color, '#');
+
+            if (ctype_alnum($color) && strlen($color) === 6) {
+                $this->hex($color);
+
+                return $this;
+            }
+
+            if (str_contains($color, ',')) {
+                $color = Str::of($color)->replaceStart('rgb', '')
+                    ->trim()
+                    ->replaceStart('(', '')
+                    ->trim()
+                    ->replaceEnd(')', '')
+                    ->trim()
+                    ->replace(' ', '')
+                    ->explode(',', 3)
+                    ->toArray();
+                $this->rgb($color);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Validates if a string or array is a valid color in hex or RGB format
+     *
+     * @param mixed $color The color string or array to validate
+     * @return bool True if the color is valid, false otherwise
+     */
+    public function isValidColor($color)
+    {
+        if (empty($color)) {
+            return false;
+        }
+
+        // Check if it's an array first
+        if (is_array($color)) {
+            // Check if it has exactly 3 values
+            if (count($color) === 3) {
+                // Check if each value is an integer between 0 and 255
+                foreach ($color as $value) {
+                    if (!is_int($value) || $value < 0 || $value > 255) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            return false;
+        }
+
+        // If not an array, it must be a string
+        if (!is_string($color)) {
+            return false;
+        }
+
+        $color = trim($color);
+
+        // Check hex format (#000000 or 000000)
+        if (preg_match('/^#?([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $color)) {
+            return true;
+        }
+
+        // Check RGB format: "0,0,0", "0, 0, 0", "rgb(0,0,0)", or "rgb(0, 0, 0)"
+        if (preg_match('/^(rgb\()?(\s*\d{1,3}\s*)(,\s*\d{1,3}\s*)(,\s*\d{1,3}\s*)\)?$/i', $color, $matches)) {
+            // Extract the numbers from the matches
+            $numbers = [];
+            for ($i = 2; $i <= 4; $i++) {
+                if (isset($matches[$i])) {
+                    $numbers[] = (int) trim($matches[$i]);
+                }
+            }
+
+            // Check if we have exactly 3 numbers and each is between 0 and 255
+            if (count($numbers) === 3) {
+                foreach ($numbers as $num) {
+                    if ($num < 0 || $num > 255) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

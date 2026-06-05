@@ -1,5 +1,5 @@
 {
-    "version": "2.20.0",
+    "version": "3.0.0",
     "name": "Cpanel.name",
     "description": "Cpanel.description",
     "authors": [
@@ -17,8 +17,22 @@
         "row_key": "server_name"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers"],
-        "package": ["type", "package", "acl", "account_limit"],
-        "service": ["cpanel_username", "cpanel_password", "cpanel_domain", "cpanel_ip"]
-    }
+        "module": [
+            "host_name",
+            "name_servers"
+        ],
+        "package": [
+            "type",
+            "package",
+            "acl",
+            "account_limit"
+        ],
+        "service": [
+            "cpanel_username",
+            "cpanel_password",
+            "cpanel_domain",
+            "cpanel_ip"
+        ]
+    },
+    "icon": "bi-server"
 }

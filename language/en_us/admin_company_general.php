@@ -56,7 +56,6 @@ $lang['AdminCompanyGeneral.localization.field.localizationsubmit'] = 'Update Set
 
 
 // Internationalization
-$lang['AdminCompanyGeneral.!notice.international_languages'] = 'A crowdsourced translation project exists at translate.blesta.com. You may contribute to, and download language translations there. To install, unzip the contents of the file to your Blesta installation directory. Then, refresh this page, and click the Install link.';
 $lang['AdminCompanyGeneral.international.page_title'] = 'Settings > Company > General > Internationalization';
 $lang['AdminCompanyGeneral.international.boxtitle_international'] = 'Internationalization';
 
@@ -93,7 +92,7 @@ $lang['AdminCompanyGeneral.contacttypes.boxtitle_types'] = 'Contact Types';
 
 $lang['AdminCompanyGeneral.contacttypes.heading_name'] = 'Name';
 $lang['AdminCompanyGeneral.contacttypes.heading_define'] = 'Uses Language Definition';
-$lang['AdminCompanyGeneral.contacttypes.heading_options'] = 'Options';
+$lang['AdminCompanyGeneral.contacttypes.heading_options'] = 'Actions';
 
 $lang['AdminCompanyGeneral.contacttypes.text_yes'] = 'Yes';
 $lang['AdminCompanyGeneral.contacttypes.text_no'] = 'No';
@@ -122,7 +121,7 @@ $lang['AdminCompanyGeneral.editcontacttype.boxtitle_editcontacttype'] = 'Edit Co
 
 $lang['AdminCompanyGeneral.editcontacttype.field_name'] = 'Name';
 $lang['AdminCompanyGeneral.editcontacttype.field_is_lang'] = 'Use Language Definition';
-$lang['AdminCompanyGeneral.editcontacttype.field_contacttypesubmit'] = 'Edit Contact Type';
+$lang['AdminCompanyGeneral.editcontacttype.field_contacttypesubmit'] = 'Update Contact Type';
 
 
 // Marketing

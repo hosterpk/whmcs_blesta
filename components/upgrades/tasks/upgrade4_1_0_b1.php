@@ -282,7 +282,7 @@ HT;
             $value = base64_encode(serialize([]));
 
             // Add to company settings
-            $companies = $this->Record->select()->from('companies')->getStatement();
+            $companies = $this->Record->select()->from('companies')->fetchAll();
             foreach ($companies as $company) {
                 $this->Record->insert(
                     'company_settings',
@@ -320,7 +320,7 @@ HT;
      */
     private function setThemeSettings($undo = false)
     {
-        $themes = $this->Record->select()->from('themes')->where('type', '=', 'client')->getStatement();
+        $themes = $this->Record->select()->from('themes')->where('type', '=', 'client')->fetchAll();
         $record = $this->newRecord();
 
         if ($undo) {
@@ -365,7 +365,7 @@ HT;
                 $theme->data = base64_encode(serialize($theme->data));
 
                 // Set data
-                $record->where('id', '=', $theme->id)->update('themes', (array)$theme, ['data']);
+                $this->Record->where('id', '=', $theme->id)->update('themes', (array)$theme, ['data']);
             }
         }
     }
@@ -385,7 +385,7 @@ HT;
                 ->from('email_groups')
                 ->innerJoin('emails', 'emails.email_group_id', '=', 'email_groups.id', false)
                 ->where('email_groups.action', '=', 'auto_debit_pending')
-                ->getStatement();
+                ->fetchAll();
 
             $record = $this->newRecord();
 
@@ -412,7 +412,7 @@ HT;
                     $email_fields
                 );
 
-                $record->where('emails.id', '=', $email->id)->update('emails', $email_fields, ['html', 'text']);
+                $this->Record->where('emails.id', '=', $email->id)->update('emails', $email_fields, ['html', 'text']);
             }
         }
     }

@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * DirectAdmin Module
  *
@@ -209,7 +211,7 @@ class DirectAdmin extends Module
             $fields->fieldRadio(
                 'meta[type]',
                 'user',
-                (isset($vars->meta['type']) ? $vars->meta['type'] : 'user') == 'user',
+                ($vars->meta['type'] ?? 'user') == 'user',
                 ['id' => 'direct_admin_type_user', 'class' => 'direct_admin_type'],
                 $type_user
             )
@@ -218,7 +220,7 @@ class DirectAdmin extends Module
             $fields->fieldRadio(
                 'meta[type]',
                 'reseller',
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null) == 'reseller',
+                ($vars->meta['type'] ?? null) == 'reseller',
                 ['id' => 'direct_admin_type_reseller', 'class' => 'direct_admin_type'],
                 $type_reseller
             )
@@ -228,7 +230,7 @@ class DirectAdmin extends Module
         $packages = [];
         if ($module_row) {
             // Fetch the packages associated with this user/reseller
-            $command = ((isset($vars->meta['type']) ? $vars->meta['type'] : null) == 'reseller'
+            $command = (($vars->meta['type'] ?? null) == 'reseller'
                 ? 'getPackagesReseller'
                 : 'getPackagesUser'
             );
@@ -268,7 +270,7 @@ class DirectAdmin extends Module
                 $fields->fieldSelect(
                     'meta[ip]',
                     $reseller_ips,
-                    (isset($vars->meta['ip']) ? $vars->meta['ip'] : null),
+                    ($vars->meta['ip'] ?? null),
                     ['id' => 'direct_admin_ip']
                 )
             );
@@ -352,6 +354,14 @@ class DirectAdmin extends Module
         }
 
         $this->view->set('http_versions', $this->getHttpVersions());
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -410,6 +420,14 @@ class DirectAdmin extends Module
         }
 
         $this->view->set('http_versions', $this->getHttpVersions());
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -649,8 +667,8 @@ class DirectAdmin extends Module
         if (!empty($post)) {
             Loader::loadModels($this, ['Services']);
             $data = [
-                'direct_admin_password' => (isset($post['direct_admin_password']) ? $post['direct_admin_password'] : null),
-                'direct_admin_confirm_password' => (isset($post['direct_admin_confirm_password']) ? $post['direct_admin_confirm_password'] : null),
+                'direct_admin_password' => ($post['direct_admin_password'] ?? null),
+                'direct_admin_confirm_password' => ($post['direct_admin_confirm_password'] ?? null),
             ];
             $this->Services->edit($service->id, $data);
 
@@ -665,7 +683,7 @@ class DirectAdmin extends Module
         $this->view->set('password_options', $password_options);
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'direct_admin' . DS);
         return $this->view->fetch();
@@ -708,7 +726,7 @@ class DirectAdmin extends Module
         $domain->attach(
             $fields->fieldText(
                 'direct_admin_domain',
-                (isset($vars->direct_admin_domain) ? $vars->direct_admin_domain : null),
+                ($vars->direct_admin_domain ?? null),
                 ['id' => 'direct_admin_domain']
             )
         );
@@ -721,7 +739,7 @@ class DirectAdmin extends Module
         $username->attach(
             $fields->fieldText(
                 'direct_admin_username',
-                (isset($vars->direct_admin_username) ? $vars->direct_admin_username : null),
+                ($vars->direct_admin_username ?? null),
                 ['id' => 'direct_admin_username']
             )
         );
@@ -737,21 +755,33 @@ class DirectAdmin extends Module
                 [
                     'class' => 'direct_admin_password',
                     'id' => 'direct_admin_password',
-                    'value' => (isset($vars->direct_admin_password) ? $vars->direct_admin_password : null)
+                    'value' => ($vars->direct_admin_password ?? null)
                 ]
             )
         );
         // Set the label as a field
         $fields->setField($password);
-        $fields->setHtml('<a class="generate-password"
-                href="#" data-options="' . $this->Html->safe($password_options) . '"
-                data-length="' . $this->Html->safe($password_length) . '"
-                data-base-url="' . $this->base_uri . '" data-for-class="direct_admin_password">
-            <i class="fas fa-sync-alt"></i> ' . Language::_('DirectAdmin.service_field.text_generate_password', true) .
-        '</a>
+        $fields->setHtml('
+        <button type="button" class="btn btn-secondary generate-password"
+            data-options="' . $this->Html->safe($password_options) . '"
+            data-length="' . $this->Html->safe($password_length) . '"
+            data-base-url="' . $this->base_uri . '"
+            data-for-class="direct_admin_password"
+            aria-label="' . $this->Html->safe(Language::_('DirectAdmin.service_field.text_generate_password', true)) . '"
+            title="' . $this->Html->safe(Language::_('DirectAdmin.service_field.text_generate_password', true)) . '">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        </button>
         <script type="text/javascript">
-            $(document).ready(function () {
-                $("#direct_admin_password").parent().append($(".generate-password"));
+            document.addEventListener("DOMContentLoaded", function() {
+                var field = document.getElementById("direct_admin_password");
+                var btn = document.querySelector(".generate-password[data-for-class=\'direct_admin_password\']");
+                if (field && btn) {
+                    var wrapper = document.createElement("div");
+                    wrapper.className = "input-group";
+                    field.parentNode.insertBefore(wrapper, field);
+                    wrapper.appendChild(field);
+                    wrapper.appendChild(btn);
+                }
             });
         </script>
         ');
@@ -762,7 +792,7 @@ class DirectAdmin extends Module
         $email->attach(
             $fields->fieldText(
                 'direct_admin_email',
-                (isset($vars->direct_admin_email) ? $vars->direct_admin_email : null),
+                ($vars->direct_admin_email ?? null),
                 ['id' => 'direct_admin_email']
             )
         );
@@ -813,21 +843,33 @@ class DirectAdmin extends Module
                 [
                     'class' => 'direct_admin_password',
                     'id' => 'direct_admin_password',
-                    'value' => (isset($vars->direct_admin_password) ? $vars->direct_admin_password : null)
+                    'value' => ($vars->direct_admin_password ?? null)
                 ]
             )
         );
         // Set the label as a field
         $fields->setField($password);
-        $fields->setHtml('<a class="generate-password"
-                href="#" data-options="' . $this->Html->safe($password_options) . '"
-                data-length="' . $this->Html->safe($password_length) . '"
-                data-base-url="' . $this->base_uri . '" data-for-class="direct_admin_password">
-            <i class="fas fa-sync-alt"></i> ' . Language::_('DirectAdmin.service_field.text_generate_password', true) .
-        '</a>
+        $fields->setHtml('
+        <button type="button" class="btn btn-secondary generate-password"
+            data-options="' . $this->Html->safe($password_options) . '"
+            data-length="' . $this->Html->safe($password_length) . '"
+            data-base-url="' . $this->base_uri . '"
+            data-for-class="direct_admin_password"
+            aria-label="' . $this->Html->safe(Language::_('DirectAdmin.service_field.text_generate_password', true)) . '"
+            title="' . $this->Html->safe(Language::_('DirectAdmin.service_field.text_generate_password', true)) . '">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        </button>
         <script type="text/javascript">
-            $(document).ready(function () {
-                $("#direct_admin_password").parent().append($(".generate-password"));
+            document.addEventListener("DOMContentLoaded", function() {
+                var field = document.getElementById("direct_admin_password");
+                var btn = document.querySelector(".generate-password[data-for-class=\'direct_admin_password\']");
+                if (field && btn) {
+                    var wrapper = document.createElement("div");
+                    wrapper.className = "input-group";
+                    field.parentNode.insertBefore(wrapper, field);
+                    wrapper.appendChild(field);
+                    wrapper.appendChild(btn);
+                }
             });
         </script>
         ');
@@ -855,7 +897,7 @@ class DirectAdmin extends Module
         $domain->attach(
             $fields->fieldText(
                 'direct_admin_domain',
-                (isset($vars->direct_admin_domain) ? $vars->direct_admin_domain : ($vars->domain ?? null)),
+                ($vars->direct_admin_domain ?? ($vars->domain ?? null)),
                 ['id' => 'direct_admin_domain']
             )
         );
@@ -959,12 +1001,14 @@ class DirectAdmin extends Module
             $resellers = $api->__call('listResellers', []);
 
             // Username exists, create another instead
-            if (isset($users['list']) && in_array($username, $users['list'])
+            if (
+                isset($users['list']) && in_array($username, $users['list'])
                 || isset($resellers['list']) && in_array($username, $resellers['list'])
             ) {
                 for ($i = 0; $i < (int) str_repeat(9, $account_matching_characters); $i++) {
                     $new_username = substr($username, 0, -strlen($i)) . $i;
-                    if ((!isset($users['list']) || !in_array($new_username, $users['list']))
+                    if (
+                        (!isset($users['list']) || !in_array($new_username, $users['list']))
                         && (!isset($resellers['list']) || !in_array($new_username, $resellers['list']))
                     ) {
                         $username = $new_username;
@@ -972,7 +1016,7 @@ class DirectAdmin extends Module
                     }
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return '';
         }
 
@@ -1257,22 +1301,12 @@ class DirectAdmin extends Module
         $service_fields = isset($service->fields) ? $this->serviceFieldsToObject($service->fields) : [];
 
         $params = [
-            'username' => isset($service_fields->direct_admin_username)
-                ? $service_fields->direct_admin_username
-                : '',
-            'passwd' => isset($vars['direct_admin_password'])
-                ? $vars['direct_admin_password']
-                : (
-                    isset($service_fields->direct_admin_password)
-                        ? $service_fields->direct_admin_password
-                        : ''
+            'username' => $service_fields->direct_admin_username ?? '',
+            'passwd' => $vars['direct_admin_password'] ?? (
+                    $service_fields->direct_admin_password ?? ''
                 ),
-            'passwd2' => isset($vars['direct_admin_password'])
-                ? $vars['direct_admin_password']
-                : (
-                    isset($service_fields->direct_admin_password)
-                        ? $service_fields->direct_admin_password
-                        : ''
+            'passwd2' => $vars['direct_admin_password'] ?? (
+                    $service_fields->direct_admin_password ?? ''
                 ),
         ];
 
@@ -1302,14 +1336,12 @@ class DirectAdmin extends Module
         return [
             [
                 'key' => 'direct_admin_domain',
-                'value' => isset($service_fields->direct_admin_domain) ? $service_fields->direct_admin_domain : '',
+                'value' => $service_fields->direct_admin_domain ?? '',
                 'encrypted' => 0
             ],
             [
                 'key' => 'direct_admin_username',
-                'value' => isset($service_fields->direct_admin_username)
-                    ? $service_fields->direct_admin_username
-                    : '',
+                'value' => $service_fields->direct_admin_username ?? '',
                 'encrypted' => 0
             ],
             [
@@ -1319,12 +1351,12 @@ class DirectAdmin extends Module
             ],
             [
                 'key' => 'direct_admin_email',
-                'value' => isset($service_fields->direct_admin_email) ? $service_fields->direct_admin_email : '',
+                'value' => $service_fields->direct_admin_email ?? '',
                 'encrypted' => 0
             ],
             [
                 'key' => 'direct_admin_ip',
-                'value' => isset($service_fields->direct_admin_ip) ? $service_fields->direct_admin_ip : '',
+                'value' => $service_fields->direct_admin_ip ?? '',
                 'encrypted' => 0
             ]
         ];
@@ -1711,9 +1743,7 @@ class DirectAdmin extends Module
 
         // Set an error if given
         if (isset($response['error']) && $response['error'] == '1') {
-            $error = (isset($response['text'])
-                ? $response['text']
-                : Language::_('DirectAdmin.!error.api.internal', true)
+            $error = ($response['text'] ?? Language::_('DirectAdmin.!error.api.internal', true)
             );
             $this->Input->setErrors(['api' => ['error' => $error]]);
             $success = false;
@@ -1741,7 +1771,8 @@ class DirectAdmin extends Module
     private function getFieldsFromInput(array $vars, $package, $meta)
     {
         Loader::loadModels($this, ['Clients']);
-        if (empty($vars['direct_admin_email'])
+        if (
+            empty($vars['direct_admin_email'])
             && isset($vars['client_id'])
             && ($client = $this->Clients->get($vars['client_id']))
         ) {
@@ -1778,17 +1809,17 @@ class DirectAdmin extends Module
         try {
             // Fetch the login URL
             $response = $api->contactApi(
-                    'api/login',
-                    'POST',
-                    json_encode([
+                'api/login',
+                'POST',
+                json_encode([
                         'username' => $service_fields->direct_admin_username,
                         'password' => $service_fields->direct_admin_password
                     ])
-                );
+            );
 
             $data = json_decode($response);
             return $data->loginURL ?? null;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return;
         }
     }
@@ -1811,7 +1842,7 @@ class DirectAdmin extends Module
             if ($response && is_array($response) && array_key_exists('usertype', $response)) {
                 $user_type = $response['usertype'];
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return;
         }
 
@@ -1827,7 +1858,7 @@ class DirectAdmin extends Module
                 $list = (isset($response['list']) ? (array) $response['list'] : []);
 
                 return count($list);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
             }
         }
@@ -1895,7 +1926,7 @@ class DirectAdmin extends Module
             );
 
             // Packages are set in 'list'
-            $list = (isset($response['list']) ? $response['list'] : []);
+            $list = ($response['list'] ?? []);
             $packages = [];
 
             // Assign the key/value for each package
@@ -1904,7 +1935,7 @@ class DirectAdmin extends Module
             }
 
             return $packages;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $message = $e->getMessage();
             $this->log($module_row->meta->host_name . '|' . $command, serialize($message), 'output', false);
@@ -1944,7 +1975,7 @@ class DirectAdmin extends Module
             }
 
             return $ips;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return [];
         }
     }

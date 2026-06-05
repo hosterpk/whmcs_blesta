@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs Domain Email Forwarding Management
  *
@@ -31,7 +32,7 @@ class InternetbsDomainEmailforward
      *  - Destination The forwarding rule destination.
      * @return InternetbsResponse The response object
      */
-    public function add(array $vars) : InternetbsResponse
+    public function add(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/EmailForward/Add', $vars, 'POST');
     }
@@ -44,7 +45,7 @@ class InternetbsDomainEmailforward
      *  - Destination The forwarding rule destination.
      * @return InternetbsResponse The response object
      */
-    public function update(array $vars) : InternetbsResponse
+    public function update(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/EmailForward/Update', $vars, 'POST');
     }
@@ -56,7 +57,7 @@ class InternetbsDomainEmailforward
      *  - Source The forwarding rule source.
      * @return InternetbsResponse The response object
      */
-    public function remove(array $vars) : InternetbsResponse
+    public function remove(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/EmailForward/Remove', $vars, 'POST');
     }
@@ -68,7 +69,7 @@ class InternetbsDomainEmailforward
      *  - Domain The domain name for which the forwarding rules have to be retrieved.
      * @return InternetbsResponse The response object
      */
-    public function list(array $vars) : InternetbsResponse
+    public function list(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/EmailForward/List', $vars);
     }

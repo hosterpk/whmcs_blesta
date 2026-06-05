@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\ServiceProviders;
 
 use Blesta\Core\ServiceProviders\Common\AbstractServiceProvider;
@@ -69,10 +70,10 @@ class MinphpBridge extends AbstractServiceProvider
             $dbInfo = Configure::get('Database.profile');
 
             // Set PDO-specific database options
-            $dbInfo['options'] = (array) (isset($dbInfo['options']) ? $dbInfo['options'] : null)
+            $dbInfo['options'] = (array) ($dbInfo['options'] ?? null)
                 + [
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
-                    PDO::ATTR_PERSISTENT => (isset($dbInfo['persistent']) ? $dbInfo['persistent'] : false)
+                    PDO::ATTR_PERSISTENT => ($dbInfo['persistent'] ?? false)
                 ];
 
             // Retrieve the PDO connection
@@ -129,12 +130,8 @@ class MinphpBridge extends AbstractServiceProvider
             $appDir = 'app' . DIRECTORY_SEPARATOR;
             $htaccess = file_exists($rootWebDir . '.htaccess');
 
-            $script = isset($_SERVER['SCRIPT_NAME'])
-                ? $_SERVER['SCRIPT_NAME']
-                : (
-                    isset($_SERVER['PHP_SELF'])
-                        ? $_SERVER['PHP_SELF']
-                        : null
+            $script = $_SERVER['SCRIPT_NAME'] ?? (
+                    $_SERVER['PHP_SELF'] ?? null
                 );
 
             $webDir = (
@@ -150,9 +147,12 @@ class MinphpBridge extends AbstractServiceProvider
             // Format the web directory appropriately, particularly for CLI
             $webDir = str_replace(DIRECTORY_SEPARATOR, '/', trim($webDir, '.'));
 
+            // Set cache dir
+            $cacheDir = $this->fetchCacheDir();
+
             return [
                 'APPDIR' => $appDir,
-                'CACHEDIR' => $rootWebDir . 'cache' . DIRECTORY_SEPARATOR,
+                'CACHEDIR' => $cacheDir,
                 'COMPONENTDIR' => $rootWebDir . 'components' . DIRECTORY_SEPARATOR,
                 'CONFIGDIR' => $rootWebDir . 'config' . DIRECTORY_SEPARATOR,
                 'CONTROLLERDIR' => $rootWebDir . $appDir . 'controllers' . DIRECTORY_SEPARATOR,
@@ -196,6 +196,65 @@ class MinphpBridge extends AbstractServiceProvider
                 '404_forwarding' => false
             ];
         });
+    }
+
+    /**
+     * Resolves the cache directory path. Reads config/cache.dir.php (a tiny PHP file that
+     * returns the configured path) when present, otherwise falls back to a writable
+     * cache_blesta/ directory above the web root, and finally to the legacy in-docroot
+     * cache/ directory.
+     *
+     * The marker file is used instead of a database lookup because this method runs while
+     * the minphp.constants service is being built; resolving 'pdo' from here would trigger
+     * Configure::load('database') -> minphp.config -> minphp.constants, a circular path
+     * that fails silently and leaves CACHEDIR stuck on the fallback.
+     *
+     * @return string The cache directory path with trailing separator
+     */
+    private function fetchCacheDir()
+    {
+        $rootWebDir = realpath(dirname(dirname(dirname(__FILE__)))) . DIRECTORY_SEPARATOR;
+
+        $configured = $this->readCacheMarker($rootWebDir);
+        if ($configured !== null && is_dir($configured) && is_writable($configured)) {
+            return $configured;
+        }
+
+        $aboveDocroot = realpath(dirname(rtrim($rootWebDir, DIRECTORY_SEPARATOR)));
+        if ($aboveDocroot !== false) {
+            $newCache = $aboveDocroot . DIRECTORY_SEPARATOR . 'cache_blesta' . DIRECTORY_SEPARATOR;
+            if (is_dir($newCache) && is_writable($newCache)) {
+                return $newCache;
+            }
+        }
+
+        return $rootWebDir . 'cache' . DIRECTORY_SEPARATOR;
+    }
+
+    /**
+     * Reads the cache directory marker file (config/cache.dir.php).
+     *
+     * @param string $rootWebDir The root web directory with trailing separator
+     * @return string|null The configured cache dir with trailing separator, or null
+     */
+    private function readCacheMarker($rootWebDir)
+    {
+        $markerFile = $rootWebDir . 'config' . DIRECTORY_SEPARATOR . 'cache.dir.php';
+        if (!is_file($markerFile)) {
+            return null;
+        }
+
+        try {
+            $value = include $markerFile;
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return rtrim($value, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
     }
 
     private function registerSession()

@@ -1,4 +1,5 @@
 <?php
+
 require_once dirname(__FILE__) . DS . '..' . DS . 'whmcs_migrator.php';
 
 /**
@@ -21,7 +22,7 @@ class Whmcs5_2 extends WhmcsMigrator
     {
         parent::__construct($local);
 
-        set_time_limit(60*60*15); // 15 minutes
+        set_time_limit(60 * 60 * 15); // 15 minutes
 
         Language::loadLang(['whmcs5_2'], null, dirname(__FILE__) . DS . 'language' . DS);
 
@@ -95,7 +96,7 @@ class Whmcs5_2 extends WhmcsMigrator
 
         try {
             $this->remote = new Record($db_info);
-            $this->remote->query("SET NAMES utf8");
+            $this->remote->query('SET NAMES utf8');
             $this->remote->query("SET sql_mode='TRADITIONAL'");
         } catch (Throwable $e) {
             $this->Input->setErrors([[$e->getMessage()]]);
@@ -149,37 +150,37 @@ class Whmcs5_2 extends WhmcsMigrator
     {
         return [
             [
-                'label' => Language::_("Whmcs5_2.settings.host", true),
+                'label' => Language::_('Whmcs5_2.settings.host', true),
                 'field' => 'host',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs5_2.settings.database", true),
+                'label' => Language::_('Whmcs5_2.settings.database', true),
                 'field' => 'database',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs5_2.settings.user", true),
+                'label' => Language::_('Whmcs5_2.settings.user', true),
                 'field' => 'user',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs5_2.settings.pass", true),
+                'label' => Language::_('Whmcs5_2.settings.pass', true),
                 'field' => 'pass',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs5_2.settings.key", true),
+                'label' => Language::_('Whmcs5_2.settings.key', true),
                 'field' => 'key',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs5_2.settings.balance_credit", true),
+                'label' => Language::_('Whmcs5_2.settings.balance_credit', true),
                 'field' => 'balance_credit',
                 'type' => 'bool'
             ],
             [
-                'label' => Language::_("Whmcs5_2.settings.enable_debug", true),
+                'label' => Language::_('Whmcs5_2.settings.enable_debug', true),
                 'field' => 'enable_debug',
                 'type' => 'bool'
             ],

@@ -1,4 +1,7 @@
 <?php
+
+use Blesta\App\AppModel;
+
 /**
  * SystemOverview parent model
  *

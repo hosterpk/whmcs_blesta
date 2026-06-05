@@ -194,7 +194,7 @@ class Upgrade5_10_0B1 extends UpgradeUtil
         if ($undo) {
             // Nothing to do
         } else {
-            $this->Upload->createUploadPath(
+            @$this->Upload->createUploadPath(
                 $uploads_dir . Configure::get('Blesta.company_id') . DS . 'tmp' . DS
             );
         }

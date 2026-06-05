@@ -15,6 +15,7 @@ abstract class AbstractComponent
     protected $connection;
     protected $factory;
     protected $moduleRow;
+    protected $parent;
 
     /**
      * Initialize a component

@@ -1,0 +1,29 @@
+<?php /** @var View $this **/ ?>
+
+<!-- New Chat Button -->
+<div style="padding: 1rem 1rem 0 1rem;">
+    <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" id="btn-new-chat">
+        <i class="bi bi-plus-lg"></i>
+        <span><?php $this->_('AdminChatbot.index.btn_new_chat');?></span>
+    </button>
+</div>
+
+<!-- Conversation Search -->
+<div class="settings-search">
+    <div class="settings-search-wrapper">
+        <input type="text" class="form-control form-control-sm" id="conversation-search"
+               placeholder="<?php $this->_('AdminChatbot.index.search_placeholder');?>">
+        <button type="button" class="conversation-filter-btn" id="show-all-conversations"
+                aria-pressed="false"
+                title="<?php $this->_('AdminChatbot.index.show_all_conversations');?>">
+            <i class="bi bi-funnel-fill"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Conversation List -->
+<div class="conversation-list" id="conversation-list">
+    <div class="text-muted text-center py-3" id="no-conversations" style="display:none; font-size: 0.875rem;">
+        <?php $this->_('AdminChatbot.index.no_conversations');?>
+    </div>
+</div>

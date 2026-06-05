@@ -1,7 +1,8 @@
 {
-    "version": "1.8.2",
+    "version": "2.0.0",
     "name": "MassMailerPlugin.name",
     "description": "MassMailerPlugin.description",
+    "icon": "bi bi-envelope-fill",
     "authors": [
         {
             "name": "Phillips Data, Inc.",

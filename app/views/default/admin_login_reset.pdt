@@ -1,56 +1,71 @@
+<?php /** @var View $this **/ ?>
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="login-box vertical-center">
-                <div class="card card-login">
-                    <div class="card-body">
-                        <h3><?php $this->_('AdminLogin.reset.title_adminarea', false, (isset($system_company->name) ? $this->Html->safe($system_company->name) : null));?></h3>
+<div class="login-container">
+    <div class="login-brand-panel">
+        <div class="brand-content">
+            <?php
+            if (!empty($theme_logo)) {
+                ?>
+                <img<?php echo (!empty($admin_logo_height) ? ' style="height: ' . $admin_logo_height . 'px;"' : '');?> src="<?php echo $this->Html->safe(($theme_logo_dark ?? null) ?: $theme_logo);?>" alt="<?php echo $this->Html->safe($system_company->name ?? 'Blesta');?>" class="brand-logo brand-logo-dark" />
+                <img<?php echo (!empty($admin_logo_height) ? ' style="height: ' . $admin_logo_height . 'px;"' : '');?> src="<?php (print (isset($theme_logo) ? $this->Html->safe($theme_logo) : null));?>" alt="<?php echo $this->Html->safe($system_company->name ?? 'Blesta');?>" class="brand-logo brand-logo-light" />
+                <?php
+            } else {
+                ?>
+                <img src="<?php echo $this->view_dir . 'images/logo.svg';?>" alt="Blesta" class="brand-logo brand-logo-dark">
+                <img src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" class="brand-logo brand-logo-light">
+                <?php
+            }
+            ?>
+            <h2 class="brand-title"><?php echo $this->Html->safe($system_company->name ?? 'Blesta');?></h2>
+            <p class="brand-subtitle"><?php $this->_('AdminLogin.reset.page_subtitle', false);?></p>
+        </div>
+    </div>
+
+    <div class="login-form-panel">
+        <div class="login-form-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <h1><?php $this->_('AdminLogin.reset.title_adminarea', false);?></h1>
+                    <p><?php $this->_('AdminLogin.reset.subtitle_adminarea', false);?></p>
+                </div>
+
+                <?php echo ($message ?? null);?>
+
+                <?php
+                $this->Form->create(null, ['class' => 'disable-on-submit']);
+                ?>
+                <div class="form-group">
+                    <div class="input-icon-wrapper">
+                        <i class="bi bi-person input-icon"></i>
                         <?php
-                        echo (isset($message) ? $message : null);
-                        $this->Form->create(null, ['class' => 'disable-on-submit']);
+                        $this->Form->fieldText(
+                            'username',
+                            ($vars->username ?? null),
+                            [
+                                'id' => 'username',
+                                'class' => 'form-control form-control-modern',
+                                'tabindex' => 1,
+                                'placeholder' => $this->_('AdminLogin.reset.field_username', true),
+                                'autocomplete' => 'username',
+                                'autofocus' => 'autofocus'
+                            ]
+                        );
                         ?>
-                            <div class="form-group">
-                                <?php
-                                $this->Form->fieldText(
-                                    'username',
-                                    (isset($vars->username) ? $vars->username : null),
-                                    [
-                                        'id' => 'username',
-                                        'class' => 'form-control',
-                                        'tabindex' => 1,
-                                        'placeholder' => $this->_('AdminLogin.reset.field_username', true),
-                                        'autofocus' => 'autofocus'
-                                    ]
-                                );
-                                ?>
-                            </div>
-                            <?php
-                            if ((isset($captcha) ? $captcha : null)) {
-                                ?>
-                                <div class="form-group">
-                                    <?php echo $captcha;?>
-                                </div>
-                                <?php
-                            }
-                            ?>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <button class="btn btn-block btn-success float-right" type="submit">
-                                        <i class="fas fa-key"></i> <?php $this->_('AdminLogin.reset.field_resetsubmit');?>
-                                    </button>
-                                </div>
-                            </div>
-                        <?php
-                        $this->Form->end();
-                        ?>
-                    </div>
-                    <div class="card-footer">
-                       <div class="pass-reset">
-                           <a href="<?php echo $this->base_uri . 'login/';?>"><?php $this->_('AdminLogin.reset.link_login');?></a>
-                       </div>
                     </div>
                 </div>
+
+                <button type="submit" class="btn btn-primary btn-login" id="login-button">
+                    <span id="login-button-text">
+                        <i class="bi bi-key me-2"></i> <?php $this->_('AdminLogin.reset.field_resetsubmit');?>
+                    </span>
+                </button>
+
+                <div class="forgot-password">
+                    <a href="<?php echo $this->base_uri . 'login/';?>" id="forgot-password-link"><?php $this->_('AdminLogin.reset.link_login');?></a>
+                </div>
+                <?php
+                $this->Form->end();
+                ?>
             </div>
         </div>
     </div>

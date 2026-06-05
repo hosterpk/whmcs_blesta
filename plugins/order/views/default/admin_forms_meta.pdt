@@ -1,175 +1,267 @@
-            <?php
-            echo (isset($meta_fields) ? $meta_fields : null);
-            ?>
+<?php /** @var View $this */ ?>
 
-            <?php
-            if ((isset($multi_group) ? $multi_group : null)) {
-            ?>
-            <div class="title_row">
-                <h3><?php $this->_('AdminForms.meta.heading_package_groups');?></h3>
-            </div>
+<?php
+echo (isset($meta_fields) ? $meta_fields : null);
+?>
 
-            <div class="pad inline-block">
-                <?php $this->Form->label($this->_('AdminForms.meta.text_membergroups', true), 'groups', ['class' => 'inline']);?>
-                <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminForms.meta.tooltip_text_membergroups');?></div></span>
-                <table id="groups" class="table">
-                    <tbody class="connected-sortable">
-                        <tr class="non-sortable"><td class="text-middle"><?php $this->_('AdminForms.meta.text_drag_and_drop');?></td></tr>
-                        <?php
-                        foreach ((isset($vars->groups) ? $vars->groups : array()) as $id => $group) {
-                        ?>
-                        <tr><td><?php echo $group; $this->Form->fieldHidden('groups[]', (isset($id) ? $id : null));?></td></tr>
-                        <?php
-                        }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="d-none d-md-inline-block package-group-arrows">
-                <i class="fas fa-arrow-left"></i>
-                <i class="fas fa-arrow-right"></i>
-            </div>
-            <div class="pad inline-block">
-                <?php $this->Form->label($this->_('AdminForms.meta.text_availablegroups', true), 'available', ['class' => 'inline']);?>
-                <table id="available" class="table">
-                    <tbody class="connected-sortable">
-                        <tr class="non-sortable"><td class="text-middle"><?php $this->_('AdminForms.meta.text_drag_and_drop');?></td></tr>
-                        <?php
-                        foreach ($package_groups as $id => $group) {
-                        ?>
-                        <tr><td><?php echo $group; $this->Form->fieldHidden('available[]', (isset($id) ? $id : null));?></td></tr>
-                        <?php
-                        }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php
-            } elseif ((isset($multi_group) ? $multi_group : null) === false) {
-                $group_id = null;
-                $groups = array_keys((isset($vars->groups) ? $vars->groups : []));
-                if (isset($groups[0])) {
-                    $group_id = $groups[0];
-                }
-            ?>
-            <div class="title_row">
-                <h3><?php $this->_('AdminForms.meta.heading_package_group');?></h3>
-            </div>
+<?php
+if ((isset($multi_group) ? $multi_group : null)) {
+?>
+<h6 class="form-section-header"><?php $this->_('AdminForms.meta.heading_package_groups');?></h6>
 
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->fieldSelect('groups[]', ['' => $this->_('AppController.select.please', true)] + (array)(isset($package_groups) ? $package_groups : null), $group_id, ['id' => 'form_groups']);
-                        ?>
-                    </li>
-                </ul>
-            </div>
-            <?php
-            }
-            ?>
-
-            <?php
-            if ((isset($currencies) ? $currencies : null)) {
-            ?>
-            <div class="title_row">
-                <h3><?php $this->_('AdminForms.meta.heading_currencies');?></h3>
-            </div>
-            <div class="pad">
-                <dl>
-                    <?php
-                    foreach ($currencies as $currency) {
-                    ?>
-                    <dd>
-                        <?php
-                        $this->Form->fieldCheckbox('currencies[]', (isset($currency->code) ? $currency->code : null), in_array($currency->code, (array)(isset($vars->currencies) ? $vars->currencies : null)), ['id' => 'currency_' . $currency->code]);
-                        $this->Form->label($currency->code, 'currency_' . $currency->code, ['class' => 'inline']);
-                        ?>
-                    </dd>
-                    <?php
-                    }
-                    ?>
-                </dl>
-            </div>
-            <?php
-            }
-            ?>
-
-            <?php
-            if ((isset($gateways) ? $gateways : null)) {
-            ?>
-            <div class="title_row">
-                <h3><?php $this->_('AdminForms.meta.heading_gateways');?></h3>
-            </div>
-            <div class="pad">
+<div class="dual-select-container mb-4">
+    <div class="dual-select-panel">
+        <?php $this->Form->label($this->_('AdminForms.meta.text_membergroups', true), 'groups', ['class' => 'form-label']);?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php $this->_('AdminForms.meta.tooltip_text_membergroups');?>"></i>
+        <div class="dual-select-dropzone">
+            <div class="drag-list" id="memberGroups">
                 <?php
-                if (isset($gateways['nonmerchant'])) {
+                foreach ((isset($vars->groups) ? $vars->groups : array()) as $id => $group) {
                 ?>
-                <dl>
-                    <?php
-                    foreach ($gateways['nonmerchant'] as $gateway) {
-                    ?>
-                    <dd>
-                        <?php
-                        $this->Form->fieldCheckbox('gateways[]', (isset($gateway->id) ? $gateway->id : null), in_array($gateway->id, (array)(isset($vars->gateways) ? $vars->gateways : null)), ['id' => 'gateway_' . $gateway->id]);
-                        $this->Form->label($gateway->name, 'gateway_' . $gateway->id, ['class' => 'inline']);
-                        ?>
-                    </dd>
-                    <?php
-                    }
-                    ?>
-                </dl>
-                <?php
-                }
-                ?>
-                <?php
-                if (isset($gateways['merchant'])) {
-                ?>
-                <dl>
-                    <?php
-                    foreach ($gateways['merchant'] as $gateway) {
-                    ?>
-                    <dd>
-                        <?php
-                        $this->Form->fieldCheckbox('gateways[]', (isset($gateway->id) ? $gateway->id : null), in_array($gateway->id, (array)(isset($vars->gateways) ? $vars->gateways : null)), ['id' => 'gateway_' . $gateway->id]);
-                        $this->Form->label($gateway->name, 'gateway_' . $gateway->id, ['class' => 'inline']);
-                        ?>
-                    </dd>
-                    <?php
-                    }
-                    ?>
-                </dl>
+                <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true">
+                    <?php echo $this->Html->safe($group);?>
+                    <?php $this->Form->fieldHidden('groups[]', $id);?>
+                </div>
                 <?php
                 }
                 ?>
             </div>
+        </div>
+    </div>
+
+    <div class="dual-select-controls">
+        <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move_left" title="Move to Member Groups">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move_right" title="Move to Available Groups">
+            <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
+
+    <div class="dual-select-panel">
+        <?php $this->Form->label($this->_('AdminForms.meta.text_availablegroups', true), 'available', ['class' => 'form-label']);?>
+        <div class="dual-select-dropzone">
+            <div class="drag-list" id="availableGroups">
+                <?php
+                foreach ($package_groups as $id => $group) {
+                ?>
+                <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true">
+                    <?php echo $this->Html->safe($group);?>
+                    <?php $this->Form->fieldHidden('available[]', $id);?>
+                </div>
+                <?php
+                }
+                ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php
+} elseif ((isset($multi_group) ? $multi_group : null) === false) {
+    $group_id = null;
+    $groups = array_keys((isset($vars->groups) ? $vars->groups : []));
+    if (isset($groups[0])) {
+        $group_id = $groups[0];
+    }
+?>
+<h6 class="form-section-header"><?php $this->_('AdminForms.meta.heading_package_group');?></h6>
+
+<div class="mb-3">
+    <?php
+    $this->Form->fieldSelect('groups[]', ['' => $this->_('AppController.select.please', true)] + (array)(isset($package_groups) ? $package_groups : null), $group_id, ['id' => 'form_groups', 'class' => 'form-select']);
+    ?>
+</div>
+<?php
+}
+?>
+
+<?php
+if ((isset($currencies) ? $currencies : null)) {
+?>
+<h6 class="form-section-header"><?php $this->_('AdminForms.meta.heading_currencies');?></h6>
+<div class="row g-3 mb-4">
+    <?php
+    foreach ($currencies as $currency) {
+    ?>
+    <div class="col-md-4 col-lg-3">
+        <div class="form-check">
             <?php
-            }
+            $this->Form->fieldCheckbox('currencies[]', (isset($currency->code) ? $currency->code : null), in_array($currency->code, (array)(isset($vars->currencies) ? $vars->currencies : null)), ['id' => 'currency_' . $currency->code, 'class' => 'form-check-input']);
+            $this->Form->label($currency->code, 'currency_' . $currency->code, ['class' => 'form-check-label']);
             ?>
+        </div>
+    </div>
+    <?php
+    }
+    ?>
+</div>
+<?php
+}
+?>
+
+<?php
+if ((isset($gateways) ? $gateways : null)) {
+?>
+<h6 class="form-section-header"><?php $this->_('AdminForms.meta.heading_gateways');?></h6>
+<div class="row g-3 mb-4">
+    <?php
+    if (isset($gateways['nonmerchant'])) {
+        foreach ($gateways['nonmerchant'] as $gateway) {
+        ?>
+        <div class="col-md-4 col-lg-3">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('gateways[]', (isset($gateway->id) ? $gateway->id : null), in_array($gateway->id, (array)(isset($vars->gateways) ? $vars->gateways : null)), ['id' => 'gateway_' . $gateway->id, 'class' => 'form-check-input']);
+                $this->Form->label($gateway->name, 'gateway_' . $gateway->id, ['class' => 'form-check-label']);
+                ?>
+            </div>
+        </div>
+        <?php
+        }
+    }
+    ?>
+    <?php
+    if (isset($gateways['merchant'])) {
+        foreach ($gateways['merchant'] as $gateway) {
+        ?>
+        <div class="col-md-4 col-lg-3">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('gateways[]', (isset($gateway->id) ? $gateway->id : null), in_array($gateway->id, (array)(isset($vars->gateways) ? $vars->gateways : null)), ['id' => 'gateway_' . $gateway->id, 'class' => 'form-check-input']);
+                $this->Form->label($gateway->name, 'gateway_' . $gateway->id, ['class' => 'form-check-label']);
+                ?>
+            </div>
+        </div>
+        <?php
+        }
+    }
+    ?>
+</div>
+<?php
+}
+?>
+
 <script type="text/javascript">
-    $(document).ready(function() {
-        $("#groups tbody, #available tbody").sortable({
-            connectWith: '.connected-sortable',
-            items: 'tr:not(.non-sortable)',
-            placeholder: "ui-state-highlight",
-            update: function() {
-                $(this).find('tr input').each(function() {
-                    $(this).attr('name', ($(this).closest('table').attr('id') + '[]'));
-                });
-            }
-        }).disableSelection();
-        $('.connected-sortable tr:not(.non-sortable)').on('dblclick', function(e) {
-            var element = $(this);
-            var connected_sortable = $(this).closest('.connected-sortable');
-            var target = $('.connected-sortable').not(connected_sortable).first();
+document.addEventListener('DOMContentLoaded', function() {
+    blestaBindToolTips();
 
-            element.appendTo(target);
+    // Initialize drag and drop for package groups
+    var memberGroups = document.getElementById('memberGroups');
+    var availableGroups = document.getElementById('availableGroups');
 
-            $(this).parent().find('tr input').each(function() {
-                $(this).attr('name', ($(this).closest('table').attr('id') + '[]'));
+    function makeDraggable(item) {
+        item.addEventListener('dragstart', function(e) {
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.value);
+        });
+
+        item.addEventListener('dragend', function() {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.drag-list').forEach(function(list) {
+                list.classList.remove('drag-over');
             });
         });
 
-        $('#order_form_meta').blestaBindToolTips();
+        // Click to select/deselect
+        item.addEventListener('click', function(e) {
+            if (!e.ctrlKey && !e.metaKey) {
+                // Clear other selections in the same list
+                var siblings = this.parentElement.querySelectorAll('.drag-item');
+                siblings.forEach(function(sibling) {
+                    if (sibling !== item) {
+                        sibling.classList.remove('selected');
+                    }
+                });
+            }
+            this.classList.toggle('selected');
+        });
+
+        // Double-click to move to other list
+        item.addEventListener('dblclick', function() {
+            var currentList = this.parentElement;
+            var targetList = currentList.id === 'memberGroups' ? availableGroups : memberGroups;
+
+            if (targetList) {
+                this.classList.remove('selected');
+                targetList.appendChild(this);
+                updateInputName(this);
+            }
+        });
+    }
+
+    function updateInputName(item) {
+        var input = item.querySelector('input[type="hidden"]');
+        var listId = item.parentElement.id;
+        if (input) {
+            if (listId === 'memberGroups') {
+                input.name = 'groups[]';
+            } else {
+                input.name = 'available[]';
+            }
+        }
+    }
+
+    function setupDragAndDrop(list) {
+        if (!list) return;
+
+        var items = list.querySelectorAll('.drag-item');
+        items.forEach(function(item) {
+            makeDraggable(item);
+        });
+
+        list.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('drag-over');
+        });
+
+        list.addEventListener('dragleave', function(e) {
+            if (e.target === this) {
+                this.classList.remove('drag-over');
+            }
+        });
+
+        list.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+
+            var draggingItem = document.querySelector('.drag-item.dragging');
+            if (draggingItem && draggingItem.parentElement !== this) {
+                this.appendChild(draggingItem);
+                updateInputName(draggingItem);
+            }
+        });
+    }
+
+    setupDragAndDrop(memberGroups);
+    setupDragAndDrop(availableGroups);
+
+    // Button controls
+    document.addEventListener('click', function(e) {
+        var moveLeftBtn = e.target.closest('.move_left');
+        var moveRightBtn = e.target.closest('.move_right');
+
+        if (moveLeftBtn) {
+            e.preventDefault();
+            var selectedItems = availableGroups.querySelectorAll('.drag-item.selected');
+            selectedItems.forEach(function(item) {
+                item.classList.remove('selected');
+                memberGroups.appendChild(item);
+                updateInputName(item);
+            });
+        }
+
+        if (moveRightBtn) {
+            e.preventDefault();
+            var selectedItems = memberGroups.querySelectorAll('.drag-item.selected');
+            selectedItems.forEach(function(item) {
+                item.classList.remove('selected');
+                availableGroups.appendChild(item);
+                updateInputName(item);
+            });
+        }
     });
+});
 </script>

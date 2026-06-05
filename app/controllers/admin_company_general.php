@@ -21,13 +21,6 @@ class AdminCompanyGeneral extends AdminController
     public function preAction()
     {
         parent::preAction();
-
-        $this->uses(['Navigation']);
-
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**
@@ -133,7 +126,6 @@ class AdminCompanyGeneral extends AdminController
         }
 
         $this->set('languages', $languages);
-        $this->setMessage('notice', Language::_('AdminCompanyGeneral.!notice.international_languages', true));
     }
 
     /**
@@ -313,7 +305,7 @@ class AdminCompanyGeneral extends AdminController
         $company_settings = $this->SettingsCollection->fetchSettings($this->Companies, $this->company_id);
 
         if (isset($company_settings['captcha_enabled_forms'])) {
-            $company_settings['captcha_enabled_forms'] = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($company_settings['captcha_enabled_forms']);
+            $company_settings['captcha_enabled_forms'] = safe_unserialize($company_settings['captcha_enabled_forms']);
         }
 
         $vars = !empty($this->post) ? $this->post : $company_settings;

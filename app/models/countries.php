@@ -1,5 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use stdClass;
+
 /**
  * Countries adhere to ISO 3166-1 and contain English and native country name
  * (when differing from English)
@@ -131,7 +137,7 @@ class Countries extends AppModel
                 'in_use' => [
                     'rule' => [[$this, 'get']],
                     'negate' => true,
-                    'message' => $this->_('Countries.!error.alpha2.in_use', (isset($vars['alpha2']) ? $vars['alpha2'] : null))
+                    'message' => $this->_('Countries.!error.alpha2.in_use', ($vars['alpha2'] ?? null))
                 ]
             ],
             'alpha3' => [
@@ -142,9 +148,9 @@ class Countries extends AppModel
                 ],
                 'in_use' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateAlpha3InUse'], (isset($vars['alpha2']) ? $vars['alpha2'] : null)],
+                    'rule' => [[$this, 'validateAlpha3InUse'], ($vars['alpha2'] ?? null)],
                     'negate' => true,
-                    'message' => $this->_('Countries.!error.alpha3.in_use', (isset($vars['alpha3']) ? $vars['alpha3'] : null))
+                    'message' => $this->_('Countries.!error.alpha3.in_use', ($vars['alpha3'] ?? null))
                 ]
             ],
             'format' => [

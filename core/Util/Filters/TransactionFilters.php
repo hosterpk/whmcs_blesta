@@ -1,9 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
+
 use Blesta\Core\Util\Filters\Common\Filter;
 use Blesta\Core\Util\Input\Fields\InputFields;
-use \Loader;
-use \Language;
+use Loader;
+use Language;
 
 /**
  * Transactions Filters
@@ -76,7 +78,7 @@ class TransactionFilters extends Filter
             $fields->fieldSelect(
                 'filters[payment_type]',
                 ['' => Language::_('Util.filters.transaction_filters.any', true)] + $payment_types,
-                isset($vars['payment_type']) ? $vars['payment_type'] : null,
+                $vars['payment_type'] ?? null,
                 ['id' => 'payment_type', 'class' => 'form-control']
             )
         );
@@ -90,7 +92,7 @@ class TransactionFilters extends Filter
         $transaction_id->attach(
             $fields->fieldText(
                 'filters[transaction_id]',
-                isset($vars['transaction_id']) ? $vars['transaction_id'] : null,
+                $vars['transaction_id'] ?? null,
                 [
                     'id' => 'transaction_id',
                     'class' => 'form-control stretch',
@@ -109,7 +111,7 @@ class TransactionFilters extends Filter
             $reference_id->attach(
                 $fields->fieldText(
                     'filters[reference_id]',
-                    isset($vars['reference_id']) ? $vars['reference_id'] : null,
+                    $vars['reference_id'] ?? null,
                     [
                         'id' => 'reference_id',
                         'class' => 'form-control stretch',
@@ -135,7 +137,7 @@ class TransactionFilters extends Filter
             $fields->fieldSelect(
                 'filters[applied_status]',
                 $applied_statuses,
-                isset($vars['applied_status']) ? $vars['applied_status'] : null,
+                $vars['applied_status'] ?? null,
                 ['id' => 'applied_status', 'class' => 'form-control']
             )
         );
@@ -150,7 +152,7 @@ class TransactionFilters extends Filter
             $start_date->attach(
                 $fields->fieldText(
                     'filters[start_date]',
-                    isset($vars['start_date']) ? $vars['start_date'] : null,
+                    $vars['start_date'] ?? null,
                     [
                         'id' => 'start_date',
                         'class' => 'date form-control',
@@ -167,7 +169,7 @@ class TransactionFilters extends Filter
             $end_date->attach(
                 $fields->fieldText(
                     'filters[end_date]',
-                    isset($vars['end_date']) ? $vars['end_date'] : null,
+                    $vars['end_date'] ?? null,
                     [
                         'id' => 'end_date',
                         'class' => 'date form-control',
@@ -184,7 +186,7 @@ class TransactionFilters extends Filter
             $date->attach(
                 $fields->fieldText(
                     'filters[start_date]',
-                    isset($vars['start_date']) ? $vars['start_date'] : null,
+                    $vars['start_date'] ?? null,
                     [
                         'id' => 'start_date',
                         'class' => 'date form-control',
@@ -195,7 +197,7 @@ class TransactionFilters extends Filter
             $date->attach(
                 $fields->fieldText(
                     'filters[end_date]',
-                    isset($vars['end_date']) ? $vars['end_date'] : null,
+                    $vars['end_date'] ?? null,
                     [
                         'id' => 'end_date',
                         'class' => 'date form-control',
@@ -215,7 +217,7 @@ class TransactionFilters extends Filter
             $minimum_amount->attach(
                 $fields->fieldText(
                     'filters[minimum_amount]',
-                    isset($vars['minimum_amount']) ? $vars['minimum_amount'] : null,
+                    $vars['minimum_amount'] ?? null,
                     [
                         'id' => 'minimum_amount',
                         'class' => 'form-control',
@@ -232,7 +234,7 @@ class TransactionFilters extends Filter
             $maximum_amount->attach(
                 $fields->fieldText(
                     'filters[maximum_amount]',
-                    isset($vars['maximum_amount']) ? $vars['maximum_amount'] : null,
+                    $vars['maximum_amount'] ?? null,
                     [
                         'id' => 'maximum_amount',
                         'class' => 'form-control',
@@ -249,7 +251,7 @@ class TransactionFilters extends Filter
             $amount->attach(
                 $fields->fieldText(
                     'filters[minimum_amount]',
-                    isset($vars['minimum_amount']) ? $vars['minimum_amount'] : null,
+                    $vars['minimum_amount'] ?? null,
                     [
                         'id' => 'minimum_amount',
                         'class' => 'form-control small',
@@ -260,7 +262,7 @@ class TransactionFilters extends Filter
             $amount->attach(
                 $fields->fieldText(
                     'filters[maximum_amount]',
-                    isset($vars['maximum_amount']) ? $vars['maximum_amount'] : null,
+                    $vars['maximum_amount'] ?? null,
                     [
                         'id' => 'maximum_amount',
                         'class' => 'form-control small',
@@ -273,9 +275,18 @@ class TransactionFilters extends Filter
 
         $fields->setHtml('
             <script type="text/javascript">
-                $(document).ready(function () {
-                    $(this).blestaBindDatePicker();
-                });
+                (function() {
+                    function bindDates() {
+                        if (typeof blestaBindDatePicker === "function") {
+                            blestaBindDatePicker();
+                        }
+                    }
+                    if (document.readyState === "loading") {
+                        document.addEventListener("DOMContentLoaded", bindDates);
+                    } else {
+                        bindDates();
+                    }
+                })();
             </script>
         ');
 

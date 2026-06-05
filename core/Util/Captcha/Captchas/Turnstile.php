@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Captcha\Captchas;
 
 use Blesta\Core\Util\Captcha\Common\AbstractCaptcha;

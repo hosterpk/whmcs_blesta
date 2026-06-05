@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('interworx.map', [
     'module' => 'interworx',
     'module_row_key' => 'hostname',
@@ -6,7 +7,9 @@ Configure::set('interworx.map', [
         (object)['key' => 'server_name', 'value' => (object)['module' => 'name'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'host_name', 'value' => (object)['module' => 'hostname'], 'alternate_value' => (object)['module' => 'ipaddress'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'key', 'value' => (object)['module' => 'password'], 'serialized' => 0, 'encrypted' => 1],
-        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) { return ($value == 'on' ? 'true' : 'false');}],
+        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) {
+            return ($value == 'on' ? 'true' : 'false');
+        }],
         (object)['key' => 'port', 'value' => '2443', 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'account_limit', 'value' => (object)['module' => 'maxaccounts'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'debug', 'value' => 'none', 'serialized' => 0, 'encrypted' => 0],

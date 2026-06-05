@@ -1,0 +1,71 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "message_group_id",
+            "type": "int",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "company_id",
+            "type": "int",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "type",
+            "type": "enum('sms')",
+            "nullable": false,
+            "key": null,
+            "default": "sms",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive')",
+            "nullable": false,
+            "key": null,
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "message_group_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "message_group_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

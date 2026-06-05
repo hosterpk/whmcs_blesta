@@ -1,0 +1,630 @@
+<?php /** @var View $this **/ ?>
+
+
+            <div class="mb-3">
+                <label for="inv_days_before_renewal" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.inv_days_before_renewal');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.inv_days_before_renewal', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'inv_days_before_renewal',
+                    (isset($invoice_days) ? $invoice_days : null),
+                    (isset($vars['inv_days_before_renewal']) ? $this->Html->safe($vars['inv_days_before_renewal']) : null),
+                    ['id' => 'inv_days_before_renewal', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="quotation_valid_days" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.quotation_valid_days');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.quotation_valid_days', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'quotation_valid_days',
+                    (isset($quotation_days) ? $quotation_days : null),
+                    (isset($vars['quotation_valid_days']) ? $this->Html->safe($vars['quotation_valid_days']) : null),
+                    ['id' => 'quotation_valid_days', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="quotation_dead_days" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.quotation_dead_days');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.quotation_dead_days', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'quotation_dead_days',
+                    (isset($quotation_days) ? $quotation_days : null),
+                    (isset($vars['quotation_dead_days']) ? $this->Html->safe($vars['quotation_dead_days']) : null),
+                    ['id' => 'quotation_dead_days', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="quotation_deposit_percentage" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.quotation_deposit_percentage');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.quotation_deposit_percentage', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'quotation_deposit_percentage',
+                    (isset($vars['quotation_deposit_percentage']) ? $this->Html->safe($vars['quotation_deposit_percentage']) : null),
+                    ['id' => 'quotation_deposit_percentage', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="autodebit_days_before_due" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.autodebit_days_before_due');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.autodebit_days_before_due', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'autodebit_days_before_due',
+                    (isset($autodebit_days) ? $autodebit_days : null),
+                    (isset($vars['autodebit_days_before_due']) ? $this->Html->safe($vars['autodebit_days_before_due']) : null),
+                    ['id' => 'autodebit_days_before_due', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="suspend_services_days_after_due" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.suspend_services_days_after_due');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.suspend_services_days_after_due', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'suspend_services_days_after_due',
+                    (isset($suspend_days) ? $suspend_days : null),
+                    (isset($vars['suspend_services_days_after_due']) ? $this->Html->safe($vars['suspend_services_days_after_due']) : null),
+                    ['id' => 'suspend_services_days_after_due', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="autodebit_attempts" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.autodebit_attempts');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.autodebit_attempts', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'autodebit_attempts',
+                    (isset($autodebit_attempts) ? $autodebit_attempts : null),
+                    (isset($vars['autodebit_attempts']) ? $this->Html->safe($vars['autodebit_attempts']) : null),
+                    ['id' => 'autodebit_attempts', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <!-- Service Actions Table -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminCompanyBilling.invoices.field.service_actions');?></h6>
+
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th><?php $this->_('AdminCompanyBilling.invoices.field.type');?></th>
+                            <th>
+                                <?php $this->_('AdminCompanyBilling.invoices.field.attempts');?>
+                                <i class="bi bi-info-circle ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.service_attempts', true));?>"></i>
+                            </th>
+                            <th>
+                                <?php $this->_('AdminCompanyBilling.invoices.field.first_attempt_threshold');?>
+                                <i class="bi bi-info-circle ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.first_attempt_threshold', true));?>"></i>
+                            </th>
+                            <th><?php $this->_('AdminCompanyBilling.invoices.field.first_attempt_spacing');?></th>
+                            <th>
+                                <?php $this->_('AdminCompanyBilling.invoices.field.second_attempt_threshold');?>
+                                <i class="bi bi-info-circle ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.second_attempt_threshold', true));?>"></i>
+                            </th>
+                            <th><?php $this->_('AdminCompanyBilling.invoices.field.second_attempt_spacing');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $i = 0;
+                        foreach ($service_attempt_types as $service_attempt_type => $service_attempt_label) {
+                        ?>
+                            <tr<?php echo (($i % 2 == 1) ? ' class="table-secondary"' : '');?>>
+                                <td><?php echo $this->Html->safe($service_attempt_label); ?></td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldSelect(
+                                        'service_' . $service_attempt_type . '_attempts',
+                                        (isset($service_attempts) ? $service_attempts : null),
+                                        (isset($vars['service_' . $service_attempt_type . '_attempts']) ? $this->Html->safe($vars['service_' . $service_attempt_type . '_attempts']) : null),
+                                        ['class' => 'form-select form-select-sm']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldText(
+                                        'first_' . $service_attempt_type . '_attempt_threshold',
+                                        $this->Html->safe($vars['first_' . $service_attempt_type . '_attempt_threshold'] ?? ''),
+                                        ['class' => 'form-control form-control-sm', 'type' => 'number']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldSelect(
+                                        'first_' . $service_attempt_type . '_attempt_spacing',
+                                        (isset($service_attempt_spacing) ? $service_attempt_spacing : null),
+                                        (isset($vars['first_' . $service_attempt_type . '_attempt_spacing']) ? $this->Html->safe($vars['first_' . $service_attempt_type . '_attempt_spacing']) : null),
+                                        ['class' => 'form-select form-select-sm']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldText(
+                                        'second_' . $service_attempt_type . '_attempt_threshold',
+                                        $this->Html->safe($vars['second_' . $service_attempt_type . '_attempt_threshold'] ?? ''),
+                                        ['class' => 'form-control form-control-sm', 'type' => 'number']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldSelect(
+                                        'second_' . $service_attempt_type . '_attempt_spacing',
+                                        (isset($service_attempt_spacing) ? $service_attempt_spacing : null),
+                                        (isset($vars['second_' . $service_attempt_type . '_attempt_spacing']) ? $this->Html->safe($vars['second_' . $service_attempt_type . '_attempt_spacing']) : null),
+                                        ['class' => 'form-select form-select-sm']
+                                    );
+                                    ?>
+                                </td>
+                            </tr>
+                        <?php
+                            $i++;
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mb-3">
+                <label for="cancel_service_changes_days" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.cancel_service_changes_days');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.cancel_service_changes_days', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'cancel_service_changes_days',
+                    (isset($service_change_days) ? $service_change_days : null),
+                    (isset($vars['cancel_service_changes_days']) ? $this->Html->safe($vars['cancel_service_changes_days']) : null),
+                    ['id' => 'cancel_service_changes_days', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="apply_inv_late_fees" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.apply_inv_late_fees');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.apply_inv_late_fees', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'apply_inv_late_fees',
+                    (isset($service_change_days) ? $service_change_days : null),
+                    (isset($vars['apply_inv_late_fees']) ? $this->Html->safe($vars['apply_inv_late_fees']) : null),
+                    ['id' => 'apply_inv_late_fees', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'autodebit',
+                    'true',
+                    (isset($vars['autodebit']) ? $vars['autodebit'] : 'true') == 'true',
+                    ['id' => 'autodebit', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="autodebit" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.autodebit');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.autodebit', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'client_set_invoice',
+                    'true',
+                    (isset($vars['client_set_invoice']) ? $vars['client_set_invoice'] : 'true') == 'true',
+                    ['id' => 'client_set_invoice', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="client_set_invoice" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.client_set_invoice');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.client_set_invoice', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'inv_suspended_services',
+                    'true',
+                    (isset($vars['inv_suspended_services']) ? $vars['inv_suspended_services'] : 'true') == 'true',
+                    ['id' => 'inv_suspended_services', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="inv_suspended_services" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.inv_suspended_services');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.inv_suspended_services', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'inv_group_services',
+                    'true',
+                    (isset($vars['inv_group_services']) ? $vars['inv_group_services'] : 'true') == 'true',
+                    ['id' => 'inv_group_services', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="inv_group_services" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.inv_group_services');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.inv_group_services', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'inv_append_descriptions',
+                    'true',
+                    (isset($vars['inv_append_descriptions']) ? $vars['inv_append_descriptions'] : 'false') == 'true',
+                    ['id' => 'inv_append_descriptions', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="inv_append_descriptions" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.inv_append_descriptions');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.inv_append_descriptions', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'inv_lines_verbose_option_dates',
+                    'true',
+                    (isset($vars['inv_lines_verbose_option_dates']) ? $vars['inv_lines_verbose_option_dates'] : 'true') == 'true',
+                    ['id' => 'inv_lines_verbose_option_dates', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="inv_lines_verbose_option_dates" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.inv_lines_verbose_option_dates');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.inv_lines_verbose_option_dates', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'clients_cancel_services',
+                    'true',
+                    (isset($vars['clients_cancel_services']) ? $vars['clients_cancel_services'] : 'true') == 'true',
+                    ['id' => 'clients_cancel_services', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="clients_cancel_services" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.clients_cancel_services');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.clients_cancel_services', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 clients_cancel_options" style="display:none;">
+                <label for="clients_cancel_options" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.clients_cancel_options');?>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'clients_cancel_options',
+                    (isset($clients_cancel_options) ? $clients_cancel_options : null),
+                    (isset($vars['clients_cancel_options']) ? $vars['clients_cancel_options'] : null),
+                    ['id' => 'clients_cancel_options', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'clients_renew_services',
+                    'true',
+                    (isset($vars['clients_renew_services']) ? $vars['clients_renew_services'] : 'true') == 'true',
+                    ['id' => 'clients_renew_services', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="clients_renew_services" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.clients_renew_services');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.clients_renew_services', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'synchronize_addons',
+                    'true',
+                    (isset($vars['synchronize_addons']) ? $vars['synchronize_addons'] : 'true') == 'true',
+                    ['id' => 'synchronize_addons', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="synchronize_addons" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.synchronize_addons');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.synchronize_addons', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'client_create_addons',
+                    'true',
+                    (isset($vars['client_create_addons']) ? $vars['client_create_addons'] : 'true') == 'true',
+                    ['id' => 'client_create_addons', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="client_create_addons" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.client_create_addons');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.client_create_addons', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'client_change_service_term',
+                    'true',
+                    (isset($vars['client_change_service_term']) ? $vars['client_change_service_term'] : 'true') == 'true',
+                    ['id' => 'client_change_service_term', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="client_change_service_term" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.client_change_service_term');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.client_change_service_term', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'client_change_service_package',
+                    'true',
+                    (isset($vars['client_change_service_package']) ? $vars['client_change_service_package'] : 'true') == 'true',
+                    ['id' => 'client_change_service_package', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="client_change_service_package" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.client_change_service_package');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.client_change_service_package', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'client_prorate_credits',
+                    'true',
+                    (isset($vars['client_prorate_credits']) ? $vars['client_prorate_credits'] : 'false') == 'true',
+                    ['id' => 'client_prorate_credits', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="client_prorate_credits" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.client_prorate_credits');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.client_prorate_credits', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'auto_apply_credits',
+                    'true',
+                    (isset($vars['auto_apply_credits']) ? $vars['auto_apply_credits'] : 'true') == 'true',
+                    ['id' => 'auto_apply_credits', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="auto_apply_credits" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.auto_apply_credits');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.auto_apply_credits', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'auto_paid_pending_services',
+                    'true',
+                    (isset($vars['auto_paid_pending_services']) ? $vars['auto_paid_pending_services'] : 'true') == 'true',
+                    ['id' => 'auto_paid_pending_services', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="auto_paid_pending_services" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.auto_paid_pending_services');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.auto_paid_pending_services', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'void_invoice_canceled_service',
+                    'true',
+                    (isset($vars['void_invoice_canceled_service']) ? $vars['void_invoice_canceled_service'] : 'true') == 'true',
+                    ['id' => 'void_invoice_canceled_service', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="void_invoice_canceled_service" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.void_invoice_canceled_service');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.void_invoice_canceled_service', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 void_inv_canceled_service_days" style="display:none;">
+                <label for="void_inv_canceled_service_days" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.void_inv_canceled_service_days');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.void_inv_canceled_service_days', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'void_inv_canceled_service_days',
+                    (isset($void_inv_canceled_service_days) ? $void_inv_canceled_service_days : null),
+                    (isset($vars['void_inv_canceled_service_days']) ? $vars['void_inv_canceled_service_days'] : null),
+                    ['id' => 'void_inv_canceled_service_days', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'show_client_tax_id',
+                    'true',
+                    (isset($vars['show_client_tax_id']) ? $vars['show_client_tax_id'] : 'true') == 'true',
+                    ['id' => 'show_client_tax_id', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="show_client_tax_id" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.show_client_tax_id');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.show_client_tax_id', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'process_paid_service_changes',
+                    'true',
+                    (isset($vars['process_paid_service_changes']) ? $vars['process_paid_service_changes'] : 'true') == 'true',
+                    ['id' => 'process_paid_service_changes', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="process_paid_service_changes" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.process_paid_service_changes');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.process_paid_service_changes', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'requeue_invoice_delivery_on_closed',
+                    'true',
+                    (isset($vars['requeue_invoice_delivery_on_closed']) ? $vars['requeue_invoice_delivery_on_closed'] : 'false') == 'true',
+                    ['id' => 'requeue_invoice_delivery_on_closed', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="requeue_invoice_delivery_on_closed" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.invoices.field.requeue_invoice_delivery_on_closed');?>
+                </label>
+            </div>

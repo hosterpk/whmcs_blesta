@@ -18,15 +18,9 @@ class AdminCompanyLookandfeel extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'Companies', 'PluginManager', 'Plugins', 'Themes', 'Actions']);
+        $this->uses(['Companies', 'PluginManager', 'Plugins', 'Themes', 'Actions']);
         $this->components(['SettingsCollection', 'Upload']);
         $this->helpers(['Color']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**
@@ -161,7 +155,7 @@ class AdminCompanyLookandfeel extends AdminController
                 }
             }
 
-            $cards_order = base64_encode(json_encode($cards_order));
+            $cards_order = base64_encode(serialize($cards_order));
             $this->Companies->setSetting($this->company_id, 'layout_cards_order', $cards_order);
 
             // Update widgets
@@ -180,7 +174,7 @@ class AdminCompanyLookandfeel extends AdminController
                 }
             }
 
-            $widgets_order = base64_encode(json_encode($widgets_order));
+            $widgets_order = base64_encode(serialize($widgets_order));
             $this->Companies->setSetting($this->company_id, 'layout_widgets_order', $widgets_order);
 
             if (($errors = $this->PluginManager->errors())) {
@@ -198,7 +192,7 @@ class AdminCompanyLookandfeel extends AdminController
 
         // Order cards
         $cards_order = $this->Companies->getSetting($this->company_id, 'layout_cards_order');
-        $cards_order = isset($cards_order->value) ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($cards_order->value)) : [];
+        $cards_order = isset($cards_order->value) ? safe_unserialize(base64_decode($cards_order->value)) : [];
 
         $admin_cards = array_merge(array_flip($cards_order), $cards);
         foreach ($admin_cards as $key => $value) {
@@ -216,7 +210,7 @@ class AdminCompanyLookandfeel extends AdminController
 
         // Order widgets
         $widgets_order = $this->Companies->getSetting($this->company_id, 'layout_widgets_order');
-        $widgets_order = isset($widgets_order->value) ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($widgets_order->value)) : [];
+        $widgets_order = isset($widgets_order->value) ? safe_unserialize(base64_decode($widgets_order->value)) : [];
 
         $admin_widgets = array_merge(array_flip($widgets_order), $widgets);
         foreach ($admin_widgets as $key => $value) {
@@ -237,9 +231,6 @@ class AdminCompanyLookandfeel extends AdminController
         if (is_array($theme_types)) {
             $theme_types = array_reverse($theme_types);
         }
-
-        // Load color picker
-        $this->Javascript->setFile('colorpicker.min.js');
 
         $this->set(
             'layout_admin',
@@ -457,12 +448,21 @@ class AdminCompanyLookandfeel extends AdminController
                 $navigation_items = $this->Navigation->getPrimary($this->admin_uri);
         }
 
+        // Create a list of only nav type action locations for the Create Item modal
+        $nav_locations = $this->Actions->getLocations();
+        foreach ($nav_locations as $loc => $name) {
+            if (!str_contains($loc, 'nav_')) {
+                unset($nav_locations[$loc]);
+            }
+        }
+
         $this->set('location', $location);
         $this->set(
             'actions',
             $this->Actions->getAll(['location' => $location, 'company_id' => $this->company_id, 'enabled' => 1])
         );
         $this->set('navigation_items', $navigation_items);
+        $this->set('nav_locations', $nav_locations);
 
         return $this->renderAjaxWidgetIfAsync();
     }
@@ -470,43 +470,13 @@ class AdminCompanyLookandfeel extends AdminController
     /**
      * List custom actions
      */
+    /**
+     * Custom actions are now managed from the Navigation page.
+     * Redirect any direct access to the navigation page.
+     */
     public function actions()
     {
-        // Set current page of results
-        $location = (isset($this->get[0]) ? $this->get[0] : 'nav_staff');
-        $page = (isset($this->get[1]) ? (int) $this->get[1] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'id');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
-
-        // Set the number of actions for each location
-        $filters = ['location' => $location, 'company_id' => $this->company_id, 'editable' => 1, 'plugin_id' => null];
-        $location_count = [
-            'nav_staff' => $this->Actions->getListCount(array_merge($filters, ['location' => 'nav_staff'])),
-            'nav_client' => $this->Actions->getListCount(array_merge($filters, ['location' => 'nav_client'])),
-            'nav_public' => $this->Actions->getListCount(array_merge($filters, ['location' => 'nav_public'])),
-        ];
-
-        $this->set('location_count', $location_count);
-        $this->set('location', $location);
-        $this->set('sort', $sort);
-        $this->set('order', $order);
-        $this->set('negate_order', ($order == 'asc' ? 'desc' : 'asc'));
-        $this->set('actions', $this->Actions->getList($filters, $page, [$sort => $order]));
-        $total_results = $this->Actions->getListCount($filters);
-
-        // Overwrite default pagination settings
-        $settings = array_merge(
-            Configure::get('Blesta.pagination'),
-            [
-                'total_results' => $total_results,
-                'uri' => $this->base_uri . 'settings/company/lookandfeel/actions/' . $location . '/[p]/',
-                'params' => ['sort' => $sort, 'order' => $order]
-            ]
-        );
-        $this->setPagination($this->get, $settings);
-
-        // Render the request if ajax
-        return $this->renderAjaxWidgetIfAsync(isset($this->get[1]) || isset($this->get['sort']));
+        $this->redirect($this->base_uri . 'settings/company/lookandfeel/navigation/');
     }
 
     /**
@@ -514,42 +484,27 @@ class AdminCompanyLookandfeel extends AdminController
      */
     public function addaction()
     {
+        // Non-AJAX requests redirect to navigation page
+        if (!$this->isAjax()) {
+            $this->redirect($this->base_uri . 'settings/company/lookandfeel/navigation/');
+        }
+
         // Create an action
         if (isset($this->post['url'])) {
             $this->post['company_id'] = $this->company_id;
             $this->post['url'] = trim($this->post['url'], '/');
 
-            $this->Actions->add($this->post);
+            $action_id = $this->Actions->add($this->post);
 
             if (($errors = $this->Actions->errors())) {
-                // Error, reset vars
-                $vars = (object) $this->post;
-                $this->setMessage('error', $errors);
-            } else {
-                // Success
-                $this->flashMessage('message', Language::_('AdminCompanyLookandfeel.!success.action_created', true));
-                $this->redirect($this->base_uri . 'settings/company/lookandfeel/actions/');
+                $this->outputAsJson(['error' => true, 'messages' => $errors]);
+                return false;
             }
-        }
 
-        // Set default input vars
-        if (empty($vars)) {
-            $vars = new stdClass();
-            if (isset($this->get['location'])) {
-                $vars->location = $this->get['location'];
-            }
+            $action = $this->Actions->get($action_id);
+            $this->outputAsJson(['success' => true, 'action' => $action]);
+            return false;
         }
-
-        // Create a list of only nav type action locations
-        $locations = $this->Actions->getLocations();
-        foreach ($locations as $location => $name) {
-            if (!str_contains($location, 'nav_')) {
-                unset($locations[$location]);
-            }
-        }
-
-        $this->set('nav_locations', $locations);
-        $this->set('vars', $vars);
     }
 
     /**
@@ -557,45 +512,57 @@ class AdminCompanyLookandfeel extends AdminController
      */
     public function editaction()
     {
-        // Get action or redirect if not given
+        // Non-AJAX requests redirect to navigation page
+        if (!$this->isAjax()) {
+            $this->redirect($this->base_uri . 'settings/company/lookandfeel/navigation/');
+        }
+
+        // Determine if this is an icon-only edit (allowed for any action in this company)
+        $is_icon_only = isset($this->post['icon']) && !isset($this->post['url']);
+
+        // Get action or return error if not given
         if (!isset($this->get[0])
             || !($action = $this->Actions->get((int)$this->get[0], false))
             || $action->company_id != $this->company_id
-            || $action->plugin_id != null
-            || $action->editable != '1'
+            || (!$is_icon_only && ($action->plugin_id != null || $action->editable != '1'))
         ) {
-            $this->redirect($this->base_uri . 'settings/company/lookandfeel/actions/');
+            $this->outputAsJson(['error' => true, 'messages' => ['action' => ['invalid' => 'Invalid action.']]]);
+            return false;
         }
 
         // Edit an action
-        $vars = $action;
-        if (isset($this->post['url'])) {
+        if (isset($this->post['url']) || isset($this->post['icon'])) {
             $this->post['company_id'] = $this->company_id;
-            $this->post['url'] = trim($this->post['url'], '/');
+            if (isset($this->post['url'])) {
+                $this->post['url'] = trim($this->post['url'], '/');
+            }
 
-            $this->Actions->edit($action->id, $this->post);
+            // For icon-only edits, only pass the icon field to avoid overwriting other fields
+            $edit_vars = $is_icon_only ? ['icon' => $this->post['icon']] : $this->post;
+            $this->Actions->edit($action->id, $edit_vars);
 
             if (($errors = $this->Actions->errors())) {
-                // Error, reset vars
-                $vars = (object) $this->post;
-                $this->setMessage('error', $errors);
-            } else {
-                // Success
-                $this->flashMessage('message', Language::_('AdminCompanyLookandfeel.!success.action_updated', true));
-                $this->redirect($this->base_uri . 'settings/company/lookandfeel/actions/');
+                $this->outputAsJson(['error' => true, 'messages' => $errors]);
+                return false;
             }
-        }
 
-        // Create a list of only nav type action locations
-        $locations = $this->Actions->getLocations();
-        foreach ($locations as $location => $name) {
-            if (!str_contains($location, 'nav_')) {
-                unset($locations[$location]);
+            // Clear nav cache for all staff members
+            $this->uses(['Staff', 'StaffGroups']);
+            $staff_groups = $this->StaffGroups->getAll($this->company_id);
+            foreach ($staff_groups as $staff_group) {
+                $staff_members = $this->Staff->getAll($this->company_id, null, $staff_group->id);
+                foreach ($staff_members as $staff_member) {
+                    Cache::clearCache(
+                        'nav_staff_group_' . $staff_group->id,
+                        $this->company_id . DS . 'nav' . DS . $staff_member->id . DS
+                    );
+                }
             }
-        }
 
-        $this->set('nav_locations', $locations);
-        $this->set('vars', $vars);
+            $updated_action = $this->Actions->get($action->id);
+            $this->outputAsJson(['success' => true, 'action' => $updated_action]);
+            return false;
+        }
     }
 
     /**
@@ -610,21 +577,33 @@ class AdminCompanyLookandfeel extends AdminController
             || $action->plugin_id != null
             || $action->editable != '1'
         ) {
-            $this->redirect($this->base_uri . 'settings/company/lookandfeel/actions/');
+            $this->redirect($this->base_uri . 'settings/company/lookandfeel/navigation/');
         }
 
-        // Attempt to delete the action
-        $this->Actions->delete($action->plugin_id, $action->url);
+        // Delete the action and any associated navigation items by ID
+        Loader::loadComponents($this, ['Record']);
+        $this->Record->from('actions')
+            ->leftJoin('navigation_items', 'navigation_items.action_id', '=', 'actions.id', false)
+            ->where('actions.id', '=', $action->id)
+            ->delete(['actions.*', 'navigation_items.*']);
 
-        if (($errors = $this->Actions->errors())) {
-            // Error
-            $this->flashMessage('error', $errors);
-        } else {
-            // Success
-            $this->flashMessage('message', Language::_('AdminCompanyLookandfeel.!success.action_deleted', true));
+        // Clear nav cache for all staff members
+        $this->uses(['Staff', 'StaffGroups']);
+        $staff_groups = $this->StaffGroups->getAll($this->company_id);
+        foreach ($staff_groups as $staff_group) {
+            $staff_members = $this->Staff->getAll($this->company_id, null, $staff_group->id);
+            foreach ($staff_members as $staff_member) {
+                Cache::clearCache(
+                    'nav_staff_group_' . $staff_group->id,
+                    $this->company_id . DS . 'nav' . DS . $staff_member->id . DS
+                );
+            }
         }
 
-        $this->redirect($this->base_uri . 'settings/company/lookandfeel/actions/');
+        // Success
+        $this->flashMessage('message', Language::_('AdminCompanyLookandfeel.!success.action_deleted', true));
+
+        $this->redirect($this->base_uri . 'settings/company/lookandfeel/navigation/');
     }
 
     /**
@@ -662,7 +641,11 @@ class AdminCompanyLookandfeel extends AdminController
                 $this->Upload->setAllowedFileExtensions($file_extensions['image']);
 
                 if (!($errors = $this->Upload->errors())) {
-                    $expected_files = ['admin_logo', 'admin_icon_image', 'client_logo', 'client_icon_image'];
+                    $expected_files = [
+                        'admin_logo', 'admin_icon_image', 'admin_logo_dark',
+                        'admin_icon_image_dark', 'admin_favicon_image',
+                        'client_logo', 'client_icon_image', 'client_favicon_image'
+                    ];
 
                     // Will overwrite existing file, which is exactly what we want
                     $this->Upload->writeFiles($expected_files, true, $expected_files);
@@ -680,6 +663,19 @@ class AdminCompanyLookandfeel extends AdminController
 
             // Set new logo url
             if (empty($errors)) {
+                // Handle image removals
+                $removable = [
+                    'logo_admin', 'logo_admin_dark', 'icon_admin', 'icon_admin_dark',
+                    'favicon_admin', 'logo_client', 'icon_client', 'favicon_client'
+                ];
+                $removed = [];
+                foreach ($removable as $setting_key) {
+                    if (($this->post['remove_' . $setting_key] ?? '0') === '1') {
+                        $this->Companies->setSetting($this->company_id, $setting_key, '');
+                        $removed[$setting_key] = true;
+                    }
+                }
+
                 // Set admin logo and icon
                 if (isset($this->post['admin_type'])) {
                     $logo_admin = null;
@@ -692,7 +688,7 @@ class AdminCompanyLookandfeel extends AdminController
                         $logo_admin = trim($this->post['admin_url']);
                     }
 
-                    if ($logo_admin) {
+                    if ($logo_admin && empty($removed['logo_admin'])) {
                         $this->Companies->setSetting($this->company_id, 'logo_admin', $logo_admin);
                     }
 
@@ -706,8 +702,53 @@ class AdminCompanyLookandfeel extends AdminController
                         $icon_admin = trim($this->post['admin_icon_url']);
                     }
 
-                    if ($icon_admin) {
+                    if ($icon_admin && empty($removed['icon_admin'])) {
                         $this->Companies->setSetting($this->company_id, 'icon_admin', $icon_admin);
+                    }
+
+                    // Set admin dark logo
+                    $logo_admin_dark = null;
+                    if (($this->post['admin_dark_type'] ?? '') == 'logo' && isset($this->post['admin_logo_dark'])) {
+                        $file_name = explode(DS, $this->post['admin_logo_dark']);
+                        $file_name = end($file_name);
+
+                        $logo_admin_dark = WEBDIR . 'uploads/themes/asset/' . $file_name;
+                    } elseif (($this->post['admin_dark_type'] ?? '') == 'url' && isset($this->post['admin_url_dark'])) {
+                        $logo_admin_dark = trim($this->post['admin_url_dark']);
+                    }
+
+                    if ($logo_admin_dark && empty($removed['logo_admin_dark'])) {
+                        $this->Companies->setSetting($this->company_id, 'logo_admin_dark', $logo_admin_dark);
+                    }
+
+                    // Set admin dark icon
+                    $icon_admin_dark = null;
+                    if (($this->post['admin_icon_dark_type'] ?? '') == 'image' && isset($this->post['admin_icon_image_dark'])) {
+                        $file_name = explode(DS, $this->post['admin_icon_image_dark']);
+                        $file_name = end($file_name);
+
+                        $icon_admin_dark = WEBDIR . 'uploads/themes/asset/' . $file_name;
+                    } elseif (($this->post['admin_icon_dark_type'] ?? '') == 'url' && isset($this->post['admin_icon_url_dark'])) {
+                        $icon_admin_dark = trim($this->post['admin_icon_url_dark']);
+                    }
+
+                    if ($icon_admin_dark && empty($removed['icon_admin_dark'])) {
+                        $this->Companies->setSetting($this->company_id, 'icon_admin_dark', $icon_admin_dark);
+                    }
+
+                    // Set admin favicon
+                    $favicon_admin = null;
+                    if (($this->post['admin_favicon_type'] ?? '') == 'image' && isset($this->post['admin_favicon_image'])) {
+                        $file_name = explode(DS, $this->post['admin_favicon_image']);
+                        $file_name = end($file_name);
+
+                        $favicon_admin = WEBDIR . 'uploads/themes/asset/' . $file_name;
+                    } elseif (($this->post['admin_favicon_type'] ?? '') == 'url' && isset($this->post['admin_favicon_url'])) {
+                        $favicon_admin = trim($this->post['admin_favicon_url']);
+                    }
+
+                    if ($favicon_admin && empty($removed['favicon_admin'])) {
+                        $this->Companies->setSetting($this->company_id, 'favicon_admin', $favicon_admin);
                     }
                 }
 
@@ -723,7 +764,7 @@ class AdminCompanyLookandfeel extends AdminController
                         $logo_client = trim($this->post['client_url']);
                     }
 
-                    if ($logo_client) {
+                    if ($logo_client && empty($removed['logo_client'])) {
                         $this->Companies->setSetting($this->company_id, 'logo_client', $logo_client);
                     }
 
@@ -737,8 +778,23 @@ class AdminCompanyLookandfeel extends AdminController
                         $icon_client = trim($this->post['client_icon_url']);
                     }
 
-                    if ($icon_client) {
+                    if ($icon_client && empty($removed['icon_client'])) {
                         $this->Companies->setSetting($this->company_id, 'icon_client', $icon_client);
+                    }
+
+                    // Set client favicon
+                    $favicon_client = null;
+                    if (($this->post['client_favicon_type'] ?? '') == 'image' && isset($this->post['client_favicon_image'])) {
+                        $file_name = explode(DS, $this->post['client_favicon_image']);
+                        $file_name = end($file_name);
+
+                        $favicon_client = WEBDIR . 'uploads/themes/asset/' . $file_name;
+                    } elseif (($this->post['client_favicon_type'] ?? '') == 'url' && isset($this->post['client_favicon_url'])) {
+                        $favicon_client = trim($this->post['client_favicon_url']);
+                    }
+
+                    if ($favicon_client && empty($removed['favicon_client'])) {
+                        $this->Companies->setSetting($this->company_id, 'favicon_client', $favicon_client);
                     }
                 }
 
@@ -769,6 +825,9 @@ class AdminCompanyLookandfeel extends AdminController
         $default_icon = $this->structure->view_dir . 'images/favicon.ico';
         $admin_logo = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'logo_admin');
         $admin_icon = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'icon_admin');
+        $admin_logo_dark = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'logo_admin_dark');
+        $admin_icon_dark = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'icon_admin_dark');
+        $admin_favicon = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'favicon_admin');
         $theme_id = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'theme_admin');
 
         if (!empty($theme_id['value'])) {
@@ -794,11 +853,18 @@ class AdminCompanyLookandfeel extends AdminController
         }
 
         // Set default icon, if a custom one is not set
+        $admin_default_icon = true;
         if (!empty($admin_icon['value'])) {
+            $admin_default_icon = false;
             $admin_icon = $admin_icon['value'];
         } else {
             $admin_icon = $default_icon;
         }
+
+        // Set dark variants (fallback to light)
+        $admin_logo_dark = !empty($admin_logo_dark['value']) ? $admin_logo_dark['value'] : null;
+        $admin_icon_dark = !empty($admin_icon_dark['value']) ? $admin_icon_dark['value'] : null;
+        $admin_favicon = !empty($admin_favicon['value']) ? $admin_favicon['value'] : null;
 
         // Get client logo
         $client_view_dir = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'client_view_dir');
@@ -807,6 +873,7 @@ class AdminCompanyLookandfeel extends AdminController
         $default_icon = $structure_view_dir . 'images/favicon.ico';
         $client_logo = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'logo_client');
         $client_icon = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'icon_client');
+        $client_favicon = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'favicon_client');
         $client_colors = [];
         $theme_id = $this->SettingsCollection->fetchSetting(null, $this->company_id, 'theme_client');
 
@@ -834,11 +901,15 @@ class AdminCompanyLookandfeel extends AdminController
         }
 
         // Set default icon, if a custom one is not set
+        $client_default_icon = true;
         if (!empty($client_icon['value'])) {
+            $client_default_icon = false;
             $client_icon = $client_icon['value'];
         } else {
             $client_icon = $default_icon;
         }
+
+        $client_favicon = !empty($client_favicon['value']) ? $client_favicon['value'] : null;
 
         // Get theme types
         $theme_types = $this->Themes->getTypes();
@@ -846,10 +917,16 @@ class AdminCompanyLookandfeel extends AdminController
         $this->set('vars', $company_settings);
         $this->set('admin_logo', $admin_logo);
         $this->set('admin_icon', $admin_icon);
+        $this->set('admin_logo_dark', $admin_logo_dark);
+        $this->set('admin_icon_dark', $admin_icon_dark);
+        $this->set('admin_favicon', $admin_favicon);
         $this->set('client_logo', $client_logo);
         $this->set('client_icon', $client_icon);
+        $this->set('client_favicon', $client_favicon);
         $this->set('admin_default_logo', $admin_default_logo);
+        $this->set('admin_default_icon', $admin_default_icon);
         $this->set('client_default_logo', $client_default_logo);
+        $this->set('client_default_icon', $client_default_icon);
         $this->set('client_colors', $client_colors);
         $this->set('theme_types', $theme_types);
     }

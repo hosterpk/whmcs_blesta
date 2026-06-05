@@ -1,0 +1,299 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyGeneral.localization.boxtitle_localization', true), ['id' => 'admin_company_general_localization']);
+            ?>
+                    <?php
+                    $this->Form->create(null, ['class' => 'disable-on-submit']);
+                    ?>
+
+                    <!-- Language -->
+                    <div class="mb-3">
+                        <label for="language" class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.localization.field.language');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.language', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'language',
+                            (isset($languages) ? $languages : null),
+                            (isset($vars['language']) ? $vars['language'] : null),
+                            ['id' => 'language', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                    <!-- Client Set Language -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldCheckbox(
+                                'client_set_lang',
+                                'true',
+                                ((isset($vars['client_set_lang']) ? $vars['client_set_lang'] : null) == 'true'),
+                                ['id' => 'client_set_lang', 'class' => 'form-check-input']
+                            );
+                            ?>
+                            <label for="client_set_lang" class="form-check-label">
+                                <?php $this->_('AdminCompanyGeneral.localization.field.setlanguage');?>
+                                <i class="bi bi-info-circle ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.client_set_lang', true));?>"></i>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Begins -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.localization.field.calendar');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.calendar_begins', true));?>"></i>
+                        </label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio(
+                                    'calendar_begins',
+                                    'sunday',
+                                    (isset($vars['calendar_begins']) ? $vars['calendar_begins'] : 'sunday') == 'sunday',
+                                    ['id' => 'calendar_begins_sunday', 'class' => 'form-check-input']
+                                );
+                                ?>
+                                <?php
+                                $this->Form->label(
+                                    $this->_('AdminCompanyGeneral.localization.field.sunday', true),
+                                    'calendar_begins_sunday',
+                                    ['class' => 'form-check-label']
+                                );
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio(
+                                    'calendar_begins',
+                                    'monday',
+                                    (isset($vars['calendar_begins']) ? $vars['calendar_begins'] : 'sunday') == 'monday',
+                                    ['id' => 'calendar_begins_monday', 'class' => 'form-check-input']
+                                );
+                                ?>
+                                <?php
+                                $this->Form->label(
+                                    $this->_('AdminCompanyGeneral.localization.field.monday', true),
+                                    'calendar_begins_monday',
+                                    ['class' => 'form-check-label']
+                                );
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timezone -->
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.localization.field.timezone');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.timezone', true));?>"></i>
+                        </label>
+                        <?php
+                        if (is_array((isset($timezones) ? $timezones : null)) && !empty($timezones)) {
+                        ?>
+                            <?php
+                            $this->Form->fieldSelect(
+                                'timezone',
+                                (isset($timezones) ? $timezones : null),
+                                (isset($vars['timezone']) ? $vars['timezone'] : null),
+                                ['id' => 'timezone', 'class' => 'form-select']
+                            );
+                            ?>
+                        <?php
+                        } else {
+                        ?>
+                            <p class="form-text"><?php echo $this->Html->safe($this->Date->format('e'));?></p>
+                        <?php
+                        }
+                        ?>
+                    </div>
+
+                    <!-- Date Format -->
+                    <div class="mb-3">
+                        <label for="date_format" class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.localization.field.dateformat');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.date_format', true));?>"></i>
+                        </label>
+                        <div class="input-group">
+                            <?php
+                            $this->Form->fieldText(
+                                'date_format',
+                                (isset($vars['date_format']) ? $vars['date_format'] : null),
+                                ['id' => 'date_format', 'class' => 'form-control']
+                            );
+                            ?>
+                            <span class="input-group-text" id="date_format_preview">
+                                <?php echo $this->Html->safe($this->Date->cast(time(), (isset($vars['date_format']) ? $vars['date_format'] : null)));?>
+                            </span>
+                        </div>
+                        <div class="form-text"><?php $this->_('AdminCompanyGeneral.localization.text.date_format');?></div>
+                    </div>
+
+                    <!-- DateTime Format -->
+                    <div class="mb-3">
+                        <label for="datetime_format" class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.localization.field.datetimeformat');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.datetime_format', true));?>"></i>
+                        </label>
+                        <div class="input-group">
+                            <?php
+                            $this->Form->fieldText(
+                                'datetime_format',
+                                (isset($vars['datetime_format']) ? $vars['datetime_format'] : null),
+                                ['id' => 'datetime_format', 'class' => 'form-control']
+                            );
+                            ?>
+                            <span class="input-group-text" id="datetime_format_preview">
+                                <?php echo $this->Html->safe($this->Date->cast(time(), (isset($vars['datetime_format']) ? $vars['datetime_format'] : null)));?>
+                            </span>
+                        </div>
+                        <div class="form-text"><?php $this->_('AdminCompanyGeneral.localization.text.datetime_format');?></div>
+                    </div>
+
+                    <!-- Country -->
+                    <div class="mb-3">
+                        <label for="country" class="form-label">
+                            <?php $this->_('AdminCompanyGeneral.localization.field.country');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.!tooltip.country', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'country',
+                            (isset($countries) ? $countries : null),
+                            (isset($vars['country']) ? $vars['country'] : null),
+                            ['id' => 'country', 'class' => 'form-select']
+                        );
+                        ?>
+                    </div>
+
+                </div>
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminCompanyGeneral.localization.field.localizationsubmit', true),
+                        ['class' => 'btn btn-primary']
+                    );
+                    ?>
+                </div>
+                <?php
+                $this->Form->end();
+                ?>
+<?php
+$this->Widget->end();
+?>
+        </div>
+
+<script>
+// Initialize Bootstrap tooltips - vanilla JavaScript only
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Dynamic date format preview
+    const dateFormatInput = document.getElementById('date_format');
+    const dateFormatPreview = document.getElementById('date_format_preview');
+    const datetimeFormatInput = document.getElementById('datetime_format');
+    const datetimeFormatPreview = document.getElementById('datetime_format_preview');
+
+    // Function to convert PHP date format to JavaScript-displayable format
+    function formatDatePreview(phpFormat) {
+        if (!phpFormat) return '';
+
+        const now = new Date();
+        let result = '';
+        let escaped = false;
+
+        // Common PHP date format mappings
+        const replacements = {
+            'Y': now.getFullYear(),
+            'y': String(now.getFullYear()).slice(-2),
+            'm': String(now.getMonth() + 1).padStart(2, '0'),
+            'n': now.getMonth() + 1,
+            'd': String(now.getDate()).padStart(2, '0'),
+            'j': now.getDate(),
+            'H': String(now.getHours()).padStart(2, '0'),
+            'G': now.getHours(),
+            'h': String(now.getHours() % 12 || 12).padStart(2, '0'),
+            'g': now.getHours() % 12 || 12,
+            'i': String(now.getMinutes()).padStart(2, '0'),
+            's': String(now.getSeconds()).padStart(2, '0'),
+            'A': now.getHours() >= 12 ? 'PM' : 'AM',
+            'a': now.getHours() >= 12 ? 'pm' : 'am',
+            'F': now.toLocaleString('default', { month: 'long' }),
+            'M': now.toLocaleString('default', { month: 'short' }),
+            'l': now.toLocaleString('default', { weekday: 'long' }),
+            'D': now.toLocaleString('default', { weekday: 'short' })
+        };
+
+        // Process format string character by character
+        for (let i = 0; i < phpFormat.length; i++) {
+            const char = phpFormat[i];
+
+            // Handle escaped characters
+            if (escaped) {
+                result += char;
+                escaped = false;
+                continue;
+            }
+
+            if (char === '\\') {
+                escaped = true;
+                continue;
+            }
+
+            // Replace format character if it exists in mappings
+            if (replacements.hasOwnProperty(char)) {
+                result += replacements[char];
+            } else {
+                result += char;
+            }
+        }
+
+        return result;
+    }
+
+    // Update date format preview
+    if (dateFormatInput && dateFormatPreview) {
+        dateFormatInput.addEventListener('input', function() {
+            dateFormatPreview.textContent = formatDatePreview(this.value);
+        });
+    }
+
+    // Update datetime format preview
+    if (datetimeFormatInput && datetimeFormatPreview) {
+        datetimeFormatInput.addEventListener('input', function() {
+            datetimeFormatPreview.textContent = formatDatePreview(this.value);
+        });
+    }
+});
+</script>

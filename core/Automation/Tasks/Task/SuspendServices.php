@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Type\Common\AutomationTypeInterface;
@@ -71,7 +72,7 @@ class SuspendServices extends StaffNoticeTask
             date('c'),
             'midnight +1 day -1 second',
             'c',
-            isset($this->options['timezone']) ? $this->options['timezone'] : 'UTC'
+            $this->options['timezone'] ?? 'UTC'
         );
 
         foreach ($client_groups as $client_group) {
@@ -92,7 +93,7 @@ class SuspendServices extends StaffNoticeTask
                 $today,
                 '-' . abs((int)$suspension_days->value) . ' days',
                 'c',
-                isset($this->options['timezone']) ? $this->options['timezone'] : 'UTC'
+                $this->options['timezone'] ?? 'UTC'
             );
 
             // Get all services ready to be suspended

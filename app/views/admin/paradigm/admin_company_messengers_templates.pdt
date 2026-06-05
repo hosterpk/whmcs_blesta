@@ -1,0 +1,120 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $tabs = [];
+    if (!empty($groups)) {
+        // Get the active tab from URL or default to first group
+        $group_types = array_keys($groups);
+        $active_type = isset($_GET['type']) && isset($groups[$_GET['type']]) ? $_GET['type'] : $group_types[0];
+
+        foreach ($groups as $type => $templates) {
+            $tabs[] = [
+                'name' => $this->_('AdminCompanyMessengers.templates.heading_' . $this->Html->safe($type), true),
+                'current' => ($type == $active_type),
+                'attributes' => [
+                    'href' => $this->Html->safe($this->base_uri . 'settings/company/messengers/templates/?type=' . $this->Html->safe($type))
+                ]
+            ];
+        }
+    }
+    $this->Widget->clear();
+    if (!empty($tabs)) {
+        $this->Widget->setTabs($tabs);
+    }
+    $this->Widget->setBodyWrapper(false);
+    $this->Widget->create($this->_('AdminCompanyMessengers.templates.boxtitle_message_templates', true), ['id' => 'admin_company_messengers_templates'], ($render_section ?? null));?>
+
+    <?php
+    if (!empty($groups)) {
+    ?>
+            <?php
+            // Display templates for the active tab
+            $templates = $groups[$active_type];
+            if (!empty($templates)) {
+            ?>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th><?php $this->_('AdminCompanyMessengers.templates.text_name');?></th>
+                                <?php
+                                // Show plugin column if set
+                                if ($active_type == 'plugins') {
+                                ?>
+                                <th><?php $this->_('AdminCompanyMessengers.templates.text_plugin');?></th>
+                                <?php
+                                }
+                                ?>
+                                <th><?php $this->_('AdminCompanyMessengers.templates.text_description');?></th>
+                                <th style="width: 60px;"><?php $this->_('AdminCompanyMessengers.templates.text_options');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            // Display templates for this group
+                            for ($i = 0, $num_templates = count($templates); $i < $num_templates; $i++) {
+                            ?>
+                                <tr>
+                                    <td>
+                                        <a href="<?php echo $this->base_uri . 'settings/company/messengers/edittemplate/' . (isset($templates[$i]->message_group_id) ? $this->Html->safe($templates[$i]->message_group_id) : null) . '/';?>">
+                                            <?php echo (isset($templates[$i]->group_name) ? $this->Html->safe($templates[$i]->group_name) : null);?>
+                                        </a>
+                                    </td>
+                                    <?php
+                                    // Show plugin name if set
+                                    if ($active_type == 'plugins') {
+                                    ?>
+                                    <td><?php echo (isset($templates[$i]->plugin_name) ? $this->Html->safe($templates[$i]->plugin_name) : null);?></td>
+                                    <?php
+                                    }
+                                    ?>
+                                    <td><?php echo (isset($templates[$i]->group_desc) ? $this->Html->safe($templates[$i]->group_desc) : null);?></td>
+                                    <td>
+                                        <a href="<?php echo $this->base_uri . 'settings/company/messengers/edittemplate/' . (isset($templates[$i]->message_group_id) ? $this->Html->safe($templates[$i]->message_group_id) : null) . '/';?>"
+                                           class="btn btn-sm btn-outline-secondary"
+                                           data-bs-toggle="tooltip"
+                                           title="<?php echo $this->Html->safe($this->_('AdminCompanyMessengers.templates.option_edit', true));?>">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php
+            } else {
+            ?>
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="mt-3 mb-0"><?php $this->_('AdminCompanyMessengers.templates.no_results');?></p>
+                </div>
+            <?php
+            }
+            ?>
+        <?php
+    }
+    if (empty($groups)) {
+    ?>
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3 mb-0"><?php $this->_('AdminCompanyMessengers.templates.no_results');?></p>
+            </div>
+    <?php
+    }
+    ?>
+    <?php $this->Widget->end();?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

@@ -18,16 +18,10 @@ class AdminSystemApi extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'ApiKeys']);
+        $this->uses(['ApiKeys']);
 
         // Create an array helper
         $this->ArrayHelper = $this->DataStructure->create('Array');
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-        );
     }
 
     /**

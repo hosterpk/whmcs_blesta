@@ -1,0 +1,126 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "action_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "icon",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "color",
+            "type": "varchar(20)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 20
+        },
+        {
+            "name": "type",
+            "type": "enum('info','success','warning','danger')",
+            "nullable": false,
+            "key": null,
+            "default": "info",
+            "extra": null,
+            "max_length": 7
+        },
+        {
+            "name": "title",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "message",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "url",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "read",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "user_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "user_id",
+                "read"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

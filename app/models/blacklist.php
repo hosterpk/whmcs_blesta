@@ -1,5 +1,9 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
@@ -204,7 +208,7 @@ class Blacklist extends AppModel
         $ip = $parts[0];
         $netmask = $parts[1];
 
-        if (!preg_match("/^\d+$/", $netmask)){
+        if (!preg_match('/^\d+$/', $netmask)) {
             return false;
         }
 
@@ -245,11 +249,7 @@ class Blacklist extends AppModel
             return false;
         }
 
-        if ($username == '*') {
-            return true;
-        } else {
-            return $this->Input->isEmail($email);
-        }
+        return $username == '*' ? true : $this->Input->isEmail($email);
     }
 
     /**
@@ -309,7 +309,7 @@ class Blacklist extends AppModel
                             break;
                         }
                     }
-                } else if ($type == 'email') {
+                } elseif ($type == 'email') {
                     $parts = explode('@', $input, 2);
                     $wildcard = '*@' . ($parts[1] ?? '');
                     $this->Record->select()

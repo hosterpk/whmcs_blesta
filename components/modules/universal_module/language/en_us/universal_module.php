@@ -22,6 +22,8 @@ $lang['UniversalModule.description'] = 'A dynamic module meant to adapt to most 
 $lang['UniversalModule.module_row'] = 'Product';
 $lang['UniversalModule.module_row_plural'] = 'Products';
 
+$lang['UniversalModule.back_to_manage'] = 'Back';
+
 // Module management
 $lang['UniversalModule.add_module_row'] = 'Add Product';
 $lang['UniversalModule.manage.module_rows_title'] = 'Products';

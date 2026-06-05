@@ -1,5 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use Record;
+use stdClass;
+
 /**
  * Log System
  *
@@ -511,7 +520,7 @@ class Logs extends AppModel
         if ($this->Input->validates($vars)) {
             // Insert into contact logs
             $vars['date_changed'] = $this->dateToUtc(date('c'));
-            $vars['change'] = base64_encode(json_encode($vars['fields']));
+            $vars['change'] = base64_encode(serialize($vars['fields']));
 
             $fields = ['contact_id', 'change', 'date_changed'];
             $this->Record->insert('log_contacts', $vars, $fields);
@@ -618,7 +627,7 @@ class Logs extends AppModel
         $rules = [
             'run_id' => [
                 'exists' => [
-                    'rule' => [[$this, 'validateCronExists'], (!empty($vars['run_id']) ? $vars['run_id'] : null)],
+                    'rule' => [[$this, 'validateCronExists'], (isset($vars['run_id']) ? $vars['run_id'] : null)],
                     'message' => $this->_('Logs.!error.run_id.exists')
                 ]
             ],
@@ -636,7 +645,7 @@ class Logs extends AppModel
                 'unique' => [
                     'rule' => [
                         [$this, 'validateCronLogUnique'],
-                        (!empty($vars['run_id']) ? $vars['run_id'] : null),
+                        (isset($vars['run_id']) ? $vars['run_id'] : null),
                         (!empty($vars['event']) ? $vars['event'] : null)
                     ],
                     'message' => $this->_('Logs.!error.group.unique')
@@ -736,7 +745,7 @@ class Logs extends AppModel
         if ($this->Input->validates($vars)) {
             // Insert into contact logs
             $vars['date_changed'] = $this->dateToUtc(date('c'));
-            $vars['change'] = base64_encode(json_encode($vars['fields']));
+            $vars['change'] = base64_encode(serialize($vars['fields']));
 
             $fields = ['staff_id', 'transaction_id', 'change', 'date_changed'];
             $this->Record->insert('log_transactions', $vars, $fields);
@@ -1767,7 +1776,7 @@ class Logs extends AppModel
             limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->fetchAll();
 
         foreach ($results as &$result) {
-            $result->change = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->change));
+            $result->change = safe_unserialize(base64_decode($result->change));
 
             if ($result->contact_id) {
                 $result->contact = $this->Contacts->get($result->contact_id);
@@ -1815,7 +1824,7 @@ class Logs extends AppModel
             ->fetchAll();
 
         foreach ($results as &$result) {
-            $result->change = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->change));
+            $result->change = safe_unserialize(base64_decode($result->change));
         }
 
         return $results;
@@ -1955,7 +1964,7 @@ class Logs extends AppModel
             limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->fetchAll();
 
         foreach ($results as &$result) {
-            $result->change = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->change));
+            $result->change = safe_unserialize(base64_decode($result->change));
         }
         return $results;
     }
@@ -2323,7 +2332,7 @@ class Logs extends AppModel
 
         if ($this->Input->validates($vars)) {
             // Create the client setting log entry
-            $vars['change'] = base64_encode(json_encode($vars['fields']));
+            $vars['change'] = base64_encode(serialize($vars['fields']));
 
             $fields = ['client_id', 'by_user_id', 'ip_address', 'change', 'date_changed'];
             $this->Record->insert('log_client_settings', $vars, $fields);
@@ -2353,7 +2362,7 @@ class Logs extends AppModel
             limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->fetchAll();
 
         foreach ($results as &$result) {
-            $result->change = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->change));
+            $result->change = safe_unserialize(base64_decode($result->change));
         }
         return $results;
     }
@@ -2598,6 +2607,58 @@ class Logs extends AppModel
     }
 
     /**
+     * Fetches cron log entries for the given task run IDs within the past X hours
+     *
+     * @param array $task_run_ids A list of cron task run IDs
+     * @param int $hours The number of hours of history to include (default 24)
+     * @return array A list of stdClass objects representing each matching cron log
+     */
+    public function getCronTimelineByTaskRuns(array $task_run_ids, $hours = 24)
+    {
+        $task_run_ids = array_values(
+            array_filter(
+                array_map('intval', $task_run_ids),
+                function ($run_id) {
+                    return $run_id > 0;
+                }
+            )
+        );
+
+        if (empty($task_run_ids)) {
+            return [];
+        }
+
+        $hours = max(1, (int) abs($hours));
+        $cutoff_date = $this->Date->modify(
+            date('c'),
+            '-' . $hours . ' hours',
+            'c',
+            Configure::get('Blesta.company_timezone')
+        );
+        $cutoff_date_utc = $this->dateToUtc($cutoff_date);
+
+        $this->Record->select([
+            'log_cron.run_id',
+            'log_cron.start_date',
+            'log_cron.end_date',
+            'log_cron.key'
+        ])
+            ->from('log_cron')
+            ->innerJoin('cron_task_runs', 'cron_task_runs.id', '=', 'log_cron.run_id', false)
+            ->where('cron_task_runs.company_id', '=', Configure::get('Blesta.company_id'))
+            ->where('log_cron.run_id', 'in', $task_run_ids)
+            ->where('log_cron.run_id', '!=', 0)
+            ->open()
+                ->where('log_cron.start_date', '>=', $cutoff_date_utc)
+                ->orWhere('log_cron.end_date', '>=', $cutoff_date_utc)
+                ->orWhere('log_cron.end_date', '=', null)
+            ->close()
+            ->order(['log_cron.start_date' => 'ASC']);
+
+        return $this->Record->fetchAll();
+    }
+
+    /**
      * Fetches the date at which the system cron has last been executed
      *
      * @param string $group The group the cron task is apart of (optional, default null)
@@ -2684,7 +2745,8 @@ class Logs extends AppModel
         $run_ids = [];
 
         foreach ($tasks as $task) {
-            if (!isset($run_ids[$task->run_id])
+            if (
+                !isset($run_ids[$task->run_id])
                 && ($latest_task = $this->getLatestCron($task->run_id))
                 && $latest_task->end_date === null
             ) {
@@ -3027,11 +3089,11 @@ class Logs extends AppModel
                     unset($vars['new_service']['package']->{$irrelevant_field});
                 }
             }
-            
+
             // Serialize fields
-            $vars['transactions'] = base64_encode(json_encode($vars['transactions'] ?? []));
-            $vars['old_service'] = base64_encode(json_encode($vars['old_service'] ?? []));
-            $vars['new_service'] = base64_encode(json_encode($vars['new_service'] ?? []));
+            $vars['transactions'] = base64_encode(serialize($vars['transactions'] ?? []));
+            $vars['old_service'] = base64_encode(serialize($vars['old_service'] ?? []));
+            $vars['new_service'] = base64_encode(serialize($vars['new_service'] ?? []));
 
             $fields = ['service_id', 'transactions', 'old_service', 'new_service', 'date_changed'];
             $this->Record->insert('log_service_changes', $vars, $fields);
@@ -3066,7 +3128,7 @@ class Logs extends AppModel
 
         // Unserialize fields
         foreach ($results as &$result) {
-            $result->transactions = (array) \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->transactions));
+            $result->transactions = (array) safe_unserialize(base64_decode($result->transactions));
             if (!empty($result->transactions)) {
                 foreach ($result->transactions as &$transaction) {
                     $transaction = $this->Transactions->get($transaction);
@@ -3074,8 +3136,8 @@ class Logs extends AppModel
                 unset($transaction);
             }
 
-            $result->old_service = (array) \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->old_service));
-            $result->new_service = (array) \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($result->new_service));
+            $result->old_service = (array) safe_unserialize(base64_decode($result->old_service));
+            $result->new_service = (array) safe_unserialize(base64_decode($result->new_service));
         }
 
         return $results;

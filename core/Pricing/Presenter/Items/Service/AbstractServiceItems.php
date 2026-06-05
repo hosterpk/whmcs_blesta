@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Items\Service;
 
 use Blesta\Items\Item\ItemInterface;
@@ -99,18 +100,18 @@ abstract class AbstractServiceItems implements ServiceItemsInterface
         PricingFactory $pricingFactory,
         ItemFactory $itemFactory,
         ItemInterface $settings,
-        ItemCollection $taxes = null,
-        ItemCollection $discounts = null,
-        ItemInterface $options = null
+        ?ItemCollection $taxes = null,
+        ?ItemCollection $discounts = null,
+        ?ItemInterface $options = null
     ) {
         $this->pricingFactory = $pricingFactory;
         $this->itemFactory = $itemFactory;
         $this->settings = $settings;
 
         // Default to empty collections/items if null
-        $this->taxes = ($taxes === null ? $this->itemFactory->itemCollection() : $taxes);
-        $this->discounts = ($discounts === null ? $this->itemFactory->itemCollection() : $discounts);
-        $this->options = ($options === null ? $this->itemFactory->item() : $options);
+        $this->taxes = ($taxes ?? $this->itemFactory->itemCollection());
+        $this->discounts = ($discounts ?? $this->itemFactory->itemCollection());
+        $this->options = ($options ?? $this->itemFactory->item());
 
         // Apply default options
         $this->setDefaultOptions();
@@ -213,7 +214,8 @@ abstract class AbstractServiceItems implements ServiceItemsInterface
         $endDate = null;
 
         // Calculate the end date based on the pricing term/period from the start date
-        if ($startDate && !empty($pricing->period) && $pricing->period !== 'onetime'
+        if (
+            $startDate && !empty($pricing->period) && $pricing->period !== 'onetime'
             && !empty($pricing->term) && (int)$pricing->term > 0
         ) {
             // Determine the end date based on the pricing term and period from the start date
@@ -545,10 +547,10 @@ abstract class AbstractServiceItems implements ServiceItemsInterface
             switch ($meta['_data']['item_type']) {
                 case 'service':
                 case 'domain':
-                    $currency = (isset($meta['pricing']->currency) ? $meta['pricing']->currency : null);
+                    $currency = ($meta['pricing']->currency ?? null);
                     break;
                 case 'option':
-                    $currency = (isset($meta['option']->currency) ? $meta['option']->currency : null);
+                    $currency = ($meta['option']->currency ?? null);
                     break;
             }
 

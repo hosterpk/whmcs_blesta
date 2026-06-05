@@ -25,7 +25,9 @@ trait File
      */
     public function addAllowedPath($path)
     {
-        $this->allowed_paths[] = $path;
+        if (is_string($path)) {
+            $this->allowed_paths[] = $path;
+        }
     }
 
     /**
@@ -47,7 +49,7 @@ trait File
      *
      * @return array
      */
-    public function getAllowedPaths() : array
+    public function getAllowedPaths(): array
     {
         return $this->allowed_paths;
     }

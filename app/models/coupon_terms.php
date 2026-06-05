@@ -1,5 +1,10 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+
 /**
  * Coupon term management
  *
@@ -180,9 +185,9 @@ class CouponTerms extends AppModel
                         return !(bool)$this->Record->select()
                             ->from('coupon_terms')
                             ->where('coupon_id', '=', $coupon_id)
-                            ->where('term', '=', (isset($vars['term']) ? $vars['term'] : null))
-                            ->where('period', '=', (isset($vars['period']) ? $vars['period'] : null))
-                            ->where('id', '!=', (isset($vars['term_id']) ? $vars['term_id'] : null))
+                            ->where('term', '=', ($vars['term'] ?? null))
+                            ->where('period', '=', ($vars['period'] ?? null))
+                            ->where('id', '!=', ($vars['term_id'] ?? null))
                             ->fetch();
                     },
                     'message' => $this->_('CouponTerms.!error.coupon_id.exists')

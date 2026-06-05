@@ -21,6 +21,7 @@ $lang['ServiceInvoices.getattempttypes.renewal'] = 'Renewal';
 $lang['ServiceInvoices.getattempttypes.suspension'] = 'Suspension';
 $lang['ServiceInvoices.getattempttypes.unsuspension'] = 'Unsuspension';
 $lang['ServiceInvoices.getattempttypes.cancelation'] = 'Cancelation';
+$lang['ServiceInvoices.getattempttypes.change'] = 'Change';
 
 $lang['ServiceInvoices.getCancelOptions.both'] = 'Allow immediate or end of term cancellation';
 $lang['ServiceInvoices.getCancelOptions.end_of_term'] = 'Allow end of term cancellation only';

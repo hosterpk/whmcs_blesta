@@ -1,5 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use stdClass;
+
 /**
  * CalendarEvents
  *
@@ -39,7 +45,12 @@ class CalendarEvents extends AppModel
     public function add(array $vars)
     {
         // Trigger the CalendarEvents.addBefore event
-        extract($this->executeAndParseEvent('CalendarEvents.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('CalendarEvents.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $this->Input->setRules($this->getRules($vars));
 
@@ -78,10 +89,15 @@ class CalendarEvents extends AppModel
     public function edit($calendar_event_id, array $vars)
     {
         // Trigger the CalendarEvents.editBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'CalendarEvents.editBefore',
             ['calendar_event_id' => $calendar_event_id, 'vars' => $vars]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $vars['calendar_event_id'] = $calendar_event_id;
         $this->Input->setRules($this->getRules($vars, true));
@@ -113,10 +129,15 @@ class CalendarEvents extends AppModel
     public function delete($calendar_event_id)
     {
         // Trigger the CalendarEvents.deleteBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'CalendarEvents.deleteBefore',
             ['calendar_event_id' => $calendar_event_id]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Get the calendar event state prior to update
         $calendar_event = $this->get($calendar_event_id);
@@ -145,9 +166,14 @@ class CalendarEvents extends AppModel
         $calendar_event = $this->Record->where('calendar_events.id', '=', $calendar_event_id)->fetch();
 
         // Trigger the CalendarEvents.get event
-        extract($this->executeAndParseEvent('CalendarEvents.get', [
+        $event = $this->executeAndParseEvent('CalendarEvents.get', [
             'calendar_event' => $calendar_event
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $calendar_event;
     }
@@ -295,7 +321,7 @@ class CalendarEvents extends AppModel
                     'message' => $this->_('CalendarEvents.!error.start_date.format'),
                 ],
                 'order' => [
-                    'rule' => [[$this, 'validateDateOrder'], (isset($vars['end_date']) ? $vars['end_date'] : null)],
+                    'rule' => [[$this, 'validateDateOrder'], ($vars['end_date'] ?? null)],
                     'message' => $this->_('CalendarEvents.!error.start_date.order'),
                     'post_format' => [[$this, 'dateToUtc']]
                 ]
@@ -325,7 +351,7 @@ class CalendarEvents extends AppModel
         if ($edit) {
             // Validate this event belongs to this staff member
             $rules['staff_id']['valid'] = [
-                'rule' => [[$this, 'validateStaffEvent'], (isset($vars['calendar_event_id']) ? $vars['calendar_event_id'] : null)],
+                'rule' => [[$this, 'validateStaffEvent'], ($vars['calendar_event_id'] ?? null)],
                 'message' => $this->_('CalendarEvents.!error.staff_id.valid')
             ];
 

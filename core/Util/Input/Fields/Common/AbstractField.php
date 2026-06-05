@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Input\Fields\Common;
 
 /**

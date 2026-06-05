@@ -1,0 +1,20 @@
+[
+    {
+        "key": "default_currency",
+        "client_group_id": 1,
+        "value": "USD",
+        "encrypted": 0
+    },
+    {
+        "key": "inv_days_before_renewal",
+        "client_group_id": 1,
+        "value": "5",
+        "encrypted": 0
+    },
+    {
+        "key": "autosuspend",
+        "client_group_id": 1,
+        "value": "true",
+        "encrypted": 0
+    }
+]

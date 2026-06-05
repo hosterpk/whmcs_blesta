@@ -1,0 +1,80 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyGeneral.encryption.boxtitle_encryption', true), ['id' => 'admin_company_general_encryption']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <!-- Current Passphrase (only if company has passphrase) -->
+            <?php
+            if ((isset($company_has_passphrase) ? $company_has_passphrase : false)) {
+            ?>
+            <div class="mb-3">
+                <label for="current_passphrase" class="form-label">
+                    <?php $this->_('AdminCompanyGeneral.encryption.field_current_passphrase');?>
+                </label>
+                <?php
+                $this->Form->fieldPassword('current_passphrase', ['id' => 'current_passphrase', 'class' => 'form-control']);
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+
+            <!-- Private Key Passphrase -->
+            <div class="mb-3">
+                <label for="private_key_passphrase" class="form-label">
+                    <?php $this->_('AdminCompanyGeneral.encryption.field_private_key_passphrase');?>
+                </label>
+                <?php
+                $this->Form->fieldPassword('private_key_passphrase', ['id' => 'private_key_passphrase', 'class' => 'form-control']);
+                ?>
+            </div>
+
+            <!-- Confirm New Passphrase -->
+            <div class="mb-3">
+                <label for="confirm_new_passphrase" class="form-label">
+                    <?php $this->_('AdminCompanyGeneral.encryption.field_confirm_new_passphrase');?>
+                </label>
+                <?php
+                $this->Form->fieldPassword('confirm_new_passphrase', ['id' => 'confirm_new_passphrase', 'class' => 'form-control']);
+                ?>
+            </div>
+
+            <!-- Agreement Checkbox -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'agree',
+                        'true',
+                        (isset($vars->agree) ? $vars->agree : false),
+                        ['id' => 'agree', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <?php
+                    $this->Form->label(
+                        $this->_('AdminCompanyGeneral.encryption.field_agree', true),
+                        'agree',
+                        ['class' => 'form-check-label']
+                    );
+                    ?>
+                </div>
+            </div>
+
+        </div>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyGeneral.encryption.field_encryptionsubmit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+        <?php $this->Form->end(); ?>
+<?php
+$this->Widget->end();
+?>
+</div>

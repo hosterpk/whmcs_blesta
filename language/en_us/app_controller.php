@@ -27,12 +27,18 @@ $lang['AppController.select.please'] = '-- Please Select --';
 // Modal boxes
 $lang['AppController.modal.text_close'] = 'Close';
 $lang['AppController.modal.text_confirm'] = 'Please Confirm';
+$lang['AppController.modal.confirm_delete'] = 'Confirm Delete';
+$lang['AppController.modal.btn_cancel'] = 'Cancel';
+$lang['AppController.modal.btn_delete'] = 'Delete';
 
 // Tooltip text
 $lang['AppController.tooltip.text'] = '?';
 
 // Dropzone text
 $lang['AppController.dropzone.text'] = 'Drop files here to upload or Click to select files';
+
+// Loading state
+$lang['AppController.text_loading'] = 'Loading...';
 
 // Banners
 $lang['AppController.banners.client_manager'] = 'You are currently managing an account that has invited you to manage it.';
@@ -43,11 +49,25 @@ $lang['AppController.message.close'] = '×';
 
 // Structure
 $lang['AppController.structure.text_myinfo'] = 'My Info';
+$lang['AppController.structure.text_notices'] = 'Notices';
 $lang['AppController.structure.text_settings'] = 'Settings';
+$lang['AppController.structure.text_iconbar'] = 'Icon Bar';
 $lang['AppController.structure.text_logout'] = 'Log Out';
-$lang['AppController.structure.text_maintenance'] = 'Maintenance Mode is currently enabled and clients may not login. Click here to change.';
-$lang['AppController.structure.text_step_up_access'] = 'You currently have a step up session open with access to admin settings. Click here to drop access.';
+$lang['AppController.structure.text_maintenance'] = 'Maintenance Mode is currently enabled and clients may not login.';
+$lang['AppController.structure.text_maintenance_header'] = 'Maintenance Mode Enabled';
+$lang['AppController.structure.text_maintenance_button'] = 'Edit Maintenance Mode';
+$lang['AppController.structure.text_step_up_access'] = 'You currently have a step up session open with access to admin settings.';
+$lang['AppController.structure.text_step_up_access_header'] = 'Step Up Authentication Active';
+$lang['AppController.structure.text_step_up_access_button'] = 'End Session Now';
+$lang['AppController.structure.text_step_up_time_remaining'] = 'Time Remaining:';
+$lang['AppController.structure.text_step_up_extend'] = 'Extend Session';
 $lang['AppController.structure.text_search_placeholder'] = '%1$s...'; // %1$s is the search type
+$lang['AppController.structure.text_version'] = 'v%1$s'; // %1$s is the version number
+$lang['AppController.structure.text_licensed_to'] = 'Licensed to %1$s'; // %1$s is the company name
+$lang['AppController.structure.text_notifications'] = 'Notifications';
+$lang['AppController.structure.no_notifications'] = 'No new notifications';
+$lang['AppController.structure.text_open'] = 'Open';
+$lang['AppController.structure.text_mark_all_read'] = 'Mark all as read';
 $lang['AppController.client_structure.staff_as_client_note'] = 'Return to Staff Portal';
 $lang['AppController.client_structure.default_title'] = 'My Account';
 $lang['AppController.client_structure.text_return_to_portal'] = 'Return to Portal';

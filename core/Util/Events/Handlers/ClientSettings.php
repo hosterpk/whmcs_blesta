@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events\Handlers;
 
 use Blesta\Core\Util\Common\Traits\Container;

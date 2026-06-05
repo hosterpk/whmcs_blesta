@@ -353,7 +353,7 @@ class SupportManagerStaff extends SupportManagerModel
         // Unserialize known serialized settings
         foreach ($settings as &$setting) {
             if (in_array($setting->key, $this->serializable_settings)) {
-                $setting->value = unserialize($setting->value);
+                $setting->value = safe_unserialize($setting->value);
             }
         }
 

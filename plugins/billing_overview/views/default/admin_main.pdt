@@ -1,8 +1,8 @@
 
         <?php
         $this->Widget->clear();
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
-        $this->Widget->setStyleSheet(VENDORWEBDIR . 'nvd3/nv.d3.min.css');
+        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'billing_overview_styles']);
+        $this->Widget->setWidgetButton('widget-width');
         $this->Widget->setWidgetButton('arrow');
         $this->Widget->setWidgetButton(['href' => $this->base_uri . 'widget/billing_overview/admin_main/settings/', 'class' => 'ajax setting']);
         $this->Widget->create($this->_('AdminMain.index.boxtitle_overview', true), ['id' => 'widget_billing_overview_admin_main' . ((isset($dashboard) ? $dashboard : 'false') == 'true' ? '_dashboard' : '')], (isset($render_section) ? $render_section : null));
@@ -15,18 +15,104 @@
         ?>
 
 <script type="text/javascript">
-    $(document).ready(function() {
-        $(document).on("change", "#currency, #graph_date", function() {
-            var params = $(this).closest("form").serialize();
+(function() {
+    'use strict';
 
-            $(this).blestaRequest("post", "<?php echo $this->Html->safe($this->base_uri . 'widget/billing_overview/admin_main/overview/');?>", params,
-                function(data) {
-                    if (data.overview)
-                        $('#overview').html(data.overview);
-                },
-                null);
+    var STORAGE_KEY_CURRENCY = 'billing_overview_currency';
+    var STORAGE_KEY_GRAPH_DATE = 'billing_overview_graph_date';
 
-            return false;
+    function saveSelectorValues(currency, graphDate) {
+        try {
+            if (currency) {
+                localStorage.setItem(STORAGE_KEY_CURRENCY, currency);
+            }
+            if (graphDate) {
+                localStorage.setItem(STORAGE_KEY_GRAPH_DATE, graphDate);
+            }
+        } catch (e) {}
+    }
+
+    function hasValidOption(select, value) {
+        if (!select || !value) return false;
+        return select.querySelector('option[value="' + CSS.escape(value) + '"]') !== null;
+    }
+
+    function restoreSelectors() {
+        var currencySelect = document.getElementById('currency');
+        var graphDateSelect = document.getElementById('graph_date');
+
+        if (!currencySelect || !graphDateSelect) return false;
+
+        var savedCurrency = null;
+        var savedGraphDate = null;
+
+        try {
+            savedCurrency = localStorage.getItem(STORAGE_KEY_CURRENCY);
+            savedGraphDate = localStorage.getItem(STORAGE_KEY_GRAPH_DATE);
+        } catch (e) {}
+
+        var needsRefresh = false;
+
+        if (savedCurrency && hasValidOption(currencySelect, savedCurrency) && currencySelect.value !== savedCurrency) {
+            currencySelect.value = savedCurrency;
+            needsRefresh = true;
+        }
+
+        if (savedGraphDate && hasValidOption(graphDateSelect, savedGraphDate) && graphDateSelect.value !== savedGraphDate) {
+            graphDateSelect.value = savedGraphDate;
+            needsRefresh = true;
+        }
+
+        return needsRefresh;
+    }
+
+    function refreshOverview(saveToStorage) {
+        var currencySelect = document.getElementById('currency');
+        var form = currencySelect ? currencySelect.closest('form') : null;
+        if (!form) return;
+
+        var params = new URLSearchParams(new FormData(form)).toString();
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'widget/billing_overview/admin_main/overview/');?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: params
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.overview) {
+                document.getElementById('overview').innerHTML = data.overview;
+                if (saveToStorage) {
+                    saveSelectorValues(
+                        document.getElementById('currency') ? document.getElementById('currency').value : null,
+                        document.getElementById('graph_date') ? document.getElementById('graph_date').value : null
+                    );
+                }
+            }
+        })
+        .catch(function(error) {
+            console.error('Failed to update overview:', error);
         });
-    });
+    }
+
+    function handleSelectorChange(event) {
+        var target = event.target;
+        if (target.id !== 'currency' && target.id !== 'graph_date') {
+            return;
+        }
+        refreshOverview(true);
+    }
+
+    document.addEventListener('change', handleSelectorChange);
+
+    // Restore saved selectors from localStorage on widget load
+    if (restoreSelectors()) {
+        refreshOverview(false);
+    }
+})();
 </script>

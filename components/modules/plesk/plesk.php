@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
 use Blesta\Core\Util\Common\Traits\Container;
 
@@ -197,11 +198,7 @@ class Plesk extends Module
         $versions = ['' => Language::_('Plesk.panel_version.latest', true)];
         foreach ($this->panel_versions as $panel_version => $panel) {
             if ($panel['supported']) {
-                if ($format) {
-                    $versions[$panel_version] = $panel['name'];
-                } else {
-                    $versions[$panel_version] = $panel;
-                }
+                $versions[$panel_version] = $format ? $panel['name'] : $panel;
             }
         }
         return $versions;
@@ -321,8 +318,8 @@ class Plesk extends Module
     {
         // Get module row and API
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
 
         $api = $this->getApi(
@@ -345,7 +342,7 @@ class Plesk extends Module
             if ($response && $response->result->status == 'ok') {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
@@ -365,8 +362,8 @@ class Plesk extends Module
     {
         // Get module row and API
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
 
         // Fetch the plans
@@ -397,7 +394,7 @@ class Plesk extends Module
      */
     public function validateServiceEdit($service, array $vars = null)
     {
-        $package = isset($service->package) ? $service->package : null;
+        $package = $service->package ?? null;
 
         $this->Input->setRules($this->getServiceRules($vars, $package, true));
         return $this->Input->validates($vars);
@@ -438,7 +435,7 @@ class Plesk extends Module
             'plesk_confirm_password' => [
                 'matches' => [
                     'if_set' => true,
-                    'rule' => ['compares', '==', (isset($vars['plesk_password']) ? $vars['plesk_password'] : '')],
+                    'rule' => ['compares', '==', ($vars['plesk_password'] ?? '')],
                     'message' => Language::_('Plesk.!error.plesk_confirm_password.matches', true)
                 ]
             ],
@@ -458,12 +455,6 @@ class Plesk extends Module
         } else {
             // On edit, domain is optional
             $rules['plesk_domain']['format']['if_set'] = true;
-
-            // Skip webspace ID existence check when not using the module,
-            // as the admin may be updating local data only without contacting the server
-            if (isset($vars['use_module']) && $vars['use_module'] != 'true') {
-                unset($rules['plesk_webspace_id']);
-            }
         }
 
         // Remove rules on empty fields
@@ -531,7 +522,7 @@ class Plesk extends Module
         // If no username or password given, generate them
         if (empty($vars['plesk_username'])) {
             $vars['plesk_username'] = $this->generateUsername(
-                (isset($vars['plesk_domain']) ? $vars['plesk_domain'] : '')
+                ($vars['plesk_domain'] ?? '')
             );
         }
         $vars['plesk_username'] = strtolower($vars['plesk_username']);
@@ -606,7 +597,7 @@ class Plesk extends Module
 
                 // Update the number of accounts on the server
                 $this->updateAccountCount($module_row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
                 return;
@@ -686,7 +677,7 @@ class Plesk extends Module
         // If no username or password given, generate them
         if (isset($vars['plesk_username']) && $vars['plesk_username'] == '') {
             $vars['plesk_username'] = $this->generateUsername(
-                (isset($vars['plesk_domain']) ? $vars['plesk_domain'] : '')
+                ($vars['plesk_domain'] ?? '')
             );
         }
         $vars['plesk_username'] = strtolower($vars['plesk_username']);
@@ -755,7 +746,7 @@ class Plesk extends Module
                 if ($response && $response->result->status == 'ok') {
                     $service_fields->plesk_domain = $params['domain'];
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
             }
@@ -840,7 +831,7 @@ class Plesk extends Module
 
                 $this->log($module_row->meta->host_name . '|webspace:del', serialize($data), 'input', true);
                 $response = $this->parseResponse($subscription->delete($data), $module_row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
             }
@@ -855,12 +846,13 @@ class Plesk extends Module
                 $subscription_response = $this->parseResponse(
                     $subscription->get(['owner_login' => $service_fields->plesk_username])
                 );
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
             }
 
-            if (isset($subscription_response->result)
+            if (
+                isset($subscription_response->result)
                 && !is_array($subscription_response->result)
                 && !isset($subscription_response->result->data)
             ) {
@@ -1003,7 +995,7 @@ class Plesk extends Module
 
                 $this->log($module_row->meta->host_name . '|webspace:set', serialize($data), 'input', true);
                 $response = $this->parseResponse($subscription->set($data), $module_row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
             }
@@ -1082,7 +1074,7 @@ class Plesk extends Module
                     $this->log($module_row->meta->host_name . '|customer:set', serialize($data), 'input', true);
                     $response = $this->parseResponse($customer->set($data), $module_row, true);
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // API request failed
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
             }
@@ -1167,13 +1159,9 @@ class Plesk extends Module
             ];
 
             // Set whether a reseller plan is being changed
-            $from_reseller_plan = (isset($package_from->meta->reseller_plan)
-                ? $package_from->meta->reseller_plan
-                : null
+            $from_reseller_plan = ($package_from->meta->reseller_plan ?? null
             );
-            $to_reseller_plan = (isset($package_to->meta->reseller_plan)
-                ? $package_to->meta->reseller_plan
-                : null
+            $to_reseller_plan = ($package_to->meta->reseller_plan ?? null
             );
 
             // Reseller plan changed, upgrade the customer and set the reseller plan to update
@@ -1234,7 +1222,7 @@ class Plesk extends Module
                             true
                         );
                         $response = $this->parseResponse($reseller->changePlan($data), $module_row);
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         // API request failed
                         $this->Input->setErrors(
                             ['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]
@@ -1285,7 +1273,7 @@ class Plesk extends Module
                             true
                         );
                         $response = $this->parseResponse($subscription->changePlan($data), $module_row);
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         // API request failed
                         $this->Input->setErrors(
                             ['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]
@@ -1417,6 +1405,14 @@ class Plesk extends Module
             $vars['port'] = '8443';
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         $this->view->set('panel_versions', $this->getSupportedPanelVersions(true));
         return $this->view->fetch();
@@ -1444,6 +1440,14 @@ class Plesk extends Module
             $vars = $module_row->meta;
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         $this->view->set('panel_versions', $this->getSupportedPanelVersions(true));
         return $this->view->fetch();
@@ -1596,7 +1600,7 @@ class Plesk extends Module
             $fields->fieldRadio(
                 'meta[type]',
                 'standard',
-                (isset($vars->meta['type']) ? $vars->meta['type'] : 'standard') == 'standard',
+                ($vars->meta['type'] ?? 'standard') == 'standard',
                 ['id' => 'plesk_type_standard'],
                 $type_standard
             )
@@ -1605,7 +1609,7 @@ class Plesk extends Module
             $fields->fieldRadio(
                 'meta[type]',
                 'reseller',
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null) == 'reseller',
+                ($vars->meta['type'] ?? null) == 'reseller',
                 ['id' => 'plesk_type_reseller'],
                 $type_reseller
             )
@@ -1618,7 +1622,7 @@ class Plesk extends Module
             $fields->fieldSelect(
                 'meta[plan]',
                 $plans,
-                (isset($vars->meta['plan']) ? $vars->meta['plan'] : null),
+                ($vars->meta['plan'] ?? null),
                 ['id' => 'plesk_plan']
             )
         );
@@ -1636,7 +1640,7 @@ class Plesk extends Module
                 $fields->fieldSelect(
                     'meta[reseller_plan]',
                     $reseller_plans,
-                    (isset($vars->meta['reseller_plan']) ? $vars->meta['reseller_plan'] : null),
+                    ($vars->meta['reseller_plan'] ?? null),
                     ['id' => 'plesk_reseller_plan']
                 )
             );
@@ -1666,7 +1670,7 @@ class Plesk extends Module
         $webspace_id->attach(
             $fields->fieldText(
                 'plesk_webspace_id',
-                (isset($vars->plesk_webspace_id) ? $vars->plesk_webspace_id : null),
+                ($vars->plesk_webspace_id ?? null),
                 ['id' => 'plesk_webspace_id']
             )
         );
@@ -1699,7 +1703,7 @@ class Plesk extends Module
         $domain->attach(
             $fields->fieldText(
                 'plesk_domain',
-                (isset($vars->plesk_domain) ? $vars->plesk_domain : ($vars->domain ?? null)),
+                ($vars->plesk_domain ?? ($vars->domain ?? null)),
                 ['id' => 'plesk_domain']
             )
         );
@@ -1729,7 +1733,7 @@ class Plesk extends Module
         $webspace_id->attach(
             $fields->fieldText(
                 'plesk_webspace_id',
-                (isset($vars->plesk_webspace_id) ? $vars->plesk_webspace_id : null),
+                ($vars->plesk_webspace_id ?? null),
                 ['id' => 'plesk_webspace_id']
             )
         );
@@ -1776,7 +1780,7 @@ class Plesk extends Module
         $domain = $fields->label(Language::_('Plesk.service_field.domain', true), 'plesk_domain');
         // Create domain field and attach to domain label
         $domain->attach(
-            $fields->fieldText('plesk_domain', (isset($vars->plesk_domain) ? $vars->plesk_domain : null), ['id'=>'plesk_domain'])
+            $fields->fieldText('plesk_domain', ($vars->plesk_domain ?? null), ['id' => 'plesk_domain'])
         );
         // Set the label as a field
         $fields->setField($domain);
@@ -1785,7 +1789,7 @@ class Plesk extends Module
         $username = $fields->label(Language::_('Plesk.service_field.username', true), 'plesk_username');
         // Create username field and attach to username label
         $username->attach(
-            $fields->fieldText('plesk_username', (isset($vars->plesk_username) ? $vars->plesk_username : null), ['id'=>'plesk_username'])
+            $fields->fieldText('plesk_username', ($vars->plesk_username ?? null), ['id' => 'plesk_username'])
         );
         // Add tooltip
         $tooltip = $fields->tooltip(Language::_('Plesk.service_field.tooltip.username', true));
@@ -1795,25 +1799,14 @@ class Plesk extends Module
 
         // Create password label
         $password = $fields->label(Language::_('Plesk.service_field.password', true), 'plesk_password');
-        $fields->setHtml('<a class="generate-password"
-                href="#" data-options="' . $this->Html->safe($password_options) . '" data-length="16"
-                data-base-url="' . $this->base_uri . '" data-for-class="plesk_password">
-            <i class="fas fa-sync-alt"></i> ' . Language::_('Plesk.service_field.text_generate_password', true) .
-        '</a>
-        <script type="text/javascript">
-            $(document).ready(function () {
-                $("#plesk_password").parent().append($(".generate-password"));
-            });
-        </script>
-        ');
         // Create password field and attach to password label
         $password->attach(
             $fields->fieldPassword(
                 'plesk_password',
                 [
                     'id' => 'plesk_password',
-                    'class' => 'plesk_password',
-                    'value' => (isset($vars->plesk_password) ? $vars->plesk_password : null)
+                    'class' => 'form-control plesk_password',
+                    'value' => ($vars->plesk_password ?? null)
                 ]
             )
         );
@@ -1831,13 +1824,38 @@ class Plesk extends Module
                 'plesk_confirm_password',
                 [
                     'id' => 'plesk_confirm_password',
-                    'class' => 'plesk_password',
-                    'value' => (isset($vars->plesk_password) ? $vars->plesk_password : null)
+                    'class' => 'form-control plesk_password',
+                    'value' => ($vars->plesk_password ?? null)
                 ]
             )
         );
         // Set the label as a field
         $fields->setField($confirm_password);
+
+        $fields->setHtml('
+        <button type="button" class="btn btn-secondary generate-password"
+            data-options="' . $this->Html->safe($password_options) . '"
+            data-length="16"
+            data-base-url="' . $this->base_uri . '"
+            data-for-class="plesk_password"
+            aria-label="' . $this->Html->safe(Language::_('Plesk.service_field.text_generate_password', true)) . '"
+            title="' . $this->Html->safe(Language::_('Plesk.service_field.text_generate_password', true)) . '">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        </button>
+        <script type="text/javascript">
+            document.addEventListener("DOMContentLoaded", function() {
+                var field = document.getElementById("plesk_password");
+                var btn = document.querySelector(".generate-password[data-for-class=\'plesk_password\']");
+                if (field && btn) {
+                    var wrapper = document.createElement("div");
+                    wrapper.className = "input-group";
+                    field.parentNode.insertBefore(wrapper, field);
+                    wrapper.appendChild(field);
+                    wrapper.appendChild(btn);
+                }
+            });
+        </script>
+        ');
 
         return $fields;
     }
@@ -1869,7 +1887,7 @@ class Plesk extends Module
         Loader::loadHelpers($this, ['Form', 'Html']);
 
         $service_fields = $this->serviceFieldsToObject($service->fields);
-        
+
         // Create SSO URL
         $requestor = $this->getFromContainer('requestor');
         $sso_url = $this->createSsoUrl($service_fields->plesk_username, $requestor->ip_address);
@@ -1914,7 +1932,7 @@ class Plesk extends Module
         // Create SSO URL
         $requestor = $this->getFromContainer('requestor');
         $sso_url = $this->createSsoUrl($service_fields->plesk_username, $requestor->ip_address);
-        
+
         $this->view->set('module_row', $row);
         $this->view->set('package', $package);
         $this->view->set('service', $service);
@@ -2091,7 +2109,7 @@ class Plesk extends Module
 
             $this->log($module_row->meta->host_name . '|webspace:get', serialize($data), 'input', true);
             $response = $this->parseResponse($subscription->get($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
@@ -2112,10 +2130,10 @@ class Plesk extends Module
 
             // Set bandwidth usage
             $stats->bandwidth_usage['used'] = $data->stat->traffic;
-            $stats->bandwidth_usage['limit'] = (isset($totals['max_traffic']) ? $totals['max_traffic'] : null);
+            $stats->bandwidth_usage['limit'] = ($totals['max_traffic'] ?? null);
 
             // Set disk usage
-            $stats->disk_usage['limit'] = (isset($totals['disk_space']) ? $totals['disk_space'] : null);
+            $stats->disk_usage['limit'] = ($totals['disk_space'] ?? null);
             $total_disk_usage = 0;
 
             $disk_usage_options = ['httpdocs', 'httpsdocs', 'subdomains', 'web_users',
@@ -2136,7 +2154,7 @@ class Plesk extends Module
                 $stats->disk_usage['limit_formatted'] = $this->convertBytesToString($stats->disk_usage['limit']);
 
                 // Set unused
-                $stats->disk_usage['unused'] = abs($stats->disk_usage['limit']-$stats->disk_usage['used']);
+                $stats->disk_usage['unused'] = abs($stats->disk_usage['limit'] - $stats->disk_usage['used']);
                 $stats->disk_usage['unused_formatted'] = $this->convertBytesToString($stats->disk_usage['unused']);
             }
 
@@ -2174,11 +2192,11 @@ class Plesk extends Module
         $step = 1024;
         $unit = 'B';
 
-        if (($value = number_format($bytes/($step*$step*$step), 2)) >= 1) {
+        if (($value = number_format($bytes / ($step * $step * $step), 2)) >= 1) {
             $unit = 'GB';
-        } elseif (($value = number_format($bytes/($step*$step), 2)) >= 1) {
+        } elseif (($value = number_format($bytes / ($step * $step), 2)) >= 1) {
             $unit = 'MB';
-        } elseif (($value = number_format($bytes/($step), 2)) >= 1) {
+        } elseif (($value = number_format($bytes / ($step), 2)) >= 1) {
             $unit = 'KB';
         } else {
             $value = $bytes;
@@ -2198,8 +2216,8 @@ class Plesk extends Module
     {
         $fields = [
             'domain' => isset($vars['plesk_domain']) ? strtolower($vars['plesk_domain']) : null,
-            'username' => isset($vars['plesk_username']) ? $vars['plesk_username']: null,
-            'password' => isset($vars['plesk_password']) ? $vars['plesk_password'] : null,
+            'username' => $vars['plesk_username'] ?? null,
+            'password' => $vars['plesk_password'] ?? null,
             'webspace_id' => !empty($vars['plesk_webspace_id']) ? $vars['plesk_webspace_id'] : null
         ];
 
@@ -2307,7 +2325,7 @@ class Plesk extends Module
             }
 
             return $result;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
@@ -2349,7 +2367,7 @@ class Plesk extends Module
                 true
             );
             $response = $this->parseResponse($customer->upgrade($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
@@ -2397,12 +2415,12 @@ class Plesk extends Module
             $masked_data['password'] = '***';
             $this->log($module_row->meta->host_name . '|reseller:add', serialize($masked_data), 'input', true);
             $response = $this->parseResponse($reseller->add($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
 
-        return (isset($response) ? $response : new stdClass());
+        return ($response ?? new stdClass());
     }
 
     /**
@@ -2448,12 +2466,12 @@ class Plesk extends Module
 
             $this->log($module_row->meta->host_name . '|reseller:set', serialize($masked_data), 'input', true);
             $response = $this->parseResponse($reseller->set($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
 
-        return (isset($response) ? $response : new stdClass());
+        return ($response ?? new stdClass());
     }
 
     /**
@@ -2496,12 +2514,12 @@ class Plesk extends Module
 
             $this->log($module_row->meta->host_name . '|reseller:del', serialize($data), 'input', true);
             $response = $this->parseResponse($reseller->delete($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
 
-        return (isset($response) ? $response : new stdClass());
+        return ($response ?? new stdClass());
     }
 
     /**
@@ -2539,12 +2557,12 @@ class Plesk extends Module
             $masked_data['password'] = '***';
             $this->log($module_row->meta->host_name . '|customer:add', serialize($masked_data), 'input', true);
             $response = $this->parseResponse($customer_accounts->add($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
 
-        return (isset($response) ? $response : new stdClass());
+        return ($response ?? new stdClass());
     }
 
     /**
@@ -2590,12 +2608,12 @@ class Plesk extends Module
 
             $this->log($module_row->meta->host_name . '|customer:set', serialize($masked_data), 'input', true);
             $response = $this->parseResponse($customer->set($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
 
-        return (isset($response) ? $response : new stdClass());
+        return ($response ?? new stdClass());
     }
 
     /**
@@ -2638,12 +2656,12 @@ class Plesk extends Module
 
             $this->log($module_row->meta->host_name . '|customer:del', serialize($data), 'input', true);
             $response = $this->parseResponse($customer_accounts->delete($data), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
             $this->Input->setErrors(['api' => ['internal' => Language::_('Plesk.!error.api.internal', true)]]);
         }
 
-        return (isset($response) ? $response : new stdClass());
+        return ($response ?? new stdClass());
     }
 
     /**
@@ -2743,7 +2761,7 @@ class Plesk extends Module
         foreach ($masked_params as $masked_param) {
             if (property_exists($output, $masked_param)) {
                 $raw_output = preg_replace(
-                    '/<' . $masked_param . ">(.*)<\/" . $masked_param . '>/',
+                    '/<' . $masked_param . '>(.*)<\/' . $masked_param . '>/',
                     '<' . $masked_param . '>***</' . $masked_param . '>',
                     $raw_output
                 );
@@ -2811,7 +2829,7 @@ class Plesk extends Module
                 $data = $response->response();
                 if (isset($data->result->id)) {
                     $session_token = $data->result->id;
-                    
+
                     // Build the SSO URL
                     $protocol = 'https://';
                     $host = ($row->meta->host_name ?? $row->meta->ip_address) . ':' . $row->meta->port;
@@ -2819,7 +2837,7 @@ class Plesk extends Module
                     return $protocol . $host . '/enterprise/rsession_init.php?PLESKSESSID=' . urlencode($session_token);
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2887,7 +2905,7 @@ class Plesk extends Module
                     }
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return '';
         }
 
@@ -3114,7 +3132,7 @@ class Plesk extends Module
             if ($response && !empty($response->result)) {
                 $accounts = count($response->result);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 

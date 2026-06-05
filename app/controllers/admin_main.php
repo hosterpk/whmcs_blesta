@@ -52,34 +52,19 @@ class AdminMain extends AppController
      */
     public function index()
     {
-        $this->set(
-            'quicklinks',
-            $this->Staff->getQuickLinks($this->Session->read('blesta_staff_id'), $this->company_id)
-        );
+        $quicklinks = $this->Staff->getQuickLinks($this->Session->read('blesta_staff_id'), $this->company_id);
+        $this->set('quicklinks', $quicklinks);
+        $this->structure->set('quicklinks', $quicklinks);
 
-        $layout = $this->Staff->getSetting(
-            $this->Session->read('blesta_staff_id'),
-            'dashboard_layout',
-            $this->company_id
-        );
-        $layout = ($layout ? $layout->value : 'layout1');
+        // Set icon bar icons
+        $this->structure->set('icon_bar', [
+            'bottom' => [
+                ['href' => '#widget-management', 'icon' => 'bi bi-grid-1x2']
+            ]
+        ]);
 
-        // Set the layout
-        $this->set('content', $this->partial('admin_main_' . $layout));
-
-        // Set day of the week names and abbreviations for the calendar
-        $days_of_the_week = $this->getDaysOfWeek();
-        $months = $this->getMonths();
-        $this->set('calendar_days', json_encode($days_of_the_week['days']));
-        $this->set('calendar_abbr_days', json_encode($days_of_the_week['abbr_days']));
-        $this->set('calendar_months', json_encode($months['months']));
-        $this->set('calendar_abbr_months', json_encode($months['abbr_months']));
-        $this->set('calendar_start_day', json_encode($days_of_the_week['calendar_begins']));
-        $this->set('calendar_start_month', ($this->Date->format('n') - 1)); // Calendar month range [0, 11]
-        $this->set('calendar_start_year', $this->Date->format('Y'));
-
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
+        // Set side bar partial
+        $this->structure->set('side_bar', 'partials/main_sidebar');
     }
 
     /**
@@ -137,9 +122,6 @@ class AdminMain extends AppController
         $this->Javascript->setFile('main.min.js', 'head', VENDORWEBDIR . 'fullcalendar/');
         $this->structure->set('calendar_css', VENDORWEBDIR . 'fullcalendar/main.min.css');
 
-        // Load date picker so that calendar events can be added/edited via javascript
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
     }
 
     /**
@@ -175,6 +157,20 @@ class AdminMain extends AppController
         }
 
         return $view_name;
+    }
+
+    /**
+     * Converts an HTML datetime-local or date input value to a Y-m-d H:i:s string.
+     */
+    private function parseEventDatetime($value)
+    {
+        if (!$value) {
+            return '';
+        }
+
+        return strpos($value, 'T') !== false
+            ? str_replace('T', ' ', $value) . ':00'
+            : $value . ' 00:00:00';
     }
 
     /**
@@ -221,8 +217,8 @@ class AdminMain extends AppController
             $data = $this->post;
             $data['company_id'] = $this->company_id;
             $data['staff_id'] = $this->Session->read('blesta_staff_id');
-            $data['start_date'] = $data['start_date'] . ' ' . $data['start_time'];
-            $data['end_date'] = $data['end_date'] . ' ' . $data['end_time'];
+            $data['start_date'] = $this->parseEventDatetime($data['start_datetime'] ?? '');
+            $data['end_date'] = $this->parseEventDatetime($data['end_datetime'] ?? '');
 
             $this->CalendarEvents->add($data);
 
@@ -236,8 +232,8 @@ class AdminMain extends AppController
             }
 
             // Redirect to the calendar
-            $calendar_date = (!empty($this->post['start_date'])
-                ? max(strtotime($this->post['start_date']), strtotime($this->Date->cast(date('c'), $date_format)))
+            $calendar_date = (!empty($data['start_date'])
+                ? max(strtotime($data['start_date']), strtotime($this->Date->cast(date('c'), $date_format)))
                 : $this->Date->cast(date('c'), $date_format)
             );
             $this->redirect(
@@ -322,8 +318,8 @@ class AdminMain extends AppController
         if (!empty($this->post)) {
             $post_data = $this->post;
             $post_data['staff_id'] = $staff_id;
-            $post_data['start_date'] = $post_data['start_date'] . ' ' . $post_data['start_time'];
-            $post_data['end_date'] = $post_data['end_date'] . ' ' . $post_data['end_time'];
+            $post_data['start_date'] = $this->parseEventDatetime($post_data['start_datetime'] ?? '');
+            $post_data['end_date'] = $this->parseEventDatetime($post_data['end_datetime'] ?? '');
 
             // Set initial values for checkboxes if not given
             if (!isset($post_data['shared'])) {
@@ -346,8 +342,8 @@ class AdminMain extends AppController
             }
 
             // Redirect to the calendar
-            $calendar_date = (!empty($this->post['start_date'])
-                ? max(strtotime($this->post['start_date']), strtotime($this->Date->cast(date('c'), $date_format)))
+            $calendar_date = (!empty($post_data['start_date'])
+                ? max(strtotime($post_data['start_date']), strtotime($this->Date->cast(date('c'), $date_format)))
                 : $this->Date->cast(date('c'), $date_format)
             );
             $this->redirect(
@@ -586,58 +582,6 @@ class AdminMain extends AppController
     }
 
     /**
-     * Renders a box to select the dashboard layout to use, and sets it
-     */
-    public function updateDashboard()
-    {
-        $dashboard_layout = null;
-        $dashboard_layouts = ['layout1', 'layout2', 'layout3', 'layout4'];
-
-        // Get the new dashboard layout if given
-        if (isset($this->get[0]) && in_array($this->get[0], $dashboard_layouts)) {
-            $dashboard_layout = $this->get[0];
-        }
-
-        $this->uses(['Staff']);
-        // Ensure a valid staff member is set
-        if (!($staff = $this->Staff->get($this->Session->read('blesta_staff_id'), $this->company_id))) {
-            $this->redirect($this->base_uri);
-        }
-
-        // Update dashboard layout
-        if ($dashboard_layout != null) {
-            // Update the dashboard layout
-            $this->Staff->setSetting($staff->id, 'dashboard_layout', $dashboard_layout);
-
-            // Redirect to dashboard
-            $this->redirect($this->base_uri);
-        }
-
-        // Retrieve the current layout
-        $current_layout = $this->Staff->getSetting($staff->id, 'dashboard_layout', $this->company_id);
-
-        // Set the default dashboard layout if one doesn't exist
-        if (!$current_layout) {
-            $current_layout = $dashboard_layouts[0];
-        } else {
-            $current_layout = $current_layout->value;
-        }
-
-        // Set all of the dashboard layouts
-        $layouts = [];
-        foreach ($dashboard_layouts as $layout) {
-            $layouts[] = (object) [
-                'name' => $layout,
-                'selected' => ($layout == $current_layout) ? true : false
-            ];
-        }
-
-        $this->set('layouts', $layouts);
-        echo $this->view->fetch('admin_main_updatedashboard');
-        return false;
-    }
-
-    /**
      * Enable/Disable widgets from appearing on the dashboard
      */
     public function manageWidgets()
@@ -646,64 +590,60 @@ class AdminMain extends AppController
 
         // Get all displayed widgets
         $active_widgets = $this->Staff->getHomeWidgetsState($this->Session->read('blesta_staff_id'), $this->company_id);
-
         if (!empty($this->post)) {
-            if (array_key_exists('widgets_on', $this->post) && is_array($this->post['widgets_on'])) {
-                // If a widget isn't displayed it must be disabled
-                foreach ($active_widgets as $key => $widget) {
-                    if (!in_array($key, $this->post['widgets_on'])) {
-                        $active_widgets[$key]['disabled'] = true;
-                    }
-                }
-
-                // Set all widgets to be displayed
-                foreach ($this->post['widgets_on'] as $key) {
-                    if (!isset($active_widgets[$key])) {
-                        $active_widgets[$key] = ['open' => true, 'section' => 'section1'];
-                    } else {
-                        unset($active_widgets[$key]['disabled']);
-                    }
-                }
-
-                // Update this staff member's widgets for this company
-                $this->Staff->saveHomeWidgetsState(
-                    $this->Session->read('blesta_staff_id'),
-                    $this->company_id,
-                    $active_widgets
-                );
+            $widgets_on = $this->post['widgets_on'] ?? [];
+            if (!is_array($widgets_on)) {
+                $widgets_on = [];
             }
+
+            // If a widget isn't displayed it must be disabled
+            foreach ($active_widgets as $key => $widget) {
+                if (!in_array($key, $widgets_on)) {
+                    $active_widgets[$key]['disabled'] = true;
+                }
+            }
+
+            // Set all widgets to be displayed
+            foreach ($widgets_on as $key) {
+                if (!isset($active_widgets[$key])) {
+                    $active_widgets[$key] = [
+                        'open' => true,
+                        'width' => 'full',
+                        'column' => null,
+                        'order' => 0
+                    ];
+                } else {
+                    unset($active_widgets[$key]['disabled']);
+                }
+            }
+
+            // Update this staff member's widgets for this company
+            $this->Staff->saveHomeWidgetsState(
+                $this->Session->read('blesta_staff_id'),
+                $this->company_id,
+                $active_widgets
+            );
 
             return false;
         }
 
-
         // Get all widgets installed for this location
         $installed_widgets = $this->Actions->getAll(
-            ['company_id' => $this->company_id, 'location' => 'widget_staff_home', 'enabled' => 1],
-            true
+            ['company_id' => $this->company_id, 'location' => 'widget_staff_home', 'enabled' => 1]
         );
-
-        $available_widgets = [];
-        foreach ($installed_widgets as $widget) {
+        foreach ($installed_widgets as &$widget) {
+            $plugin = $this->PluginManager->get($widget->plugin_id, true);
             $key = $this->PluginManager->systemHash(
                 str_replace(['/', '?', '=', '&', '#'], '_', trim($widget->url, '/'))
             );
-            $available_widgets[$key] = $this->PluginManager->get($widget->plugin_id, true);
+
+            $widget->key = $key;
+            $widget->active = !((bool) ($active_widgets[$key]['disabled'] ?? false));
+            $widget->icon = $plugin->icon;
+            $widget->description = $plugin->description;
         }
 
-        // Move all currently displayed widgets from available to displayed
-        $displayed_widgets = [];
-        foreach ($active_widgets as $key => $widget) {
-            if (isset($available_widgets[$key]) && !(isset($widget['disabled']) && $widget['disabled'])) {
-                $displayed_widgets[$key] = $available_widgets[$key];
-                unset($available_widgets[$key]);
-            }
-        }
-
-        // All widgets available and not displayed
-        $this->set('available_widgets', $available_widgets);
-        // All widgets available and displayed
-        $this->set('displayed_widgets', $displayed_widgets);
+        $this->set('installed_widgets', $installed_widgets);
 
         echo $this->view->fetch('admin_main_managewidgets');
         return false;

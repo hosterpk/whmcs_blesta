@@ -1,0 +1,140 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->setTabs((isset($tabs) ? $tabs : []));
+$this->Widget->create($this->_('AdminClients.editservice.boxtitle_editservice', true, (isset($package->name) ? $package->name : null), (isset($service->name) ? $service->name : null)), ['id' => 'admin_clients_editservice'], (isset($render_section) ? $render_section : null));
+?>
+
+<!-- Available Add-ons Section -->
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.editservice.addon_heading');?>
+</h6>
+
+<?php
+if ((isset($package_options) ? $package_options : null) && !empty($package_options)) {
+    $this->Form->create($this->base_uri . 'clients/addservice/' . (isset($service->client_id) ? $service->client_id : null), ['method' => 'get', 'class' => 'disable-on-submit']);
+    $this->Form->fieldHidden('parent_service_id', (isset($service->id) ? $service->id : null));
+?>
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <?php
+        $this->Form->label($this->_('AdminClients.addservice.field_package', true), 'group_package', ['class' => 'form-label']);
+        $this->Form->fieldSelect('group_package', $package_options, (isset($vars->package_id) ? $vars->package_id : null), ['id' => 'group_package', 'class' => 'form-select'], (isset($package_attributes) ? $package_attributes : []));
+        ?>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminClients.editservice.field_add_addon', true), ['class' => 'btn btn-primary w-100']);
+        ?>
+    </div>
+</div>
+<?php
+    $this->Form->end();
+} else {
+?>
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle me-2"></i><?php $this->_('AdminClients.editservice.text_no_addons');?>
+</div>
+<?php
+}
+
+// List add-on services
+if (($num_services = count((isset($services) ? $services : []))) > 0) {
+?>
+<!-- Add-ons List Section -->
+<h6 class="form-section-header mt-4">
+    <?php $this->_('AdminClients.services.heading_addons');?>
+</h6>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th class="text-center" style="width: 50px;"></th>
+                <th><?php $this->_('AdminClients.services.heading_package');?></th>
+                <th><?php $this->_('AdminClients.services.heading_label');?></th>
+                <th><?php $this->_('AdminClients.services.heading_term');?></th>
+                <th class="text-end"><?php $this->_('AdminClients.services.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            for ($i = 0; $i < $num_services; $i++) {
+                $icon = 'check-circle';
+                $iconClass = 'text-success';
+                $service_status = (isset($services[$i]->status) ? $services[$i]->status : null);
+
+                switch ($service_status) {
+                    case 'pending':
+                        $icon = 'clock';
+                        $iconClass = 'text-warning';
+                        break;
+                    case 'suspended':
+                        $icon = 'exclamation-triangle';
+                        $iconClass = 'text-warning';
+                        break;
+                    case 'canceled':
+                        $icon = 'ban';
+                        $iconClass = 'text-danger';
+                        break;
+                    case 'active':
+                        if (!empty($services[$i]->date_canceled)) {
+                            $icon = 'calendar-x';
+                            $iconClass = 'text-warning';
+                        }
+                        break;
+                }
+            ?>
+            <tr>
+                <td class="text-center">
+                    <i class="bi bi-<?php (print (isset($icon) ? $this->Html->safe($icon) : null));?> <?php (print (isset($iconClass) ? $this->Html->safe($iconClass) : null));?>"></i>
+                </td>
+                <td><?php (print (isset($services[$i]->package->name) ? $this->Html->safe($services[$i]->package->name) : null));?></td>
+                <td><?php (print (isset($services[$i]->name) ? $this->Html->safe($services[$i]->name) : null));?></td>
+                <td>
+                    <?php
+                    if ((isset($services[$i]->package_pricing->period) ? $services[$i]->package_pricing->period : null) == 'onetime') {
+                        (print (isset($periods[$services[$i]->package_pricing->period]) ? $this->Html->safe($periods[$services[$i]->package_pricing->period]) : null));
+                    } else {
+                        $term = (isset($services[$i]->package_pricing->term) ? $this->Html->safe($services[$i]->package_pricing->term) : null);
+                        echo $this->Html->safe($this->Html->concat(' ', $term, ($term == 1 ? (isset($periods[$services[$i]->package_pricing->period]) ? $periods[$services[$i]->package_pricing->period] : null) : (isset($periods[$services[$i]->package_pricing->period . '_plural']) ? $periods[$services[$i]->package_pricing->period . '_plural'] : null))));
+                    }
+                    ?>
+                </td>
+                <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="<?php echo $this->base_uri . 'clients/editservice/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/' . (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.services.option_manage');?>">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                        <?php
+                        if (in_array(($services[$i]->status ?? null), ['pending', 'canceled'])) {
+                            $this->Form->create($this->base_uri . 'clients/deleteservice/', ['class' => 'd-inline']);
+                            $this->Form->fieldHidden('client_id', ($client->id ?? null));
+                            $this->Form->fieldHidden('id', $this->Html->safe($services[$i]->id));
+                        ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminClients.services.confirm_delete', true));?>"
+                            title="<?php $this->_('AdminClients.services.option_delete');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php
+                            $this->Form->end();
+                        }
+                        ?>
+                    </div>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+<?php
+}
+?>
+
+<?php
+$this->Widget->end();
+?>

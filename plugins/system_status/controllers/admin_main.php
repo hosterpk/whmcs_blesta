@@ -30,10 +30,9 @@ class AdminMain extends SystemStatusController
         'upload_dir' => ['serious' => 30, 'minor' => 30],
     ];
     /**
-     * @var Time (in seconds) that must pass without a task ending before we deem it stalled
+     * @var int Time (in seconds) that must pass without a task ending before we deem it stalled
      */
     private $stalled_time = 3600;
-
 
     /**
      * Load language
@@ -68,9 +67,9 @@ class AdminMain extends SystemStatusController
         $one_day = 86400; // seconds in a day
         $now_timestamp = $this->Date->toTime($this->Logs->dateToUtc(date('c')));
         $icons = [
-            'success' => 'fas fa-fw fa-check',
-            'error' => 'fab fa-fw fa-whmcs',
-            'warning' => 'fas fa-fw fa-exclamation-triangle'
+            'success' => 'bi bi-check-circle',
+            'error' => 'bi bi-x-octagon',
+            'warning' => 'bi bi-exclamation-triangle'
         ];
 
         // Default cron has never run
@@ -394,9 +393,63 @@ class AdminMain extends SystemStatusController
             $system_status -= $error['status_value'];
         }
 
+        // Calculate category percentages for chart
+        $categories = [
+            Language::_('AdminMain.index.category_cron', true) => ['cron', 'cron_task_stalled', 'invoices'],
+            Language::_('AdminMain.index.category_system', true) => ['docroot', 'system_dir_writable', 'log_files_owner', 'upload_dir'],
+            Language::_('AdminMain.index.category_database', true) => ['db_version', 'sql_version'],
+            Language::_('AdminMain.index.category_security', true) => ['php_version', 'error_reporting', 'trial', 'backup', 'updates']
+        ];
+
+        $chart_series = [];
+        $chart_labels = [];
+        $chart_colors = [];
+
+        foreach ($categories as $label => $checks) {
+            $max_deduction = 0;
+            $actual_deduction = 0;
+
+            foreach ($checks as $check) {
+                // Get max possible deduction for this check
+                if (isset($this->status_values[$check])) {
+                    $max_deduction += max(
+                        $this->status_values[$check]['serious'],
+                        $this->status_values[$check]['minor']
+                    );
+                }
+
+                // Get actual deduction if there's an error
+                if (isset($errors->$check) && $errors->$check && isset($errors->$check['status_value'])) {
+                    $actual_deduction += $errors->$check['status_value'];
+                }
+            }
+
+            // Calculate percentage (100% if no possible deductions)
+            $percentage = $max_deduction > 0
+                ? round(100 - ($actual_deduction / $max_deduction * 100))
+                : 100;
+
+            $chart_series[] = max(0, $percentage);
+            $chart_labels[] = $label;
+
+            // Color based on percentage (only 100% is green)
+            if ($percentage == 100) {
+                $chart_colors[] = '#198754'; // green
+            } elseif ($percentage >= 50) {
+                $chart_colors[] = '#ffc107'; // yellow
+            } else {
+                $chart_colors[] = '#dc3545'; // red
+            }
+        }
+
         $this->set('errors', $errors);
         $this->set('system_status', max(0, $system_status));
         $this->set('health_status', $this->getStatusLanguage($system_status));
+        $this->set('chart_data', [
+            'series' => $chart_series,
+            'labels' => $chart_labels,
+            'colors' => $chart_colors
+        ]);
 
         return $this->renderAjaxWidgetIfAsync(isset($this->get[0]) ? false : null);
     }

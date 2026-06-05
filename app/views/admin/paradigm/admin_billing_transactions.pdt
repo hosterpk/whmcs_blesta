@@ -1,0 +1,229 @@
+<?php
+echo (isset($message) ? $message : null);
+
+// Build tabs for the widget
+$tabs = [
+    [
+        'name' => $this->_('AdminBilling.transactions.category_approved', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['approved']) ? $this->Html->safe($status_count['approved']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'approved'),
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/approved/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.transactions.category_declined', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['declined']) ? $this->Html->safe($status_count['declined']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'declined'),
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/declined/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.transactions.category_voided', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['void']) ? $this->Html->safe($status_count['void']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'void'),
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/void/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.transactions.category_error', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['error']) ? $this->Html->safe($status_count['error']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'error'),
+        'highlight' => true,
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/error/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.transactions.category_pending', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['pending']) ? $this->Html->safe($status_count['pending']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'pending'),
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/pending/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.transactions.category_refunded', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['refunded']) ? $this->Html->safe($status_count['refunded']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'refunded'),
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/refunded/']
+    ],
+    [
+        'name' => $this->_('AdminBilling.transactions.category_returned', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['returned']) ? $this->Html->safe($status_count['returned']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'returned'),
+        'attributes' => ['href' => $this->base_uri . 'billing/transactions/returned/']
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'billing/transactions/' . ($status ?? 'approved') . '/'), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminBilling.transactions.boxtitle_transactions', true), ['id' => 'admin_billing_transactions'], ($render_section ?? null));
+?>
+
+<?php
+if ((isset($transactions) ? $transactions : false) && ($num_transactions = count($transactions)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="transactions">
+        <thead>
+            <tr>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=clients.id_value&order=' . ($sort == 'clients.id_value' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_client');?>
+                        <?php if ($sort == 'clients.id_value') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=type&order=' . ($sort == 'type' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_type');?>
+                        <?php if ($sort == 'type') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=amount&order=' . ($sort == 'amount' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_amount');?>
+                        <?php if ($sort == 'amount') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th><?php $this->_('AdminBilling.transactions.heading_credit');?></th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=applied_amount&order=' . ($sort == 'applied_amount' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_applied');?>
+                        <?php if ($sort == 'applied_amount') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=transaction_id&order=' . ($sort == 'transaction_id' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_number');?>
+                        <?php if ($sort == 'transaction_id') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=reference_id&order=' . ($sort == 'reference_id' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_reference_id');?>
+                        <?php if ($sort == 'reference_id') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/transactions/' . (isset($status) ? $status : null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.transactions.heading_date');?>
+                        <?php if ($sort == 'date_added') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th style="width: 80px;"><?php $this->_('AdminBilling.transactions.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Display all transactions
+            for ($i = 0; $i < $num_transactions; $i++) {
+                if ((isset($transactions[$i]->type) ? $transactions[$i]->type : null) == 'other' && (isset($transactions[$i]->gateway_type) ? $transactions[$i]->gateway_type : null) == 'nonmerchant') {
+                    $trans_type = $transactions[$i]->gateway_name;
+                } else {
+                    $trans_type = (isset($transaction_types[($transactions[$i]->type_name != '' ? $transactions[$i]->type_name : $transactions[$i]->type)]) ? $transaction_types[($transactions[$i]->type_name != '' ? $transactions[$i]->type_name : $transactions[$i]->type)] : null);
+                }
+            ?>
+            <tr style="cursor: pointer;" data-collapse-row aria-expanded="false">
+                <td>
+                    <a href="<?php echo $this->base_uri . 'clients/view/' . (isset($transactions[$i]->client_id) ? $this->Html->safe($transactions[$i]->client_id) : null);?>" data-bs-toggle="tooltip" title="<?php echo (isset($transactions[$i]->client_first_name) ? $this->Html->safe($transactions[$i]->client_first_name) : null) . ' ' . (isset($transactions[$i]->client_last_name) ? $this->Html->safe($transactions[$i]->client_last_name) : null) . ($transactions[$i]->client_company ? ' - ' . $this->Html->safe($transactions[$i]->client_company) : '');?>">
+                        <?php (print (isset($transactions[$i]->client_id_code) ? $this->Html->safe($transactions[$i]->client_id_code) : null));?>
+                    </a>
+                </td>
+                <td><?php (print (isset($trans_type) ? $this->Html->safe($trans_type) : null));?></td>
+                <td><?php echo $this->CurrencyFormat->format((isset($transactions[$i]->amount) ? $this->Html->safe($transactions[$i]->amount) : null), (isset($transactions[$i]->currency) ? $this->Html->safe($transactions[$i]->currency) : null), ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format((isset($transactions[$i]->credited_amount) ? $this->Html->safe($transactions[$i]->credited_amount) : null), (isset($transactions[$i]->currency) ? $this->Html->safe($transactions[$i]->currency) : null), ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format((isset($transactions[$i]->applied_amount) ? $this->Html->safe($transactions[$i]->applied_amount) : null), (isset($transactions[$i]->currency) ? $this->Html->safe($transactions[$i]->currency) : null), ['html_code' => true]);?></td>
+                <td><?php (print (isset($transactions[$i]->transaction_id) ? $this->Html->safe($transactions[$i]->transaction_id) : null));?></td>
+                <td><?php (print (isset($transactions[$i]->reference_id) ? $this->Html->safe($transactions[$i]->reference_id) : null));?></td>
+                <td><?php echo $this->Date->cast((isset($transactions[$i]->date_added) ? $this->Html->safe($transactions[$i]->date_added) : null), 'date_time');?></td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . (isset($transactions[$i]->client_id) ? $transactions[$i]->client_id : null) . '/' . (isset($transactions[$i]->id) ? $transactions[$i]->id : null) . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminBilling.transactions.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            <!-- Expandable Row -->
+            <tr class="collapse" id="transaction-details-<?php echo (isset($transactions[$i]->id) ? $this->Html->safe($transactions[$i]->id) : null);?>">
+                <td colspan="9" style="padding: 0; background-color: var(--bg-secondary);">
+                    <div class="transaction-applied-container" data-transaction-id="<?php echo (isset($transactions[$i]->id) ? $this->Html->safe($transactions[$i]->id) : null);?>">
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+
+<?php
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+?>
+<?php
+} else {
+?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminBilling.transactions.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Widget->end();
+?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips for elements currently in DOM
+    const transactionsTable = document.getElementById('transactions');
+    if (transactionsTable) {
+        const tooltipTriggerList = transactionsTable.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+    }
+});
+
+// Lazy-load transaction details when expandable row opens
+document.addEventListener('show.bs.collapse', function(e) {
+    var container = e.target.querySelector('.transaction-applied-container');
+    if (!container) return;
+
+    var transactionId = container.getAttribute('data-transaction-id');
+    if (!transactionId || container.hasAttribute('data-loaded')) return;
+
+    fetch('<?php echo $this->base_uri;?>billing/transactionapplied/' + transactionId, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('HTTP error ' + response.status);
+        return response.text();
+    })
+    .then(function(html) {
+        container.innerHTML = html;
+        container.setAttribute('data-loaded', 'true');
+    })
+    .catch(function(error) {
+        container.innerHTML = '<div class="alert alert-danger m-3">Error loading transaction details.</div>';
+    });
+});
+</script>

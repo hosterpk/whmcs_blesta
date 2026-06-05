@@ -1,9 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
+
 use Blesta\Core\Util\Filters\Common\Filter;
 use Blesta\Core\Util\Input\Fields\InputFields;
-use \Loader;
-use \Language;
+use Loader;
+use Language;
 
 /**
  * Invoice Filters
@@ -50,7 +52,7 @@ class InvoiceFilters extends Filter
         $invoice_number->attach(
             $fields->fieldText(
                 'filters[invoice_number]',
-                isset($vars['invoice_number']) ? $vars['invoice_number'] : null,
+                $vars['invoice_number'] ?? null,
                 [
                     'id' => 'invoice_number',
                     'class' => 'form-control stretch',
@@ -74,7 +76,7 @@ class InvoiceFilters extends Filter
             $fields->fieldSelect(
                 'filters[currency]',
                 ['' => Language::_('Util.filters.invoice_filters.any', true)] + $currencies,
-                isset($vars['currency']) ? $vars['currency'] : null,
+                $vars['currency'] ?? null,
                 ['id' => 'currency', 'class' => 'form-control']
             )
         );
@@ -88,7 +90,7 @@ class InvoiceFilters extends Filter
         $invoice_line->attach(
             $fields->fieldText(
                 'filters[invoice_line]',
-                isset($vars['invoice_line']) ? $vars['invoice_line'] : null,
+                $vars['invoice_line'] ?? null,
                 [
                     'id' => 'invoice_line',
                     'class' => 'form-control stretch',

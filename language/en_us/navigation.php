@@ -15,7 +15,7 @@ $lang['Navigation.!error.order.valid'] = 'The order index must be a numeric valu
 $lang['Navigation.!error.parent_id.valid'] = 'Invalid parent navigation item ID';
 
 // Primary nav
-$lang['Navigation.getprimary.nav_home'] = 'Home';
+$lang['Navigation.getprimary.nav_home'] = 'Dashboard';
 $lang['Navigation.getprimary.nav_home_dashboard'] = 'Dashboard';
 
 $lang['Navigation.getprimary.nav_clients'] = 'Clients';
@@ -151,6 +151,8 @@ $lang['Navigation.getsystem.nav_staff_manage'] = 'Manage Staff';
 $lang['Navigation.getsystem.nav_staff_groups'] = 'Staff Groups';
 
 $lang['Navigation.getsystem.nav_api'] = 'API Access';
+
+$lang['Navigation.getsystem.nav_ai'] = 'AI';
 
 $lang['Navigation.getsystem.nav_upgrade'] = 'Upgrade Options';
 

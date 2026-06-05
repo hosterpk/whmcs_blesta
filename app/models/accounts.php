@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Accounts contain both ACH and Credit Card account information. Permits
  * accounts to be fetched, added, edited, and deleted. Some accounts may require
@@ -98,7 +106,8 @@ class Accounts extends AppModel
                 $account->last4 = $this->systemDecrypt($account->last4);
                 $account->expiration = $this->systemDecrypt($account->expiration);
 
-                if ($account->gateway_id == null
+                if (
+                    $account->gateway_id == null
                     && ($default_currency = $this->Clients->getSetting($account->client_id, 'default_currency'))
                 ) {
                     $account->gateway_name = $default_gateways_by_currency[$default_currency->value ?? 'USD'] ?? null;
@@ -157,7 +166,8 @@ class Accounts extends AppModel
                 $account->last4 = $this->systemDecrypt($account->last4);
                 $account->expiration = $this->systemDecrypt($account->expiration);
 
-                if ($account->gateway_id == null
+                if (
+                    $account->gateway_id == null
                     && ($default_currency = $this->Clients->getSetting($client_id, 'default_currency'))
                 ) {
                     $account->gateway_name = $default_gateways_by_currency[$default_currency->value ?? 'USD'] ?? null;
@@ -260,7 +270,8 @@ class Accounts extends AppModel
             foreach ($accounts as &$account) {
                 $account->last4 = $this->systemDecrypt($account->last4);
 
-                if ($account->gateway_id == null
+                if (
+                    $account->gateway_id == null
                     && ($default_currency = $this->Clients->getSetting($client_id, 'default_currency'))
                 ) {
                     $account->gateway_name = $default_gateways_by_currency[$default_currency->value ?? 'USD'] ?? null;
@@ -610,8 +621,10 @@ class Accounts extends AppModel
 
         // Detect if account or routing number changed. If so, add to rules so validation can be done on those fields
         $vars['account_changed'] = false;
-        if ((isset($vars['account']) && substr($vars['account'], 0, 1) != '*') ||
-            (isset($vars['routing']) && substr($vars['routing'], 0, 1) != '*')) {
+        if (
+            (isset($vars['account']) && substr($vars['account'], 0, 1) != '*') ||
+            (isset($vars['routing']) && substr($vars['routing'], 0, 1) != '*')
+        ) {
             $vars['account_changed'] = true; // account numbers updated
             $rules = array_merge($rules, $this->getAddAchRules($vars));
         } else {
@@ -928,7 +941,7 @@ class Accounts extends AppModel
         if (!isset($vars['type'])) {
             // Set the type to the card number, we'll transform that into the card type
             // when validated
-            $vars['type'] = isset($vars['number']) ? $vars['number'] : null;
+            $vars['type'] = $vars['number'] ?? null;
             $rules['type']['cc_format']['pre_format'] = [([$this, 'creditCardType'])];
         }
         $this->Input->setRules($rules);
@@ -986,7 +999,7 @@ class Accounts extends AppModel
             if (!isset($vars['type'])) {
                 // Set the type to the card number, we'll transform that into the card type
                 // when validated
-                $vars['type'] = isset($vars['number']) ? $vars['number'] : null;
+                $vars['type'] = $vars['number'] ?? null;
                 $rules['type']['cc_format']['pre_format'] = [([$this, 'creditCardType'])];
             }
         } else {
@@ -1242,7 +1255,7 @@ class Accounts extends AppModel
                 ],
                 'country_exists' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateStateCountry'], (isset($vars['country']) ? $vars['country'] : null)],
+                    'rule' => [[$this, 'validateStateCountry'], ($vars['country'] ?? null)],
                     'message' => $this->_('Accounts.!error.state.country_exists')
                 ]
             ],
@@ -1421,7 +1434,7 @@ class Accounts extends AppModel
         // Get the public key, which is used to encrypt
         if (!isset($public_keys[$company_id])) {
             $temp = $this->SettingsCollection->fetchSetting(null, $company_id, 'public_key');
-            $public_keys[$company_id] = isset($temp['value']) ? $temp['value'] : null;
+            $public_keys[$company_id] = $temp['value'] ?? null;
             unset($temp);
         }
 
@@ -1458,7 +1471,8 @@ class Accounts extends AppModel
 
         // If passphrase is set, ensure it is correct before attempting to decrypt
         $hash_pass = $this->SettingsCollection->fetchSetting(null, $company_id, 'private_key_passphrase');
-        if ($passphrase !== null && isset($hash_pass['value']) && $hash_pass['value'] != $this->systemHash($passphrase)
+        if (
+            $passphrase !== null && isset($hash_pass['value']) && $hash_pass['value'] != $this->systemHash($passphrase)
         ) {
             return false;
         }
@@ -1468,7 +1482,7 @@ class Accounts extends AppModel
         if (!isset($private_keys[$company_id])) {
             $temp = $this->SettingsCollection->fetchSetting(null, $company_id, 'private_key');
             $private_keys[$company_id] = $this->systemDecrypt(
-                isset($temp['value']) ? $temp['value'] : null,
+                $temp['value'] ?? null,
                 $passphrase
             );
             unset($temp);
@@ -1662,6 +1676,14 @@ class Accounts extends AppModel
      */
     public function luhnValid($card_number)
     {
+        if (is_null($card_number) || $card_number === '') {
+            return false;
+        }
+
+        if (is_int($card_number)) {
+            $card_number = (string) $card_number;
+        }
+
         $sum_table = [
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
             [0, 2, 4, 6, 8, 1, 3, 5, 7, 9]

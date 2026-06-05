@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Description\Type\Tax;
 
 use Blesta\Core\Pricing\Modifier\Type\Description\Type\AbstractDescription;
@@ -17,12 +18,12 @@ class Tax extends AbstractDescription
     /**
      * {@inheritdoc}
      */
-    public function get(array $meta, array $oldMeta = null)
+    public function get(array $meta, ?array $oldMeta = null)
     {
         $description = '';
 
         // Determine the type of meta info we have to work with
-        $type = (isset($meta['_data']['type']) ? $meta['_data']['type'] : null);
+        $type = ($meta['_data']['type'] ?? null);
         switch ($type) {
             case 'tax':
                 $description = $this->getTax($meta);
@@ -57,7 +58,7 @@ class Tax extends AbstractDescription
         $amount = '';
 
         if (isset($meta['tax']) && is_object($meta['tax'])) {
-            $tax = isset($meta['tax']->name) ? $meta['tax']->name : '';
+            $tax = $meta['tax']->name ?? '';
             // Add 0 to the amount to remove insignificant digits of 0
             $amount = isset($meta['tax']->tax) ? $meta['tax']->tax + 0 : '';
         }

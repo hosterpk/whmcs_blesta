@@ -1,0 +1,68 @@
+{
+    "columns": [
+        {
+            "name": "alpha2",
+            "type": "char(2)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 2
+        },
+        {
+            "name": "alpha3",
+            "type": "char(3)",
+            "nullable": true,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "format",
+            "type": "enum('code','name')",
+            "nullable": false,
+            "key": null,
+            "default": "code",
+            "extra": null,
+            "max_length": 4
+        },
+        {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "alt_name",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        }
+    ],
+    "indexes": [
+        {
+            "name": "alpha3",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "alpha3"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "alpha2"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

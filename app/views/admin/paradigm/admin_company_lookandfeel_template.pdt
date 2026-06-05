@@ -1,0 +1,86 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyLookandfeel.template.box_title', true), ['id' => 'admin_company_lookandfeel_template']);
+            ?>
+
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+            <!-- Client View Directory -->
+            <div class="mb-3">
+                <label for="client_view_dir" class="form-label">
+                    <?php $this->_('AdminCompanyLookandfeel.template.text_client_view_dir');?>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'client_view_dir',
+                    ($client_view_dirs ?? null),
+                    ($vars['client_view_dir'] ?? null),
+                    ['id' => 'client_view_dir', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <!-- Admin View Directory -->
+            <div class="mb-3">
+                <label for="admin_view_dir" class="form-label">
+                    <?php $this->_('AdminCompanyLookandfeel.template.text_admin_view_dir');?>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'admin_view_dir',
+                    ($admin_view_dirs ?? null),
+                    ($vars['admin_view_dir'] ?? 'paradigm'),
+                    ['id' => 'admin_view_dir', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <!-- Client View Override -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'client_view_override',
+                        'true',
+                        ($vars['client_view_override'] ?? 'false') == 'true',
+                        ['id' => 'client_view_override', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="client_view_override" class="form-check-label">
+                        <?php $this->_('AdminCompanyLookandfeel.template.text_client_view_override');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminCompanyLookandfeel.!tooltip.client_view_override', true));?>"></i>
+                    </label>
+                </div>
+            </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                echo $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyLookandfeel.template.text_submit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+
+            <?php $this->Form->end();?>
+            <?php $this->Widget->end();?>
+        </div>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips - vanilla JavaScript only
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

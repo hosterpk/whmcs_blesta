@@ -1,0 +1,38 @@
+[
+    {
+        "id": 102,
+        "option_id": 53,
+        "name": "10 GB",
+        "value": "10gb",
+        "default": 1,
+        "status": "active",
+        "order": 0,
+        "min": null,
+        "max": null,
+        "step": null
+    },
+    {
+        "id": 103,
+        "option_id": 53,
+        "name": "50 GB",
+        "value": "50gb",
+        "default": 0,
+        "status": "active",
+        "order": 1,
+        "min": null,
+        "max": null,
+        "step": null
+    },
+    {
+        "id": 104,
+        "option_id": 53,
+        "name": "100 GB",
+        "value": "100gb",
+        "default": 0,
+        "status": "active",
+        "order": 2,
+        "min": null,
+        "max": null,
+        "step": null
+    }
+]

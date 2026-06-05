@@ -1,0 +1,448 @@
+<?php /** @var View $this **/ ?>
+
+<div id="right_outer">
+    <section id="right_container">
+        <?php echo (isset($message) ? $message : null);?>
+        <div class="row cards"></div>
+        <div class="column section1">
+            <?php echo (isset($content) ? $content : null);?>
+        </div>
+    </section>
+</div>
+
+<!-- Delay Suspension Modal -->
+<div class="modal fade" id="delaySuspensionModal" tabindex="-1" aria-labelledby="delaySuspensionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="delaySuspensionModalContent">
+            <!-- Content loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var clientId = <?php echo (isset($client->id) ? $this->Html->safe($client->id) : '0');?>;
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var defaultCurrency = <?php echo json_encode((isset($default_currency) ? $default_currency : 'USD'));?>;
+
+    // Load widgets and cards if content is empty
+    var content = <?php echo json_encode((isset($content) ? $this->Html->safe($content) : ''));?>;
+    if (content === '') {
+        loadWidgets();
+        loadCards();
+    }
+
+    // Fetch currency amounts and last seen data
+    fetchCurrencyAmounts(defaultCurrency);
+    fetchLastSeen();
+    setInterval(fetchLastSeen, 60000);
+
+    // Setup settings toggle
+    var settingsToggle = document.getElementById('clientSettingsToggle');
+    var settingsCollapse = document.getElementById('clientSettingsCollapse');
+    var settingsChevron = document.getElementById('settingsChevron');
+
+    if (settingsToggle && settingsCollapse && settingsChevron) {
+        // Load saved state - use display style instead of .show class for animation compatibility
+        var settingsState = localStorage.getItem('clientSettingsCollapsed_' + clientId);
+        if (settingsState === 'true') {
+            settingsChevron.classList.remove('bi-chevron-down');
+            settingsChevron.classList.add('bi-chevron-up');
+            settingsCollapse.style.display = 'none';
+        } else {
+            settingsCollapse.style.display = 'block';
+        }
+
+        settingsToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            blestaSlideToggle(settingsCollapse, 400, function(isNowOpen) {
+                if (isNowOpen) {
+                    settingsChevron.classList.remove('bi-chevron-up');
+                    settingsChevron.classList.add('bi-chevron-down');
+                    localStorage.setItem('clientSettingsCollapsed_' + clientId, 'false');
+                } else {
+                    settingsChevron.classList.remove('bi-chevron-down');
+                    settingsChevron.classList.add('bi-chevron-up');
+                    localStorage.setItem('clientSettingsCollapsed_' + clientId, 'true');
+                }
+            });
+        });
+    }
+
+    // Setup actions toggle
+    var toggleActions = document.getElementById('toggleActions');
+    var moreActions = document.getElementById('moreActions');
+    var toggleActionsIcon = document.getElementById('toggleActionsIcon');
+    var toggleActionsSpan = toggleActions ? toggleActions.querySelector('span') : null;
+
+    if (toggleActions && moreActions && toggleActionsIcon && toggleActionsSpan) {
+        // Load saved state
+        var actionsState = localStorage.getItem('clientActionsExpanded_' + clientId);
+        if (actionsState === 'true') {
+            moreActions.style.display = 'flex';
+            toggleActionsIcon.classList.remove('bi-chevron-down');
+            toggleActionsIcon.classList.add('bi-chevron-up');
+            if (toggleActionsSpan) {
+                toggleActionsSpan.textContent = <?php echo json_encode($this->_('AdminClients.view.actionlink_less', true));?>;
+            }
+        }
+
+        toggleActions.addEventListener('click', function(e) {
+            e.preventDefault();
+            var isExpanded = moreActions.style.display === 'flex';
+            if (isExpanded) {
+                moreActions.style.display = 'none';
+                toggleActionsIcon.classList.remove('bi-chevron-up');
+                toggleActionsIcon.classList.add('bi-chevron-down');
+                if (toggleActionsSpan) {
+                    toggleActionsSpan.textContent = <?php echo json_encode($this->_('AdminClients.view.actionlink_more', true));?>;
+                }
+                localStorage.setItem('clientActionsExpanded_' + clientId, 'false');
+            } else {
+                moreActions.style.display = 'flex';
+                toggleActionsIcon.classList.remove('bi-chevron-down');
+                toggleActionsIcon.classList.add('bi-chevron-up');
+                if (toggleActionsSpan) {
+                    toggleActionsSpan.textContent = <?php echo json_encode($this->_('AdminClients.view.actionlink_less', true));?>;
+                }
+                localStorage.setItem('clientActionsExpanded_' + clientId, 'true');
+            }
+        });
+    }
+
+    // Setup quick update links
+    var quickupdateLinks = document.querySelectorAll('a.quickupdate');
+    quickupdateLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            var url = this.getAttribute('href');
+            var self = this;
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.class_name) {
+                    if (self.classList.contains('statusupdate')) {
+                        var statusBar = self.querySelector('.client-status-bar');
+                        if (statusBar) {
+                            statusBar.className = 'client-status-bar ' + data.class_name.replace('status_box ', '').replace(' status_box', '').replace('status_box', '');
+                            var statusText = statusBar.querySelector('.client-status-text');
+                            if (statusText) {
+                                statusText.textContent = data.text + ' <?php echo $this->_('AdminClients.view.status_link', true);?>';
+                            }
+                        }
+                    } else {
+                        var strong = self.querySelector('strong');
+                        if (strong) {
+                            strong.className = data.class_name;
+                            var statusSpan = strong.querySelector('.status');
+                            if (statusSpan) {
+                                statusSpan.textContent = data.text + ' ';
+                            }
+
+                            var tooltip = strong.querySelector('.tooltip');
+                            if (data.tooltip && tooltip) {
+                                tooltip.classList.remove('hidden');
+                                if (statusSpan) statusSpan.classList.add('strike');
+                            } else if (typeof data.autosuspend_date !== 'undefined') {
+                                var autosuspendDate = self.querySelector('.autosuspend-date');
+                                if (autosuspendDate) {
+                                    if (data.class_name === 'enable') {
+                                        if (data.autosuspend_date && statusSpan) {
+                                            statusSpan.classList.add('strike');
+                                        }
+                                        autosuspendDate.classList.remove('d-none');
+                                    } else {
+                                        autosuspendDate.classList.add('d-none');
+                                        if (statusSpan) statusSpan.classList.remove('strike');
+                                    }
+                                }
+                            } else {
+                                if (tooltip) tooltip.classList.add('hidden');
+                                if (statusSpan) statusSpan.classList.remove('strike');
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+
+    // Setup toggle switch quick updates
+    var quickupdateToggles = document.querySelectorAll('.quickupdate-toggle');
+    quickupdateToggles.forEach(function(toggle) {
+        toggle.addEventListener('change', function(e) {
+            var url = this.getAttribute('data-url');
+            var checkbox = this;
+            var previousState = !checkbox.checked; // State before user clicked
+
+            checkbox.disabled = true;
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.class_name) {
+                    checkbox.checked = (data.class_name === 'enable');
+
+                    // Handle autosuspend date visibility
+                    if (typeof data.autosuspend_date !== 'undefined') {
+                        var autosuspendDate = document.querySelector('.autosuspend-date');
+                        if (autosuspendDate) {
+                            if (data.class_name === 'enable') {
+                                autosuspendDate.classList.remove('d-none');
+                            } else {
+                                autosuspendDate.classList.add('d-none');
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                checkbox.checked = previousState; // Revert on error
+            })
+            .finally(function() {
+                checkbox.disabled = false;
+            });
+        });
+    });
+
+    // Setup autosuspend date modal
+    var autosuspendDates = document.querySelectorAll('.autosuspend-date');
+    autosuspendDates.forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var url = this.getAttribute('data-url');
+            var modalContent = document.getElementById('delaySuspensionModalContent');
+            var modalElement = document.getElementById('delaySuspensionModal');
+
+            if (!url || !modalContent || !modalElement) return;
+
+            // Load modal content via AJAX
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                modalContent.innerHTML = html;
+
+                // Open modal using Bootstrap's modal
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    var modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                }
+            })
+            .catch(error => console.error('Error loading modal:', error));
+        });
+    });
+
+    // Setup delete client confirmation
+    var deleteLinks = document.querySelectorAll('.delete-client');
+    deleteLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Open confirmation modal
+            var url = this.getAttribute('href');
+            // Use existing modal infrastructure or create custom confirmation
+            if (confirm(<?php echo json_encode($this->_('AdminClients.view.delete_modal_confirm', true));?>)) {
+                window.location.href = url;
+            }
+        });
+    });
+
+    function loadWidgets() {
+        var column = document.querySelector('.column');
+        if (!column) return;
+
+        fetch(baseUri + 'clients/getwidgets/' + clientId, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(widgets => {
+            if (!widgets || typeof widgets !== 'object') return;
+
+            // Clear existing widget containers and section.card elements
+            column.querySelectorAll('.widget-container, section.card').forEach(function(el) {
+                el.remove();
+            });
+
+            var widgetKeys = Object.keys(widgets).filter(function(key) {
+                return widgets[key] && widgets[key].uri;
+            });
+            var totalWidgets = widgetKeys.length;
+            var loadedWidgets = 0;
+
+            // If no widgets, nothing to bind
+            if (totalWidgets === 0) return;
+
+            // Iterate through each widget and fetch its content
+            widgetKeys.forEach(function(widget_id) {
+                var widget = widgets[widget_id];
+
+                // Create placeholder (will be replaced with actual widget content)
+                var placeholder = document.createElement('div');
+                placeholder.id = 'widget-placeholder-' + widget_id;
+                column.appendChild(placeholder);
+
+                // Fetch widget content
+                fetch(widget.uri, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.content) {
+                        // Parse HTML into temp container
+                        var temp = document.createElement('div');
+                        temp.innerHTML = data.content;
+
+                        var cardElement = temp.querySelector('section.card');
+                        if (cardElement) {
+                            // Apply widget collapsed state (consistent with DashboardWidgets)
+                            if (!widget.open) {
+                                var header = cardElement.querySelector('div.card-header:last-of-type');
+                                if (header) {
+                                    header.classList.add('close');
+                                }
+                                cardElement.classList.add('collapsed');
+
+                                var cardContent = cardElement.querySelector('.card-content');
+                                if (cardContent) {
+                                    cardContent.style.display = 'none';
+                                }
+
+                                var arrow = cardElement.querySelector('a.arrow');
+                                if (arrow) {
+                                    blestaToggleIcons(arrow);
+                                }
+                            }
+
+                            // Apply widget width attribute
+                            if (widget.width) {
+                                cardElement.setAttribute('data-width', widget.width);
+                            }
+                        }
+
+                        // Collect scripts before moving nodes
+                        var scripts = [];
+                        temp.querySelectorAll('script').forEach(function(script) {
+                            scripts.push(script.textContent);
+                        });
+
+                        // Replace placeholder with widget content (makes widgets direct children of column)
+                        var currentPlaceholder = document.getElementById('widget-placeholder-' + widget_id);
+                        if (currentPlaceholder) {
+                            currentPlaceholder.replaceWith(...temp.childNodes);
+                        }
+
+                        // Execute scripts (innerHTML doesn't execute them)
+                        scripts.forEach(function(scriptContent) {
+                            var newScript = document.createElement('script');
+                            newScript.textContent = scriptContent;
+                            document.body.appendChild(newScript);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading widget:', error))
+                .finally(function() {
+                    loadedWidgets++;
+                    // When all widgets are loaded, bind GUI events for widget controls
+                    if (loadedWidgets === totalWidgets) {
+                        blestaBindGuiEvents(column, {
+                            sort_uri: baseUri + 'clients/reorderwidgets/',
+                            toggle_uri: baseUri + 'clients/togglewidget/',
+                            resize_uri: baseUri + 'clients/resizewidget/'
+                        });
+
+                        // Fetch badges for collapsed widgets
+                        column.querySelectorAll('section.card.collapsed').forEach(function(card) {
+                            blestaGetWidgetBadge(card);
+                        });
+                    }
+                });
+            });
+        })
+        .catch(error => console.error('Error loading widgets:', error));
+    }
+
+    function loadCards() {
+        var cards_container = document.querySelector('.cards');
+        if (!cards_container) return;
+
+        fetch(baseUri + 'clients/getcards/' + clientId, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(cards => {
+            if (!cards || typeof cards !== 'object') return;
+
+            // Iterate through each card and append its HTML
+            Object.keys(cards).forEach(function(card_id) {
+                var card = cards[card_id];
+                if (card && card.value) {
+                    cards_container.insertAdjacentHTML('beforeend', card.value);
+                }
+            });
+        })
+        .catch(error => console.error('Error loading cards:', error));
+    }
+
+    function fetchLastSeen() {
+        var container = document.querySelector('.client-last-seen');
+        if (!container) return;
+
+        fetch(baseUri + 'clients/getlastseen/' + clientId, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data) {
+                container.innerHTML = data;
+                // Re-init tooltips on newly inserted content
+                container.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+                    new bootstrap.Tooltip(el);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching last seen:', error));
+    }
+
+    function fetchCurrencyAmounts(currency) {
+        var balanceList = document.querySelector('.balance-list');
+        if (!balanceList) return;
+
+        fetch(baseUri + 'clients/getcurrencyamounts/' + clientId + '/' + currency, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data) {
+                balanceList.innerHTML = data;
+            }
+        })
+        .catch(error => console.error('Error fetching currency amounts:', error));
+    }
+});
+</script>

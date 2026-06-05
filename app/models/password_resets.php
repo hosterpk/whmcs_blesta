@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+
 /**
  * Password resets management
  *
@@ -67,7 +74,7 @@ class PasswordResets extends AppModel
      * @param string $token The password reset token to validate
      * @return bool True if the token is valid, false otherwise
      */
-    public function validate(string $token) : bool
+    public function validate(string $token): bool
     {
         if (!isset($this->Users)) {
             Loader::loadModels($this, ['Users']);
@@ -109,13 +116,14 @@ class PasswordResets extends AppModel
             if (($contact = $this->Contacts->getByUserId($user->id, $client->id))) {
                 $email = $contact->email;
             }
-            
+
             if ($email == $token->email) {
                 $valid_email = true;
             }
         } else {
             // Validate if the email belongs to a staff member associated to the given user
-            if (($staff = $this->Staff->getByUserId($user->id))
+            if (
+                ($staff = $this->Staff->getByUserId($user->id))
                 && $staff->email == $token->email
             ) {
                 $valid_email = true;
@@ -161,7 +169,7 @@ class PasswordResets extends AppModel
     {
         $this->deleteByHash($this->systemHash($token));
     }
-    
+
     /**
      * Deletes an existing token by the token hash
      *
@@ -191,7 +199,7 @@ class PasswordResets extends AppModel
      *
      * @return array The validation rules
      */
-    private function getRules() : array
+    private function getRules(): array
     {
         $rules = [
             'user_id' => [

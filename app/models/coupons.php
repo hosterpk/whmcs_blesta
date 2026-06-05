@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Coupon management
  *
@@ -212,7 +220,7 @@ class Coupons extends AppModel
      * @return mixed A stdClass object representing the coupon, false if no
      *  such coupon exists of the coupon is no longer valid
      */
-    public function getForPackages($code = null, $coupon_id = null, array $packages = null)
+    public function getForPackages($code = null, $coupon_id = null, ?array $packages = null)
     {
         $fields = ['coupons.*'];
 
@@ -306,7 +314,8 @@ class Coupons extends AppModel
             if ($coupon->limit_recurring == '1') {
                 // Max quantity may be 0 for unlimited uses, otherwise it must be larger than the used quantity to apply
                 $coupon_qty_reached = ($coupon->max_qty == '0' ? false : $coupon->used_qty >= $coupon->max_qty);
-                if ($coupon_qty_reached
+                if (
+                    $coupon_qty_reached
                     || ($coupon->start_date !== null && $date < $this->Date->toTime($coupon->start_date))
                     || ($coupon->end_date !== null && $date > $this->Date->toTime($coupon->end_date))
                 ) {
@@ -696,7 +705,7 @@ class Coupons extends AppModel
                     'message' => $this->_('Coupons.!error.code.length')
                 ],
                 'unique' => [
-                    'rule' => [[$this, 'validateUniqueCode'], (isset($vars['coupon_id']) ? $vars['coupon_id'] : null)],
+                    'rule' => [[$this, 'validateUniqueCode'], ($vars['coupon_id'] ?? null)],
                     'message' => $this->_('Coupons.!error.code.unique')
                 ]
             ],
@@ -821,7 +830,7 @@ class Coupons extends AppModel
                 ],
                 'positive' => [
                     'if_set' => true,
-                    'rule' => function($amount) {
+                    'rule' => function ($amount) {
                         if (!is_numeric($amount)) {
                             return true; // the existing rule will handle the check for a number
                         }

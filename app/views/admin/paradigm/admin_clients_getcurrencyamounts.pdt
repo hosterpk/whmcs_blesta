@@ -1,0 +1,17 @@
+<?php /** @var View $this **/ ?>
+
+<?php foreach ((isset($all_amounts) ? $all_amounts : []) as $currency_code => $amounts) { ?>
+<div class="balance-item">
+    <div class="balance-currency"><?php echo $this->Html->safe($currency_code); ?></div>
+    <div class="balance-details">
+        <div class="balance-row">
+            <span class="balance-label"><?php $this->_('AdminClients.getcurrencyamounts.text_total_credits'); ?></span>
+            <span class="balance-amount balance-credit"><?php echo $this->Html->safe($amounts['total_credit']); ?></span>
+        </div>
+        <div class="balance-row">
+            <span class="balance-label"><?php $this->_('AdminClients.getcurrencyamounts.text_total_due'); ?></span>
+            <span class="balance-amount balance-due"><?php echo $this->Html->safe($amounts['total_due']); ?></span>
+        </div>
+    </div>
+</div>
+<?php } ?>

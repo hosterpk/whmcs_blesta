@@ -1,22 +1,32 @@
 
     <div id="change_password">
-        <h4><?php $this->_('Plesk.tab_client_login.logintoplesk');?></h4>
+        <h4><?php $this->_('Plesk.tab_client_login.logintoplesk'); ?></h4>
 
         <div class="col-md-12">
             <div class="form-group">
                 <?php
                 $this->Form->label($this->_('Plesk.tab_client_login.field_plesk_username', true), 'plesk_username');
-                $this->Form->fieldText('plesk_username', $service_fields->plesk_username ?? '', ['disabled' => 'disabled', 'id' => 'plesk_username', 'class'=>'form-control']);
+                $this->Form->fieldText('plesk_username', $service_fields->plesk_username ?? '', [
+                    'disabled' => 'disabled',
+                    'id' => 'plesk_username',
+                    'class' => 'form-control',
+                ]);
                 ?>
             </div>
             <div class="form-group">
                 <?php
                 $this->Form->label($this->_('Plesk.tab_client_login.field_plesk_password', true), 'plesk_password');
-                $this->Form->fieldText('plesk_password', $service_fields->plesk_password ?? '', ['disabled' => 'disabled', 'id' => 'plesk_password', 'class'=>'form-control']);
+                $this->Form->fieldText('plesk_password', $service_fields->plesk_password ?? '', [
+                    'disabled' => 'disabled',
+                    'id' => 'plesk_password',
+                    'class' => 'form-control',
+                ]);
                 ?>
             </div>
         </div>
-        <a href="<?php echo (isset($sso_url) ? $this->Html->safe($sso_url) : null);?>" target="_blank" class="btn btn-light float-right">
-            <i class="fas fa-sign-in-alt"></i> <?php $this->_('Plesk.tab_client_login.field_login');?>
+        <a href="<?php echo isset($sso_url)
+            ? $this->Html->safe($sso_url)
+            : null; ?>" target="_blank" class="btn btn-light float-right">
+            <i class="fas fa-sign-in-alt"></i> <?php $this->_('Plesk.tab_client_login.field_login'); ?>
         </a>
     </div>

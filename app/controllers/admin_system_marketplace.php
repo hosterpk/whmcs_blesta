@@ -18,19 +18,11 @@ class AdminSystemMarketplace extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'Marketplace']);
+        $this->uses(['Marketplace']);
 
         if (!$this->isAjax()) {
-            // Set the left nav for all settings pages to settings_leftnav
-            $this->set(
-                'left_nav',
-                $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-            );
         }
 
-        // Set jRating
-        $this->Javascript->setFile('jquery-jrating.min.js');
-        $this->structure->set('jrating_css', $this->structure->view_dir . 'css/jquery.jrating.css');
     }
 
     /**

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Interworx API Module
  *
@@ -181,7 +182,7 @@ class InterworxApi
 
         try {
             $query = $this->sendQuery($api_controller, $action, $input);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $query = $this->getResponse(null, $e->getMessage());
         }
 
@@ -221,12 +222,12 @@ class InterworxApi
         * Be aware that even actions that require no input still require the parameter
         * Just pass in an empty array
         * $input = array("nickname"         => "Example User",
-        * 				  "email"            => "exampleuser@example.com",
-        * 				  "language"         => "en-us",
-        * 				  "theme"            => "interworx",
-        * 				  "password"         => "pass",
-        * 				  "confirm_password" => "pass",
-        * 				  "perms"            => array("LOGIN", "SWACCOUNTS" ));
+        *                 "email"            => "exampleuser@example.com",
+        *                 "language"         => "en-us",
+        *                 "theme"            => "interworx",
+        *                 "password"         => "pass",
+        *                 "confirm_password" => "pass",
+        *                 "perms"            => array("LOGIN", "SWACCOUNTS" ));
         */
 
         // Check permissions
@@ -235,7 +236,7 @@ class InterworxApi
         }
 
         // Host URL
-        $host_url = $this->protocol.'://'.$this->host.':'.$this->port.'/soap?wsdl';
+        $host_url = $this->protocol . '://' . $this->host . ':' . $this->port . '/soap?wsdl';
 
         $log = [];
         $log['parameters'] = ['apikey'    => $this->apikey,
@@ -244,7 +245,7 @@ class InterworxApi
                                    'input'     => $input];
 
         if ($this->debug == 'print') {
-            echo '<pre><br/>sendQuery Parameters sent to Soap Client at ('.$host_url.') (Line: '.__LINE__.')<br/>';
+            echo '<pre><br/>sendQuery Parameters sent to Soap Client at (' . $host_url . ') (Line: ' . __LINE__ . ')<br/>';
             print_r($log['parameters']);
             echo '</pre>';
         }
@@ -258,8 +259,8 @@ class InterworxApi
         try {
             $client = new SoapClient($host_url);
             $response = $client->route($this->apikey, $api_controller, $action, $input);
-        } catch (Exception $e) {
-            throw new Exception('soap_error2');
+        } catch (\Throwable $e) {
+            throw new Exception('soap_error2: ' . $e->getMessage());
         }
 
         // Set Log Response
@@ -267,7 +268,7 @@ class InterworxApi
 
         // print out the response if debug mode is enabled.
         if ($this->debug == 'print') {
-            echo '<pre><br/>sendQuery Response from ('.$host_url.') (Line: '.__LINE__.')<br/>';
+            echo '<pre><br/>sendQuery Response from (' . $host_url . ') (Line: ' . __LINE__ . ')<br/>';
             print_r($response);
             echo '</pre>';
         }
@@ -294,16 +295,16 @@ class InterworxApi
      */
     private function getResponse($response, $error = '', $log = '')
     {
-        if (!isset($response['payload']) || !isset($response['status']) || !is_array($response)) {
+        if (!is_array($response) || !isset($response['payload']) || !isset($response['status'])) {
             $response = ['status' => 0, 'payload' => $response];
         }
 
-        $results = new stdClass;
+        $results = new stdClass();
         $results->status = (!$error && isset($response['status']) && !$response['status']
             && isset($response['payload']) ? 'success' : 'error'
         );
-        $results->response = (isset($response['payload']) ? $response['payload'] : null);
-        $results->log = (!empty($log) ? "DEBUG LOG: \n".print_r($log, true) : '');
+        $results->response = ($response['payload'] ?? null);
+        $results->log = (!empty($log) ? "DEBUG LOG: \n" . print_r($log, true) : '');
 
         if (!isset($response['payload']) && !$error) {
             $results->response = 'internal';
@@ -315,7 +316,7 @@ class InterworxApi
 
         // print out the results if debug mode is enabled.
         if ($this->debug == 'print') {
-            echo '<pre><br/>getResponse Results (Line: '.__LINE__.')<br/>';
+            echo '<pre><br/>getResponse Results (Line: ' . __LINE__ . ')<br/>';
             print_r($results);
             echo '</pre>';
         }
@@ -370,7 +371,8 @@ class InterworxApi
         if (!is_array($values)) {
             return $this->getResponse(null, 'create_account.no_array');
         }
-        if (!isset($values['username']) || !isset($values['password'])
+        if (
+            !isset($values['username']) || !isset($values['password'])
             || !isset($values['domain']) || !isset($values['email'])
         ) {
             return $this->getResponse(null, 'create_account.missing_fields');
@@ -405,7 +407,8 @@ class InterworxApi
         $packages = $this->listPackages();
         $package_details = false;
 
-        if (!empty($values['plan']) && isset($packages->status)
+        if (
+            !empty($values['plan']) && isset($packages->status)
             && $packages->status == 'success' && !empty($packages->response)
         ) {
             foreach ($packages->response as $package) {
@@ -627,7 +630,8 @@ class InterworxApi
         $packages = $this->listResellerPackages();
         $package_details = false;
 
-        if (!empty($values['plan']) && isset($packages->status)
+        if (
+            !empty($values['plan']) && isset($packages->status)
             && $packages->status == 'success' && !empty($packages->response)
         ) {
             foreach ($packages->response as $package) {
@@ -671,7 +675,7 @@ class InterworxApi
             if (isset($resellers->status) && $resellers->status == 'success' && isset($resellers->response)) {
                 if (!empty($resellers->response) && is_array($resellers->response)) {
                     $reseller = end($resellers->response);
-                    $reseller_id = (isset($reseller->reseller_id) ? $reseller->reseller_id : 0);
+                    $reseller_id = ($reseller->reseller_id ?? 0);
                 }
             } else {
                 return $resellers;
@@ -975,7 +979,7 @@ class InterworxApi
             }
             if (!empty($accounts->response)) {
                 foreach ($accounts->response as $account) {
-                    if ($account['domain'] == $domain) {
+                    if (($account->domain ?? $account['domain'] ?? null) == $domain) {
                         return $this->getResponse($account);
                     }
                 }

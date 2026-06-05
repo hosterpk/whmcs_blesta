@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Captcha\Common;
 
 use Minphp\Html\Html;

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\DataFeed\Feeds;
 
 use Blesta\Core\Util\DataFeed\Common\AbstractDataFeed;
@@ -101,13 +102,13 @@ class ClientFeed extends AbstractDataFeed
             <div class="title_row"><h3>' . Language::_('ClientFeed.getOptionFields.title_row_example_code', true) . '</h3></div>
             <div class="pad">
                 <small>' . Language::_('ClientFeed.getOptionFields.example_code_active', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/client/count/"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/client/count/"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('ClientFeed.getOptionFields.example_code_inactive', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/client/count/?status=inactive"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/client/count/?status=inactive"&gt;&lt;/script&gt;</pre>
                 
                 <small>' . Language::_('ClientFeed.getOptionFields.example_code_fraud', true) . '</small>
-                <pre class="rounded bg-light text-secondary border border-secondary p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/client/count/?status=fraud"&gt;&lt;/script&gt;</pre>
+                <pre class="rounded bg-body-tertiary border p-2 m-0 my-1">&lt;script src="' . $base_url . 'feed/client/count/?status=fraud"&gt;&lt;/script&gt;</pre>
             </div>
         ');
 

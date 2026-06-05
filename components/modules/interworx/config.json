@@ -1,5 +1,5 @@
 {
-    "version": "2.12.0",
+    "version": "3.0.0",
     "name": "Interworx.name",
     "description": "Interworx.description",
     "authors": [
@@ -21,8 +21,21 @@
         "group": "Interworx.module_group"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers", "notes"],
-        "package": ["type", "package"],
-        "service": ["interworx_username", "interworx_email", "interworx_password", "interworx_domain"]
-    }
+        "module": [
+            "host_name",
+            "name_servers",
+            "notes"
+        ],
+        "package": [
+            "type",
+            "package"
+        ],
+        "service": [
+            "interworx_username",
+            "interworx_email",
+            "interworx_password",
+            "interworx_domain"
+        ]
+    },
+    "icon": "bi-server"
 }

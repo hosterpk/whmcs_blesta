@@ -15,11 +15,15 @@ $lang['Interworx.module_row_plural'] = 'Servers';
 $lang['Interworx.module_group'] = 'Server Group';
 $lang['Interworx.tab_stats'] = 'Statistics';
 
+$lang['Interworx.back_to_manage'] = 'Back';
+
 // Module management
 $lang['Interworx.add_module_row'] = 'Add Server';
 $lang['Interworx.add_module_group'] = 'Add Server Group';
 $lang['Interworx.manage.module_rows_title'] = 'Servers';
 $lang['Interworx.manage.module_groups_title'] = 'Server Groups';
+$lang['Interworx.manage.tab_rows'] = 'Servers';
+$lang['Interworx.manage.tab_groups'] = 'Server Groups';
 $lang['Interworx.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Interworx.manage.module_rows_heading.hostname'] = 'Hostname';
 $lang['Interworx.manage.module_rows_heading.accounts'] = 'Accounts';
@@ -28,6 +32,7 @@ $lang['Interworx.manage.module_groups_heading.name'] = 'Group Name';
 $lang['Interworx.manage.module_groups_heading.servers'] = 'Server Count';
 $lang['Interworx.manage.module_groups_heading.options'] = 'Options';
 $lang['Interworx.manage.module_rows.count'] = '%1$s / %2$s'; // %1$s is the current number of accounts, %2$s is the total number of accounts available
+$lang['Interworx.manage.module_rows.count_server_group'] = '%1$s / %2$s (%3$s Available)'; // %1$s is the current number of accounts, %2$s is the total number of accounts available, %3$s is the total number of accounts available without over-subscription
 $lang['Interworx.manage.module_rows.edit'] = 'Edit';
 $lang['Interworx.manage.module_groups.edit'] = 'Edit';
 $lang['Interworx.manage.module_rows.delete'] = 'Delete';

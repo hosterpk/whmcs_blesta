@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -33,7 +34,8 @@ class Plugin extends AbstractTask
         $data = $this->task->raw();
 
         // This is not a valid plugin task to be run
-        if (empty($data->plugin)
+        if (
+            empty($data->plugin)
             || !isset($data->key)
             || !isset($data->plugin->enabled)
             || !$data->plugin->enabled

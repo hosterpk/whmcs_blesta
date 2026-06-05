@@ -1,9 +1,38 @@
+<?php /** @var View $this */ ?>
+
 <!DOCTYPE HTML>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <style>
+            html, body { margin: 0; padding: 0; }
+            body { background-color: #fff; color: #1a1a1a; padding: 1rem; }
+            body.dark { background-color: #1e1e1e; color: #ffffff; }
+
+            * { scrollbar-width: thin; scrollbar-color: #c0c0c0 #ffffff; }
+            *::-webkit-scrollbar { width: 8px; height: 8px; }
+            *::-webkit-scrollbar-track { background: #ffffff; }
+            *::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 4px; }
+            *::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+
+            body.dark, body.dark * { scrollbar-color: #2a2a2a #141414; }
+            body.dark *::-webkit-scrollbar-track { background: #141414; }
+            body.dark *::-webkit-scrollbar-thumb { background: #2a2a2a; }
+            body.dark *::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+        </style>
     </head>
     <body>
-        <?php echo (isset($html) ? $html : null);?>
+        <?php echo ($html ?? null);?>
+        <script>
+            try {
+                if (window.parent.document.documentElement.getAttribute('data-theme') === 'dark') {
+                    document.body.classList.add('dark');
+                }
+            } catch (e) {}
+            // Notify parent to resize iframe to content height
+            try {
+                window.parent.postMessage({ type: 'iframeHeight', height: document.body.scrollHeight }, '*');
+            } catch (e) {}
+        </script>
     </body>
 </html>

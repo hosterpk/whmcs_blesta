@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('directadmin.map', [
     'module' => 'direct_admin',
     'module_row_key' => 'hostname',
@@ -7,7 +8,9 @@ Configure::set('directadmin.map', [
         (object)['key' => 'host_name', 'value' => (object)['module' => 'hostname'], 'alternate_value' => (object)['module' => 'ipaddress'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'user_name', 'value' => (object)['module' => 'username'], 'serialized' => 0, 'encrypted' => 1],
         (object)['key' => 'password', 'value' => (object)['module' => 'password'], 'serialized' => 0, 'encrypted' => 1],
-        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) { return ($value == 'on' ? 'true' : 'false');}],
+        (object)['key' => 'use_ssl', 'value' => (object)['module' => 'secure'], 'serialized' => 0, 'encrypted' => 0, 'callback' => function ($value) {
+            return ($value == 'on' ? 'true' : 'false');
+        }],
         (object)['key' => 'account_limit', 'value' => (object)['module' => 'maxaccounts'], 'serialized' => 0, 'encrypted' => 0],
         (object)['key' => 'name_servers', 'value' => [(object)['module' => 'nameserver1'], (object)['module' => 'nameserver2'], (object)['module' => 'nameserver3'], (object)['module' => 'nameserver4'], (object)['module' => 'nameserver5']], 'serialized' => 1, 'encrypted' => 0],
         (object)['key' => 'notes', 'value' => null, 'serialized' => 0, 'encrypted' => 0]

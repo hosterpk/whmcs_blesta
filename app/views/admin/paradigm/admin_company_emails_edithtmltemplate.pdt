@@ -1,0 +1,172 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyEmails.edithtmltemplate.boxtitle_addhtmltemplate', true), ['id' => 'admin_company_emails_edithtmltemplate']);
+    $this->Form->create(null, ['enctype' => 'multipart/form-data', 'id' => 'admin_company_emails_edittemplate', 'class' => 'disable-on-submit']);
+    ?>
+            <!-- Name -->
+            <div class="mb-3">
+                <label for="name" class="form-label">
+                    <?php $this->_('AdminCompanyEmails.edithtmltemplate.field.name');?>
+                </label>
+                <?php $this->Form->fieldText('name', ($vars->name ?? null), ['id' => 'name', 'class' => 'form-control']);?>
+            </div>
+
+            <!-- Available Tags -->
+            <?php
+            if (!empty($tags) && is_array($tags)) {
+            ?>
+            <div class="alert alert-info mb-3">
+                <h6 class="alert-heading mb-2"><i class="bi bi-tags me-2"></i><?php $this->_('AdminCompanyEmails.edithtmltemplate.field.tags');?></h6>
+                <p class="mb-1 small"><?php $this->_('AdminCompanyEmails.edithtmltemplate.text_tags');?></p>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <?php
+                    foreach ($tags as $tag) {
+                    ?>
+                    <code><?php echo $this->Html->safe($tag);?></code>
+                    <?php
+                    }
+                    ?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+
+            <!-- Language Tabs -->
+            <?php
+            if (!empty($languages)) {
+            ?>
+            <ul class="nav nav-tabs-connected" role="tablist">
+                <?php
+                $i = 0;
+                foreach ($languages as $language) {
+                ?>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link<?php echo ($i == 0 ? ' active' : '');?>" id="lang-<?php echo $this->Html->safe($language->code);?>-tab" data-bs-toggle="tab" data-bs-target="#lang-<?php echo $this->Html->safe($language->code);?>" type="button" role="tab"><?php echo $this->Html->safe($language->name);?></button>
+                </li>
+                <?php
+                    $i++;
+                }
+                ?>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content tab-content-connected">
+                <?php
+                $i = 0;
+                foreach ($languages as $language) {
+                    // Find template for this language by matching the lang field
+                    $template_html = '';
+                    if (!empty($vars->templates)) {
+                        foreach ($vars->templates as $template) {
+                            if (($template['lang'] ?? null) === $language->code) {
+                                $template_html = $template['html'] ?? '';
+                                break;
+                            }
+                        }
+                    }
+                ?>
+                <div class="tab-pane fade<?php echo ($i == 0 ? ' show active' : '');?>" id="lang-<?php echo $this->Html->safe($language->code);?>" role="tabpanel">
+                    <div id="editor-<?php echo $this->Html->safe($language->code);?>" class="ace-editor-container"></div>
+                    <textarea name="templates[<?php echo $i;?>][html]" id="textarea-<?php echo $this->Html->safe($language->code);?>" style="display: none;"><?php echo $this->Html->safe($template_html);?></textarea>
+                    <?php $this->Form->fieldHidden('templates[' . $i . '][lang]', $language->code);?>
+                </div>
+                <?php
+                    $i++;
+                }
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end gap-2">
+            <a class="btn btn-secondary" href="<?php echo $this->base_uri;?>settings/company/emails/htmltemplates/"><?php $this->_('AdminCompanyEmails.!cancel.field.cancel');?></a>
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyEmails.edithtmltemplate.field.addtemplatesubmit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+        <?php
+        $this->Form->end();
+        $this->Widget->end();
+        ?>
+</div>
+
+<style>
+.ace-editor-container {
+    min-height: 300px;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 0.375rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Ace editor for each language
+    const languages = <?php echo json_encode($languages ?? []); ?>;
+    const editors = {};
+
+    // Determine initial theme based on current mode
+    function getAceTheme() {
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        return isDarkMode ? 'ace/theme/tomorrow_night' : 'ace/theme/tomorrow';
+    }
+
+    // Update all editors theme
+    function updateEditorsTheme() {
+        const theme = getAceTheme();
+        Object.keys(editors).forEach(function(code) {
+            editors[code].setTheme(theme);
+        });
+    }
+
+    languages.forEach(function(language, index) {
+        const editorId = 'editor-' + language.code;
+        const textareaId = 'textarea-' + language.code;
+
+        // Initialize Ace editor
+        editors[language.code] = ace.edit(editorId);
+        editors[language.code].session.setMode('ace/mode/html');
+        editors[language.code].setTheme(getAceTheme());
+        editors[language.code].setOptions({
+            fontSize: '14px',
+            showPrintMargin: false,
+            wrap: true
+        });
+
+        // Get initial value from the hidden textarea (preserves whitespace/newlines)
+        const textarea = document.getElementById(textareaId);
+        if (textarea && textarea.value) {
+            editors[language.code].setValue(textarea.value, -1);
+        }
+
+        // Update hidden textarea on change
+        editors[language.code].session.on('change', function() {
+            const textarea = document.getElementById(textareaId);
+            if (textarea) {
+                textarea.value = editors[language.code].getValue();
+            }
+        });
+    });
+
+    // Listen for theme changes
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'data-bs-theme') {
+                updateEditorsTheme();
+            }
+        });
+    });
+
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-bs-theme']
+    });
+});
+</script>

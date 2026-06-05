@@ -1,0 +1,146 @@
+<?php /** @var View $this **/ ?>
+
+<div class="row g-3">
+    <?php
+    if (!(isset($edit) ? $edit : false)) {
+    ?>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_contact_id', true), 'contact_id', ['class' => 'form-label']);
+        $this->Form->fieldSelect('contact_id', (isset($contacts) ? $contacts : null), (isset($vars->contact_id) ? $vars->contact_id : null), ['id' => 'contact_id', 'class' => 'form-select']);
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_first_name', true), 'first_name', ['class' => 'form-label']);
+        $this->Form->fieldText('first_name', (isset($vars->first_name) ? $vars->first_name : null), ['id' => 'first_name', 'class' => 'form-control', 'autocomplete' => 'cc-given-name']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_last_name', true), 'last_name', ['class' => 'form-label']);
+        $this->Form->fieldText('last_name', (isset($vars->last_name) ? $vars->last_name : null), ['id' => 'last_name', 'class' => 'form-control', 'autocomplete' => 'cc-family-name']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_address1', true), 'address1', ['class' => 'form-label']);
+        $this->Form->fieldText('address1', (isset($vars->address1) ? $vars->address1 : null), ['id' => 'address1', 'class' => 'form-control', 'autocomplete' => 'address-line1']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_address2', true), 'address2', ['class' => 'form-label']);
+        $this->Form->fieldText('address2', (isset($vars->address2) ? $vars->address2 : null), ['id' => 'address2', 'class' => 'form-control', 'autocomplete' => 'address-line2']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_city', true), 'city', ['class' => 'form-label']);
+        $this->Form->fieldText('city', (isset($vars->city) ? $vars->city : null), ['id' => 'city', 'class' => 'form-control', 'autocomplete' => 'address-level2']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_zip', true), 'zip', ['class' => 'form-label']);
+        $this->Form->fieldText('zip', (isset($vars->zip) ? $vars->zip : null), ['id' => 'zip', 'class' => 'form-control', 'autocomplete' => 'postal-code']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_country', true), 'country', ['class' => 'form-label']);
+        $this->Form->fieldSelect('country', (isset($countries) ? $countries : null), (isset($vars->country) ? $vars->country : null), ['id' => 'country', 'class' => 'form-select', 'autocomplete' => 'country']);
+        ?>
+    </div>
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountcontactinfo.field_state', true), 'state', ['class' => 'form-label']);
+        $this->Form->fieldSelect('state', (isset($states) ? $states : null), (isset($vars->state) ? $vars->state : null), ['id' => 'state', 'class' => 'form-select', 'autocomplete' => 'address-level1']);
+        ?>
+    </div>
+</div>
+
+<?php
+$js_contacts = (isset($js_contacts) ? $js_contacts : null);
+$this->Javascript->setInline("
+document.addEventListener('DOMContentLoaded', function() {
+    var contacts = " . (isset($js_contacts) ? $js_contacts : 'null') . ";
+    var contactSelect = document.getElementById('contact_id');
+    var countrySelect = document.getElementById('country');
+    var stateSelect = document.getElementById('state');
+    var pendingState = null;
+
+    if (contactSelect) {
+        contactSelect.addEventListener('change', function() {
+            if (this.value !== '' && this.value !== 'none') {
+                // Populate contacts data onto form
+                var selectedContact = null;
+                if (contacts) {
+                    for (var id in contacts) {
+                        if (contacts[id].id == this.value) {
+                            selectedContact = contacts[id];
+                            break;
+                        }
+                    }
+                }
+
+                if (selectedContact) {
+                    var firstName = document.getElementById('first_name');
+                    var lastName = document.getElementById('last_name');
+                    var address1 = document.getElementById('address1');
+                    var address2 = document.getElementById('address2');
+                    var city = document.getElementById('city');
+                    var zip = document.getElementById('zip');
+
+                    if (firstName) firstName.value = selectedContact.first_name || '';
+                    if (lastName) lastName.value = selectedContact.last_name || '';
+                    if (address1) address1.value = selectedContact.address1 || '';
+                    if (address2) address2.value = selectedContact.address2 || '';
+                    if (city) city.value = selectedContact.city || '';
+                    if (zip) zip.value = selectedContact.zip || '';
+
+                    if (countrySelect) {
+                        // Store the desired state so the fetch callback can apply it
+                        pendingState = selectedContact.state || null;
+                        countrySelect.value = selectedContact.country || '';
+                        var event = new Event('change', {bubbles: true});
+                        countrySelect.dispatchEvent(event);
+                    }
+                }
+            }
+        });
+    }
+
+    if (countrySelect) {
+        countrySelect.addEventListener('change', function() {
+            var country = this.value;
+            fetch('" . $this->Html->safe($this->base_uri . 'clients/getstates/') . "' + country, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (stateSelect && data) {
+                    stateSelect.innerHTML = '';
+                    Object.keys(data).sort().forEach(function(key) {
+                        var option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = data[key];
+                        stateSelect.appendChild(option);
+                    });
+
+                    // Apply the pending state from contact copy
+                    if (pendingState) {
+                        stateSelect.value = pendingState;
+                        pendingState = null;
+                    }
+                }
+            })
+            .catch(error => console.error('Error fetching states:', error));
+        });
+    }
+});
+");
+?>

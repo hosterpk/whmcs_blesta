@@ -85,7 +85,9 @@ class ClientPay extends AppController
         } elseif (isset($payment['client_id'])) {
             // Fetch the client from this payment session
             $this->client = $this->Clients->get($payment['client_id']);
-        } elseif (isset($this->get['client_id'])) {
+        } elseif ($this->action != 'received' && isset($this->get['client_id'])) {
+            // Don't resolve client from GET on the received action to prevent
+            // unauthenticated client enumeration via the payment-received endpoint
             $this->client = $this->Clients->get($this->get['client_id']);
         }
 
@@ -170,7 +172,7 @@ class ClientPay extends AppController
                     $this->client->id_code
                 );
             }
-        } else {
+        } elseif ($this->action != 'received') {
             $this->redirect($this->base_uri);
         }
     }
@@ -1316,12 +1318,19 @@ class ClientPay extends AppController
         $this->components(['GatewayPayments']);
 
         $gateway_name = isset($this->get[0]) ? $this->get[0] : null;
-        $this->get['client_id'] = $this->client->id;
+        if ($this->client) {
+            $this->get['client_id'] = $this->client->id;
+        } else {
+            unset($this->get['client_id']);
+        }
 
         $trans_data = $this->GatewayPayments->processReceived($gateway_name, $this->get, $this->post);
 
         if (($errors = $this->GatewayPayments->errors())) {
-            $this->setMessage('error', $errors);
+            // Don't surface gateway-existence errors to avoid gateway enumeration
+            if (!isset($errors['gateway']['exists'])) {
+                $this->setMessage('error', $errors);
+            }
         } else {
             // Get invoice data
             if (isset($trans_data['invoices'])) {
@@ -1438,7 +1447,7 @@ class ClientPay extends AppController
                 $setting = $this->ClientGroups->getSetting($this->client->client_group_id, $group_name);
 
                 if ($setting) {
-                    $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
+                    $unserialized = safe_unserialize(
                         base64_decode($setting->value)
                     );
                     if (is_array($unserialized)) {

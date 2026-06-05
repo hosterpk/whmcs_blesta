@@ -1,51 +1,86 @@
 
     <?php
-    $this->Form->create();
-    ?>
-    <div class="pad">
-        <ul>
-            <li>
-                <?php
-                $this->Form->label($this->_('Logicboxes.tab_settings.field_registrar_lock', true), 'registrar_lock');
+$this->Form->create();
+?>
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldRadio(
+                        'registrar_lock',
+                        'true',
+                        ($vars->registrar_lock ?? null) == 'true',
+                        ['id' => 'registrar_lock_yes', 'class' => 'form-check-input'],
+                    );
+                    $this->Form->label(
+                        $this->_('Logicboxes.tab_settings.field_registrar_lock_yes', true),
+                        'registrar_lock_yes',
+                        ['class' => 'form-check-label'],
+                    );
+                    ?>
+                </div>
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldRadio(
+                        'registrar_lock',
+                        'false',
+                        ($vars->registrar_lock ?? null) == 'false',
+                        ['id' => 'registrar_lock_no', 'class' => 'form-check-input'],
+                    );
+                    $this->Form->label(
+                        $this->_('Logicboxes.tab_settings.field_registrar_lock_no', true),
+                        'registrar_lock_no',
+                        ['class' => 'form-check-label'],
+                    );
+                    ?>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'request_epp',
+                        'true',
+                        ($vars->request_epp ?? null) == 'true',
+                        ['id' => 'request_epp', 'class' => 'form-check-input'],
+                    );
+                    $this->Form->label($this->_('Logicboxes.tab_settings.field_request_epp', true), 'request_epp', [
+                        'class' => 'form-check-label',
+                    ]);
+                    ?>
+                </div>
+                <div id="epp_code_display" class="mt-2"<?php echo ($vars->request_epp ?? null) == 'true'
+                    ? ''
+                    : ' style="display: none;"'; ?>>
+                    <strong class="epp_code"><?php echo isset($vars->epp_code)
+                        ? $this->Html->safe($vars->epp_code)
+                        : null; ?></strong>
+                </div>
+            </div>
+        </div>
 
-                $this->Form->fieldRadio('registrar_lock', 'true', (isset($vars->registrar_lock) ? $vars->registrar_lock : null) == 'true', ['id' => 'registrar_lock_yes']);
-                $this->Form->label($this->_('Logicboxes.tab_settings.field_registrar_lock_yes', true), 'registrar_lock_yes', ['class' => 'inline']);
+        <div class="d-flex gap-2 justify-content-end mt-3">
+            <?php $this->Form->fieldSubmit('save', $this->_('Logicboxes.tab_settings.field_submit', true), [
+                'class' => 'btn btn-primary',
+            ]); ?>
+        </div>
+    <?php $this->Form->end(); ?>
 
-                $this->Form->fieldRadio('registrar_lock', 'false', (isset($vars->registrar_lock) ? $vars->registrar_lock : null) == 'false', ['id' => 'registrar_lock_no']);
-                $this->Form->label($this->_('Logicboxes.tab_settings.field_registrar_lock_no', true), 'registrar_lock_no', ['class' => 'inline']);
-                ?>
-            </li>
-            <li>
-                <?php
-                $this->Form->fieldCheckbox('request_epp', 'true', (isset($vars->request_epp) ? $vars->request_epp : null) == 'true', ['id' => 'request_epp']);
-                $this->Form->label($this->_('Logicboxes.tab_settings.field_request_epp', true), 'request_epp', ['class' => 'inline']);
-                ?>
-                <strong class="epp_code" style="display: none;"><?php echo (isset($vars->epp_code) ? $this->Html->safe($vars->epp_code) : null);?></strong>
-            </li>
-        </ul>
-    </div>
-    <div class="button_row">
-        <?php
-        $this->Form->fieldSubmit('save', $this->_('Logicboxes.tab_settings.field_submit', true), ['class' => 'btn btn-primary float-right']);
-        ?>
-    </div>
-    <?php
-    $this->Form->end();
-    ?>
-
-    <script type="text/javascript">
-        $(document).ready(function() {
-
-            showEpp();
-            $("#request_epp").change(function() {
-                showEpp();
-            });
-
-            function showEpp() {
-                if ($("#request_epp").is(":checked"))
-                    $(".epp_code").show();
-                else
-                    $(".epp_code").hide();
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function showEpp() {
+            const checkbox = document.getElementById('request_epp');
+            const display = document.getElementById('epp_code_display');
+            if (checkbox && display) {
+                display.style.display = checkbox.checked ? '' : 'none';
             }
-        });
+        }
+
+        showEpp();
+
+        const checkbox = document.getElementById('request_epp');
+        if (checkbox) {
+            checkbox.addEventListener('change', showEpp);
+        }
+    });
     </script>

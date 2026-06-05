@@ -1,6 +1,17 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Core\Util\Events\Common\EventInterface;
+use Cache;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use ReflectionClass;
+use Router;
+use stdClass;
 
 /**
  * Plugin manager. Handles installing/uninstalling plugins through their respective plugin handlers.
@@ -44,7 +55,7 @@ class PluginManager extends AppModel
 
                 // Set the installed version of the plugin
                 $plugins[$i]->installed_version = $plugins[$i]->version;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Plugin could not be loaded
                 $i++;
                 continue;
@@ -130,7 +141,7 @@ class PluginManager extends AppModel
                 foreach ((array) $info as $key => $value) {
                     $plugin->$key = $value;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Plugin could not be loaded
             }
         }
@@ -157,7 +168,7 @@ class PluginManager extends AppModel
                     try {
                         $plugin = $this->loadPlugin($file);
                         $plugins[$i] = new stdClass();
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         // The plugins could not be loaded, try the next one
                         continue;
                     }
@@ -175,7 +186,7 @@ class PluginManager extends AppModel
         closedir($dir);
 
         // Order the available plugins by their names using a natural order algorithm
-        usort($plugins, function($current, $next) {
+        usort($plugins, function ($current, $next) {
             $names = [$current->name, $next->name];
             natsort($names);
 
@@ -204,7 +215,7 @@ class PluginManager extends AppModel
             $this->Record->where('company_id', '=', $company_id);
         }
 
-        return (boolean) $this->Record->fetch();
+        return (bool) $this->Record->fetch();
     }
 
     /**
@@ -1012,15 +1023,21 @@ class PluginManager extends AppModel
                 $current_action = $current_actions[$var_set['location']][$var_set['url']];
                 $var_set['enabled'] = $current_action->enabled;
 
+                // Preserve admin-customized icon; let plugin default replace the generic gear or NULL
+                if (
+                    $current_action->icon !== null
+                    && !in_array($current_action->icon, ['bi-gear', 'bi bi-gear'], true)
+                ) {
+                    $var_set['icon'] = $current_action->icon;
+                }
+
                 // Keep the previous navigation items
                 $navigation_var_sets = $current_action->nav_items;
             } elseif ((!isset($var_set['enabled']) || $var_set['enabled'] == '1')) {
                 // Add this action to the navigation if it is not disabled
                 $navigation_var_sets[] = [
                     'company_id' => $var_set['company_id'],
-                    'parent_url' => isset($var_set['parent_url'])
-                        ? $var_set['parent_url']
-                        : null,
+                    'parent_url' => $var_set['parent_url'] ?? null,
                 ];
             }
 
@@ -1063,6 +1080,11 @@ class PluginManager extends AppModel
             // Set the location and url based on the old action parameters
             $primary_nav = $this->Actions->mapOldFields($params);
 
+            // Preserve icon if defined — mapOldFields may not carry it through
+            if (isset($params['icon'])) {
+                $primary_nav['icon'] = $params['icon'];
+            }
+
             // If this is the second primary navigation item being inserted then it is for the public nav
             if ($i === 1) {
                 $primary_nav['location'] = 'nav_public';
@@ -1076,15 +1098,19 @@ class PluginManager extends AppModel
             $sub_items = [];
             if (isset($primary_nav['options']['sub'])) {
                 foreach ($primary_nav['options']['sub'] as $sub_nav) {
-                    $sub_items[] = [
+                    $sub_item = [
                         'location' => $primary_nav['location'],
-                        'url' => isset($sub_nav['uri']) ? $sub_nav['uri'] : $sub_nav['url'],
+                        'url' => $sub_nav['uri'] ?? $sub_nav['url'],
                         'name' => $sub_nav['name'],
                         'plugin_id' => $primary_nav['plugin_id'],
-                        'enabled' => isset($sub_nav['enabled']) ? $sub_nav['enabled'] : '1',
+                        'enabled' => $sub_nav['enabled'] ?? '1',
                         'company_id' => $primary_nav['company_id'],
                         'parent_url' => $primary_nav['url']
                     ];
+                    if (isset($sub_nav['icon'])) {
+                        $sub_item['icon'] = $sub_nav['icon'];
+                    }
+                    $sub_items[] = $sub_item;
                 }
             }
             unset($primary_nav['options']['sub']);
@@ -1092,16 +1118,20 @@ class PluginManager extends AppModel
             // Set actions based on the old action secondary options
             if (isset($primary_nav['options']['secondary'])) {
                 foreach ($primary_nav['options']['secondary'] as $secondary_nav) {
-                    $sub_items[] = [
+                    $secondary_item = [
                         'location' => $primary_nav['location'],
-                        'url' => isset($secondary_nav['uri']) ? $secondary_nav['uri'] : $secondary_nav['url'],
+                        'url' => $secondary_nav['uri'] ?? $secondary_nav['url'],
                         'name' => $secondary_nav['name'],
                         'plugin_id' => $primary_nav['plugin_id'],
-                        'enabled' => isset($secondary_nav['enabled']) ? $secondary_nav['enabled'] : '1',
+                        'enabled' => $secondary_nav['enabled'] ?? '1',
                         'company_id' => $primary_nav['company_id'],
                         'options' => json_encode(['sub_as_secondary' => true]),
                         'parent_url' => $primary_nav['url']
                     ];
+                    if (isset($secondary_nav['icon'])) {
+                        $secondary_item['icon'] = $secondary_nav['icon'];
+                    }
+                    $sub_items[] = $secondary_item;
                 }
             }
             unset($primary_nav['options']['secondary']);
@@ -1185,7 +1215,7 @@ class PluginManager extends AppModel
 
         if ($this->Input->validates($vars)) {
             if (!is_scalar($vars['callback'])) {
-                $vars['callback'] = serialize((array)$vars['callback']);
+                $vars['callback'] = serialize((array) $vars['callback']);
             }
 
             // Only allow the label/link/background/background_type/enabled fields to be updated
@@ -1208,7 +1238,7 @@ class PluginManager extends AppModel
     public function deleteCard($plugin_id, $callback = null, $level = null)
     {
         if (!is_scalar($callback)) {
-            $callback = serialize((array)$callback);
+            $callback = serialize((array) $callback);
         }
 
         $this->Record->from('plugin_cards')
@@ -1319,7 +1349,7 @@ class PluginManager extends AppModel
                 ],
                 'valid' => [
                     'rule' => [
-                        function($background, $background_type) {
+                        function ($background, $background_type) {
                             // If the background type is set to "image", validate if a valid URL was given
                             if ($background_type == 'image') {
                                 return preg_match(
@@ -1410,20 +1440,20 @@ class PluginManager extends AppModel
         Loader::loadModels($this, ['Permissions']);
 
         // Get permission group by alias
-        $group = $this->Permissions->getGroupByAlias(isset($vars['group_alias']) ? $vars['group_alias'] : null);
+        $group = $this->Permissions->getGroupByAlias($vars['group_alias'] ?? null);
         if (!$group) {
             // Get permission group by alias and plugin ID
             $group = $this->Permissions->getGroupByAlias(
-                isset($vars['group_alias']) ? $vars['group_alias'] : null,
+                $vars['group_alias'] ?? null,
                 $plugin_id
             );
         }
 
         // Ensure the permission does not already exist
         $permission = $this->Permissions->getByAlias(
-            isset($vars['alias']) ? $vars['alias'] : null,
+            $vars['alias'] ?? null,
             $plugin_id,
-            isset($vars['action']) ? $vars['action'] : null
+            $vars['action'] ?? null
         );
 
         // Add the permission
@@ -1467,7 +1497,7 @@ class PluginManager extends AppModel
         Loader::loadModels($this, ['Permissions']);
 
         // Ensure the permission group does not already exist
-        $group = $this->Permissions->getGroupByAlias(isset($vars['alias']) ? $vars['alias'] : null, $plugin_id);
+        $group = $this->Permissions->getGroupByAlias($vars['alias'] ?? null, $plugin_id);
 
         // Add the permission group
         if (!$group) {
@@ -1858,7 +1888,7 @@ class PluginManager extends AppModel
     {
         // Unserialize the callback
         if (property_exists($card, 'callback')) {
-            $card->callback = ($card->callback === null ? null : \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($card->callback));
+            $card->callback = ($card->callback === null ? null : safe_unserialize($card->callback));
         }
 
         // Translate the card's names
@@ -1978,7 +2008,7 @@ class PluginManager extends AppModel
                 $plugin = $this->loadPlugin($plugin_event->plugin_dir);
 
                 // Allow the plugin to invoke instance methods
-                $callback = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($plugin_event->callback);
+                $callback = safe_unserialize($plugin_event->callback);
                 if (is_array($callback) && isset($callback[1]) && $callback[0] == 'this') {
                     $callback[0] = $plugin;
                 }
@@ -1989,7 +2019,7 @@ class PluginManager extends AppModel
                 #
                 # TODO: Log this action
                 #
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 #
                 # TODO: Log this action failure
                 #
@@ -2043,6 +2073,7 @@ class PluginManager extends AppModel
         $info = [
             'dir' => $dir,
             'name' => $plugin->getName(),
+            'icon' => $plugin->getIcon(),
             'version' => $plugin->getVersion(),
             'authors' => $plugin->getAuthors(),
             'logo' => Router::makeURI(

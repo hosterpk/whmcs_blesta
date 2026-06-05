@@ -1,0 +1,33 @@
+<?php /** @var View $this **/ ?>
+
+            <div class="mb-3">
+                <p class="text-muted"><?php $this->_('AdminCompanyBilling.acceptedtypes.text_description');?></p>
+
+                <div class="form-check mb-2">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'payments_allowed_cc',
+                        'true',
+                        ((isset($vars['payments_allowed_cc']) ? $vars['payments_allowed_cc'] : null) == 'true'),
+                        ['id' => 'payments_allowed_cc', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="payments_allowed_cc" class="form-check-label">
+                        <?php $this->_('AdminCompanyBilling.acceptedtypes.field_cc');?>
+                    </label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'payments_allowed_ach',
+                        'true',
+                        ((isset($vars['payments_allowed_ach']) ? $vars['payments_allowed_ach'] : null) == 'true'),
+                        ['id' => 'payments_allowed_ach', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="payments_allowed_ach" class="form-check-label">
+                        <?php $this->_('AdminCompanyBilling.acceptedtypes.field_ach');?>
+                    </label>
+                </div>
+            </div>

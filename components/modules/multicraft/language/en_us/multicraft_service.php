@@ -1,6 +1,9 @@
 <?php
 // Errors
 $lang['MulticraftService.!error.internal'] = 'An internal error occurred, or the server did not respond to the request.';
+
+$lang['Multicraft.back_to_manage'] = 'Back';
+
 $lang['MulticraftService.!error.client'] = 'No client was found from which to create a Multicraft user.';
 
 $lang['MulticraftService.!error.server_id.format'] = 'The server ID must be an integer, or left blank.';

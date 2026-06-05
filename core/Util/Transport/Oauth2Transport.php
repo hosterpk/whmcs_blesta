@@ -56,8 +56,7 @@ class Oauth2Transport extends EsmtpTransport
         ?bool $tls = null,
         ?EventDispatcherInterface $dispatcher = null,
         ?LoggerInterface $logger = null
-    )
-    {
+    ) {
         parent::__construct($host, $port, $tls, $dispatcher, $logger);
 
         if (!isset($this->Companies)) {
@@ -271,7 +270,7 @@ class Oauth2Transport extends EsmtpTransport
 
         // Set default redirect URI
         $base_url = 'http' . (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 's' : '')
-            . '://' . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : null);
+            . '://' . ($_SERVER['HTTP_HOST'] ?? null);
         $redirect_uri = rtrim($base_url, '/') . '/' . ltrim(WEBDIR, '/') . Configure::get('Route.admin') . '/settings/company/emails/mail/';
 
         return empty($this->redirect_uri) ? $redirect_uri : $this->redirect_uri;

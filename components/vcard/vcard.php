@@ -1,5 +1,7 @@
 <?php
 
+namespace Blesta\Components\VCard;
+
 use Blesta\Core\Util\Components\Component;
 use JeroenDesloovere\VCard\VCard as VirtualContact;
 

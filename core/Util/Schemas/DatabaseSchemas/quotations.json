@@ -1,0 +1,145 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "id_format",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "id_value",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "staff_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "title",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "status",
+            "type": "enum('draft','pending','approved','invoiced','expired','dead','lost')",
+            "nullable": false,
+            "key": null,
+            "default": "draft",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "subtotal",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "total",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "currency",
+            "type": "char(3)",
+            "nullable": false,
+            "key": null,
+            "default": "USD",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "notes",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "private_notes",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "date_created",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_expires",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

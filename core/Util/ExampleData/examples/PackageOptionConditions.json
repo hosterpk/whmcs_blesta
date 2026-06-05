@@ -1,0 +1,18 @@
+[
+    {
+        "id": 15,
+        "condition_set_id": 15,
+        "trigger_option_id": 53,
+        "operator": "=",
+        "value": null,
+        "value_id": 103
+    },
+    {
+        "id": 16,
+        "condition_set_id": 15,
+        "trigger_option_id": 53,
+        "operator": "!=",
+        "value": null,
+        "value_id": 102
+    }
+]

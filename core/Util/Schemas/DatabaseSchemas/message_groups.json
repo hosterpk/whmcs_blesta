@@ -1,0 +1,77 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "action",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "type",
+            "type": "enum('client','staff','shared')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "client",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "plugin_dir",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "tags",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        }
+    ],
+    "indexes": [
+        {
+            "name": "action",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "action"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "type",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "type"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

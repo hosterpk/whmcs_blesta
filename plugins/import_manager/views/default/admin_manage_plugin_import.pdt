@@ -1,28 +1,29 @@
+<?php /** @var View $this */ ?>
 
-        <?php
-        echo (isset($message) ? $message : null);
+<?php
+echo ($message ?? null);
 
-        $this->Widget->clear();
-        $this->Widget->create($this->_('ImportManagerManagePlugin.import.boxtitle_importmanager', true, (isset($info->name) ? $info->name : null), (isset($version) ? $version : null)));
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('ImportManagerManagePlugin.import.boxtitle_importmanager', true, ($info->name ?? null), ($version ?? null)));
 
-        $this->Form->create();
-        $this->Form->fieldHidden('import', 'true');
-        ?>
-        <div class="inner">
-            <div class="pad">
-                <?php
-                echo (isset($content) ? $content : null);
-                ?>
-            </div>
+$this->Form->create();
+$this->Form->fieldHidden('import', 'true');
+?>
+<div class="card-body">
+    <?php
+    echo ($content ?? null);
+    ?>
+</div>
 
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('ImportManagerManagePlugin.import.' . ((isset($continue) ? $continue : null) ? 'continue' : 'submit'), true), ['class' => 'btn btn-primary pull-right']);
-                ?>
-                <a class="btn btn-default pull-right" href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null) . '/' . (isset($category->id) ? $category->id : null));?>"><?php $this->_('ImportManagerManagePlugin.import.cancel');?></a>
-            </div>
-        </div>
-        <?php
-        $this->Form->end();
-        $this->Widget->end();
-        ?>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . ($plugin_id ?? null) . '/' . ($category->id ?? null));?>" class="btn btn-secondary"><?php $this->_('ImportManagerManagePlugin.import.cancel');?></a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('ImportManagerManagePlugin.import.' . (($continue ?? null) ? 'continue' : 'submit'), true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>

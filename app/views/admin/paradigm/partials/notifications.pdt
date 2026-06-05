@@ -1,0 +1,61 @@
+<?php /** @var View $this **/ ?>
+
+<div class="dropdown" id="notifications-dropdown">
+    <button class="top-bar-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-bell"></i>
+        <?php
+        if (isset($notifications_count) && $notifications_count > 0) {
+        ?>
+            <span class="notification-badge"><?php echo $this->Html->safe($notifications_count);?></span>
+        <?php
+        }
+        ?>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end notification-dropdown">
+        <div class="notification-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <?php $this->_('AppController.structure.text_notifications');?>
+                <?php
+                if (isset($notifications_count) && $notifications_count > 0) {
+                ?>
+                    <button class="btn btn-link btn-sm text-primary p-0 notification-mark-all-read" style="font-size: 0.75rem;">
+                        <?php $this->_('AppController.structure.text_mark_all_read');?>
+                    </button>
+                <?php
+                }
+                ?>
+            </div>
+        </div>
+
+        <?php
+        if (!empty($notifications)) {
+            foreach ($notifications as $notification) {
+                $notification->title = Illuminate\Support\Str::of($notification->title)->squish()->limit(30);
+                $notification->message = Illuminate\Support\Str::of($notification->message)->squish()->limit(185);
+        ?>
+            <div class="notification-item <?php echo $this->Html->safe($notification->read ? '' : 'unread');?>" data-notification-id="<?php echo $this->Html->safe($notification->id);?>">
+                <div class="notification-icon notification-<?php echo $this->Html->safe($notification->type ?? 'info');?>">
+                    <i class="<?php echo $this->Html->safe($notification->icon ?? 'bi bi-bell-fill');?>" <?php echo $notification->color ? "style=\"color:{$this->Html->safe($notification->color)}\"" : '';?>></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title" <?php echo $notification->color ? "style=\"color:{$this->Html->safe($notification->color)}\"" : '';?>><?php echo $this->Html->safe($notification->title);?></div>
+                    <div class="notification-text"><?php echo $this->Html->safe($notification->message);?></div>
+                    <div class="notification-time"><?php echo $this->Date->cast($notification->date_added ?? '', 'date_time');?></div>
+                </div>
+                <button class="notification-dismiss">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        <?php
+            }
+        } else {
+        ?>
+            <div class="notification-empty">
+                <i class="bi bi-bell-slash"></i>
+                <p><?php $this->_('AppController.structure.no_notifications');?></p>
+            </div>
+        <?php
+        }
+        ?>
+    </div>
+</div>

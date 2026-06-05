@@ -18,17 +18,11 @@ class AdminCompanyAutomation extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Companies', 'CronTasks', 'Logs', 'Navigation']);
+        $this->uses(['Companies', 'CronTasks', 'Logs']);
         $this->components(['SettingsCollection']);
         $this->helpers(['DataStructure']);
 
         $this->ArrayHelper = $this->DataStructure->create('Array');
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**
@@ -132,10 +126,17 @@ class AdminCompanyAutomation extends AdminController
             }
         }
 
+        // Fetch task execution timeline data for the past 24 hours (all task types)
+        $all_task_runs = $this->CronTasks->getAllTaskRun();
+        $timeline_series = $this->getTaskTimelineSeries($all_task_runs);
+        $timeline_now = strtotime(date('c')) * 1000;
+
         $this->set('company_timezone', str_replace('_', ' ', Configure::get('Blesta.company_timezone')));
         $this->set('time_values', $this->getTimes(5));
         $this->set('task_types', $task_types);
         $this->set('tab', $task_type);
+        $this->set('timeline_now', $timeline_now);
+        $this->set('timeline_series', $timeline_series);
         $this->set('vars', $vars);
     }
 
@@ -247,6 +248,71 @@ class AdminCompanyAutomation extends AdminController
         }
 
         return $task_runs;
+    }
+
+    /**
+     * Builds ApexCharts range-bar series for cron task timeline data
+     *
+     * @param array $task_runs An array of cron task runs
+     * @return array A list of series entries for ApexCharts
+     */
+    private function getTaskTimelineSeries(array $task_runs)
+    {
+        if (empty($task_runs)) {
+            return [];
+        }
+
+        $task_name_map = [];
+        $task_run_ids = [];
+        foreach ($task_runs as $task) {
+            $task_run_ids[] = (int) $task->task_run_id;
+            $task_name_map[(int) $task->task_run_id] = $task->real_name;
+        }
+
+        $timeline_logs = $this->Logs->getCronTimelineByTaskRuns($task_run_ids, 24);
+        if (empty($timeline_logs)) {
+            return [];
+        }
+
+        $series_map = [];
+        $now = strtotime(date('c')) * 1000;
+        $window_start = $now - (24 * 60 * 60 * 1000);
+
+        foreach ($timeline_logs as $log) {
+            $run_id = (int) $log->run_id;
+            $task_name = ($task_name_map[$run_id] ?? ('Run #' . $run_id));
+            $start = strtotime($log->start_date) * 1000;
+            $end = ($log->end_date !== null ? strtotime($log->end_date) * 1000 : $now);
+
+            // Ignore invalid entries and anything completely outside the 24-hour window
+            if ($start <= 0 || $end <= 0 || $end < $window_start) {
+                continue;
+            }
+
+            // Clamp start so bars crossing the boundary remain visible
+            $clamped_start = max($start, $window_start);
+            $duration = max(0, round(($end - $start) / 1000));
+            $status = ($log->end_date === null ? 'running' : 'completed');
+            $color = ($status == 'running' ? '#ffc107' : '#198754');
+
+            if (!isset($series_map[$task_name])) {
+                $series_map[$task_name] = [
+                    'name' => $task_name,
+                    'data' => []
+                ];
+            }
+
+            $series_map[$task_name]['data'][] = [
+                'x' => Language::_('AdminCompanyAutomation.index.text_timeline_execution', true),
+                'y' => [$clamped_start, $end],
+                'fillColor' => $color,
+                'status' => $status,
+                'duration' => $duration,
+                'hasEndTime' => ($log->end_date !== null)
+            ];
+        }
+
+        return array_values($series_map);
     }
 
     /**

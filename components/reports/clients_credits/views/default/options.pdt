@@ -1,17 +1,15 @@
 
-            <div class="pad_side">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('ClientsCredits.options.field_status', true), 'status');
-                        $this->Form->fieldSelect('status', ($statuses ?? null), ($vars->status ?? 'active'), ['id' => 'status']);
-                        ?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->label($this->_('ClientsCredits.options.field_currency', true), 'currency');
-                        $this->Form->fieldSelect('currency', ($currencies ?? null), ($vars->currency ?? ($default_currency ?? 'USD')), ['id' => 'currency']);
-                        ?>
-                    </li>
-                </ul>
-            </div>
+<div class="row g-3">
+    <div class="col-md-6">
+        <label for="status" class="form-label"><?php $this->_('ClientsCredits.options.field_status');?></label>
+        <?php
+        $this->Form->fieldSelect('status', ($statuses ?? null), ($vars->status ?? 'active'), ['id' => 'status', 'class' => 'form-select']);
+        ?>
+    </div>
+    <div class="col-md-6">
+        <label for="currency" class="form-label"><?php $this->_('ClientsCredits.options.field_currency');?></label>
+        <?php
+        $this->Form->fieldSelect('currency', ($currencies ?? null), ($vars->currency ?? ($default_currency ?? 'USD')), ['id' => 'currency', 'class' => 'form-select']);
+        ?>
+    </div>
+</div>

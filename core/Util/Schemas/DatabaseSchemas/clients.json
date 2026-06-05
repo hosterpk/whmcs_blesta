@@ -1,0 +1,140 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "id_format",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "id_value",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "user_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_group_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "primary_account_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "primary_account_type",
+            "type": "enum('ach','cc')",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive','fraud')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_group_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_group_id"
+            ]
+        },
+        {
+            "name": "id_format",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "id_format"
+            ]
+        },
+        {
+            "name": "id_value",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "id_value"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "primary_account_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "primary_account_id"
+            ]
+        },
+        {
+            "name": "status",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "status"
+            ]
+        },
+        {
+            "name": "user_id",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "user_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

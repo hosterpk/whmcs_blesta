@@ -1,0 +1,130 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+if ((isset($gateway_form) ? $gateway_form : null)) {
+    echo $gateway_form;
+} else {
+?>
+<div class="row g-3">
+    <div class="col-12">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountccinfo.field_number', true), 'number', ['class' => 'form-label']);
+        ?>
+        <div class="input-group">
+            <?php
+            $this->Form->fieldText('number', isset($vars->last4) ? str_pad($vars->last4, 16, '*', STR_PAD_LEFT) : (isset($vars->number) ? $vars->number : null), ['id' => 'number', 'class' => 'form-control', 'autocomplete' => 'cc-number']);
+
+            if ((isset($edit) ? $edit : false) && (isset($is_local_storage) ? $is_local_storage : false)) {
+            ?>
+            <a href="<?php echo $this->base_uri . 'clients/showcard/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/' . (isset($vars->id) ? $this->Html->safe($vars->id) : null);?>" class="btn btn-outline-secondary input-group-text show-card">
+                <i class="bi bi-eye"></i>
+            </a>
+            <?php
+            }
+            ?>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountccinfo.field_security', true), 'security_code', ['class' => 'form-label']);
+        ?>
+        <div class="input-group">
+            <?php
+            $this->Form->fieldText('security_code', (isset($vars->security_code) ? $vars->security_code : null), ['id' => 'security_code', 'class' => 'form-control', 'autocomplete' => 'cc-csc']);
+            ?>
+            <span class="input-group-text">
+                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.accountccinfo.tooltip_code');?>"></i>
+            </span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <?php
+        $this->Form->label($this->_('AdminClients.accountccinfo.field_expiration', true), 'expiration', ['class' => 'form-label']);
+        ?>
+        <div class="input-group">
+            <?php
+            $this->Form->fieldSelect('expiration_month', (isset($expiration['months']) ? $expiration['months'] : null), (isset($vars->expiration_month) ? $vars->expiration_month : null), ['id' => 'expiration_month', 'class' => 'form-select', 'autocomplete' => 'cc-exp-month']);
+            $this->Form->fieldSelect('expiration_year', (isset($expiration['years']) ? $expiration['years'] : null), (isset($vars->expiration_year) ? $vars->expiration_year : null), ['id' => 'expiration_year', 'class' => 'form-select', 'autocomplete' => 'cc-exp-year']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php
+}
+
+if (isset($save_account) && $save_account) {
+?>
+<div class="form-check mt-3">
+    <?php
+    $this->Form->fieldCheckbox('save_details', 'true', isset($vars->save_details), ['id' => 'save_details_cc', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminClients.accountccinfo.field_savedetails', true), 'save_details_cc', ['class' => 'form-check-label']);
+    ?>
+</div>
+<?php
+}
+?>
+
+<?php
+if ((isset($edit) ? $edit : false) && (isset($is_local_storage) ? $is_local_storage : false)) {
+    $this->Javascript->setInline("
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof blestaModal === 'undefined') return;
+
+        function bindShowCardForm(api) {
+            var form = api.elements.content.querySelector('#showCardForm');
+            if (!form) return;
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                var formData = new FormData(form);
+                var submitBtn = form.querySelector('[type=\"submit\"]');
+                if (submitBtn && submitBtn.name) {
+                    formData.append(submitBtn.name, submitBtn.value);
+                }
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData),
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.view) {
+                        api.set('content.text', data.view);
+                        bindShowCardForm(api);
+                        return;
+                    }
+
+                    if (data.account && data.account.number) {
+                        var numberField = document.getElementById('number');
+                        if (numberField) {
+                            numberField.value = data.account.number;
+                        }
+                    }
+
+                    api.hide();
+                })
+                .catch(function(error) { console.error('Error:', error); });
+            });
+        }
+
+        document.querySelectorAll('.show-card').forEach(function(link) {
+            blestaModal(link, {
+                title: '" . addslashes($this->_('AdminClients.showcard.modal_title', true)) . "',
+                close: '" . addslashes($this->_('AppController.modal.text_close', true)) . "',
+                onRender: function(event, api) {
+                    bindShowCardForm(api);
+                }
+            });
+        });
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle=\"tooltip\"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+    ");
+}
+?>

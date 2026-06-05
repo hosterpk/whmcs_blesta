@@ -1,0 +1,276 @@
+<?php
+echo (isset($message) ? $message : null);
+
+$current_tab = 'index';
+?>
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminMyinfo.index.boxtitle_myinfo');?></h5>
+    </div>
+    <div class="card-filter-bar">
+        <ul class="nav nav-tabs-box border-0 mb-0" role="tablist">
+            <?php
+            foreach ((isset($link_tabs) ? $link_tabs : []) as $tab) {
+                $is_current = ((isset($tab['uri']) ? $tab['uri'] : 'index') == $current_tab);
+            ?>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link<?php echo $is_current ? ' active' : '';?>"
+                   href="<?php echo $this->base_uri . 'myinfo/' . $tab['uri'] . '/';?>">
+                    <?php echo (isset($tab['name']) ? $this->Html->safe($tab['name']) : '');?>
+                </a>
+            </li>
+            <?php
+            }
+            ?>
+        </ul>
+    </div>
+    <?php $this->Form->create(null, ['id' => 'accountForm', 'enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);?>
+    <div class="card-body">
+        <!-- Profile Picture Section -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.index.heading_profile_picture');?></h6>
+        <div class="d-flex align-items-start gap-3 mb-4">
+            <div class="file-preview-container<?php echo empty($user->avatar) ? ' file-preview-empty' : ' has-image';?>" id="previewContainer">
+                <img id="profileImagePreview"
+                     src="<?php echo !empty($user->avatar) ? WEBDIR . 'uploads/avatar/' . ($user->id ?? null) . '/' : '';?>"
+                     alt="Preview"
+                     class="file-preview-image"
+                     style="<?php echo empty($user->avatar) ? 'display: none;' : '';?>">
+            </div>
+            <div class="flex-grow-1">
+                <?php $this->Form->fieldFile('avatar', ['id' => 'avatar', 'class' => 'form-control mb-2', 'accept' => 'image/*']);?>
+                <div class="form-text">
+                    <i class="bi bi-info-circle"></i> <?php $this->_('AdminMyinfo.index.text_avatar_recommendation');?>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="removeProfileImageBtn"<?php echo empty($user->avatar) ? ' style="display: none;"' : '';?>>
+                    <i class="bi bi-trash"></i> <?php $this->_('AdminMyinfo.index.link_remove_avatar');?>
+                </button>
+                <?php $this->Form->fieldHidden('remove_avatar', '0', ['id' => 'remove_avatar']);?>
+            </div>
+        </div>
+
+        <!-- Account Information Section -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.index.heading_account_information');?></h6>
+
+        <!-- Username -->
+        <div class="mb-3">
+            <label for="username" class="form-label"><?php $this->_('AdminMyinfo.index.field_username');?></label>
+            <?php $this->Form->fieldText('username', (isset($vars->username) ? $vars->username : null), ['id' => 'username', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- E-mail -->
+        <div class="mb-3">
+            <label for="email" class="form-label"><?php $this->_('AdminMyinfo.index.field_email');?></label>
+            <?php $this->Form->fieldText('email', (isset($vars->email) ? $vars->email : null), ['id' => 'email', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- Mobile E-mail -->
+        <div class="mb-3">
+            <label for="email_mobile" class="form-label"><?php $this->_('AdminMyinfo.index.field_mobileemail');?></label>
+            <?php $this->Form->fieldText('email_mobile', (isset($vars->email_mobile) ? $vars->email_mobile : null), ['id' => 'email_mobile', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- Mobile Number -->
+        <div class="mb-3">
+            <label for="number_mobile" class="form-label"><?php $this->_('AdminMyinfo.index.field_mobilenumber');?></label>
+            <?php $this->Form->fieldText('number_mobile', (isset($vars->number_mobile) ? $vars->number_mobile : null), ['id' => 'number_mobile', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- New Password -->
+        <div class="mb-3">
+            <label for="new_password" class="form-label"><?php $this->_('AdminMyinfo.index.field_newpass');?></label>
+            <?php $this->Form->fieldPassword('new_password', ['id' => 'new_password', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="mb-3">
+            <label for="confirm_password" class="form-label"><?php $this->_('AdminMyinfo.index.field_confirmpass');?></label>
+            <?php $this->Form->fieldPassword('confirm_password', ['id' => 'confirm_password', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- Recovery Email -->
+        <div class="mb-3">
+            <label for="recovery_email" class="form-label"><?php $this->_('AdminMyinfo.index.field_recovery_email');?></label>
+            <?php $this->Form->fieldText('recovery_email', (isset($vars->recovery_email) ? $vars->recovery_email : null), ['id' => 'recovery_email', 'class' => 'form-control']);?>
+        </div>
+
+        <!-- Two Factor Authentication Section -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.index.heading_two_factor');?></h6>
+
+        <!-- Two Factor Mode -->
+        <div class="mb-3">
+            <label for="two_factor_mode" class="form-label"><?php $this->_('AdminMyinfo.index.field_twofactormode');?></label>
+            <?php $this->Form->fieldSelect('two_factor_mode', (isset($two_factor_modes) ? $two_factor_modes : null), (isset($vars->two_factor_mode) ? $vars->two_factor_mode : null), ['id' => 'two_factor_mode', 'class' => 'form-select']);?>
+        </div>
+
+        <!-- TOTP Section (Hidden by default) -->
+        <div id="totpSection" style="display: none;">
+            <div class="row">
+                <div class="col-lg-6">
+                    <!-- Two Factor Key -->
+                    <div class="mb-3" id="factor_key">
+                        <label for="two_factor_key" class="form-label"><?php $this->_('AdminMyinfo.index.field_twofactorkey');?></label>
+                        <?php $this->Form->fieldText('two_factor_key', (isset($vars->two_factor_key) ? $vars->two_factor_key : null), ['id' => 'two_factor_key', 'class' => 'form-control', 'readonly' => 'readonly']);?>
+                    </div>
+
+                    <!-- Two Factor PIN (for MOTP) -->
+                    <div class="mb-3" id="factor_pin" style="display: none;">
+                        <label for="two_factor_pin" class="form-label"><?php $this->_('AdminMyinfo.index.field_twofactorpin');?></label>
+                        <?php $this->Form->fieldText('two_factor_pin', (isset($vars->two_factor_pin) ? $vars->two_factor_pin : null), ['id' => 'two_factor_pin', 'class' => 'form-control']);?>
+                    </div>
+
+                    <!-- One-time Password -->
+                    <div class="mb-3" id="factor_otp">
+                        <label for="otp" class="form-label">
+                            <?php $this->_('AdminMyinfo.index.field_otp');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminMyinfo.index.note_otp', true));?>"></i>
+                        </label>
+                        <?php $this->Form->fieldText('otp', null, ['id' => 'otp', 'class' => 'form-control', 'maxlength' => '6']);?>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <!-- QR Code Card -->
+                    <div class="qr-code-card" id="qr_code_section">
+                        <h6 class="text-center mb-3"><?php $this->_('AdminMyinfo.index.text_scan_qr');?></h6>
+                        <div class="qr-code-container">
+                            <img id="two_factor_qr" class="qr-code-image" src="<?php echo (new chillerlan\QRCode\QRCode)->render($this->Html->safe('otpauth://totp/' . urlencode((isset($vars->username) ? $vars->username : null)) . '?secret=' . (isset($vars->two_factor_key_base32) ? $vars->two_factor_key_base32 : null) . '&issuer=Blesta'));?>">
+                        </div>
+                        <p class="text-center text-muted mt-3 small">
+                            <?php $this->_('AdminMyinfo.index.text_authenticator_apps');?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Settings Section -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.index.heading_additional_settings');?></h6>
+
+        <!-- Language -->
+        <div class="mb-3">
+            <label for="language" class="form-label"><?php $this->_('AdminMyinfo.index.field_language');?></label>
+            <?php $this->Form->fieldSelect('settings[language]', (isset($languages) ? $languages : null), (isset($vars->settings['language']) ? $vars->settings['language'] : null), ['id' => 'language', 'class' => 'form-select']);?>
+        </div>
+
+        <!-- Current Password -->
+        <div class="mb-3">
+            <label for="current_password" class="form-label"><?php $this->_('AdminMyinfo.index.field_currentpass');?></label>
+            <?php $this->Form->fieldPassword('current_password', ['id' => 'current_password', 'class' => 'form-control']);?>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end">
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminMyinfo.index.field_infosubmit', true), ['class' => 'btn btn-primary']);?>
+        </div>
+    </div>
+    <?php $this->Form->end();?>
+</div>
+
+<style>
+/* QR Code Card Styling */
+.qr-code-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.qr-code-container {
+    display: inline-block;
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code-image {
+    display: block;
+    width: 200px;
+    height: 200px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Two Factor Authentication Toggle
+    const twoFactorMode = document.getElementById('two_factor_mode');
+    const totpSection = document.getElementById('totpSection');
+    const factorKey = document.getElementById('factor_key');
+    const factorPin = document.getElementById('factor_pin');
+    const factorOtp = document.getElementById('factor_otp');
+    const qrCodeSection = document.getElementById('qr_code_section');
+
+    function toggleTwoFactorFields() {
+        const selectedValue = twoFactorMode.value;
+
+        switch(selectedValue) {
+            case 'motp':
+                totpSection.style.display = 'block';
+                qrCodeSection.style.display = 'none';
+                factorPin.style.display = 'block';
+                factorKey.style.display = 'block';
+                factorOtp.style.display = 'block';
+                break;
+            case 'totp':
+                totpSection.style.display = 'block';
+                qrCodeSection.style.display = 'block';
+                factorKey.style.display = 'block';
+                factorPin.style.display = 'none';
+                factorOtp.style.display = 'block';
+                break;
+            case 'none':
+            default:
+                totpSection.style.display = 'none';
+                break;
+        }
+    }
+
+    twoFactorMode.addEventListener('change', toggleTwoFactorFields);
+    toggleTwoFactorFields();
+
+    // Profile Picture Upload
+    const avatarInput = document.getElementById('avatar');
+    const profileImagePreview = document.getElementById('profileImagePreview');
+    const previewContainer = document.getElementById('previewContainer');
+    const removeProfileImageBtn = document.getElementById('removeProfileImageBtn');
+    const removeAvatarInput = document.getElementById('remove_avatar');
+
+    // Image preview on file selection
+    avatarInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                profileImagePreview.src = e.target.result;
+                profileImagePreview.style.display = 'block';
+                previewContainer.classList.remove('file-preview-empty');
+                previewContainer.classList.add('has-image');
+                removeProfileImageBtn.style.display = 'inline-block';
+                removeAvatarInput.value = '0';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Remove image functionality
+    removeProfileImageBtn.addEventListener('click', function() {
+        avatarInput.value = '';
+        profileImagePreview.src = '';
+        profileImagePreview.style.display = 'none';
+        previewContainer.classList.add('file-preview-empty');
+        previewContainer.classList.remove('has-image');
+        removeProfileImageBtn.style.display = 'none';
+        removeAvatarInput.value = '1';
+    });
+});
+</script>

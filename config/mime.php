@@ -259,6 +259,7 @@ Configure::set('Blesta.mime_types', [
     'application/x-sv4crc' => 'sv4crc',
     'application/svg+xml' => 'svg',
     'image/svg+xml' => 'svg',
+    'image/webp' => 'webp',
     'x-world/x-svr' => 'svr',
     'application/x-shockwave-flash' => 'swf',
     'application/x-tar' => 'tar',
@@ -333,7 +334,8 @@ Configure::set('Blesta.allowed_mime_types', [
         'image/jpeg',
         'image/png',
         'image/svg+xml',
-        'application/svg+xml'
+        'application/svg+xml',
+        'image/webp'
     ]
 ]);
 
@@ -344,6 +346,7 @@ Configure::set('Blesta.allowed_file_extensions', [
         '.jpg',
         '.jpeg',
         '.png',
-        '.svg'
+        '.svg',
+        '.webp'
     ]
 ]);

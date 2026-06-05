@@ -1,0 +1,148 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "email_group_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "lang",
+            "type": "char(5)",
+            "nullable": false,
+            "key": null,
+            "default": "en_us",
+            "extra": null,
+            "max_length": 5
+        },
+        {
+            "name": "from",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "from_name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "subject",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "text",
+            "type": "mediumtext",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 16777215
+        },
+        {
+            "name": "html",
+            "type": "mediumtext",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 16777215
+        },
+        {
+            "name": "email_signature_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "email_template_group_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "include_attachments",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive')",
+            "nullable": false,
+            "key": null,
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "email_group_id",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "email_group_id",
+                "company_id",
+                "lang"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

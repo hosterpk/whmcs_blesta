@@ -1,0 +1,138 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "code",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "used_qty",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "max_qty",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "start_date",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "end_date",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "status",
+            "type": "enum('active','inactive')",
+            "nullable": false,
+            "key": null,
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "recurring",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "limit_recurring",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "apply_package_options",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "internal_use_only",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "code",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "code",
+                "company_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

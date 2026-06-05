@@ -1,7 +1,8 @@
 {
-	"version": "2.41.6",
+	"version": "3.1.0",
 	"name": "OrderPlugin.name",
 	"description": "Allow users to place orders. Manage orders in the staff interface.",
+	"icon": "bi bi-cart",
 	"authors": [
 		{
 			"name": "Phillips Data, Inc.",

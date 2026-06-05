@@ -1,0 +1,68 @@
+<?php
+$has_results = ($invoices ?? false) && count($invoices) > 0;
+
+if (($smart_search ?? false) && !$has_results) {
+    return;
+}
+?>
+<div class="card-body pb-0">
+    <h6 class="form-section-header"><?php $this->_('AdminSearch.invoices.heading');?></h6>
+</div>
+<?php if ($has_results) { ?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th><?php $this->_('AdminSearch.invoice.heading_invoice');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_client_id');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_amount');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_paid');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_due');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_date_billed');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_date_due');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_sent');?></th>
+                <th><?php $this->_('AdminSearch.invoice.heading_status');?></th>
+                <th style="width: 80px;"><?php $this->_('AdminSearch.invoice.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $num_invoices = count($invoices);
+            for ($i = 0; $i < $num_invoices; $i++) {
+            ?>
+            <tr>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editinvoice/' . ($invoices[$i]->client_id ?? null) . '/' . ($invoices[$i]->id ?? null));?>">
+                        <?php echo $this->Html->safe($invoices[$i]->id_code ?? null);?>
+                    </a>
+                </td>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . ($invoices[$i]->client_id ?? null) . '/');?>">
+                        <?php echo $this->Html->safe($invoices[$i]->client_id_code ?? null);?>
+                    </a>
+                </td>
+                <td><?php echo $this->CurrencyFormat->format(($invoices[$i]->total ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format(($invoices[$i]->paid ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);?></td>
+                <td><?php echo $this->CurrencyFormat->format(($invoices[$i]->due ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);?></td>
+                <td><?php echo $this->Date->cast($invoices[$i]->date_billed ?? null);?></td>
+                <td><?php echo $this->Date->cast($invoices[$i]->date_due ?? null);?></td>
+                <td><?php echo empty($invoices[$i]->delivery_date_sent) ? $this->_('AdminSearch.invoices.status_unsent', true) : $this->_('AdminSearch.invoices.status_sent', true);?></td>
+                <td><?php $this->_('AdminSearch.invoices.status_' . ($invoices[$i]->status ?? null));?></td>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/viewinvoice/' . ($invoices[$i]->client_id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminSearch.invoice.option_view');?>">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+<?php } else { ?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-receipt" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminSearch.invoice.no_results');?></p>
+</div>
+<?php } ?>

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin Payouts controller
  *
@@ -38,10 +39,10 @@ class AdminPayouts extends OrderAffiliateController
      */
     public function index()
     {
-        $status = (isset($this->get[0]) ? $this->get[0] : 'pending');
+        $status = ($this->get[0] ?? 'pending');
         $page = (isset($this->get[1]) ? (int)$this->get[1] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'id');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
+        $sort = ($this->get['sort'] ?? 'id');
+        $order = ($this->get['order'] ?? 'desc');
 
         // Set the number of payouts of each type
         $status_count = [
@@ -107,9 +108,7 @@ class AdminPayouts extends OrderAffiliateController
         );
 
         // Set withdrawal currency
-        $withdrawal_currency = isset($affiliate_settings['withdrawal_currency'])
-            ? $affiliate_settings['withdrawal_currency']
-            : 'USD';
+        $withdrawal_currency = $affiliate_settings['withdrawal_currency'] ?? 'USD';
 
         if (!empty($this->post)) {
             // Calculate paid amount
@@ -180,7 +179,7 @@ class AdminPayouts extends OrderAffiliateController
     public function approve()
     {
         // Get payout or redirect if not given
-        $payout_id = isset($this->get[0]) ? $this->get[0] : (isset($this->post['id']) ? $this->post['id'] : null);
+        $payout_id = $this->get[0] ?? ($this->post['id'] ?? null);
         if (!($payout = $this->OrderAffiliatePayouts->get($payout_id))) {
             $this->redirect($this->base_uri . 'plugin/order/admin_payouts/');
         }
@@ -204,7 +203,7 @@ class AdminPayouts extends OrderAffiliateController
     public function decline()
     {
         // Get payout or redirect if not given
-        $payout_id = isset($this->get[0]) ? $this->get[0] : (isset($this->post['id']) ? $this->post['id'] : null);
+        $payout_id = $this->get[0] ?? ($this->post['id'] ?? null);
         if (!($payout = $this->OrderAffiliatePayouts->get($payout_id))) {
             $this->redirect($this->base_uri . 'plugin/order/admin_payouts/');
         }

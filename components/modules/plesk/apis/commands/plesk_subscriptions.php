@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk Subscription management
  *
@@ -110,13 +111,13 @@ class PleskSubscriptions extends PleskPacket
         $this->setContainer($this->base_container . '/add');
 
         // Build gen_setup section
-        $general = (isset($vars['general']) ? $vars['general'] : []);
+        $general = ($vars['general'] ?? []);
         $this->buildGenSetup($general);
 
         // Build hosting section
         if (!(isset($vars['general']['htype']) && $vars['general']['htype'] == 'none')) {
-            $htype = (isset($vars['general']['htype']) ? $vars['general']['htype'] : 'vrt_hst');
-            $hosting = array_merge((isset($vars['hosting']) ? $vars['hosting'] : []), ['htype' => $htype]);
+            $htype = ($vars['general']['htype'] ?? 'vrt_hst');
+            $hosting = array_merge(($vars['hosting'] ?? []), ['htype' => $htype]);
             $this->buildHosting($hosting, $this->getContainer());
         }
 
@@ -155,8 +156,8 @@ class PleskSubscriptions extends PleskPacket
         $this->insert(['del' => null], $this->getContainer());
         $this->setContainer($this->base_container . '/del');
 
-        $ids = (isset($vars['ids']) ? $vars['ids'] : []);
-        $names = (isset($vars['names']) ? $vars['names'] : []);
+        $ids = ($vars['ids'] ?? []);
+        $names = ($vars['names'] ?? []);
 
         // Add the subscription IDs or names to delete
         $this->insert(['filter' => null], $this->getContainer());
@@ -213,7 +214,7 @@ class PleskSubscriptions extends PleskPacket
         $this->insert(['dataset' => null], $this->getContainer());
 
         // Always fetch general information
-        $vars['settings'] = (isset($vars['settings']) ? $vars['settings'] : []);
+        $vars['settings'] = ($vars['settings'] ?? []);
         $vars['settings'] = array_merge($vars['settings'], ['gen_info' => true]);
 
         // Set any of the settings to fetch
@@ -279,14 +280,14 @@ class PleskSubscriptions extends PleskPacket
         $this->setContainer($this->base_container . '/set');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Build the values container
         $this->insert(['values' => null], $this->getContainer());
 
         // Build gen_setup section in the values section
-        $general = (isset($vars['general']) ? $vars['general'] : []);
+        $general = ($vars['general'] ?? []);
         $general = array_merge(
             $general,
             (isset($vars['hosting']['htype']) ? ['htype' => $vars['hosting']['htype']] : [])
@@ -298,7 +299,8 @@ class PleskSubscriptions extends PleskPacket
         #
 
         // Build the hosting section in the values section
-        if (!empty($vars['hosting']) && isset($vars['hosting']['htype'])
+        if (
+            !empty($vars['hosting']) && isset($vars['hosting']['htype'])
             && in_array($vars['hosting']['htype'], ['vrt_hst', 'std_fwd', 'frm_fwd'])
         ) {
             $this->buildHosting($vars['hosting'], $this->getContainer() . '/values');
@@ -336,7 +338,7 @@ class PleskSubscriptions extends PleskPacket
         $this->setContainer($this->base_container . '/add-plan-item');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Set the plan-item section
@@ -375,7 +377,7 @@ class PleskSubscriptions extends PleskPacket
         $this->setContainer($this->base_container . '/remove-plan-item');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Set the plan-item section
@@ -417,7 +419,7 @@ class PleskSubscriptions extends PleskPacket
         $this->setContainer($this->base_container . '/switch-subscription');
 
         // Build the filter section
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter);
 
         // Set the plan
@@ -475,7 +477,7 @@ class PleskSubscriptions extends PleskPacket
         } elseif (in_array($vars['htype'], ['std_fwd', 'frm_fwd'])) {
             // Set the type and dest_url
             $this->insert(
-                [$vars['htype'] => ['dest_url' => (isset($vars['dest_url']) ? $vars['dest_url'] : '')]],
+                [$vars['htype'] => ['dest_url' => ($vars['dest_url'] ?? '')]],
                 $container . '/hosting'
             );
         } else {
@@ -528,8 +530,8 @@ class PleskSubscriptions extends PleskPacket
         if ($type == 'add') {
             // Set the gen_setup section
             $gen_setup['gen_setup'] = [
-                'name' => (isset($vars['name']) ? $vars['name'] : null),
-                'ip_address' => (isset($vars['ip_address']) ? $vars['ip_address'] : null),
+                'name' => ($vars['name'] ?? null),
+                'ip_address' => ($vars['ip_address'] ?? null),
                 'htype' => 'vrt_hst',
                 'status' => '0'
             ];

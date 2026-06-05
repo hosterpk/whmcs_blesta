@@ -87,3 +87,8 @@ $lang['AdminCompanyGateways.manage.text_in_use_by'] = 'default';
 $lang['AdminCompanyGateways.manage.text_set_defaults'] = 'To set default gateways per currency, go to the %1$sInstalled Gateways%2$s page and click the gear icon in the top right of the widget.';
 
 $lang['AdminCompanyGateways.manage.update_settings'] = 'Update Settings';
+
+
+// Filter
+$lang['AdminCompanyGateways.text_filter_placeholder'] = 'Filter gateways...';
+$lang['AdminCompanyGateways.text_filter_no_results'] = 'No matching gateways found.';

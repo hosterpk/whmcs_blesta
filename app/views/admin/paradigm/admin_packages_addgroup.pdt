@@ -1,0 +1,346 @@
+<?php
+echo (isset($message) ? $message : null);
+
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminPackages.addgroup.boxtitle_addgroup', true));
+
+$this->Form->create(null, ['id' => 'add_package_group', 'class' => 'disable-on-submit']);
+?>
+    <!-- Language Tabs -->
+    <?php if (!empty($languages)) { ?>
+    <div class="mb-3">
+        <ul class="nav nav-tabs-connected" role="tablist">
+            <?php
+            $first = true;
+            foreach ($languages as $lang) {
+            ?>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link<?php echo $first ? ' active' : '';?>"
+                        id="lang-<?php echo $this->Html->safe($lang->code);?>-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#lang-<?php echo $this->Html->safe($lang->code);?>"
+                        type="button"
+                        role="tab"
+                        aria-controls="lang-<?php echo $this->Html->safe($lang->code);?>"
+                        aria-selected="<?php echo $first ? 'true' : 'false';?>">
+                    <?php echo $this->Html->safe($lang->name);?>
+                </button>
+            </li>
+            <?php
+                $first = false;
+            }
+            ?>
+        </ul>
+
+        <div class="tab-content tab-content-connected">
+            <?php
+            $first = true;
+            foreach ($languages as $i => $lang) {
+                // Get the name and description for this language
+                $name_value = '';
+                $description_value = '';
+
+                foreach ((array)(isset($vars->names) ? $vars->names : null) as $name) {
+                    if ((isset($name->lang) ? $name->lang : null) == $lang->code) {
+                        $name_value = (isset($name->name) ? $name->name : null);
+                        break;
+                    }
+                }
+
+                foreach ((array)(isset($vars->descriptions) ? $vars->descriptions : null) as $description) {
+                    if ((isset($description->lang) ? $description->lang : null) == $lang->code) {
+                        $description_value = (isset($description->description) ? $description->description : null);
+                        break;
+                    }
+                }
+            ?>
+            <div class="tab-pane fade<?php echo $first ? ' show active' : '';?>"
+                 id="lang-<?php echo $this->Html->safe($lang->code);?>"
+                 role="tabpanel">
+
+                <?php $this->Form->fieldHidden('names[' . $i . '][lang]', (isset($lang->code) ? $lang->code : null));?>
+                <div class="mb-3">
+                    <label for="name_<?php echo $this->Html->safe($lang->code);?>" class="form-label">
+                        <?php $this->_('AdminPackages.addgroup.field_name');?>
+                    </label>
+                    <?php
+                    $this->Form->fieldText(
+                        'names[' . $i . '][name]',
+                        (isset($name_value) ? $name_value : null),
+                        ['id' => 'name_' . (isset($lang->code) ? $lang->code : null), 'class' => 'form-control']
+                    );
+                    ?>
+                </div>
+
+                <?php $this->Form->fieldHidden('descriptions[' . $i . '][lang]', (isset($lang->code) ? $lang->code : null));?>
+                <div class="mb-3">
+                    <label for="description_<?php echo $this->Html->safe($lang->code);?>" class="form-label">
+                        <?php $this->_('AdminPackages.addgroup.field_description');?>
+                    </label>
+                    <?php
+                    $this->Form->fieldTextarea(
+                        'descriptions[' . $i . '][description]',
+                        (isset($description_value) ? $description_value : null),
+                        ['id' => 'description_' . (isset($lang->code) ? $lang->code : null), 'class' => 'form-control', 'data-markdown-editor' => '']
+                    );
+                    ?>
+                </div>
+            </div>
+            <?php
+                $first = false;
+            }
+            ?>
+        </div>
+    </div>
+    <?php } ?>
+
+    <div class="form-check mb-3">
+        <?php
+        $this->Form->fieldCheckbox(
+            'allow_upgrades',
+            '1',
+            ((isset($vars->allow_upgrades) ? $vars->allow_upgrades : '1') == '1'),
+            ['id' => 'allow_upgrades', 'class' => 'form-check-input']
+        );
+        ?>
+        <label for="allow_upgrades" class="form-check-label">
+            <?php $this->_('AdminPackages.addgroup.field_allow_upgrades');?>
+        </label>
+    </div>
+
+    <div class="mb-3">
+        <label for="type" class="form-label">
+            <?php $this->_('AdminPackages.addgroup.field_type');?>
+        </label>
+        <?php
+        $this->Form->fieldSelect(
+            'type',
+            (isset($group_types) ? $group_types : null),
+            (isset($vars->type) ? $vars->type : null),
+            ['id' => 'type', 'class' => 'form-select']
+        );
+        ?>
+    </div>
+
+    <!-- Parent Groups Section (visible for addon type) -->
+    <div id="parent_groups" class="mb-3" style="display: none;">
+        <div class="dual-select-container" data-group="parent-groups">
+            <!-- Left Panel: Selected Parents -->
+            <div class="dual-select-panel">
+                <label class="form-label"><?php $this->_('AdminPackages.addgroup.text_parentgroups');?></label>
+                <div class="dual-select-dropzone">
+                    <div class="drag-list" id="assigned_parents">
+                        <?php
+                        foreach ((isset($vars->parents) ? $vars->parents : []) as $id => $name) {
+                        ?>
+                        <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($name);?></div>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Control Buttons -->
+            <div class="dual-select-controls">
+                <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right">
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Right Panel: Available Groups -->
+            <div class="dual-select-panel">
+                <label class="form-label"><?php $this->_('AdminPackages.addgroup.text_availablegroups');?></label>
+                <div class="dual-select-dropzone">
+                    <div class="drag-list" id="available_parents">
+                        <?php
+                        foreach ((isset($standard_groups) ? $standard_groups : []) as $id => $name) {
+                        ?>
+                        <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($name);?></div>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php $this->Widget->footer(); ?>
+
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit(
+        'save',
+        $this->_('AdminPackages.addgroup.field_addgroupsubmit', true),
+        ['class' => 'btn btn-primary']
+    );
+    ?>
+</div>
+<?php $this->Form->end();?>
+
+<?php
+$this->Widget->end();
+?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('type');
+    const parentGroupsDiv = document.getElementById('parent_groups');
+    const form = document.getElementById('add_package_group');
+    const container = document.querySelector('.dual-select-container[data-group="parent-groups"]');
+
+    if (!typeSelect || !parentGroupsDiv) return;
+
+    // Dual-select drag and drop functionality
+    let draggedItem = null;
+
+    function setupDualSelect(container) {
+        const leftList = container.querySelector('.dual-select-panel:first-child .drag-list');
+        const rightList = container.querySelector('.dual-select-panel:last-child .drag-list');
+        const moveLeftBtn = container.querySelector('.move-left');
+        const moveRightBtn = container.querySelector('.move-right');
+
+        if (!leftList || !rightList) return;
+
+        // Setup drag items
+        function setupDragItems() {
+            container.querySelectorAll('.drag-item').forEach(item => {
+                // Click to select
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (e.ctrlKey || e.metaKey) {
+                        this.classList.toggle('selected');
+                    } else {
+                        container.querySelectorAll('.drag-item').forEach(i => i.classList.remove('selected'));
+                        this.classList.add('selected');
+                    }
+                });
+
+                // Double-click to move
+                item.addEventListener('dblclick', function(e) {
+                    e.stopPropagation();
+                    const currentList = this.closest('.drag-list');
+                    const targetList = currentList === leftList ? rightList : leftList;
+                    targetList.appendChild(this);
+                    this.classList.remove('selected');
+                });
+
+                // Drag events
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.textContent);
+                });
+
+                item.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                    container.querySelectorAll('.drag-list').forEach(l => l.classList.remove('drag-over'));
+                });
+            });
+        }
+
+        // Setup drop zones
+        [leftList, rightList].forEach(list => {
+            list.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+
+            list.addEventListener('dragleave', function(e) {
+                if (!this.contains(e.relatedTarget)) {
+                    this.classList.remove('drag-over');
+                }
+            });
+
+            list.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                if (draggedItem && draggedItem.parentNode !== this) {
+                    this.appendChild(draggedItem);
+                    draggedItem.classList.remove('selected');
+                    draggedItem = null;
+                }
+            });
+        });
+
+        // Arrow button functionality
+        moveLeftBtn?.addEventListener('click', function() {
+            const selectedItems = rightList.querySelectorAll('.drag-item.selected');
+            selectedItems.forEach(item => {
+                leftList.appendChild(item);
+                item.classList.remove('selected');
+            });
+        });
+
+        moveRightBtn?.addEventListener('click', function() {
+            const selectedItems = leftList.querySelectorAll('.drag-item.selected');
+            selectedItems.forEach(item => {
+                rightList.appendChild(item);
+                item.classList.remove('selected');
+            });
+        });
+
+        setupDragItems();
+
+        return { leftList, rightList };
+    }
+
+    // Initialize dual-select
+    let dualSelectLists = null;
+    if (container) {
+        dualSelectLists = setupDualSelect(container);
+    }
+
+    // Clear selection when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.drag-item')) {
+            document.querySelectorAll('.drag-item.selected').forEach(item => item.classList.remove('selected'));
+        }
+    });
+
+    // Show/hide parent groups based on type
+    function updateParentGroupsVisibility() {
+        if (typeSelect.value === 'addon') {
+            parentGroupsDiv.style.display = 'block';
+        } else {
+            parentGroupsDiv.style.display = 'none';
+            // Move all assigned parents back to available
+            if (dualSelectLists) {
+                dualSelectLists.leftList.querySelectorAll('.drag-item').forEach(item => {
+                    dualSelectLists.rightList.appendChild(item);
+                    item.classList.remove('selected');
+                });
+            }
+        }
+    }
+
+    // Initial state
+    updateParentGroupsVisibility();
+
+    // Listen for type changes
+    typeSelect.addEventListener('change', updateParentGroupsVisibility);
+
+    // Before form submit, create hidden inputs for parent values
+    if (form) {
+        form.addEventListener('submit', function() {
+            const assignedParents = document.getElementById('assigned_parents');
+            if (assignedParents) {
+                // Remove any existing hidden inputs
+                assignedParents.querySelectorAll('input[name="parents[]"]').forEach(i => i.remove());
+                // Create hidden inputs for each assigned item
+                assignedParents.querySelectorAll('.drag-item').forEach(item => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'parents[]';
+                    input.value = item.dataset.value;
+                    assignedParents.appendChild(input);
+                });
+            }
+        });
+    }
+});
+</script>

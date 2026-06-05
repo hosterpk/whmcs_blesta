@@ -1,76 +1,177 @@
 		<?php
         $this->Widget->clear();
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css?ver=1.4.0');
+        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css?ver=2.0.0');
+        $this->Widget->setWidgetButton('widget-width');
         $this->Widget->setWidgetButton('arrow');
-        $this->Widget->create($this->_('AdminMain.index.boxtitle_feed', true), ['id' => 'widget_system_status_admin_main' . ((isset($billing) ? $billing : 'false') == 'true' ? '_billing' : '')], (isset($render_section) ? $render_section : null));
+        $this->Widget->create($this->_('AdminMain.index.boxtitle_feed', true), ['id' => 'widget_system_status_admin_main' . ((isset($billing) ? $billing : 'false') == 'true' ? '_billing' : '')], ($render_section ?? null));
         ?>
 
 		<div class="system_status">
-			<div id="status_chart"></div>
-			<div class="status_box">
-				<p><?php echo (isset($health_status) ? $this->Html->safe($health_status) : null);?></p>
-			</div>
-			<div class="link_area">
-				<ul>
+			<div class="row g-3">
+				<div class="col-md-6">
+					<div id="healthChart"></div>
+				</div>
+				<div class="col-md-6">
 					<?php
-                    // Show any status messages
-                    foreach ($errors as $error) {
-                        if (!$error) {
-                            continue;
-                        }
-                    ?>
-					<li>
-                        <i class="<?php echo (isset($error['icon']) ? $this->Html->safe($error['icon']) : null);?>"></i>
-                        <?php echo (isset($error['message']) ? $this->Html->safe($error['message']) : null);?>
-                        <a class="override" href="<?php echo (isset($error['link']) ? $this->Html->safe($error['link']) : null);?>"><?php echo (isset($error['link_text']) ? $this->Html->safe($error['link_text']) : null);?></a>
-                    </li>
+                        // Show any status messages
+                        foreach ($errors ?? [] as $error) {
+                            if (!$error) {
+                                continue;
+                            }
+
+                            $badge_class = 'bg-secondary';
+                            $type = 'info';
+                            if (str_contains($error['icon'], 'bi-exclamation-triangle')) {
+                                $badge_class = 'bg-warning text-dark';
+                                $type = 'warning';
+                            } elseif (str_contains($error['icon'], 'bi-x-octagon')) {
+                                $badge_class = 'bg-danger';
+                                $type = 'error';
+                            } elseif (str_contains($error['icon'], 'bi-check-circle')) {
+                                $badge_class = 'bg-success';
+                                $type = 'success';
+                            }
+                        ?>
+						<div class="status-item d-block mb-3">
+							<div class="badge <?php echo $badge_class; ?>">
+								<i class="<?php echo (isset($error['icon']) ? $this->Html->safe($error['icon']) : null);?>"></i>
+                                <?php $this->_('AdminMain.index.text_' . $type);?>
+							</div>
+							<span class="d-block mt-2 mb-3">
+                                <?php echo (isset($error['message']) ? $this->Html->safe($error['message']) : null);?>
+
+                                <?php
+                                if (isset($error['link'])) {
+                                    ?>
+                                    <a class="link-primary fw-bold" href="<?php echo $this->Html->safe($error['link']);?>"><?php echo (isset($error['link_text']) ? $this->Html->safe($error['link_text']) : null);?></a>
+                                    <?php
+                                }
+                                ?>
+                            </span>
+						</div>
 					<?php
-                    }
-                    ?>
-				</ul>
+					}
+
+					// Show health status message when there are no issues
+					if (empty(array_filter((array) ($errors ?? [])))) {
+					?>
+						<div class="status-item d-block mb-3">
+							<div class="badge bg-success">
+								<i class="bi bi-check-circle"></i>
+								<?php $this->_('AdminMain.index.text_success');?>
+							</div>
+							<span class="d-block mt-2 mb-3">
+								<?php echo (isset($health_status) ? $this->Html->safe($health_status) : null);?>
+							</span>
+						</div>
+					<?php
+					}
+					?>
+				</div>
 			</div>
 		</div>
-
-<script type="text/javascript">
-	$(document).ready(function() {
-		systemStatusInitialize();
-	});
-
-    function systemStatusInitialize() {
-        var colors = ['#cb3d3d', '#f4ee39', '#6fcb56'];
-        var percent = <?php echo ($this->Html->safe((isset($system_status) ? $system_status : 0))/100);?>;
-        var color = colors[0];
-
-        // Retrieve the required scripts
-        $.when(
-            $.ajax({
-                url: '<?php echo $this->Html->safe(VENDORWEBDIR . 'd3/d3.min.js');?>',
-                dataType: "script",
-                cache: true,
-                ifModified: false
-            }),
-            $.Deferred(function(deferred) {
-                $(deferred.resolve);
-            })
-        ).done(function() {
-            $.ajax({
-                url: '<?php echo $this->Html->safe($this->view_dir . 'js/gauge.js');?>',
-                dataType: "script",
-                cache: true,
-                ifModified: false
-            }).done(function() {
-                if (percent >= 0.5) {
-                    color = (percent >= 0.8 ? colors[2] : colors[1]);
-                }
-
-                if (typeof needle === 'object') {
-                    needle.moveTo(percent);
-                    $('#status_chart .chart-filled').css('fill', color);
-                }
-            });
-        });
-    }
-</script>
 		<?php
         $this->Widget->end();
         ?>
+
+        <script type="text/javascript">
+            (function() {
+                'use strict';
+
+                var healthChart;
+
+                if (typeof ApexCharts !== 'undefined') {
+                    var chart_data = <?php echo json_encode($chart_data ?? ['series' => [100], 'labels' => ['Health'], 'colors' => ['#198754']]); ?>;
+
+                    function getCurrentTheme() {
+                        return document.documentElement.getAttribute('data-theme') || 'dark';
+                    }
+
+                    function getBaseChartOptions() {
+                        var isDark = getCurrentTheme() === 'dark';
+                        var labelColor = isDark ? '#a0a0a0' : '#666666';
+                        var valueColor = isDark ? '#ffffff' : '#1a1a1a';
+
+                        return {
+                            series: chart_data.series,
+                            labels: chart_data.labels,
+                            chart: {
+                                type: 'radialBar',
+                                height: 250,
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                background: 'transparent',
+                                foreColor: labelColor,
+                                toolbar: {
+                                    show: true,
+                                    tools: {
+                                        download: true,
+                                        selection: false,
+                                        zoom: false,
+                                        zoomin: false,
+                                        zoomout: false,
+                                        pan: false,
+                                        reset: false
+                                    }
+                                }
+                            },
+                            theme: {
+                                mode: isDark ? 'dark' : 'light'
+                            },
+                            plotOptions: {
+                                radialBar: {
+                                    offsetY: 0,
+                                    startAngle: 0,
+                                    hollow: {
+                                        margin: 5,
+                                        size: '50%',
+                                        background: 'transparent'
+                                    },
+                                    dataLabels: {
+                                        name: {
+                                            show: true,
+                                            fontSize: '14px',
+                                            offsetY: -5,
+                                            color: labelColor
+                                        },
+                                        value: {
+                                            show: true,
+                                            fontSize: '20px',
+                                            fontWeight: 600,
+                                            offsetY: 0,
+                                            color: valueColor,
+                                            formatter: function(val) {
+                                                return val + '%';
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            colors: chart_data.colors
+                        };
+                    }
+
+                    var options = getBaseChartOptions();
+                    healthChart = new ApexCharts(document.querySelector("#healthChart"), options);
+                    healthChart.render();
+
+                    // Update chart when theme changes
+                    var observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            if (mutation.attributeName === 'data-theme' && healthChart) {
+                                var baseOptions = getBaseChartOptions();
+                                healthChart.updateOptions({
+                                    chart: baseOptions.chart,
+                                    theme: baseOptions.theme,
+                                    plotOptions: baseOptions.plotOptions
+                                });
+                            }
+                        });
+                    });
+
+                    observer.observe(document.documentElement, {
+                        attributes: true,
+                        attributeFilter: ['data-theme']
+                    });
+                }
+            })();
+        </script>

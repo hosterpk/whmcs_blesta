@@ -1,9 +1,7 @@
 
-	<ul>
-		<li>
-			<?php
-            $this->Form->label($this->_('Offline.instructions', true), 'instructions');
-            $this->Form->fieldTextarea('instructions', $this->Html->ifSet($meta['instructions']), ['id'=>'instructions', 'data-markdown-editor' => '']);
-            ?>
-		</li>
-	</ul>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Offline.instructions', true), 'instructions', ['class' => 'form-label']);
+    $this->Form->fieldTextarea('instructions', $this->Html->ifSet($meta['instructions']), ['id' => 'instructions', 'class' => 'form-control', 'data-markdown-editor' => '']);
+    ?>
+</div>

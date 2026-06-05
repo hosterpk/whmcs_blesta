@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Email Verifications management
  *
@@ -42,9 +50,14 @@ class EmailVerifications extends AppModel
             ->fetch();
 
         // Trigger the EmailVerifications.get event
-        extract($this->executeAndParseEvent('EmailVerifications.get', [
+        $event = $this->executeAndParseEvent('EmailVerifications.get', [
             'email_verification' => $email_verification
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $email_verification;
     }
@@ -309,7 +322,7 @@ class EmailVerifications extends AppModel
         $verification = $this->get($verification_id);
         $contact = $this->Contacts->get($verification->contact_id);
         $client = $this->Clients->get($contact->client_id);
-        $user = $this->Users->get(isset($contact->user_id) ? $contact->user_id : $client->user_id);
+        $user = $this->Users->get($contact->user_id ?? $client->user_id);
 
         if ($client->status != 'active') {
             $this->Input->setErrors(['client' => ['status' => $this->_('EmailVerifications.!error.client.valid')]]);
@@ -387,12 +400,10 @@ class EmailVerifications extends AppModel
         $verification = $this->get($verification_id);
         $contact = $this->Contacts->get($verification->contact_id);
         $client = $this->Clients->get($contact->client_id);
-        $user = $this->Users->get(isset($contact->user_id) ? $contact->user_id : $client->user_id);
+        $user = $this->Users->get($contact->user_id ?? $client->user_id);
 
         // Get the company hostname
-        $hostname = isset(Configure::get('Blesta.company')->hostname)
-            ? Configure::get('Blesta.company')->hostname
-            : '';
+        $hostname = Configure::get('Blesta.company')->hostname ?? '';
         $requestor = $this->getFromContainer('requestor');
 
         // Update date sent

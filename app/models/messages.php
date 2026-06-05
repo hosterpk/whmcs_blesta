@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use stdClass;
+
 /**
  * Messages
  *
@@ -310,8 +317,7 @@ class Messages extends AppModel
      */
     public function setMessageContent($message_id, array $vars)
     {
-        foreach ($vars as $message_content)
-        {
+        foreach ($vars as $message_content) {
             $message_content['message_id'] = $message_id;
 
             $this->Record->duplicate('content', '=', $message_content['content'])

@@ -1,0 +1,81 @@
+<?php
+echo (isset($message) ? $message : null);
+?>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminReportsCustomize.index.box_title');?></h5>
+    </div>
+    <div class="card-filter-bar d-flex justify-content-between align-items-center">
+        <ul class="nav nav-tabs-custom border-0 mb-0" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="<?php echo $this->base_uri . 'reports/';?>">
+                    <?php $this->_('AdminReportsCustomize.index.reports');?>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="<?php echo $this->base_uri . 'reports_customize';?>">
+                    <?php $this->_('AdminReportsCustomize.index.customize');?>
+                </a>
+            </li>
+        </ul>
+        <div class="pe-3">
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'reports_customize/add/');?>"
+               class="btn btn-sm btn-primary"
+               title="<?php $this->_('AdminReportsCustomize.index.btn_add_report');?>">
+                <i class="bi bi-plus-lg"></i>
+            </a>
+        </div>
+    </div>
+
+    <?php if ((isset($reports) ? $reports : null) && !empty($reports)) { ?>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('AdminReportsCustomize.index.table_name');?></th>
+                        <th><?php $this->_('AdminReportsCustomize.index.table_created');?></th>
+                        <th style="width: 100px;"><?php $this->_('AdminReportsCustomize.index.table_options');?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($reports as $report) { ?>
+                    <tr>
+                        <td><?php echo (isset($report->name) ? $this->Html->safe($report->name) : null);?></td>
+                        <td><?php echo $this->Html->safe($this->Date->cast((isset($report->date_created) ? $report->date_created : null)));?></td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'reports_customize/edit/' . (isset($report->id) ? $report->id : null));?>"
+                                   class="btn btn-sm btn-outline-secondary"
+                                   title="<?php echo $this->Html->safe($this->_('AdminReportsCustomize.index.table_option_edit', true));?>">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <?php
+                                $this->Form->create($this->base_uri . 'reports_customize/delete/' . (isset($report->id) ? $report->id : null), ['class' => 'd-inline']);
+                                $this->Form->fieldHidden('id', (isset($report->id) ? $report->id : null));
+                                ?>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                        data-confirm-message="<?php echo $this->Html->safe($this->_('AdminReportsCustomize.index.table_confirm_delete', true));?>"
+                                        title="<?php echo $this->Html->safe($this->_('AdminReportsCustomize.index.table_option_delete', true));?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <?php
+                                $this->Form->end();
+                                ?>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php } else { ?>
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="mt-3 mb-0"><?php $this->_('AdminReportsCustomize.index.no_custom_reports');?></p>
+    </div>
+    <?php } ?>
+</div>

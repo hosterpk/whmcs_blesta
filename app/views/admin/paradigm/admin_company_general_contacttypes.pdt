@@ -1,0 +1,97 @@
+<?php /** @var View $this **/ ?>
+
+        <?php
+        if (!(isset($is_ajax) ? $is_ajax : false)) {
+        ?>
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+        <?php
+        }
+        ?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->setLinkButtons([
+                [
+                    'name' => '',
+                    'icon' => 'bi-plus-lg',
+                    'attributes' => ['href' => $this->base_uri . 'settings/company/general/addcontacttype/', 'title' => $this->_('AdminCompanyGeneral.contacttypes.categorylink_addtype', true)]
+                ]
+            ]);
+            $this->Widget->setBodyWrapper(false);
+            $this->Widget->create($this->_('AdminCompanyGeneral.contacttypes.boxtitle_types', true), ['id' => 'admin_company_general_contacttypes'], ($render_section ?? null));
+            ?>
+
+                <?php
+                if ((isset($contact_types) ? $contact_types : false) && count($contact_types) > 0) {
+                ?>
+                <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th><?php $this->_('AdminCompanyGeneral.contacttypes.heading_name');?></th>
+                                    <th><?php $this->_('AdminCompanyGeneral.contacttypes.heading_define');?></th>
+                                    <th style="width: 100px;"><?php $this->_('AdminCompanyGeneral.contacttypes.heading_options');?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                foreach ($contact_types as $contact_type) {
+                                ?>
+                                <tr>
+                                    <td><?php echo $this->Html->safe($contact_type->real_name ?? '');?></td>
+                                    <td>
+                                        <?php echo ($contact_type->is_lang ?? '0') == '1'
+                                            ? $this->_('AdminCompanyGeneral.contacttypes.text_yes', true)
+                                            : $this->_('AdminCompanyGeneral.contacttypes.text_no', true);?>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a href="<?php echo $this->base_uri . 'settings/company/general/editcontacttype/' . $this->Html->safe($contact_type->id ?? '') . '/';?>"
+                                               class="btn btn-sm btn-outline-secondary"
+                                               title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.contacttypes.option_edit', true));?>">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <?php
+                                            $this->Form->create($this->base_uri . 'settings/company/general/deletecontacttype/', ['class' => 'd-inline']);
+                                            $this->Form->fieldHidden('id', $this->Html->safe($contact_type->id ?? ''));
+                                            ?>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                                    data-confirm-message="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.contacttypes.modal_delete', true));?>"
+                                                    title="<?php echo $this->Html->safe($this->_('AdminCompanyGeneral.contacttypes.option_delete', true));?>">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <?php
+                                            $this->Form->end();
+                                            ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                </div>
+                <?php
+                } else {
+                ?>
+                <div class="card-body text-center text-muted py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="mt-3 mb-0"><?php $this->_('AdminCompanyGeneral.contacttypes.no_results');?></p>
+                </div>
+                <?php
+                }
+                ?>
+            <?php
+            $this->Widget->end();
+            ?>
+
+        <?php
+        if (!(isset($is_ajax) ? $is_ajax : false)) {
+        ?>
+        </div>
+        <?php
+        }
+        ?>

@@ -12,6 +12,7 @@
 // Errors
 $lang['Actions.!error.location.valid'] = 'Invalid valid location.';
 $lang['Actions.!error.location.unique'] = 'The location and URL must be unique for this company.';
+$lang['Actions.!error.icon.length'] = 'Icon class must not exceed 255 characters.';
 $lang['Actions.!error.url.empty'] = 'Please enter a URL.';
 $lang['Actions.!error.name.action_empty'] = 'Please enter an action name.';
 $lang['Actions.!error.plugin_id.valid'] = 'Please provide a valid plugin ID.';

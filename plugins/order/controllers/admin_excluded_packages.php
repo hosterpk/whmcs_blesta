@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin Excluded Packages controller
  *
@@ -55,11 +56,10 @@ class AdminExcludedPackages extends OrderAffiliateController
             } else {
                 $packages[$key] = $package;
             }
-
         }
 
         $settings = $this->OrderAffiliateCompanySettings->getSetting($this->company_id, 'excluded_packages');
-        $vars = isset($settings->value) ? (array)\Blesta\Core\Util\Common\Classes\Model::safeUnserialize($settings->value) : [];
+        $vars = isset($settings->value) ? (array)safe_unserialize($settings->value) : [];
 
         if (!empty($this->post)) {
             $vars = (array)$this->post;

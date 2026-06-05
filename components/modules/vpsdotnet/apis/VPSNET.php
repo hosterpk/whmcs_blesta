@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 /**
@@ -39,8 +40,9 @@ use Blesta\Core\Util\Common\Traits\Container;
  * 2009-05-31 Fixed CURL_USERAGENT to CURLOPT_USERAGENT
  * 2009-05-29 Added changelog, fixed API resource for available clouds.
  */
-require("pData.class.php");
-require("pChart.class.php");
+
+require('pData.class.php');
+require('pChart.class.php');
 
 class VPSNET
 {
@@ -65,7 +67,7 @@ class VPSNET
     /**
      * @var string
      */
-    protected $_apiUserAgent = "VPSNET_API_10_JSON/PHP";
+    protected $_apiUserAgent = 'VPSNET_API_10_JSON/PHP';
 
     /**
      * @var string
@@ -96,6 +98,11 @@ class VPSNET
      * @var null
      */
     public $last_errors = null;
+
+    /**
+     * @var Blesta\Core\ServiceProviders\Logger Container logger
+     */
+    private $logger;
 
     /**
      * @var
@@ -143,7 +150,7 @@ class VPSNET
 
         if (!isset(self::$instance)) {
             $c = __CLASS__;
-            self::$instance = new $c;
+            self::$instance = new $c();
             self::$instance->logger = $logger;
             self::$instance->_auth_name = $username;
             self::$instance->_auth_api_key = $_auth_api_key;
@@ -303,7 +310,7 @@ class VPSNET
         if (isset($rtn['info']['content_type']) && $rtn['info']['content_type'] == 'application/json; charset=utf-8') {
             if ($rtn['info']['http_code'] == 200) {
                 $rtn['response'] = json_decode($rtn['response_body']);
-            } else if ($rtn['info']['http_code'] == 422) {
+            } elseif ($rtn['info']['http_code'] == 422) {
                 $rtn['errors'] = json_decode($rtn['response_body']);
             }
         }
@@ -336,14 +343,14 @@ class VPSNET
         $result = $this->sendGETRequest();
         $return = [];
         if ($result['info']['http_code'] == 422) {
-        } else if ($result['response']) {
+        } elseif ($result['response']) {
             $response = $result['response'];
             for ($x = 0; $x < count($response); $x++) {
                 if ($response[$x]->slice->id) {
                     $return[$x] = new Node($response[$x]->slice->id, $response[$x]->slice->virtual_machine_id, $response[$x]->slice->consumer_id, 'vps', (bool) $response[$x]->slice->free_node, (bool) $response[$x]->slice->discount_node);
-                } else if ($response[$x]->storage_node->id) {
+                } elseif ($response[$x]->storage_node->id) {
                     $return[$x] = new Node($response[$x]->storage_node->id, $response[$x]->storage_node->virtual_machine_id, $response[$x]->storage_node->consumer_id, 'storage', (bool) $response[$x]->slice->free_node, (bool) $response[$x]->slice->discount_node);
-                } else if ($response[$x]->ram_node->id) {
+                } elseif ($response[$x]->ram_node->id) {
                     $return[$x] = new Node($response[$x]->ram_node->id, $response[$x]->ram_node->virtual_machine_id, $response[$x]->ram_node->consumer_id, 'ram', (bool) $response[$x]->slice->free_node, (bool) $response[$x]->slice->discount_node);
                 }
             }
@@ -392,7 +399,7 @@ class VPSNET
         $result = $this->sendGETRequest();
         $return = [];
         if ($result['info']['http_code'] == 422) {
-        } else if ($result['response']) {
+        } elseif ($result['response']) {
             $response = $result['response'];
             //                        print_r($result);
             for ($x = 0; $x < count($response); $x++) {
@@ -423,7 +430,7 @@ class VPSNET
         $return = [];
         $names = [];
         if ($result['info']['http_code'] == 422) {
-        } else if ($result['response']) {
+        } elseif ($result['response']) {
             if ($dresult['response']) {
                 foreach ($dresult['response'] as $k => $vm) {
                     $dresult['response'][$k]->virtual_machine->isDeleted = true;
@@ -452,7 +459,7 @@ class VPSNET
         $names = [];
         $response = false;
         if ($result['info']['http_code'] == 422) {
-        } else if ($result['response']) {
+        } elseif ($result['response']) {
             if ($dresult['response']) {
                 foreach ($dresult['response'] as $k => $vm) {
                     if ($consumer_id > 0) {
@@ -484,7 +491,7 @@ class VPSNET
         $result = $this->sendGETRequest();
         $clouds = [];
         if ($result['info']['http_code'] == 422) {
-        } else if ($result['response']) {
+        } elseif ($result['response']) {
             $clouds = $result['response'];
         }
         $return = [];
@@ -580,7 +587,36 @@ class VPSNET
                                     $exist = true;
                                 }
                             }
-                            if (($exist) || ($cloud == 0)) switch ($filter) {
+                            if (($exist) || ($cloud == 0)) {
+                                switch ($filter) {
+                                    case 'free':
+                                        if ($tinfo->applicable_price->USD == 0) {
+                                            $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
+                                        }
+                                        break;
+                                    case 'paid':
+                                        if ($tinfo->applicable_price->USD > 0) {
+                                            $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
+                                        }
+                                        break;
+                                    default:
+                                        $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if (!isset($this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id])) {
+                        $tinfo = $this->getTemplateInfo($tempalte->clouds[0]->id, $tempalte->clouds[0]->system_template_id);
+                        $exist = false;
+                        foreach ($tempalte->clouds as $tc) {
+                            if ($tc->id == $cloud) {
+                                $exist = true;
+                            }
+                        }
+                        if (($exist) || ($cloud == 0)) {
+                            switch ($filter) {
                                 case 'free':
                                     if ($tinfo->applicable_price->USD == 0) {
                                         $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
@@ -595,31 +631,6 @@ class VPSNET
                                     $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
                                     break;
                             }
-                        }
-                    }
-                } else {
-                    if (!isset($this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id])) {
-                        $tinfo = $this->getTemplateInfo($tempalte->clouds[0]->id, $tempalte->clouds[0]->system_template_id);
-                        $exist = false;
-                        foreach ($tempalte->clouds as $tc) {
-                            if ($tc->id == $cloud) {
-                                $exist = true;
-                            }
-                        }
-                        if (($exist) || ($cloud == 0)) switch ($filter) {
-                            case 'free':
-                                if ($tinfo->applicable_price->USD == 0) {
-                                    $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
-                                }
-                                break;
-                            case 'paid':
-                                if ($tinfo->applicable_price->USD > 0) {
-                                    $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
-                                }
-                                break;
-                            default:
-                                $this->AllTemplatesInfo[$tempalte->clouds[0]->system_template_id] = $tinfo;
-                                break;
                         }
                     }
                 }
@@ -639,7 +650,7 @@ class VPSNET
         $result = $this->sendGETRequest();
         $return = null;
         if ($result['info']['http_code'] == 422) {
-        } else if ($result['response']) {
+        } elseif ($result['response']) {
             $return = $result['response'];
         }
 
@@ -655,7 +666,7 @@ class VPSNET
     public function addInternalIPAddresses($quantity, $consumer_id = 0)
     {
         if ($quantity < 1) {
-            trigger_error("To call VPSNET::addInternalIPAddress() you must provide a quantity greater than 0", E_USER_ERROR);
+            trigger_error('To call VPSNET::addInternalIPAddress() you must provide a quantity greater than 0', E_USER_ERROR);
 
             return false;
         }
@@ -684,7 +695,7 @@ class VPSNET
     public function addExternalIPAddresses($quantity, $cloud_id, $consumer_id = 0)
     {
         if ($quantity < 1 || $cloud_id < 1) {
-            trigger_error("To call VPSNET::addExternalIPAddresses() you must provide a quantity greater than 0 and a cluster_id", E_USER_ERROR);
+            trigger_error('To call VPSNET::addExternalIPAddresses() you must provide a quantity greater than 0 and a cluster_id', E_USER_ERROR);
 
             return false;
         }
@@ -782,19 +793,19 @@ class VPSNET
         $requestdata['backups_enabled'] = (int) $virtualmachine->backups_enabled;
         $requestdata['rsync_backups_enabled'] = (int) $virtualmachine->rsync_backups_enabled;
 
-        if (property_exists($virtualmachine, "storage_nodes_required")) {
+        if (property_exists($virtualmachine, 'storage_nodes_required')) {
             $requestdata['storage_nodes_required'] = $virtualmachine->storage_nodes_required;
         }
-        if (property_exists($virtualmachine, "ram_nodes_required")) {
+        if (property_exists($virtualmachine, 'ram_nodes_required')) {
             $requestdata['ram_nodes_required'] = $virtualmachine->ram_nodes_required;
         }
-        if (property_exists($virtualmachine, "r1_soft_backups_enabled")) {
+        if (property_exists($virtualmachine, 'r1_soft_backups_enabled')) {
             $requestdata['r1_soft_backups_enabled'] = (int) $virtualmachine->r1_soft_backups_enabled;
         }
-        if (property_exists($virtualmachine, "consumer_id")) {
+        if (property_exists($virtualmachine, 'consumer_id')) {
             $requestdata['consumer_id'] = $virtualmachine->consumer_id;
         }
-        if (property_exists($virtualmachine, "licence") && is_array($virtualmachine->licence)) {
+        if (property_exists($virtualmachine, 'licence') && is_array($virtualmachine->licence)) {
             $requestdata['licenses'] = $virtualmachine->licence;
         }
 
@@ -811,10 +822,10 @@ class VPSNET
                 foreach ($result['errors']->errors as $error) {
                     $errors[] = "{$error[0]} {$error[1]}";
                 }
-                $errors = implode(", ", $errors);
+                $errors = implode(', ', $errors);
                 throw new Exception($errors);
             }
-            throw new Exception("Unknown error");
+            throw new Exception('Unknown error');
         }
     }
 
@@ -1275,7 +1286,7 @@ class Node
     {
         $api = VPSNET::getInstance();
         if ($this->id < 1) {
-            trigger_error("To call Node::remove() you must set its id", E_USER_ERROR);
+            trigger_error('To call Node::remove() you must set its id', E_USER_ERROR);
 
             return false;
         }
@@ -1302,12 +1313,12 @@ class Node
     {
         $api = VPSNET::getInstance();
         if ($this->id < 1) {
-            trigger_error("To call Node::remove() you must set its id", E_USER_ERROR);
+            trigger_error('To call Node::remove() you must set its id', E_USER_ERROR);
 
             return false;
         }
         if ($this->virtual_machine_id > 0) {
-            trigger_error("You cannot call Node::remove() with a node assigned to a virtual machine. Instead use VirtualMachine::update()", E_USER_ERROR);
+            trigger_error('You cannot call Node::remove() with a node assigned to a virtual machine. Instead use VirtualMachine::update()', E_USER_ERROR);
 
             return false;
         }
@@ -1408,7 +1419,7 @@ class IPAddress
     {
         $api = VPSNET::getInstance();
         if ($this->id < 1) {
-            trigger_error("To call IPAddress::remove() you must set id", E_USER_ERROR);
+            trigger_error('To call IPAddress::remove() you must set id', E_USER_ERROR);
 
             return false;
         }
@@ -1425,7 +1436,7 @@ class IPAddress
  *
  * Allows management of Backups
  */
-class Backup
+class VPSNETBackup
 {
     /**
      * @var int
@@ -1471,7 +1482,7 @@ class Backup
     {
         $api = VPSNET::getInstance();
         if ($this->id < 1 || $this->virtual_machine_id < 1) {
-            trigger_error("To call Backup::restore() you must set id and virtual_machine_id", E_USER_ERROR);
+            trigger_error('To call Backup::restore() you must set id and virtual_machine_id', E_USER_ERROR);
 
             return false;
         }
@@ -1489,7 +1500,7 @@ class Backup
     {
         $api = VPSNET::getInstance();
         if ($this->id < 1 || $this->virtual_machine_id < 1) {
-            trigger_error("To call Backup::remove() you must set id and virtual_machine_id", E_USER_ERROR);
+            trigger_error('To call Backup::remove() you must set id and virtual_machine_id', E_USER_ERROR);
 
             return false;
         }
@@ -1662,6 +1673,26 @@ class VirtualMachine
     public $backup_licenses = null;
 
     /**
+     * @var int
+     */
+    public $storage_nodes_required = 0;
+
+    /**
+     * @var string
+     */
+    public $rsync_backups_enabled = '';
+
+    /**
+     * @var string
+     */
+    public $r1_soft_backups_enabled = '';
+
+    /**
+     * @var null
+     */
+    public $licence = null;
+
+    /**
      * VirtualMachine constructor.
      *
      * @param string $label
@@ -1703,10 +1734,10 @@ class VirtualMachine
         $api = VPSNET::getInstance();
         $api->setAPIResource('virtual_machines/' . $this->id . '/' . $action);
         $result = $api->sendPOSTRequest();
-        //		print_r($result);
+        //      print_r($result);
         if ($result['info']['http_code'] != 200) {
-            throw new Exception("Error performing action");
-        } else if (isset($result['response'])) {
+            throw new Exception('Error performing action');
+        } elseif (isset($result['response'])) {
             foreach ($result['response']->virtual_machine as $key => $value) {
                 $this->$key = $value;
             }
@@ -1768,7 +1799,7 @@ class VirtualMachine
     public function createBackup($label)
     {
         if (!is_string($label) || strlen($label) < 0) {
-            trigger_error("To call VirtualMachine::createBackup() you must specify a label", E_USER_ERROR);
+            trigger_error('To call VirtualMachine::createBackup() you must specify a label', E_USER_ERROR);
 
             return false;
         }
@@ -1798,15 +1829,15 @@ class VirtualMachine
     {
         $bInputErrors = false;
         if (!is_string($label) || strlen($label) < 0) {
-            trigger_error("To call VirtualMachine::createTemporaryUpgradeSchedule() you must specify a label", E_USER_ERROR);
+            trigger_error('To call VirtualMachine::createTemporaryUpgradeSchedule() you must specify a label', E_USER_ERROR);
             $bInputErrors = true;
         }
         if (!is_int($extra_slices)) {
-            trigger_error("To call VirtualMachine::createTemporaryUpgradeSchedule() you must specify extra_slices as a number", E_USER_ERROR);
+            trigger_error('To call VirtualMachine::createTemporaryUpgradeSchedule() you must specify extra_slices as a number', E_USER_ERROR);
             $bInputErrors = true;
         }
         if (!is_int($days) || $days < 1) {
-            trigger_error("To call VirtualMachine::createTemporaryUpgradeSchedule() you must specify days as a number greater than 0", E_USER_ERROR);
+            trigger_error('To call VirtualMachine::createTemporaryUpgradeSchedule() you must specify days as a number greater than 0', E_USER_ERROR);
             $bInputErrors = true;
         }
         if ($bInputErrors) {
@@ -1832,13 +1863,15 @@ class VirtualMachine
      */
     public function showNetworkGraph($period)
     {
-        if (!in_array($period, [
+        if (
+            !in_array($period, [
             'hourly',
             'daily',
             'weekly',
             'monthly'
-        ])) {
-            trigger_error("To call VirtualMachine::getNetworkGraph() you must specify a period of hourly, daily, weekly or monthly", E_USER_ERROR);
+            ])
+        ) {
+            trigger_error('To call VirtualMachine::getNetworkGraph() you must specify a period of hourly, daily, weekly or monthly', E_USER_ERROR);
 
             return false;
         }
@@ -1885,13 +1918,13 @@ class VirtualMachine
             }
         }
         $nu = $this->getNetworkUtilisation();
-        $DataSet = new pData;
+        $DataSet = new pData();
         $received = 0;
         $sent = 0;
-        $name = "";
+        $name = '';
         switch ($period) {
             case 'hourly':
-                $name = "Hourly Usage";
+                $name = 'Hourly Usage';
                 $start = count($nu) - 24;
                 if ($start < 0) {
                     $start = 0;
@@ -1899,14 +1932,14 @@ class VirtualMachine
                 for ($i = $start; $i < count($nu); $i++) {
                     $data = $nu[$i];
                     $dsc = date('H:i', strtotime($data->created_at));
-                    $DataSet->AddPoint((int) ($data->data_received / 1024), "Serie1", $dsc);
-                    $DataSet->AddPoint((int) ($data->data_sent / 1024), "Serie2", $dsc);
+                    $DataSet->AddPoint((int) ($data->data_received / 1024), 'Serie1', $dsc);
+                    $DataSet->AddPoint((int) ($data->data_sent / 1024), 'Serie2', $dsc);
                     $received += $data->data_received;
                     $sent += $data->data_sent;
                 }
                 break;
             case 'weekly':
-                $name = "Weekly Usage";
+                $name = 'Weekly Usage';
                 for ($i = -12; $i <= 0; $i++) {
                     $start = mktime(0, 0, 0, date('m'), date('d') + $i, date('Y'));
                     $end = mktime(23, 59, 59, date('m'), date('d') + $i, date('Y'));
@@ -1922,12 +1955,12 @@ class VirtualMachine
                             $sent += $data->data_sent;
                         }
                     }
-                    $DataSet->AddPoint((int) ($total_received / 1024), "Serie1", $dsc);
-                    $DataSet->AddPoint((int) ($total_sent / 1024), "Serie2", $dsc);
+                    $DataSet->AddPoint((int) ($total_received / 1024), 'Serie1', $dsc);
+                    $DataSet->AddPoint((int) ($total_sent / 1024), 'Serie2', $dsc);
                 }
                 break;
             case 'daily':
-                $name = "Daily Usage";
+                $name = 'Daily Usage';
                 for ($i = -6; $i <= 0; $i++) {
                     $start = mktime(0, 0, 0, date('m'), date('d') + $i, date('Y'));
                     $end = mktime(23, 59, 59, date('m'), date('d') + $i, date('Y'));
@@ -1943,12 +1976,12 @@ class VirtualMachine
                             $sent += $data->data_sent;
                         }
                     }
-                    $DataSet->AddPoint((int) ($total_received / 1024), "Serie1", $dsc);
-                    $DataSet->AddPoint((int) ($total_sent / 1024), "Serie2", $dsc);
+                    $DataSet->AddPoint((int) ($total_received / 1024), 'Serie1', $dsc);
+                    $DataSet->AddPoint((int) ($total_sent / 1024), 'Serie2', $dsc);
                 }
                 break;
             case 'monthly':
-                $name = "Monthly Usage";
+                $name = 'Monthly Usage';
                 for ($i = -3; $i <= 0; $i++) {
                     $start = mktime(0, 0, 0, date('m') + $i, 1, date('Y'));
                     $end = mktime(0, 0, -1, date('m') + $i + 1, 1, date('Y'));
@@ -1964,19 +1997,19 @@ class VirtualMachine
                             $sent += $data->data_sent;
                         }
                     }
-                    $DataSet->AddPoint((int) ($total_received / 1024), "Serie1", $dsc);
-                    $DataSet->AddPoint((int) ($total_sent / 1024), "Serie2", $dsc);
+                    $DataSet->AddPoint((int) ($total_received / 1024), 'Serie1', $dsc);
+                    $DataSet->AddPoint((int) ($total_sent / 1024), 'Serie2', $dsc);
                 }
                 break;
         }
         $DataSet->AddAllSeries();
         $DataSet->SetAbsciseLabelSerie();
         $DataSet->SetYAxisUnit(' M');
-        $DataSet->SetSerieName($this->formatBytes($received * 1024) . " received", "Serie1");
-        $DataSet->SetSerieName($this->formatBytes($sent * 1024) . " sent", "Serie2");
+        $DataSet->SetSerieName($this->formatBytes($received * 1024) . ' received', 'Serie1');
+        $DataSet->SetSerieName($this->formatBytes($sent * 1024) . ' sent', 'Serie2');
         // Initialise the graph
         $Test = new pChart(650, 250);
-        $Test->setFontProperties(dirname(__FILE__) . "/assets/fonts/tahoma.ttf", 8);
+        $Test->setFontProperties(dirname(__FILE__) . '/assets/fonts/tahoma.ttf', 8);
         $Test->setGraphArea(55, 30, 540, 200);
         $Test->drawScale($DataSet->GetData(), $DataSet->GetDataDescription(), SCALE_NORMAL, 150, 150, 150, true, 90, 0);
         $Test->drawGrid(4, true, 230, 230, 230, 50); //reshotka
@@ -1984,9 +2017,9 @@ class VirtualMachine
         $Test->drawLineGraph($DataSet->GetData(), $DataSet->GetDataDescription());
         $Test->drawPlotGraph($DataSet->GetData(), $DataSet->GetDataDescription(), 3, 2, 255, 255, 255);
         // Finish the graph
-        $Test->setFontProperties(dirname(__FILE__) . "/assets/fonts/tahoma.ttf", 8); // Description
+        $Test->setFontProperties(dirname(__FILE__) . '/assets/fonts/tahoma.ttf', 8); // Description
         $Test->drawLegend(542, 30, $DataSet->GetDataDescription(), 255, 255, 255);
-        $Test->setFontProperties(dirname(__FILE__) . "/assets/fonts/tahoma.ttf", 10);
+        $Test->setFontProperties(dirname(__FILE__) . '/assets/fonts/tahoma.ttf', 10);
         $Test->drawTitle(50, 22, $name, 50, 50, 50, 555);
         $Test->Render($iPath . $iName);
     }
@@ -2066,8 +2099,8 @@ class VirtualMachine
             }
         }
         $cu = $this->getCPUUsage();
-        $name = "CPU Usage";
-        $DataSet = new pData;
+        $name = 'CPU Usage';
+        $DataSet = new pData();
         //            foreach ($nu as $data) {
         switch ($period) {
             default:
@@ -2107,21 +2140,21 @@ class VirtualMachine
             if ($period == 'monthly') {
                 $dsc = date('d M', strtotime($data->created_at));
             }
-            $DataSet->AddPoint((($data->cpu_time / $data->elapsed_time) * 10), "Serie1", $dsc);
+            $DataSet->AddPoint((($data->cpu_time / $data->elapsed_time) * 10), 'Serie1', $dsc);
         }
         $DataSet->AddAllSeries();
         $DataSet->SetAbsciseLabelSerie();
         $DataSet->SetYAxisUnit(' %');
-        $DataSet->SetSerieName($this->formatBytes($received * 1024) . " received", "Serie1");
+        $DataSet->SetSerieName($this->formatBytes($received * 1024) . ' received', 'Serie1');
         // Initialise the graph
         $Test = new pChart(650, 280);
-        $Test->setFontProperties(dirname(__FILE__) . "/assets/fonts/tahoma.ttf", 8);
+        $Test->setFontProperties(dirname(__FILE__) . '/assets/fonts/tahoma.ttf', 8);
         $Test->setGraphArea(40, 30, 640, 200, true);
         $Test->drawScale($DataSet->GetData(), $DataSet->GetDataDescription(), SCALE_NORMAL, 150, 150, 150, true, 90, 0, false, $SkipLabels);
         // Draw the line graph
         $Test->drawLineGraph($DataSet->GetData(), $DataSet->GetDataDescription());
         // Finish the graph
-        $Test->setFontProperties(dirname(__FILE__) . "/assets/fonts/tahoma.ttf", 10);
+        $Test->setFontProperties(dirname(__FILE__) . '/assets/fonts/tahoma.ttf', 10);
         $Test->drawTitle(50, 22, $name, 50, 50, 50, 585);
         $Test->Render(dirname(__FILE__) . '/charts/' . $iName);
     }
@@ -2132,13 +2165,15 @@ class VirtualMachine
      */
     public function showCPUGraph($period)
     {
-        if (!in_array($period, [
+        if (
+            !in_array($period, [
             'hourly',
             'daily',
             'weekly',
             'monthly'
-        ])) {
-            trigger_error("To call VirtualMachine::getCPUGraph() you must specify a period of hourly, daily, weekly or monthly", E_USER_ERROR);
+            ])
+        ) {
+            trigger_error('To call VirtualMachine::getCPUGraph() you must specify a period of hourly, daily, weekly or monthly', E_USER_ERROR);
 
             return false;
         }
@@ -2203,11 +2238,7 @@ class VirtualMachine
         $api = VPSNET::getInstance();
         $api->setAPIResource('virtual_machines/' . $this->id . '/console');
         $result = $api->sendGETRequest();
-        if (is_object($result['response'])) {
-            return $result['response']->session;
-        } else {
-            return false;
-        }
+        return is_object($result['response']) ? $result['response']->session : false;
     }
 
     /**
@@ -2263,7 +2294,7 @@ class VirtualMachine
             $this->backups = [];
             $response = $result['response'];
             for ($x = 0; $x < count($response); $x++) {
-                $this->backups[$x] = $api->_castObjectToClass('Backup', $response[$x]);
+                $this->backups[$x] = $api->_castObjectToClass('VPSNETBackup', $response[$x]);
             }
         }
 
@@ -2305,8 +2336,8 @@ class VirtualMachine
             $tinfo = $api->getTemplateInfo($this->cloud_id, $this->system_template_id);
             $this->system_template_name = $tinfo->label;
         }
-        $this->rsync_backups_enabled = ($this->backup_licenses && property_exists($this->backup_licenses, "rsync_license") && $this->backup_licenses->rsync_license ? true : false);
-        $this->r1_soft_backups_enabled = ($this->backup_licenses && property_exists($this->backup_licenses, "r1soft_license") && $this->backup_licenses->r1soft_license ? true : false);
+        $this->rsync_backups_enabled = ($this->backup_licenses && property_exists($this->backup_licenses, 'rsync_license') && $this->backup_licenses->rsync_license ? true : false);
+        $this->r1_soft_backups_enabled = ($this->backup_licenses && property_exists($this->backup_licenses, 'r1soft_license') && $this->backup_licenses->r1soft_license ? true : false);
         $this->any_backup_enabled = $this->backups_enabled || $this->rsync_backups_enabled || $this->r1_soft_backups_enabled;
 
         return $this;
@@ -2351,10 +2382,10 @@ class VirtualMachine
             foreach ($result['errors']->errors as $error) {
                 $errors[] = "{$error[0]}: {$error[1]}, ";
             }
-            $errors = implode(", ", $errors);
+            $errors = implode(', ', $errors);
             throw new Exception($errors);
         }
-        throw new Exception("Unknown error");
+        throw new Exception('Unknown error');
     }
 
     /**
@@ -2393,7 +2424,7 @@ class VirtualMachine
             }
         }
         if ($this->id < 1) {
-            trigger_error("To call VirtualMachine::remove() you must set its id", E_USER_ERROR);
+            trigger_error('To call VirtualMachine::remove() you must set its id', E_USER_ERROR);
 
             return false;
         }
@@ -2414,7 +2445,7 @@ class VirtualMachine
     public function recover()
     {
         if ($this->id < 1) {
-            trigger_error("To call VirtualMachine::restore() you must set its id", E_USER_ERROR);
+            trigger_error('To call VirtualMachine::restore() you must set its id', E_USER_ERROR);
 
             return false;
         }
@@ -2554,13 +2585,13 @@ class VirtualMachine
         $terabyte = $gigabyte * 1024;
         if (($bytes >= 0) && ($bytes < $kilobyte)) {
             return $bytes . ' B';
-        } else if (($bytes >= $kilobyte) && ($bytes < $megabyte)) {
+        } elseif (($bytes >= $kilobyte) && ($bytes < $megabyte)) {
             return round($bytes / $kilobyte, $precision) . ' KB';
-        } else if (($bytes >= $megabyte) && ($bytes < $gigabyte)) {
+        } elseif (($bytes >= $megabyte) && ($bytes < $gigabyte)) {
             return round($bytes / $megabyte, $precision) . ' MB';
-        } else if (($bytes >= $gigabyte) && ($bytes < $terabyte)) {
+        } elseif (($bytes >= $gigabyte) && ($bytes < $terabyte)) {
             return round($bytes / $gigabyte, $precision) . ' GB';
-        } else if ($bytes >= $terabyte) {
+        } elseif ($bytes >= $terabyte) {
             return round($bytes / $gigabyte, $precision) . ' TB';
         } else {
             return $bytes . ' B';

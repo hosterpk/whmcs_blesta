@@ -80,7 +80,7 @@ class free_cuinfo_response extends baseresponse
     public $Issuer;
 }
 
-class health_validate_response
+class health_validate_response extends baseresponse
 {
     public $Status;
 }

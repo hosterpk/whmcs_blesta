@@ -1,5 +1,5 @@
 {
-    "version": "1.0.3",
+    "version": "2.0.0",
     "name": "VirtfusionDirectProvisioning.name",
     "description": "VirtfusionDirectProvisioning.description",
     "authors": [
@@ -21,8 +21,23 @@
         "name_key": "hypervisor_group_id"
     },
     "email_tags": {
-        "module": ["name","hostname"],
-        "package": ["hypervisor_group_id","default_ipv4","package_id"],
-        "service": ["virtfusion_server_id", "virtfusion_hostname", "virtfusion_password", "virtfusion_ip", "virtfusion-base_ips", "virtfusion_ipv6_cidr"]
-    }
+        "module": [
+            "name",
+            "hostname"
+        ],
+        "package": [
+            "hypervisor_group_id",
+            "default_ipv4",
+            "package_id"
+        ],
+        "service": [
+            "virtfusion_server_id",
+            "virtfusion_hostname",
+            "virtfusion_password",
+            "virtfusion_ip",
+            "virtfusion-base_ips",
+            "virtfusion_ipv6_cidr"
+        ]
+    },
+    "icon": "bi-cloud"
 }

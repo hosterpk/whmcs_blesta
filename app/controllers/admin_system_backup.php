@@ -18,14 +18,8 @@ class AdminSystemBackup extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'Settings', 'Backup']);
+        $this->uses(['Settings', 'Backup']);
         $this->components(['SettingsCollection', 'Security']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-        );
     }
 
     /**

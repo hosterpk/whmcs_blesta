@@ -135,10 +135,13 @@ class DownloadManagerUrls extends DownloadManagerModel
             ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
             ->fetchAll();
 
+        $file_routes = $this->getFileRoutes($company_id);
+        $category_routes = $this->getCategoryRoutes($company_id);
+
         foreach ($urls as &$url) {
             $url->full_path = !empty($url->file_id)
-                ? $this->getFileRoutes($company_id)[$url->file_id]
-                : $this->getCategoryRoutes($company_id)[$url->category_id];
+                ? ($file_routes[$url->file_id] ?? '')
+                : ($category_routes[$url->category_id] ?? '');
         }
 
         return $urls;

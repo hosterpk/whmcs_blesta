@@ -1,7 +1,19 @@
 <?php
 
-use Blesta\Pricing\PricingFactory;
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Pricing\Collection\ItemPriceCollection;
+use Blesta\Pricing\PricingFactory;
+use Configure;
+use DateTime;
+use Exception;
+use Language;
+use Loader;
+use PDOException;
+use Record;
+use stdClass;
+use Throwable;
 
 /**
  * Invoice management
@@ -56,7 +68,12 @@ class Invoices extends AppModel
     public function add(array $vars)
     {
         // Trigger the Invoices.addBefore event
-        extract($this->executeAndParseEvent('Invoices.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Invoices.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Fetch client settings on invoices
         Loader::loadComponents($this, ['SettingsCollection']);
@@ -186,7 +203,8 @@ class Invoices extends AppModel
                 ) {
                     for ($j = 0; $j < $num_taxes; $j++) {
                         // Skip all but inclusive_calculated for tax exempt users
-                        if (($client_settings['tax_exempt'] ?? 'false') == 'true'
+                        if (
+                            ($client_settings['tax_exempt'] ?? 'false') == 'true'
                             && ($tax_rules[$j]->type != 'inclusive_calculated')
                         ) {
                             continue;
@@ -459,7 +477,12 @@ class Invoices extends AppModel
     public function edit($invoice_id, array $vars)
     {
         // Trigger the Invoices.editBefore event
-        extract($this->executeAndParseEvent('Invoices.editBefore', ['invoice_id' => $invoice_id, 'vars' => $vars]));
+        $event = $this->executeAndParseEvent('Invoices.editBefore', ['invoice_id' => $invoice_id, 'vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!isset($this->Companies)) {
             Loader::loadModels($this, ['Clients']);
@@ -509,8 +532,8 @@ class Invoices extends AppModel
         if (isset($vars['lines']) && (array_values($vars['lines']) === $vars['lines'])) {
             foreach ($vars['lines'] as $i => &$line) {
                 if (isset($line['id']) && !empty($line['id'])) {
-                    $amount = trim(isset($line['amount']) ? $line['amount'] : '');
-                    $description = trim(isset($line['description']) ? $line['description'] : '');
+                    $amount = trim($line['amount'] ?? '');
+                    $description = trim($line['description'] ?? '');
 
                     // Set this item to be deleted, and remove it from validation check
                     // if amount and description are both empty
@@ -542,7 +565,8 @@ class Invoices extends AppModel
         ];
 
         // Invoice lines, currency, and status cannot be edited if payment has been made
-        if ((isset($vars['lines']) && $this->lineItemsChanged($invoice->id, $vars))
+        if (
+            (isset($vars['lines']) && $this->lineItemsChanged($invoice->id, $vars))
             || (isset($vars['currency']) && $vars['currency'] != $invoice->currency)
             || (isset($vars['status']) && $vars['status'] != $invoice->status)
         ) {
@@ -590,7 +614,8 @@ class Invoices extends AppModel
         $update_statuses = ['draft', 'proforma'];
         // If the invoice wasn't already a draft or proforma or we're not moving from a draft or proforma
         // then we can't update the id_format or id_value
-        if (!in_array($invoice->status, $update_statuses)
+        if (
+            !in_array($invoice->status, $update_statuses)
             || ($invoice->status == $vars['status'])
             || $vars['status'] == 'void'
         ) {
@@ -632,7 +657,8 @@ class Invoices extends AppModel
             $this->Record->from('invoice_delivery')->where('invoice_id', '=', $invoice_id)->
                 where('date_sent', '=', null)->delete();
 
-            if (!empty($vars['delivery'])
+            if (
+                !empty($vars['delivery'])
                 && is_array($vars['delivery'])
                 && ($num_methods = count($vars['delivery'])) > 0
             ) {
@@ -802,7 +828,8 @@ class Invoices extends AppModel
             }
 
             // The line item has changed if any property of it has changed
-            if ($temp_line_items[$new_line_item['id']]['qty'] != $new_line_item['qty']
+            if (
+                $temp_line_items[$new_line_item['id']]['qty'] != $new_line_item['qty']
                 || $temp_line_items[$new_line_item['id']]['amount'] != $new_line_item['amount']
                 || ((bool)count($temp_line_items[$new_line_item['id']]['taxes_applied']))
                     != ($new_line_item['tax'] == 'true')
@@ -850,8 +877,8 @@ class Invoices extends AppModel
         if (isset($vars['lines']) && (array_values($vars['lines']) === $vars['lines'])) {
             foreach ($vars['lines'] as $i => &$line) {
                 if (isset($line['id']) && !empty($line['id'])) {
-                    $amount = trim(isset($line['amount']) ? $line['amount'] : '');
-                    $description = trim(isset($line['description']) ? $line['description'] : '');
+                    $amount = trim($line['amount'] ?? '');
+                    $description = trim($line['description'] ?? '');
 
                     // Set this item to be deleted, and remove it from validation check
                     // if amount and description are both empty
@@ -894,7 +921,8 @@ class Invoices extends AppModel
                 }
 
                 // Add or update a line item
-                if (isset($line['id'])
+                if (
+                    isset($line['id'])
                     && !empty($line['id'])
                     && $this->validateExists($line['id'], 'id', 'invoice_recur_lines', false)
                 ) {
@@ -913,7 +941,8 @@ class Invoices extends AppModel
             // Delete existing invoice delivery methods and insert new
             $this->Record->from('invoice_recur_delivery')->where('invoice_recur_id', '=', $invoice_recur_id)->delete();
 
-            if (!empty($vars['delivery'])
+            if (
+                !empty($vars['delivery'])
                 && is_array($vars['delivery'])
                 && ($num_methods = count($vars['delivery'])) > 0
             ) {
@@ -940,7 +969,7 @@ class Invoices extends AppModel
      * @param array $client_settings A list of client settings belonging to this invoice's client (optional)
      * @return bool True if any invoices were created from this recurring invoice, false otherwise
      */
-    public function addFromRecurring($invoice_recur_id, array $client_settings = null)
+    public function addFromRecurring($invoice_recur_id, ?array $client_settings = null)
     {
         $invoice = $this->getRecurring($invoice_recur_id);
         $created_invoice = false;
@@ -984,7 +1013,8 @@ class Invoices extends AppModel
             }
 
             // Renew the invoice, possibly many times if it needs to be caught up
-            while (($invoice->duration == null || $invoice->count < $invoice->duration)
+            while (
+                ($invoice->duration == null || $invoice->count < $invoice->duration)
                 && $invoice_day_timestamp <= $today_timestamp
             ) {
                 // Convert line items to arrays
@@ -1322,13 +1352,10 @@ class Invoices extends AppModel
 
             // Set the delivery method for the client
             $delivery_method = $this->Clients->getSetting($client_id, 'inv_method');
-            if (isset($delivery_method->value)
+            $delivery_method =
+            isset($delivery_method->value)
                 && array_key_exists($delivery_method->value, (array) $this->getDeliveryMethods($client_id))
-            ) {
-                $delivery_method = $delivery_method->value;
-            } else {
-                $delivery_method = 'email';
-            }
+             ? $delivery_method->value : 'email';
 
             // Merge invoices
             if (is_null($invoice_id)) {
@@ -1393,27 +1420,6 @@ class Invoices extends AppModel
             foreach ($new_service_invoices as $service_invoice) {
                 $service_invoice->invoice_id = $invoice_id;
                 $this->Record->insert('service_invoices', (array) $service_invoice);
-            }
-
-            // Update service changes
-            $new_service_changes = [];
-            $service_changes = $this->Record->select()->from('service_changes')
-                ->where('invoice_id', 'in', $invoice_ids)
-                ->where('status', '=', 'pending')
-                ->fetchAll();
-
-            foreach ($service_changes as $service_change) {
-                $new_service_changes[$service_change->service_id] = $service_change;
-            }
-            unset($service_change);
-
-            $this->Record->from('service_changes')
-                ->where('invoice_id', 'in', $invoice_ids)
-                ->delete();
-
-            foreach ($new_service_changes as $service_change) {
-                $service_change->invoice_id = $invoice_id;
-                $this->Record->insert('service_changes', (array) $service_change);
             }
 
             // Void invoices
@@ -1594,9 +1600,18 @@ class Invoices extends AppModel
             $old_invoice['lines'] = $old_invoice['line_items'];
 
             unset(
-                $old_invoice['id'], $old_invoice['id_format'], $old_invoice['id_value'], $old_invoice['id_code'],
-                $old_invoice['subtotal'], $old_invoice['total'], $old_invoice['paid'], $old_invoice['previous_due'],
-                $old_invoice['due'], $old_invoice['tax_total'], $old_invoice['tax_subtotal'], $old_invoice['delivery']
+                $old_invoice['id'],
+                $old_invoice['id_format'],
+                $old_invoice['id_value'],
+                $old_invoice['id_code'],
+                $old_invoice['subtotal'],
+                $old_invoice['total'],
+                $old_invoice['paid'],
+                $old_invoice['previous_due'],
+                $old_invoice['due'],
+                $old_invoice['tax_total'],
+                $old_invoice['tax_subtotal'],
+                $old_invoice['delivery']
             );
             $this->edit($invoice->id, $old_invoice);
 
@@ -1635,7 +1650,7 @@ class Invoices extends AppModel
         $term_cycles = 1
     ) {
         // Trigger the Invoices.createFromServicesBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'Invoices.createFromServicesBefore',
             [
                 'client_id' => $client_id,
@@ -1645,7 +1660,12 @@ class Invoices extends AppModel
                 'allow_pro_rata' => $allow_pro_rata,
                 'services_renew' => $services_renew
             ]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!isset($this->Coupons)) {
             Loader::loadModels($this, ['Coupons']);
@@ -1671,13 +1691,10 @@ class Invoices extends AppModel
 
         // Set the delivery method for the client
         $delivery_method = $this->Clients->getSetting($client_id, 'inv_method');
-        if (isset($delivery_method->value)
+        $delivery_method =
+        isset($delivery_method->value)
             && array_key_exists($delivery_method->value, (array)$this->getDeliveryMethods($client_id))
-        ) {
-            $delivery_method = $delivery_method->value;
-        } else {
-            $delivery_method = 'email';
-        }
+         ? $delivery_method->value : 'email';
 
         // Set the current price as the override price, only if the services are being invoiced for the first time
         if (!$services_renew) {
@@ -2007,7 +2024,8 @@ class Invoices extends AppModel
                 $line_item_id = $this->addLine($invoice_id, $line);
 
                 // Add line item taxes, if set to taxable IFF tax is enabled
-                if (isset($client_settings['enable_tax'])
+                if (
+                    isset($client_settings['enable_tax'])
                     && $client_settings['enable_tax'] == 'true'
                     && isset($line['tax'])
                     && $line['tax']
@@ -2138,7 +2156,8 @@ class Invoices extends AppModel
                 )
             );
 
-            if ($allow_pro_rata
+            if (
+                $allow_pro_rata
                 && ($client = $this->Clients->get($service->client_id))
                 && ($client_group = $this->ClientGroups->get($client->client_group_id))
                 && ($parent_service = $this->Services->get($service->parent_service_id))
@@ -2322,7 +2341,12 @@ class Invoices extends AppModel
     public function setClosed($invoice_id)
     {
         // Trigger the Invoices.setClosedBefore event
-        extract($this->executeAndParseEvent('Invoices.setClosedBefore', ['invoice_id' => $invoice_id]));
+        $event = $this->executeAndParseEvent('Invoices.setClosedBefore', ['invoice_id' => $invoice_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Update totals
         $this->updateTotals($invoice_id);
@@ -2559,9 +2583,14 @@ class Invoices extends AppModel
         }
 
         // Trigger the Invoices.get event
-        extract($this->executeAndParseEvent('Invoices.get', [
+        $event = $this->executeAndParseEvent('Invoices.get', [
             'invoice' => $invoice
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $invoice;
     }
@@ -3209,7 +3238,7 @@ class Invoices extends AppModel
             ->where('invoices.id', '=', $query)
             ->orLike(
                 "CONVERT(REPLACE(invoices.id_format, '"
-                . $this->replacement_keys['invoices']['ID_VALUE_TAG']
+                . ($this->replacement_keys['invoices']['ID_VALUE_TAG'] ?? '{num}')
                 . "', invoices.id_value) USING utf8)",
                 '%' . $query . '%',
                 true,
@@ -3217,7 +3246,7 @@ class Invoices extends AppModel
             )
             ->orLike(
                 "REPLACE(clients.id_format, '"
-                . $this->replacement_keys['clients']['ID_VALUE_TAG']
+                . ($this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}')
                 . "', clients.id_value)",
                 '%' . $query . '%',
                 true,
@@ -3400,7 +3429,8 @@ class Invoices extends AppModel
                             'term' => $service->package_pricing->term,
                             'period' => $service->package_pricing->period,
                         ];
-                    } elseif ($recur['term'] == $service->package_pricing->term
+                    } elseif (
+                        $recur['term'] == $service->package_pricing->term
                         && $recur['period'] == $service->package_pricing->period
                     ) {
                         $recur['amount'] += $this->Services->getRenewalPrice($service->id, $invoice->currency);
@@ -3618,7 +3648,7 @@ class Invoices extends AppModel
         // Fetch the invoices along with total due and total paid, calculate total remaining on the fly
         $this->Record->select($fields)
             ->select(['invoices.total-IFNULL(invoices.paid,0)' => 'due'], false)
-            ->appendValues([$this->replacement_keys['invoices']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['invoices']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('invoices')
             ->on('invoice_delivery.date_sent', '!=', null)
             ->leftJoin('invoice_delivery', 'invoice_delivery.invoice_id', '=', 'invoices.id', false)
@@ -3669,7 +3699,20 @@ class Invoices extends AppModel
             $filters['status'] = 'open';
         }
 
-        if ($count) {
+        // Determine whether we can use a simplified count query. The id_code REPLACE
+        // and GROUP BY are only needed when an invoice_number HAVING filter, an
+        // invoice_line join, or an advanced status that adds extra joins is present.
+        // Advanced statuses (autodebit, print, deliver) add joins that can fan out
+        // rows, so they must keep GROUP BY to avoid overcounting.
+        $simple_statuses = ['open', 'closed', 'draft', 'void', 'past_due', 'pending', 'active', 'proforma', 'all'];
+        $simple_count = $count
+            && empty($filters['invoice_number'])
+            && empty($filters['invoice_line'])
+            && in_array($filters['status'], $simple_statuses);
+
+        if ($simple_count) {
+            $fields = ['invoices.*'];
+        } elseif ($count) {
             $fields = ['invoices.*', 'REPLACE(invoices.id_format, ?, invoices.id_value)' => 'id_code'];
         } else {
             $fields = ['invoices.*',
@@ -3689,14 +3732,16 @@ class Invoices extends AppModel
 
         // Fetch the invoices along with total due and total paid, calculate total remaining on the fly
         $this->Record->select($fields);
-        if ($count) {
-            $this->Record->appendValues([$this->replacement_keys['invoices']['ID_VALUE_TAG']]);
+        if ($simple_count) {
+            // No bound values needed — we skipped REPLACE
+        } elseif ($count) {
+            $this->Record->appendValues([$this->replacement_keys['invoices']['ID_VALUE_TAG'] ?? '{num}']);
         } else {
             $this->Record->select(['invoices.total-IFNULL(invoices.paid,0)' => 'due'], false)
                 ->appendValues(
                     [
-                        $this->replacement_keys['invoices']['ID_VALUE_TAG'],
-                        $this->replacement_keys['clients']['ID_VALUE_TAG']
+                        $this->replacement_keys['invoices']['ID_VALUE_TAG'] ?? '{num}',
+                        $this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'
                     ]
                 );
         }
@@ -3778,7 +3823,7 @@ class Invoices extends AppModel
                 $now = $this->dateToUtc(date('c'));
                 $fifteen_minutes_ago = $this->dateToUtc(date('c', strtotime('-15 minutes')));
                 // Set the autodebit date to use
-                $autodebit_date = isset($options['autodebit_date']) ? $options['autodebit_date'] : $now;
+                $autodebit_date = $options['autodebit_date'] ?? $now;
 
                 $record = clone $this->Record;
                 $this->Record->reset();
@@ -3906,7 +3951,13 @@ class Invoices extends AppModel
             $this->Record->where('invoices.client_id', '=', $filters['client_id']);
         }
 
-        if ($filters['status'] !== 'all' && $filters['status'] !== 'to_print' && $filters['status'] !== 'printed') {
+        // Simple counts don't need GROUP BY — no joins that produce duplicate invoice rows
+        if (
+            !$simple_count
+            && $filters['status'] !== 'all'
+            && $filters['status'] !== 'to_print'
+            && $filters['status'] !== 'printed'
+        ) {
             $this->Record->group('invoices.id');
         }
 
@@ -3984,7 +4035,7 @@ class Invoices extends AppModel
         // Filter based on company ID
         $company_id = Configure::get('Blesta.company_id');
 
-        $this->Record->select($fields)->appendValues([0, $this->replacement_keys['clients']['ID_VALUE_TAG']])->
+        $this->Record->select($fields)->appendValues([0, $this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'])->
             from('invoices_recur')->
             leftJoin([$sub_query => 'temp_count'], 'temp_count.invoice_recur_id', '=', 'invoices_recur.id', false)->
             leftJoin('invoice_recur_lines', 'invoices_recur.id', '=', 'invoice_recur_lines.invoice_recur_id', false)->
@@ -4223,7 +4274,8 @@ class Invoices extends AppModel
 
         if ($vars['status'] == 'draft') {
             $inv_format = $client_settings['inv_draft_format'];
-        } elseif ($vars['status'] == 'proforma'
+        } elseif (
+            $vars['status'] == 'proforma'
             || (
                 ($new || (isset($vars['prev_status']) && in_array($vars['prev_status'], ['void', 'draft'])))
                 && $client_settings['inv_type'] == 'proforma'
@@ -4320,9 +4372,10 @@ class Invoices extends AppModel
         $client_settings = $this->SettingsCollection->fetchClientSettings($client_id);
 
         // Check if requeue setting is enabled
-        if (isset($client_settings['requeue_invoice_delivery_on_closed'])
-            && $client_settings['requeue_invoice_delivery_on_closed'] == 'true') {
-
+        if (
+            isset($client_settings['requeue_invoice_delivery_on_closed'])
+            && $client_settings['requeue_invoice_delivery_on_closed'] == 'true'
+        ) {
             // Only requeue for email delivery if client prefers email delivery
             $delivery_methods = $this->getDeliveryMethods($client_id);
 
@@ -4566,8 +4619,8 @@ class Invoices extends AppModel
             ->from('invoice_delivery')
             ->appendValues(
                 [
-                    $this->replacement_keys['invoices']['ID_VALUE_TAG'],
-                    $this->replacement_keys['clients']['ID_VALUE_TAG']
+                    $this->replacement_keys['invoices']['ID_VALUE_TAG'] ?? '{num}',
+                    $this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'
                 ]
             )
             ->innerJoin('invoices', 'invoices.id', '=', 'invoice_delivery.invoice_id', false)
@@ -4648,7 +4701,7 @@ class Invoices extends AppModel
             }
 
             if ($delivery_methods && isset($delivery_methods['value'])) {
-                $delivery_methods = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($delivery_methods['value']));
+                $delivery_methods = safe_unserialize(base64_decode($delivery_methods['value']));
 
                 if (is_array($delivery_methods)) {
                     // array_fill_keys()
@@ -5158,13 +5211,13 @@ class Invoices extends AppModel
 
         // Build a list of all items
         foreach ($items as $key => $item) {
-            $amount = (isset($item['price']) ? $item['price'] : 0);
-            $qty = (isset($item['qty']) ? $item['qty'] : 1);
-            $description = (isset($item['description']) ? $item['description'] : '');
+            $amount = ($item['price'] ?? 0);
+            $qty = ($item['qty'] ?? 1);
+            $description = ($item['description'] ?? '');
 
             try {
                 $item_price = $factory->itemPrice($amount, $qty);
-            } catch (Exception $ex) {
+            } catch (\Throwable $ex) {
                 // Invalid data provided
                 continue;
             }
@@ -5184,7 +5237,7 @@ class Invoices extends AppModel
                 if (empty($tax['apply']) || in_array($key, $tax['apply'])) {
                     try {
                         call_user_func_array([$item_price, 'setTax'], $tax['prices']);
-                    } catch (Exception $ex) {
+                    } catch (\Throwable $ex) {
                         // Taxes could not be included
                         continue;
                     }
@@ -5223,14 +5276,14 @@ class Invoices extends AppModel
             $tax_prices = [];
             $apply = [];
             foreach ($tax_group as $price) {
-                $amount = (isset($price['amount']) ? $price['amount'] : 0);
-                $type = (isset($price['type']) ? $price['type'] : null);
-                $description = (isset($price['description']) ? $price['description'] : '');
+                $amount = ($price['amount'] ?? 0);
+                $type = ($price['type'] ?? null);
+                $description = ($price['description'] ?? '');
 
                 // Create the discount price
                 try {
                     $tax = $factory->taxPrice($amount, $type);
-                } catch (Exception $ex) {
+                } catch (\Throwable $ex) {
                     // Invalid data provided
                     continue;
                 }
@@ -5276,14 +5329,14 @@ class Invoices extends AppModel
         $factory = $this->pricingFactory();
 
         foreach ($discounts as $price) {
-            $amount = (isset($price['amount']) ? $price['amount'] : 0);
-            $type = (isset($price['type']) ? $price['type'] : null);
-            $description = (isset($price['description']) ? $price['description'] : '');
+            $amount = ($price['amount'] ?? 0);
+            $type = ($price['type'] ?? null);
+            $description = ($price['description'] ?? '');
 
             // Create the discount price
             try {
                 $discount = $factory->discountPrice($amount, $type);
-            } catch (Exception $ex) {
+            } catch (\Throwable $ex) {
                 // Invalid data provided
                 continue;
             }
@@ -5413,7 +5466,7 @@ class Invoices extends AppModel
      * @param array $methods A key=>value array of delivery methods (e.g. "email"=>true)
      * @return bool True if at least one delivery method was given, false otherwise
      */
-    public function validateDeliveryMethods(array $methods = null)
+    public function validateDeliveryMethods(?array $methods = null)
     {
         $all_methods = ['email', 'paper', 'interfax', 'postalmethods'];
 
@@ -5510,7 +5563,7 @@ class Invoices extends AppModel
                     'message' => $this->_('Invoices.!error.date_due.format')
                 ],
                 'after_billed' => [
-                    'rule' => [[$this, 'validateDateDueAfterDateBilled'], (isset($vars['date_billed']) ? $vars['date_billed'] : null)],
+                    'rule' => [[$this, 'validateDateDueAfterDateBilled'], ($vars['date_billed'] ?? null)],
                     'message' => $this->_('Invoices.!error.date_due.after_billed'),
                     'post_format' => [[$this, 'dateToUtc']]
                 ]
@@ -5932,15 +5985,19 @@ class Invoices extends AppModel
                     for ($j = 0; $j < $num_lines; $j++) {
                         // Ensure tax status remains unchanged
                         if ($invoice->line_items[$j]->id == $lines[$i]['id']) {
-                            if ((!$lines[$i]['tax'] && !empty($invoice->line_items[$j]->taxes)) ||
-                                ($lines[$i]['tax'] && empty($invoice->line_items[$j]->taxes))) {
+                            if (
+                                (!$lines[$i]['tax'] && !empty($invoice->line_items[$j]->taxes)) ||
+                                ($lines[$i]['tax'] && empty($invoice->line_items[$j]->taxes))
+                            ) {
                                 $tax_change = true;
                                 break 2;
                             }
 
                             // Ensure amount and quantity remain unchanged
-                            if ($lines[$i]['amount'] != $invoice->line_items[$j]->amount ||
-                                $lines[$i]['qty'] != $invoice->line_items[$j]->qty) {
+                            if (
+                                $lines[$i]['amount'] != $invoice->line_items[$j]->amount ||
+                                $lines[$i]['qty'] != $invoice->line_items[$j]->qty
+                            ) {
                                 $tax_change = true;
                                 break 2;
                             }
@@ -6094,7 +6151,8 @@ class Invoices extends AppModel
                     Loader::loadModels($this, ['Contacts', 'Countries']);
 
                     // Fetch the contact to which invoices should be addressed
-                    if (!($billing = $this->Contacts->get((int)$data->client->settings['inv_address_to']))
+                    if (
+                        !($billing = $this->Contacts->get((int)$data->client->settings['inv_address_to']))
                         || $billing->client_id != $data->client_id
                     ) {
                         $billing = $this->Contacts->get($data->client->contact_id);

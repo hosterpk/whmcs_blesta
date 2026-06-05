@@ -18,17 +18,11 @@ class AdminSystemAutomation extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Logs', 'Navigation', 'Settings']);
+        $this->uses(['Logs', 'Settings']);
         $this->components(['SettingsCollection']);
         $this->helpers(['DataStructure']);
 
         $this->ArrayHelper = $this->DataStructure->create('Array');
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-        );
     }
 
     /**

@@ -271,7 +271,7 @@ class Gocardless extends NonmerchantGateway
                             'interval' => (isset($options['recur']['term']) ? $options['recur']['term'] : null),
                             'metadata' => [
                                 'invoices' => (isset($invoices) ? $invoices : null),
-                                'client_id' => (isset($contact_info['client_id']) ? $contact_info['client_id'] : null)
+                                'client_id' => (isset($contact_info['client_id']) ? (string)$contact_info['client_id'] : null)
                             ],
                             'links' => [
                                 'mandate' => isset($redirect_flow->api_response->body->redirect_flows->links->mandate)
@@ -313,7 +313,7 @@ class Gocardless extends NonmerchantGateway
                             'currency' => (isset($this->currency) ? $this->currency : null),
                             'metadata' => [
                                 'invoices' => (isset($invoices) ? $invoices : null),
-                                'client_id' => (isset($contact_info['client_id']) ? $contact_info['client_id'] : null)
+                                'client_id' => (isset($contact_info['client_id']) ? (string)$contact_info['client_id'] : null)
                             ],
                             'links' => [
                                 'mandate' => (isset($redirect_flow->api_response->body->redirect_flows->links->mandate)

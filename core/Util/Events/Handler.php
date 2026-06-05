@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events;
 
 use Blesta\Core\Util\Events\Common\EventInterface;
@@ -21,6 +22,5 @@ class Handler implements Observable
      */
     public function update(EventInterface $event)
     {
-
     }
 }

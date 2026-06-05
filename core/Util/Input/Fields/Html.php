@@ -1,10 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Input\Fields;
 
 use Blesta\Core\Util\Input\Fields\InputFields;
 use Blesta\Core\Util\Input\Fields\InputField;
-use \Loader;
-use \View;
+use Loader;
+use View;
 
 /**
  * Input Field Html
@@ -30,7 +31,7 @@ class Html
      */
     private $fields;
 
-    public function __construct(InputFields $fields = null)
+    public function __construct(?InputFields $fields = null)
     {
         if ($fields === null) {
             $this->fields = new InputFields();

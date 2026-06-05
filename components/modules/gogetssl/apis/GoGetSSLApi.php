@@ -28,6 +28,16 @@ class GoGetSSLApi
     protected $lastResponse;
 
     /**
+     * @var string
+     */
+    protected $URL;
+
+    /**
+     * @var mixed
+     */
+    protected $logger;
+
+    /**
      * GoGetSSLApi constructor.
      *
      * @param false $sandbox

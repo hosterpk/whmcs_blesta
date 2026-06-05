@@ -1,0 +1,80 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyGateways.manage.boxtitle_manage', true, (isset($gateway_info->name) ? $gateway_info->name : null)), ['id' => 'admin_company_gateways_manage']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <!-- Gateway Settings -->
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyGateways.manage.heading_gateway');?></h6>
+            <div class="mb-4">
+                <?php echo (isset($content) ? $content : null); ?>
+            </div>
+
+            <!-- Supported Currencies -->
+            <?php if ((isset($gateway_currencies) ? $gateway_currencies : false)) { ?>
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminCompanyGateways.manage.heading_currencies');?></h6>
+
+            <?php if ((isset($gateway_info->type) ? $gateway_info->type : null) == 'merchant') { ?>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <?php $this->_('AdminCompanyGateways.manage.text_set_defaults', false, '<a href="' . $this->Html->safe($this->base_uri . 'settings/company/gateways/installed/') . '">', '</a>'); ?>
+            </div>
+            <?php } ?>
+
+            <div class="mb-3">
+                <?php
+                foreach ($gateway_currencies as $gateway_currency) {
+                    $disabled = [];
+                    if ($gateway_currency->disabled) {
+                        $disabled = ['disabled' => 'disabled'];
+                    }
+                ?>
+                <div class="mb-2 form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'currencies[]',
+                        (isset($gateway_currency->code) ? $gateway_currency->code : null),
+                        in_array($gateway_currency->code, (isset($vars['currencies']) ? $vars['currencies'] : [])),
+                        array_merge(['id' => (isset($gateway_currency->code) ? $gateway_currency->code : null), 'class' => 'form-check-input'], $disabled)
+                    );
+                    ?>
+                    <label for="<?php (print (isset($gateway_currency->code) ? $this->Html->safe($gateway_currency->code) : null));?>" class="form-check-label">
+                        <?php (print (isset($gateway_currency->code) ? $this->Html->safe($gateway_currency->code) : null)); ?>
+
+                        <?php if (!$gateway_currency->available) { ?>
+                        - <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/currencies/add/' . (isset($gateway_currency->code) ? $gateway_currency->code : null));?>">
+                            <?php $this->_('AdminCompanyGateways.manage.text_addcurrency'); ?>
+                        </a>
+                        <?php } elseif ($gateway_currency->in_use_by) { ?>
+                        - <?php $this->_('AdminCompanyGateways.manage.text_in_use_by'); ?>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/gateways/manage/' . (isset($gateway_currency->in_use_by->id) ? $gateway_currency->in_use_by->id : null) . '/'); ?>">
+                            <?php (print (isset($gateway_currency->in_use_by->name) ? $this->Html->safe($gateway_currency->in_use_by->name) : null)); ?>
+                        </a>
+                        <?php } ?>
+                    </label>
+                </div>
+                <?php } ?>
+            </div>
+            <?php } ?>
+
+        </div>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit(
+                'save',
+                $this->_('AdminCompanyGateways.manage.update_settings', true),
+                ['class' => 'btn btn-primary']
+            );
+            ?>
+        </div>
+        <?php $this->Form->end(); ?>
+<?php
+$this->Widget->end();
+?>
+</div>

@@ -1,5 +1,5 @@
 {
-    "version": "1.4.2",
+    "version": "2.0.0",
     "name": "Ispmanager.name",
     "description": "Ispmanager.description",
     "authors": [
@@ -21,8 +21,18 @@
         "group": "Ispmanager.module_group"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers"],
-        "package": ["package"],
-        "service": ["ispmanager_domain", "ispmanager_username", "ispmanager_password"]
-    }
+        "module": [
+            "host_name",
+            "name_servers"
+        ],
+        "package": [
+            "package"
+        ],
+        "service": [
+            "ispmanager_domain",
+            "ispmanager_username",
+            "ispmanager_password"
+        ]
+    },
+    "icon": "bi-server"
 }

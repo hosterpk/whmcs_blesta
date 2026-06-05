@@ -1,0 +1,91 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "dir",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "version",
+            "type": "varchar(16)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 16
+        },
+        {
+            "name": "enabled",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "company_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "company_id",
+                "enabled",
+                "dir"
+            ]
+        },
+        {
+            "name": "dir",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "dir",
+                "company_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

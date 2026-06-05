@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Affiliate Parent Controller
  *
@@ -33,7 +34,7 @@ class OrderAffiliateController extends OrderController
         // Validate if the affiliate is enabled
         if (
             $this->portal == 'client'
-            && ($affiliate = $this->OrderAffiliates->getByClientId(isset($this->client->id) ? $this->client->id : null))
+            && ($affiliate = $this->OrderAffiliates->getByClientId($this->client->id ?? null))
             && $affiliate->status !== 'active'
             && $this->controller !== 'affiliates'
             && empty($this->action)
@@ -41,12 +42,10 @@ class OrderAffiliateController extends OrderController
             $this->redirect($this->base_uri . 'order/affiliates/');
         }
 
-        // Set the left nav for all settings pages to affiliate_leftnav
+        // Set the sidebar for all admin affiliate pages
         if ($this->portal == 'admin') {
-            $this->set(
-                'left_nav',
-                $this->getLeftNav()
-            );
+            Language::loadLang('admin_affiliates', null, PLUGINDIR . 'order' . DS . 'language' . DS);
+            $this->structure->set('side_bar', ['partials/admin_affiliates_sidebar', $this->view]);
         }
     }
 
@@ -68,15 +67,15 @@ class OrderAffiliateController extends OrderController
 
         // Get the total amount available from mature referrals
         $total_available = $this->OrderAffiliateSettings->getSetting($affiliate_id, 'total_available');
-        $total_available = isset($total_available->value) ? $total_available->value : 0;
+        $total_available = $total_available->value ?? 0;
 
         // Get the total amount already paid out
         $total_withdrawn = $this->OrderAffiliateSettings->getSetting($affiliate_id, 'total_withdrawn');
-        $total_withdrawn = isset($total_withdrawn->value) ? $total_withdrawn->value : 0;
+        $total_withdrawn = $total_withdrawn->value ?? 0;
 
         // Calculate total amount
         $withdrawal_currency = $this->OrderAffiliateSettings->getSetting($affiliate_id, 'withdrawal_currency');
-        $withdrawal_currency = isset($withdrawal_currency->value) ? $withdrawal_currency->value : 0;
+        $withdrawal_currency = $withdrawal_currency->value ?? 0;
 
         $total = $this->Currencies->convert(
             ($total_available - $total_withdrawn),
@@ -140,15 +139,4 @@ class OrderAffiliateController extends OrderController
         return $this->partial('affiliate_tabs', ['current_tab' => $this->controller]);
     }
 
-    /**
-     * Get the affiliate left navigation bar
-     *
-     * @return string The partial view of the affiliate left navigation bar
-     */
-    protected function getLeftNav()
-    {
-        Language::loadLang('admin_affiliates', null, PLUGINDIR . 'order' . DS . 'language' . DS);
-
-        return $this->partial('admin_affiliate_leftnav', ['current_tab' => $this->controller]);
-    }
 }

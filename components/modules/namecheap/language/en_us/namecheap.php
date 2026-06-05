@@ -5,6 +5,8 @@ $lang['Namecheap.description'] = 'Namecheap, Inc. is an ICANN-accredited domain 
 $lang['Namecheap.module_row'] = 'Account';
 $lang['Namecheap.module_row_plural'] = 'Accounts';
 
+$lang['Namecheap.back_to_manage'] = 'Back';
+
 // Errors
 $lang['Namecheap.!error.currency.not_exists'] = 'The reseller currency does not exists in this company.';
 

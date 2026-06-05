@@ -1,0 +1,22 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanySettings.plugins.boxtitle_plugins', true), ['id' => 'admin_company_plugins']);
+    ?>
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+    <!-- Placeholder for future plugin settings -->
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        echo $this->Form->fieldSubmit('save', $this->_('AdminCompanySettings.plugins.field_pluginssubmit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+    <?php $this->Form->end();?>
+    <?php $this->Widget->end();?>
+</div>

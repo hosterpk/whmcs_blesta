@@ -1,0 +1,213 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="mb-3">
+    <label for="unique_contact_emails" class="form-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_unique_contact_emails');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.unique_contact_emails', true));?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldSelect(
+        'unique_contact_emails',
+        (isset($unique_email_options) ? $unique_email_options : null),
+        (isset($vars['unique_contact_emails']) ? $vars['unique_contact_emails'] : null),
+        ['id' => 'unique_contact_emails', 'class' => 'form-select']
+    );
+    ?>
+</div>
+
+<div class="form-check mb-2">
+    <?php
+    $this->Form->fieldCheckbox(
+        'force_email_usernames',
+        'true',
+        ((isset($vars['force_email_usernames']) ? $vars['force_email_usernames'] : 'false') == 'true'),
+        ['id' => 'force_email_usernames', 'class' => 'form-check-input']
+    );
+    ?>
+    <label for="force_email_usernames" class="form-check-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_force_email_usernames');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.force_email_usernames', true));?>"></i>
+    </label>
+</div>
+
+<div class="form-check mb-2">
+    <?php
+    $this->Form->fieldCheckbox(
+        'email_verification',
+        'true',
+        ((isset($vars['email_verification']) ? $vars['email_verification'] : 'false') == 'true'),
+        ['id' => 'email_verification', 'class' => 'form-check-input']
+    );
+    ?>
+    <label for="email_verification" class="form-check-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_email_verification');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.email_verification', true));?>"></i>
+    </label>
+</div>
+
+<div class="form-check mb-3">
+    <?php
+    $this->Form->fieldCheckbox(
+        'prevent_unverified_payments',
+        'true',
+        ((isset($vars['prevent_unverified_payments']) ? $vars['prevent_unverified_payments'] : 'false') == 'true'),
+        ['id' => 'prevent_unverified_payments', 'class' => 'form-check-input']
+    );
+    ?>
+    <label for="prevent_unverified_payments" class="form-check-label">
+        <?php $this->_('AdminCompanyClientoptions.general.prevent_unverified_payments');?>
+    </label>
+</div>
+
+<div class="mb-3">
+    <label for="clients_format" class="form-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_clients_format');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.clients_format', true));?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText(
+        'clients_format',
+        (isset($vars['clients_format']) ? $vars['clients_format'] : null),
+        ['id' => 'clients_format', 'class' => 'form-control']
+    );
+    ?>
+</div>
+
+<?php
+if (!(isset($client_group) ? $client_group : false)) {
+?>
+<div class="mb-3">
+    <label for="clients_start" class="form-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_clients_start');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.clients_start', true));?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText(
+        'clients_start',
+        (isset($vars['clients_start']) ? $vars['clients_start'] : null),
+        ['id' => 'clients_start', 'type' => 'number', 'class' => 'form-control']
+    );
+    ?>
+</div>
+
+<div class="mb-3">
+    <label for="password_format" class="form-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_password_format');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.password_format', true));?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldSelect(
+        'password_format',
+        (isset($password_formats) ? $password_formats : null),
+        (isset($vars['password_format']) ? $vars['password_format'] : 'any'),
+        ['id' => 'password_format', 'class' => 'form-select']
+    );
+    ?>
+</div>
+
+<div class="mb-3" id="password_rule">
+    <label for="password_rule" class="form-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_password_rule');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.password_rule', true));?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText(
+        'password_rule',
+        (isset($vars['password_rule']) ? $vars['password_rule'] : ''),
+        ['id' => 'password_rule', 'class' => 'form-control', 'placeholder' => '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/']
+    );
+    ?>
+</div>
+
+<div class="mb-3" id="password_length">
+    <label for="password_length" class="form-label">
+        <?php $this->_('AdminCompanyClientoptions.general.field_password_length');?>
+        <i class="bi bi-info-circle ms-1"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.password_length', true));?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText(
+        'password_length',
+        (isset($vars['password_length']) ? $vars['password_length'] : 6),
+        ['id' => 'password_length', 'type' => 'number', 'class' => 'form-control']
+    );
+    ?>
+</div>
+<?php
+}
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    const emailVerificationCheckbox = document.getElementById('email_verification');
+    const preventUnverifiedPaymentsCheckbox = document.getElementById('prevent_unverified_payments');
+    const passwordFormatSelect = document.getElementById('password_format');
+    const passwordRuleField = document.getElementById('password_rule');
+    const passwordLengthField = document.getElementById('password_length');
+
+    // Initialize prevent_unverified_payments state
+    if (emailVerificationCheckbox && preventUnverifiedPaymentsCheckbox) {
+        if (emailVerificationCheckbox.checked) {
+            preventUnverifiedPaymentsCheckbox.disabled = false;
+        } else {
+            preventUnverifiedPaymentsCheckbox.disabled = true;
+        }
+
+        // Handle email verification checkbox change
+        emailVerificationCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                preventUnverifiedPaymentsCheckbox.disabled = false;
+            } else {
+                preventUnverifiedPaymentsCheckbox.disabled = true;
+            }
+        });
+    }
+
+    // Initialize password field visibility
+    if (passwordFormatSelect && passwordRuleField && passwordLengthField) {
+        function updatePasswordFields() {
+            if (passwordFormatSelect.value === 'custom') {
+                passwordRuleField.style.display = 'block';
+                passwordLengthField.style.display = 'none';
+            } else {
+                passwordRuleField.style.display = 'none';
+                passwordLengthField.style.display = 'block';
+            }
+        }
+
+        // Initialize on page load
+        updatePasswordFields();
+
+        // Update when password format changes
+        passwordFormatSelect.addEventListener('change', updatePasswordFields);
+    }
+
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs Domain Host Management
  *
@@ -31,7 +32,7 @@ class InternetbsDomainHost
      *  - IP_List List of IP addresses separated by comma for the host.
      * @return InternetbsResponse The response object
      */
-    public function create(array $vars) : InternetbsResponse
+    public function create(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Host/Create', $vars, 'POST');
     }
@@ -43,7 +44,7 @@ class InternetbsDomainHost
      *  - Host The host for which you want to retrieve information.
      * @return InternetbsResponse The response object
      */
-    public function info(array $vars) : InternetbsResponse
+    public function info(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Host/Info', $vars);
     }
@@ -57,7 +58,7 @@ class InternetbsDomainHost
      *  - IP_List List of IP addresses separated by comma for the host.
      * @return InternetbsResponse The response object
      */
-    public function update(array $vars) : InternetbsResponse
+    public function update(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Host/Update', $vars, 'POST');
     }
@@ -69,7 +70,7 @@ class InternetbsDomainHost
      *  - host The host to delete.
      * @return InternetbsResponse The response object
      */
-    public function delete(array $vars) : InternetbsResponse
+    public function delete(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Host/Delete', $vars, 'POST');
     }
@@ -83,7 +84,7 @@ class InternetbsDomainHost
      *      such as IPs and host status if you set CompactList=no. The default value is ComptactList=yes.
      * @return InternetbsResponse The response object
      */
-    public function list(array $vars) : InternetbsResponse
+    public function list(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Host/List', $vars);
     }

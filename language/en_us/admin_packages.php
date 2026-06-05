@@ -28,14 +28,14 @@ $lang['AdminPackages.index.heading_package'] = 'Package ID';
 $lang['AdminPackages.index.heading_name'] = 'Name';
 $lang['AdminPackages.index.heading_module'] = 'Module';
 $lang['AdminPackages.index.heading_qty'] = 'Quantity';
-$lang['AdminPackages.index.heading_options'] = 'Options';
+$lang['AdminPackages.index.heading_options'] = 'Actions';
 
 $lang['AdminPackages.index.category_active'] = 'Active';
 $lang['AdminPackages.index.category_restricted'] = 'Restricted';
 $lang['AdminPackages.index.category_inactive'] = 'Inactive';
 
 $lang['AdminPackages.index.action.delete'] = 'Delete Packages';
-$lang['AdminPackages.index.field_actionsubmit'] = 'Submit';
+$lang['AdminPackages.index.field_actionsubmit'] = 'Apply';
 
 $lang['AdminPackages.index.option_edit'] = 'Edit';
 $lang['AdminPackages.index.option_copy'] = 'Copy';
@@ -45,6 +45,10 @@ $lang['AdminPackages.index.no_results'] = 'There are no packages with this statu
 $lang['AdminPackages.index.qty_unlimited'] = 'Unlimited';
 
 $lang['AdminPackages.index.confirm_delete'] = 'Are you sure you want to delete this package? Any canceled service assigned to this package will be removed.';
+$lang['AdminPackages.index.items_selected'] = 'items selected';
+$lang['AdminPackages.index.filter_toggle'] = 'Toggle Filters';
+$lang['AdminPackages.index.field_filterclear'] = 'Clear';
+$lang['AdminPackages.index.field_filtersubmit'] = 'Apply Filters';
 
 
 // Package pricing
@@ -237,7 +241,7 @@ $lang['AdminPackages.groups.categorylink_creategroup'] = 'Create Group';
 $lang['AdminPackages.groups.boxtitle_packagegroups'] = 'Package Groups';
 $lang['AdminPackages.groups.heading_name'] = 'Name';
 $lang['AdminPackages.groups.heading_type'] = 'Type';
-$lang['AdminPackages.groups.heading_options'] = 'Options';
+$lang['AdminPackages.groups.heading_options'] = 'Actions';
 $lang['AdminPackages.groups.option_edit'] = 'Edit';
 $lang['AdminPackages.groups.option_delete'] = 'Delete';
 $lang['AdminPackages.groups.confirm_delete'] = 'Are you sure you want to delete this package group? Any packages assigned to this group will no longer be assigned to this group, and may become unusable.';
@@ -285,3 +289,63 @@ $lang['AdminPackages.editgroup.field_editgroupsubmit'] = 'Update Group';
 $lang['AdminPackages.moduleoptions.not_applicable'] = 'Group';
 $lang['AdminPackages.moduleoptions.field_module_group_client'] = 'Allow Client to Select %1$s'; // %1$s is the name of the group
 $lang['AdminPackages.moduleoptions.field_module_groups'] = 'Allowed %1$ss'; // %1$s is the name of the group
+
+
+// AI Description Generation
+$lang['AdminPackages.ai.generate_button'] = 'Generate';
+$lang['AdminPackages.ai.rewrite_button'] = 'Rewrite';
+$lang['AdminPackages.ai.modal_title'] = 'AI-Generated Content';
+$lang['AdminPackages.ai.modal_title_generate'] = 'AI-Generated Description';
+$lang['AdminPackages.ai.modal_title_rewrite'] = 'AI-Rewritten Description';
+$lang['AdminPackages.ai.context_label'] = 'Context:';
+$lang['AdminPackages.ai.generated_content_label'] = 'Generated Content:';
+$lang['AdminPackages.ai.context_package'] = 'Package:';
+$lang['AdminPackages.ai.context_module'] = 'Module:';
+$lang['AdminPackages.ai.context_type'] = 'Type:';
+$lang['AdminPackages.ai.context_type_description'] = 'Package Description';
+$lang['AdminPackages.ai.context_type_email'] = 'Welcome Email';
+$lang['AdminPackages.ai.no_context'] = 'No context available';
+$lang['AdminPackages.ai.regenerate_button'] = 'Regenerate';
+$lang['AdminPackages.ai.use_content_button'] = 'Use This Content';
+$lang['AdminPackages.ai.prompt_placeholder'] = 'Describe the package features, target audience, etc...';
+$lang['AdminPackages.ai.generate_html'] = 'Generate HTML';
+$lang['AdminPackages.ai.generate_text'] = 'Generate Text (Markdown)';
+$lang['AdminPackages.ai.tone'] = 'Tone';
+$lang['AdminPackages.ai.tone_professional'] = 'Professional';
+$lang['AdminPackages.ai.tone_casual'] = 'Casual';
+$lang['AdminPackages.ai.tone_technical'] = 'Technical';
+$lang['AdminPackages.ai.preview_html'] = 'Generated HTML:';
+$lang['AdminPackages.ai.preview_text'] = 'Generated Text:';
+$lang['AdminPackages.ai.btn_generate'] = 'Generate';
+$lang['AdminPackages.ai.btn_use'] = 'Use This Description';
+$lang['AdminPackages.ai.btn_regenerate'] = 'Regenerate';
+$lang['AdminPackages.ai.btn_cancel'] = 'Cancel';
+$lang['AdminPackages.ai.generating'] = 'Generating...';
+$lang['AdminPackages.ai.regenerating'] = 'Regenerating...';
+$lang['AdminPackages.ai.error_disabled'] = 'AI features are not enabled';
+$lang['AdminPackages.ai.error_feature_disabled'] = 'Package description AI feature is not enabled';
+$lang['AdminPackages.ai.apply_content_label'] = 'Apply content to:';
+$lang['AdminPackages.ai.apply_html'] = 'HTML version';
+$lang['AdminPackages.ai.apply_text'] = 'Text version';
+$lang['AdminPackages.ai.error_prompt_required'] = 'Please enter a prompt';
+$lang['AdminPackages.ai.error_generation_failed'] = 'Failed to generate description';
+$lang['AdminPackages.ai.error_prefix'] = 'Error:';
+$lang['AdminPackages.ai.additional_instructions_label'] = 'Additional Instructions (Optional)';
+$lang['AdminPackages.ai.additional_instructions_placeholder'] = 'e.g., Include information about 24/7 support, mention the 30-day money-back guarantee...';
+$lang['AdminPackages.ai.additional_instructions_help'] = 'Provide any specific details or requirements for the AI to include in the description.';
+$lang['AdminPackages.ai.prompt_context_label'] = 'Prompt Context';
+$lang['AdminPackages.ai.prompt_loading'] = 'Loading prompt...';
+$lang['AdminPackages.ai.initial_instructions'] = 'Review the prompt above, add any additional instructions, then click Generate to create content.';
+$lang['AdminPackages.ai.prompt_rewrite_prefix'] = 'Rewrite and improve this content while maintaining the same general information:';
+$lang['AdminPackages.ai.prompt_email_prefix'] = 'Generate a professional welcome email for this product/service package that welcomes the customer and provides helpful information about their new service.';
+$lang['AdminPackages.ai.prompt_description_prefix'] = 'Generate a professional description for this product/service package.';
+$lang['AdminPackages.ai.prompt_context_info'] = 'Context Information:';
+
+// AI Email Generation
+$lang['AdminPackages.ai.generate_email_button'] = 'Generate Email with AI';
+$lang['AdminPackages.ai.email_modal_title'] = 'Generate Welcome Email';
+$lang['AdminPackages.ai.email_prompt_placeholder'] = 'Describe what the welcome email should say (e.g., "Welcome new customer, explain service setup")';
+$lang['AdminPackages.ai.email_generating'] = 'Generating email...';
+$lang['AdminPackages.ai.email_use_button'] = 'Use This Email';
+$lang['AdminPackages.ai.email_preview_html'] = 'Generated Email HTML:';
+$lang['AdminPackages.ai.email_preview_text'] = 'Generated Email Text:';

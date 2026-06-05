@@ -20,12 +20,6 @@ class AdminCompanyFeeds extends AdminController
 
         $this->uses(['Navigation']);
         $this->helpers(['Form', 'Html']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**

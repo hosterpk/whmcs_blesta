@@ -85,3 +85,8 @@ $lang['AdminCompanyModules.addrow.page_title'] = 'Settings > Company > Modules >
 
 // Edit Module Row
 $lang['AdminCompanyModules.editrow.page_title'] = 'Settings > Company > Modules > Edit %1$s %2$s'; // %1$s is the module name, %2$s is the module row noun (e.g. Server)
+
+
+// Filter
+$lang['AdminCompanyModules.text_filter_placeholder'] = 'Filter modules...';
+$lang['AdminCompanyModules.text_filter_no_results'] = 'No matching modules found.';

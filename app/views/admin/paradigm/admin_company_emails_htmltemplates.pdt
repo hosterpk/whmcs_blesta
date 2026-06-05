@@ -1,0 +1,81 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+
+    $buttons = [
+        [
+            'icon' => 'bi-plus-lg',
+            'name' => '',
+            'attributes' => [
+                'title' => $this->_('AdminCompanyEmails.htmltemplates.categorylink_addhtmltemplate', true),
+                'href' => $this->base_uri . 'settings/company/emails/addhtmltemplate/'
+            ]
+        ]
+    ];
+    $this->Widget->setLinkButtons($buttons);
+    $this->Widget->setBodyWrapper(false);
+    $this->Widget->create($this->_('AdminCompanyEmails.htmltemplates.boxtitle_templates', true), ['id' => 'admin_company_emails_htmltemplates'], ($render_section ?? null));
+    ?>
+            <?php
+            if (!empty($groups)) {
+            ?>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th><?php $this->_('AdminCompanyEmails.htmltemplates.text_name');?></th>
+                            <th class="text-end" style="width: 100px;"><?php $this->_('AdminCompanyEmails.htmltemplates.text_options');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $i = 0;
+                        foreach ($groups as $group) {
+                        ?>
+                        <tr<?php echo ($i % 2 == 1) ? ' class="table-secondary"' : '';?>>
+                            <td><?php echo (isset($group->name) ? $this->Html->safe($group->name) : null);?></td>
+                            <td class="text-end">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="<?php echo $this->base_uri . 'settings/company/emails/edithtmltemplate/' . (isset($group->id) ? $this->Html->safe($group->id) : null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminCompanyEmails.htmltemplates.option_edit');?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <?php
+                                    $this->Form->create($this->base_uri . 'settings/company/emails/deletehtmltemplate/', ['class' => 'd-inline']);
+                                    $this->Form->fieldHidden('id', ($group->id ?? null));
+                                    ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete" data-confirm-message="<?php echo $this->Html->safe($this->_('AdminCompanyEmails.htmltemplates.confirm_delete', true));?>" title="<?php $this->_('AdminCompanyEmails.htmltemplates.option_delete');?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <?php
+                                    $this->Form->end();
+                                    ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php
+                            $i++;
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php
+            } else {
+            ?>
+            <div class="empty_section">
+                <div class="empty_box">
+                    <?php $this->_('AdminCompanyEmails.htmltemplates.no_results');?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+    <?php
+    $this->Widget->end();
+    ?>
+</div>

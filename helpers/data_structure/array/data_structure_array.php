@@ -1,7 +1,11 @@
 <?php
+
+namespace Blesta\Helpers\DataStructure\Array;
+
+use stdClass;
+
 /**
  * Array Data Structure helper
- *
  * Provides utility methods to assist in manipulating arrays.
  *
  * @package blesta
@@ -127,7 +131,7 @@ class DataStructureArray
     {
         $flat_array = [];
 
-        foreach($array as $key => $value) {
+        foreach ($array as $key => $value) {
             $flat_key = (empty($parent_key) ? '' : $prefix) . $key . (empty($parent_key) ? '' : $suffix);
 
             if (is_object($value) && $cast_object && $value instanceof stdClass) {
@@ -173,7 +177,7 @@ class DataStructureArray
 
         // Convert flattened array to dot notation
         $dot_array = [];
-        foreach($array as $key => $value) {
+        foreach ($array as $key => $value) {
             $key = str_replace($prefix, '.', str_replace($suffix, '', $key));
             $dot_array[$key] = $value;
         }

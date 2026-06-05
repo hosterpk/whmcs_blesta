@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Input\Fields\Html as FieldsHtml;
 use Blesta\Core\Util\PackageOptions\Logic as OptionLogic;
 
@@ -104,7 +105,8 @@ class Config extends OrderFormController
         }
 
         // Handle multiple items
-        if (isset($this->post['pricing_id']) && is_array($this->post['pricing_id'])
+        if (
+            isset($this->post['pricing_id']) && is_array($this->post['pricing_id'])
             && isset($this->post['group_id']) && is_array($this->post['group_id'])
             && (!method_exists($this->order_type, 'validateItems') || $this->order_type->validateItems($this->post))
         ) {
@@ -142,7 +144,7 @@ class Config extends OrderFormController
         } elseif (isset($this->get['pricing_id']) && isset($this->get['group_id'])) {
             $item = $this->SessionCart->prequeueItem($this->get);
         } else {
-            $queue_index = isset($this->get['q_item']) ? $this->get['q_item'] : 0;
+            $queue_index = $this->get['q_item'] ?? 0;
         }
 
         // Fetch an item from the queue
@@ -281,11 +283,7 @@ class Config extends OrderFormController
             && empty($package->option_groups)
             && !$this->isAjax());
 
-        if ($skip_config && isset($item['group_id']) && isset($item['pricing_id'])) {
-            $cart_fields = $item;
-        } else {
-            $cart_fields = $this->post;
-        }
+        $cart_fields = $skip_config && isset($item['group_id']) && isset($item['pricing_id']) ? $item : $this->post;
 
         // Attempt to add the item to the cart
         if (!empty($cart_fields)) {
@@ -303,7 +301,8 @@ class Config extends OrderFormController
 
             // Verify fields look correct in order to proceed
             $this->Services->validateService($package, $cart_fields);
-            if (!$refresh_fields
+            if (
+                !$refresh_fields
                 && (($errors = $this->Services->errors()) || ($errors = $option_logic->validate($config_options)))
             ) {
                 $this->handleError($errors);
@@ -535,7 +534,7 @@ class Config extends OrderFormController
 
         $package_counts = $this->getClientPackageCounts();
         $limit_reached = $package->client_qty !== null
-            && $package->client_qty <= (isset($package_counts[$package->id]) ? $package_counts[$package->id] : 0);
+            && $package->client_qty <= ($package_counts[$package->id] ?? 0);
 
         if (!$package || $package->qty == '0' || $limit_reached) {
             return false;

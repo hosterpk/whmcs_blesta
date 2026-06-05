@@ -1,0 +1,23 @@
+{
+	"version": "1.0.0",
+	"name": "Paradigm",
+	"description": "A new paradigm in billing software.",
+	"authors": [
+		{
+			"name": "Phillips Data, Inc.",
+			"url": "http://www.blesta.com"
+		}
+	],
+	"require": {
+		"blesta": ">=6.0.0"
+	},
+	"assets": {
+		"javascript": [
+			"app.min.js"
+		],
+		"css": [
+			"application.min.css",
+			"bootstrap-icons.min.css"
+		]
+	}
+}

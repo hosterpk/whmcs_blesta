@@ -1,5 +1,5 @@
 {
-    "version": "2.18.1",
+    "version": "3.0.0",
     "name": "DirectAdmin.name",
     "description": "DirectAdmin.description",
     "authors": [
@@ -21,8 +21,15 @@
         "group": "DirectAdmin.module_group"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers"],
-        "package": ["type", "package", "ip"],
+        "module": [
+            "host_name",
+            "name_servers"
+        ],
+        "package": [
+            "type",
+            "package",
+            "ip"
+        ],
         "service": [
             "direct_admin_username",
             "direct_admin_password",
@@ -30,5 +37,6 @@
             "direct_admin_ip",
             "direct_admin_email"
         ]
-    }
+    },
+    "icon": "bi-server"
 }

@@ -12,6 +12,8 @@ $lang['Whmsonic.tab_stats'] = 'Service Info';
 $lang['Whmsonic.tab_client_actions'] = 'Actions';
 $lang['Whmsonic.submit'] = 'Submit';
 
+$lang['Whmsonic.back_to_manage'] = 'Back';
+
 // Tab Stats
 $lang['Whmsonic.tab_stats.info_heading.field'] = 'Field';
 $lang['Whmsonic.tab_stats.info_heading.value'] = 'Value';
@@ -37,6 +39,8 @@ $lang['Whmsonic.add_module_row'] = 'Add Server';
 $lang['Whmsonic.add_module_group'] = 'Add Server Group';
 $lang['Whmsonic.manage.module_rows_title'] = 'Servers';
 $lang['Whmsonic.manage.module_groups_title'] = 'Server Groups';
+$lang['Whmsonic.manage.tab_rows'] = 'Servers';
+$lang['Whmsonic.manage.tab_groups'] = 'Server Groups';
 $lang['Whmsonic.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Whmsonic.manage.module_rows_heading.ip_address'] = 'IP Address';
 $lang['Whmsonic.manage.module_rows_heading.options'] = 'Options';

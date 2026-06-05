@@ -1,0 +1,86 @@
+<?php /** @var View $this **/ ?>
+
+
+        <?php
+        echo (isset($message) ? $message : null);
+
+        $this->Widget->clear();
+        $this->Widget->create($this->_('AdminTools.utilities.boxtitle_utilities', true), ['id' => 'admin_tools_utilities'], ($render_section ?? null));
+
+        $this->Form->create(null, ['class' => 'disable-on-submit']);
+        ?>
+        <div class="row g-3">
+            <!-- Database Collation Utility -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="stat-card-icon me-3">
+                                <i class="bi bi-database"></i>
+                            </div>
+                            <h6 class="mb-0"><?php $this->_('AdminTools.utilities.update_collation');?></h6>
+                        </div>
+                        <?php
+                        $utf8mb4_postfix = '';
+                        if (($all_tables_utf8mb4 ?? null)) {
+                            $utf8mb4_postfix = $config_charset_mb4 ? '_supported' : '_config';
+                        } elseif (!($utf8mb4_requirements_met ?? true)) {
+                            $utf8mb4_postfix = '_requirements';
+                        }
+                        $disabled = empty($utf8mb4_postfix) ? [] : ['disabled' => 'disabled'];
+                        ?>
+                        <p class="text-secondary flex-grow-1">
+                            <?php $this->_('AdminTools.utilities.text_update_to_utf8mb4' . $utf8mb4_postfix);?>
+                        </p>
+                        <button type="submit" name="update_to_utf8mb4" class="btn btn-primary w-100<?php echo !empty($disabled) ? ' disabled' : '';?>"<?php echo !empty($disabled) ? ' disabled' : '';?>>
+                            <i class="bi bi-arrow-repeat me-2"></i><?php $this->_('AdminTools.utilities.field_update_to_utf8mb4');?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clear File Cache Utility -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="stat-card-icon me-3">
+                                <i class="bi bi-archive"></i>
+                            </div>
+                            <h6 class="mb-0"><?php $this->_('AdminTools.utilities.clear_file_cache');?></h6>
+                        </div>
+                        <p class="text-secondary flex-grow-1">
+                            <?php $this->_('AdminTools.utilities.text_clear_file_cache');?>
+                        </p>
+                        <button type="submit" name="clear_file_cache" class="btn btn-primary w-100">
+                            <i class="bi bi-arrow-repeat me-2"></i><?php $this->_('AdminTools.utilities.field_clear_file_cache');?>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Integrity Check Utility -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="stat-card-icon me-3">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <h6 class="mb-0"><?php $this->_('AdminTools.utilities.integrity_check');?></h6>
+                        </div>
+                        <p class="text-secondary flex-grow-1">
+                            <?php $this->_('AdminTools.utilities.text_integrity_check');?>
+                        </p>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'tools/integritycheck/');?>" class="btn btn-primary w-100">
+                            <i class="bi bi-shield-check me-2"></i><?php $this->_('AdminTools.utilities.field_integrity_check');?>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        <?php
+        $this->Form->end();
+        $this->Widget->end();
+        ?>

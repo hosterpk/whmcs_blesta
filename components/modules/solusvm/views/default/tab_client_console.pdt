@@ -1,45 +1,40 @@
 
-    <h4><?php $this->_('Solusvm.tab_client_console.heading_console');?></h4>
+    <h4><?php $this->_('Solusvm.tab_client_console.heading_console'); ?></h4>
     <div class="table-responsive">
         <table class="table table-striped">
             <tbody>
-                <?php
-                // Display the console fields
-                if ((isset($type) ? $type : null) == 'console') {
-                ?>
+                <?php // Display the console fields
+
+if ((isset($type) ? $type : null) == 'console') { ?>
                 <tr>
-                    <td><?php $this->_('Solusvm.tab_client_console.console_username');?></td>
-                    <td><?php echo (isset($console->username) ? $this->Html->safe($console->username) : null);?></td>
+                    <td><?php $this->_('Solusvm.tab_client_console.console_username'); ?></td>
+                    <td><?php echo isset($console->username) ? $this->Html->safe($console->username) : null; ?></td>
                 </tr>
                 <tr>
-                    <td><?php $this->_('Solusvm.tab_client_console.console_password');?></td>
-                    <td><?php echo (isset($console->password) ? $this->Html->safe($console->password) : null);?></td>
+                    <td><?php $this->_('Solusvm.tab_client_console.console_password'); ?></td>
+                    <td><?php echo isset($console->password) ? $this->Html->safe($console->password) : null; ?></td>
                 </tr>
-                <?php
-                } else {
+                <?php } else { ?>
                     // Display the VNC fields
-                ?>
+                    ?>
                 <tr>
-                    <td><?php $this->_('Solusvm.tab_client_console.vnc_password');?></td>
-                    <td><?php echo (isset($console->vncpassword) ? $this->Html->safe($console->vncpassword) : null);?></td>
+                    <td><?php $this->_('Solusvm.tab_client_console.vnc_password'); ?></td>
+                    <td><?php echo isset($console->vncpassword)
+                        ? $this->Html->safe($console->vncpassword)
+                        : null; ?></td>
                 </tr>
-                <?php
-                }
-                ?>
+                <?php } ?>
             </tbody>
         </table>
     </div>
 
     <div class="row">
         <div class="col-md-12">
-            <?php
-            // Display the console applet
-            if ((isset($type) ? $type : null) == 'console') {
-            ?>
+            <?php // Display the console applet
+
+if ((isset($type) ? $type : null) == 'console') { ?>
             <!-- Do nothing for now.  We'll want to include a console here at some point. -->
-            <?php
-            } else {
-            ?>
+            <?php } else { ?>
             <!-- actual script modules -->
             <script type="text/javascript" src="<?php echo VENDORWEBDIR; ?>novnc/novnc/lib/vendor/promise.js"></script>
             <script type="module" crossorigin="anonymous">
@@ -51,10 +46,18 @@
                     $('#sendCtrlAltDelButton').on('click', sendCtrlAltDel);
 
                     // Set WebSocket credentials
-                    let host = '<?php echo (isset($console->sockethost) ? $this->Html->safe($console->sockethost) : null); ?>';
-                    let port = '<?php echo (isset($console->socketport) ? $this->Html->safe($console->socketport) : null); ?>';
-                    let password = '<?php echo (isset($console->socketpassword) ? $this->Html->safe($console->socketpassword) : null); ?>';
-                    let token = '<?php echo (isset($console->sockethash) ? $this->Html->safe($console->sockethash) : null);?>';
+                    let host = '<?php echo isset($console->sockethost)
+                        ? $this->Html->safe($console->sockethost)
+                        : null; ?>';
+                    let port = '<?php echo isset($console->socketport)
+                        ? $this->Html->safe($console->socketport)
+                        : null; ?>';
+                    let password = '<?php echo isset($console->socketpassword)
+                        ? $this->Html->safe($console->socketpassword)
+                        : null; ?>';
+                    let token = '<?php echo isset($console->sockethash)
+                        ? $this->Html->safe($console->sockethash)
+                        : null; ?>';
 
                     // | | |         | | |
                     // | | | Connect | | |
@@ -131,13 +134,13 @@
             <div id="screen">
                 <!-- This is where the remote screen will appear -->
             </div>
-            <?php
-            }
-            ?>
+            <?php } ?>
         </div>
     </div>
 <script type="text/javascript">
         $(document).ready(function () {
-          $(this).blestaSetHeadTag("link", {media: "screen", type: "text/css", rel: "stylesheet", href: "<?php echo $this->Html->safe($this->view_dir . 'css/styles.css'); ?>"});
+          $(this).blestaSetHeadTag("link", {media: "screen", type: "text/css", rel: "stylesheet", href: "<?php echo $this->Html->safe(
+              $this->view_dir . 'css/styles.css',
+          ); ?>"});
         });
 </script>

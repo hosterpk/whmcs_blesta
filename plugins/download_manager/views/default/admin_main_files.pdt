@@ -1,154 +1,551 @@
+<?php /** @var View $this */ ?>
 
-        <?php
-        echo ($message ?? null);
+<?php
+echo ($message ?? null);
 
-        $link_buttons = [
-            ['name'=>$this->_('AdminMain.files.add_download', true), 'attributes'=>['href'=>$this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/add/' . (!empty($category) ? '/' . ($category->id ?? null) : '')), 'class'=>'add_download']],
-            ['name'=>$this->_('AdminMain.files.add_category', true), 'attributes'=>['href'=>$this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/addcategory/' . (!empty($category) ? '/' . ($category->id ?? null) : '')), 'class'=>'add_download']]
-        ];
-
-        $tabs = [
-            [
-                'name' => $this->_('AdminMain.files.tab_files', true),
-                'current' => true,
-                'attributes' => [
-                    'class' => 'files',
-                    'href' => $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/')
-                ]
-            ],
-            [
-                'name' => $this->_('AdminMain.files.tab_urls', true),
-                'current' => false,
-                'attributes' => [
-                    'class' => 'urls',
-                    'href' => $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/')
-                ]
-            ]
-        ];
-
-        $this->Widget->clear();
-        $this->Widget->setTabs($tabs);
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
-        $this->Widget->create($this->_('AdminMain.files.boxtitle_downloadmanager', true));
-
-        $category_name = (isset($category->name) ? (isset($category->name) ? $this->Html->safe($category->name) : null) : null);
-        ?>
-        <div class="pad">
-            <div class="inner">
-                <div class="links_row">
-                    <?php
-                    foreach ($link_buttons as $link_button) {
-                        $attributes = '';
-                        foreach (($link_button['attributes'] ?? []) as $attribute => $value) {
-                            $attributes .= ' ' . $attribute . '="' . $value . '"';
-                        }
-                    ?>
-                    <a class="btn btn-default btn-sm pull-right" title="<?php echo $this->Html->safe($link_button['name'] ?? '');?>"<?php echo $attributes;?>><?php echo $this->Html->safe($link_button['name'] ?? '');?></a>
-                    <?php
-                    }
-                    ?>
-                </div>
-                <div class="title_row first">
-                    <h3><?php echo ($category_name ?? $this->_('AdminMain.!text.root_directory', true));?></h3>
-                </div>
-                <?php
-                // Set a link to go back a directory
-                if (!empty($category)) {
-                ?>
-                <div id="up_directory" class="clear">
-                    <a class="btn btn-sm btn-default mb-1" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . ($parent_category->id ?? null));?>">
-                        <i class="fas fa-level-down-alt fa-rotate-180"></i>
-                        <?php $this->_('AdminMain.files.go_back');?>
-                    </a>
-                </div>
-                <?php
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
+$this->Widget->create($this->_('AdminMain.files.boxtitle_downloadmanager', true), ['id' => 'files_widget'], ($render_section ?? null));
+?>
+<div class="card-filter-bar">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <?php if (!empty($category)) { ?>
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . ($parent_category->id ?? '')); ?>" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i><?php $this->_('AdminMain.files.go_back'); ?>
+            </a>
+            <?php } ?>
+        </div>
+        <div class="d-flex gap-2 ms-auto">
+            <a href="#categoryModal" class="btn btn-sm btn-outline-secondary" id="addCategoryBtn" data-bs-toggle="modal" data-bs-target="#categoryModal" title="<?php $this->_('AdminMain.files.add_category'); ?>">
+                <i class="bi bi-folder-plus me-1"></i><?php $this->_('AdminMain.files.add_category'); ?>
+            </a>
+            <a href="#downloadModal" class="btn btn-sm btn-primary" id="addDownloadBtn" data-bs-toggle="modal" data-bs-target="#downloadModal" title="<?php $this->_('AdminMain.files.add_download'); ?>">
+                <i class="bi bi-download me-1"></i><?php $this->_('AdminMain.files.add_download'); ?>
+            </a>
+        </div>
+    </div>
+</div>
+<div class="card-body">
+    <?php
+    if (!empty($categories) || !empty($files)) {
+    ?>
+    <div id="downloads">
+        <div class="row g-4" id="downloadGrid">
+            <?php
+            // Render categories
+            foreach ((isset($categories) ? $categories : []) as $cat) {
+                // Count subcategories and files
+                $file_count = 0;
+                if (isset($cat->file_count)) {
+                    $file_count = $cat->file_count;
                 }
-
-                if (!empty($categories) || !empty($files)) {
-                ?>
-                <div class="pad" id="downloads">
-                    <div class="row">
-                        <?php
-                        $i = 0;
-                        foreach ((isset($categories) ? $categories : []) as $category) {
-                            $i++;
-                            $icon = ((isset($category->access) ? $category->access : null) == 'public') ? 'fa-folder-open' : 'fa-folder';
-                        ?>
-                            <div class="col col-sm-4 col-xs-12">
-                                <div class="category">
-                                    <i class="fas fa-folder"></i>
-                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . ($category->id ?? null) . '/');?>"><?php echo (isset($category->name) ? $this->Html->safe($category->name) : null);?></a>
-                                    <?php $this->_('AdminMain.!text.open_parenthesis');?><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/editcategory/'. ($category->id ?? null) . '/');?>"><?php $this->_('AdminMain.files.edit');?></a>
-                                    <?php $this->_('AdminMain.!text.forward_slash');?>
-                                    <?php
-                                    $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/deletecategory/');
-                                    $this->Form->fieldHidden('id', ($category->id ?? null));
-                                    ?>
-                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/deletecategory/');?>" class="manage" rel="<?php $this->_('AdminMain.modal.delete_category');?>"><?php $this->_('AdminMain.files.delete');?></a><?php $this->_('AdminMain.!text.closed_parenthesis');?>
-                                    <?php
-                                    $this->Form->end();
-                                    ?>
-                                </div>
-                            </div>
-                            <?php
-                            if ($i % 3 == 0) {
-                            ?>
-                            </div>
-                            <div class="row">
-                            <?php
-                            }
-                            ?>
-                        <?php
-                        }
-
-                        foreach ((isset($files) ? $files : []) as $file) {
-                            $i++;
-                        ?>
-                            <div class="col col-sm-4 col-xs-12">
-                                <div class="file">
-                                    <i class="fas fa-file-alt"></i>
-                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/download/' . ($file->id ?? null));?>"><?php echo $this->Html->safe(($file->name ?? null) . ($file->extension ?? null));?></a>
-                                    <?php $this->_('AdminMain.!text.open_parenthesis');?><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/edit/' . ($file->id ?? null));?>"><?php $this->_('AdminMain.files.edit');?></a>
-                                    <?php $this->_('AdminMain.!text.forward_slash');?>
-                                    <?php
-                                    $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/delete/');
-                                    $this->Form->fieldHidden('id', ($file->id ?? null));
-                                    ?>
-                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/delete/');?>" class="manage" rel="<?php $this->_('AdminMain.modal.delete_file');?>"><?php $this->_('AdminMain.files.delete');?></a><?php $this->_('AdminMain.!text.closed_parenthesis');?>
-                                    <?php
-                                    $this->Form->end();
-                                    ?>
-                                </div>
-                            </div>
-                            <?php
-                            if ($i % 3 == 0) {
-                            ?>
-                                </div>
-                                <div class="row">
-                            <?php
-                            }
-                            ?>
-                        <?php
-                        }
-                        ?>
+            ?>
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                    <div class="response-folder-card" data-item-type="category" data-item-id="<?php echo $this->Html->safe($cat->id ?? ''); ?>">
+                        <div class="response-folder-icon">
+                            <i class="bi bi-folder-fill"></i>
+                        </div>
+                        <div class="response-folder-name"><?php echo $this->Html->safe($cat->name ?? ''); ?></div>
+                        <span class="response-folder-count badge bg-secondary"><?php echo $this->Html->safe($file_count); ?></span>
+                        <div class="response-folder-actions">
+                            <button class="response-folder-action-btn" data-action="edit-category" data-id="<?php echo $this->Html->safe($cat->id ?? ''); ?>" data-name="<?php echo $this->Html->safe($cat->name ?? ''); ?>" data-description="<?php echo $this->Html->safe($cat->description ?? ''); ?>" title="<?php $this->_('AdminMain.files.edit'); ?>">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <?php $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/deletecategory/', ['class' => 'd-inline']); ?>
+                                <?php $this->Form->fieldHidden('id', ($cat->id ?? '')); ?>
+                                <button type="button" class="response-folder-action-btn response-folder-delete-btn modal-confirm-delete"
+                                    data-confirm-message="<?php $this->_('AdminMain.modal.delete_category'); ?>"
+                                    title="<?php $this->_('AdminMain.files.delete'); ?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            <?php $this->Form->end(); ?>
+                        </div>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . ($cat->id ?? '') . '/'); ?>" class="response-folder-link ajax"></a>
                     </div>
                 </div>
-                <?php
-                } else {
-                ?>
-                    <div class="empty_section">
-                        <div class="empty_box"><?php $this->_('AdminMain.files.no_downloads');?></div>
+            <?php
+            }
+
+            // Render files
+            foreach ((isset($files) ? $files : []) as $file) {
+                $extension = strtolower(ltrim(($file->extension ?? ''), '.'));
+            ?>
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                    <div class="response-folder-card response-item-card" data-item-type="file" data-item-id="<?php echo $this->Html->safe($file->id ?? ''); ?>">
+                        <div class="response-folder-icon text-primary" data-extension="<?php echo $this->Html->safe($extension); ?>">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <div class="response-folder-name"><?php echo $this->Html->safe(($file->name ?? '') . ($file->extension ?? '')); ?></div>
+                        <?php if (!empty($file->size)) { ?>
+                        <small class="text-secondary"><?php echo $this->Html->safe($file->size ?? ''); ?></small>
+                        <?php } ?>
+                        <div class="response-folder-actions">
+                            <button class="response-folder-action-btn" data-action="edit-file" data-id="<?php echo $this->Html->safe($file->id ?? ''); ?>" title="<?php $this->_('AdminMain.files.edit'); ?>">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <?php $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/delete/', ['class' => 'd-inline']); ?>
+                                <?php $this->Form->fieldHidden('id', ($file->id ?? '')); ?>
+                                <button type="button" class="response-folder-action-btn response-folder-delete-btn modal-confirm-delete"
+                                    data-confirm-message="<?php $this->_('AdminMain.modal.delete_file'); ?>"
+                                    title="<?php $this->_('AdminMain.files.delete'); ?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            <?php $this->Form->end(); ?>
+                        </div>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/download/' . ($file->id ?? '')); ?>" class="response-folder-link"></a>
                     </div>
+                </div>
+            <?php
+            }
+            ?>
+        </div>
+    </div>
+    <?php
+    } else {
+    ?>
+    <div class="text-center text-muted py-4">
+        <i class="bi bi-folder2-open" style="font-size: 2rem; opacity: 0.3;"></i>
+        <p class="mt-2 mb-0"><?php $this->_('AdminMain.files.no_downloads'); ?></p>
+    </div>
+    <?php
+    }
+    ?>
+</div>
+<?php
+$this->Widget->end();
+
+?>
+
+<!-- Add/Edit Category Modal (outside widget to survive AJAX) -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalLabel"><?php $this->_('AdminMain.files.add_category'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
                 <?php
-                }
+                $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/addcategory/' . (!empty($category) ? ($category->id ?? '') : ''), ['id' => 'categoryForm', 'class' => 'disable-on-submit']);
                 ?>
+                <input type="hidden" id="categoryId" name="id">
+                <div class="mb-3">
+                    <label for="categoryName" class="form-label"><?php $this->_('AdminMain.addcategory.field_name'); ?></label>
+                    <input type="text" class="form-control" id="categoryName" name="name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="categoryDescription" class="form-label"><?php $this->_('AdminMain.addcategory.field_description'); ?></label>
+                    <textarea class="form-control" id="categoryDescription" name="description" rows="3" data-markdown-editor="" required></textarea>
+                </div>
+                <?php $this->Form->end(); ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminMain.modal.cancel'); ?></button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+                    <?php $this->_('AdminMain.modal.save'); ?>
+                </button>
             </div>
         </div>
-        <?php
-        $this->Widget->end();
-        ?>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#downloads a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->Html->safe($this->base_uri);?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
+    </div>
+</div>
+
+<!-- Add/Edit Download Modal (outside widget to survive AJAX) -->
+<div class="modal fade" id="downloadModal" tabindex="-1" aria-labelledby="downloadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="downloadModalLabel"><?php $this->_('AdminMain.files.add_download'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <?php
+                $this->Form->create($this->base_uri . 'plugin/download_manager/admin_main/add/' . (!empty($category) ? ($category->id ?? '') : ''), ['id' => 'downloadForm', 'enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+                ?>
+                <input type="hidden" id="downloadId" name="id">
+                <input type="hidden" id="downloadCategoryId" name="category_id" value="<?php echo $this->Html->safe($category->id ?? ''); ?>">
+
+                <!-- Access Level -->
+                <div class="mb-3">
+                    <label class="form-label"><?php $this->_('AdminMain.add.field_available_to_client_groups'); ?></label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="type" id="accessPublic" value="public" checked>
+                        <label class="btn btn-outline-success" for="accessPublic">
+                            <i class="bi bi-globe me-1"></i><?php $this->_('AdminMain.add.public'); ?>
+                        </label>
+
+                        <input type="radio" class="btn-check" name="type" id="accessLoggedIn" value="logged_in">
+                        <label class="btn btn-outline-primary" for="accessLoggedIn">
+                            <i class="bi bi-lock me-1"></i><?php $this->_('AdminMain.add.logged_in'); ?>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Client Groups Section -->
+                <div class="mb-3 form-check download_logged_in" style="display:none;">
+                    <?php
+                    $this->Form->fieldCheckbox('available_to_client_groups', '1', false, ['id' => 'modalAvailableToClientGroups', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminMain.add.field_available_to_client_groups', true), 'modalAvailableToClientGroups', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+
+                <div class="mb-3" id="modalDownloadClientGroups" style="display:none;">
+                    <div class="dual-select-container">
+                        <div class="dual-select-panel">
+                            <?php $this->Form->label($this->_('AdminMain.add.text_clientgroups', true), 'modalAssignedClientGroups', ['class' => 'form-label']); ?>
+                            <?php $this->Form->fieldMultiSelect('file_groups[]', [], [], ['id' => 'modalAssignedClientGroups', 'class' => 'form-select dual-select-list', 'size' => '8']); ?>
+                        </div>
+                        <div class="dual-select-controls">
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn modal_client_group move_left" title="<?php $this->_('AdminMain.add.text_clientgroups'); ?>">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn modal_client_group move_right" title="<?php $this->_('AdminMain.add.text_availableclientgroups'); ?>">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="dual-select-panel">
+                            <?php $this->Form->label($this->_('AdminMain.add.text_availableclientgroups', true), 'modalAvailableClientGroups', ['class' => 'form-label']); ?>
+                            <?php $this->Form->fieldMultiSelect('available_client_groups[]', (isset($client_groups) ? $client_groups : []), [], ['id' => 'modalAvailableClientGroups', 'class' => 'form-select dual-select-list', 'size' => '8']); ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Packages Section -->
+                <div class="mb-3 form-check download_logged_in" style="display:none;">
+                    <?php
+                    $this->Form->fieldCheckbox('available_to_packages', '1', false, ['id' => 'modalAvailableToPackages', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminMain.add.field_available_to_packages', true), 'modalAvailableToPackages', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+
+                <div class="mb-3" id="modalDownloadPackages" style="display:none;">
+                    <div class="dual-select-container">
+                        <div class="dual-select-panel">
+                            <?php $this->Form->label($this->_('AdminMain.add.text_packagegroups', true), 'modalAssignedPackages', ['class' => 'form-label']); ?>
+                            <?php $this->Form->fieldMultiSelect('file_packages[]', [], [], ['id' => 'modalAssignedPackages', 'class' => 'form-select dual-select-list', 'size' => '8']); ?>
+                        </div>
+                        <div class="dual-select-controls">
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn modal_packages move_left" title="<?php $this->_('AdminMain.add.text_packagegroups'); ?>">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn modal_packages move_right" title="<?php $this->_('AdminMain.add.text_availablepackages'); ?>">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="dual-select-panel">
+                            <?php $this->Form->label($this->_('AdminMain.add.text_availablepackages', true), 'modalAvailablePackages', ['class' => 'form-label']); ?>
+                            <?php $this->Form->fieldMultiSelect('available_packages[]', (isset($packages) ? $packages : []), [], ['id' => 'modalAvailablePackages', 'class' => 'form-select dual-select-list', 'size' => '8']); ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Name -->
+                <div class="mb-3">
+                    <label for="downloadName" class="form-label"><?php $this->_('AdminMain.add.field_name'); ?></label>
+                    <input type="text" class="form-control" id="downloadName" name="name" required>
+                </div>
+
+                <!-- File Source -->
+                <div class="mb-3">
+                    <label class="form-label"><?php $this->_('AdminMain.add.field_file_type'); ?></label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="file_type" id="sourceUpload" value="upload" checked>
+                        <label class="btn btn-outline-primary" for="sourceUpload">
+                            <i class="bi bi-upload me-1"></i><?php $this->_('AdminMain.add.upload'); ?>
+                        </label>
+
+                        <input type="radio" class="btn-check" name="file_type" id="sourcePath" value="path">
+                        <label class="btn btn-outline-primary" for="sourcePath">
+                            <i class="bi bi-folder me-1"></i><?php $this->_('AdminMain.add.path'); ?>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Upload File Section -->
+                <div id="uploadSection" class="mb-3">
+                    <label class="form-label"><?php $this->_('AdminMain.add.field_file'); ?></label>
+                    <input type="file" class="form-control" id="fileUploadInput" name="file">
+                </div>
+
+                <!-- Path to File Section -->
+                <div id="pathSection" class="mb-3" style="display: none;">
+                    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+                        <i class="bi bi-info-circle-fill me-3" style="font-size: 1.5rem;"></i>
+                        <div><?php $this->_('AdminMain.add.text_fileinfo'); ?></div>
+                    </div>
+                    <label for="filePath" class="form-label"><?php $this->_('AdminMain.add.field_file_name'); ?></label>
+                    <input type="text" class="form-control" id="filePath" name="file_name">
+                </div>
+                <?php $this->Form->end(); ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminMain.modal.cancel'); ?></button>
+                <button type="button" class="btn btn-primary" id="saveDownloadBtn">
+                    <?php $this->_('AdminMain.modal.save'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit File Modal (outside widget, content loaded via AJAX) -->
+<div class="modal fade" id="editFileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="editFileModalContent">
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Prevent double-initialization
+    if (window._dmFilesInitialized) return;
+    window._dmFilesInitialized = true;
+
+    // File icon mapping
+    function getFileIcon(extension) {
+        var iconMap = {
+            'pdf': { icon: 'bi-file-earmark-pdf', color: 'text-danger' },
+            'doc': { icon: 'bi-file-earmark-word', color: 'text-primary' },
+            'docx': { icon: 'bi-file-earmark-word', color: 'text-primary' },
+            'xls': { icon: 'bi-file-earmark-excel', color: 'text-success' },
+            'xlsx': { icon: 'bi-file-earmark-excel', color: 'text-success' },
+            'ppt': { icon: 'bi-file-earmark-ppt', color: 'text-warning' },
+            'pptx': { icon: 'bi-file-earmark-ppt', color: 'text-warning' },
+            'zip': { icon: 'bi-file-earmark-zip', color: 'text-secondary' },
+            'rar': { icon: 'bi-file-earmark-zip', color: 'text-secondary' },
+            '7z': { icon: 'bi-file-earmark-zip', color: 'text-secondary' },
+            'txt': { icon: 'bi-file-earmark-text', color: 'text-info' },
+            'csv': { icon: 'bi-file-earmark-text', color: 'text-info' },
+            'jpg': { icon: 'bi-file-earmark-image', color: 'text-success' },
+            'jpeg': { icon: 'bi-file-earmark-image', color: 'text-success' },
+            'png': { icon: 'bi-file-earmark-image', color: 'text-success' },
+            'gif': { icon: 'bi-file-earmark-image', color: 'text-success' },
+            'mp3': { icon: 'bi-file-earmark-music', color: 'text-purple' },
+            'wav': { icon: 'bi-file-earmark-music', color: 'text-purple' },
+            'mp4': { icon: 'bi-file-earmark-play', color: 'text-danger' },
+            'avi': { icon: 'bi-file-earmark-play', color: 'text-danger' },
+            'sql': { icon: 'bi-file-earmark-code', color: 'text-warning' },
+            'js': { icon: 'bi-file-earmark-code', color: 'text-warning' },
+            'html': { icon: 'bi-file-earmark-code', color: 'text-warning' },
+            'css': { icon: 'bi-file-earmark-code', color: 'text-warning' }
+        };
+        return iconMap[(extension || '').toLowerCase()] || { icon: 'bi-file-earmark', color: 'text-secondary' };
+    }
+
+    // Apply file icons to any newly rendered cards
+    function applyFileIcons() {
+        document.querySelectorAll('[data-extension]').forEach(function(iconEl) {
+            var ext = iconEl.getAttribute('data-extension');
+            var fileIcon = getFileIcon(ext);
+            iconEl.className = 'response-folder-icon ' + fileIcon.color;
+            var iconI = iconEl.querySelector('i');
+            if (iconI) {
+                iconI.className = 'bi ' + fileIcon.icon;
+            }
+        });
+    }
+
+    // Helper function to move options between select lists
+    function moveOptions(fromId, toId) {
+        var from = document.getElementById(fromId);
+        var to = document.getElementById(toId);
+        if (from && to) {
+            Array.from(from.selectedOptions).forEach(function(option) {
+                to.appendChild(option);
+                option.selected = false;
+            });
+        }
+    }
+
+    // All click handling via document delegation
+    document.addEventListener('click', function(e) {
+        // Category card click - navigate
+        var categoryCard = e.target.closest('[data-item-type="category"]');
+        if (categoryCard && !e.target.closest('.response-folder-action-btn')) {
+            var link = categoryCard.querySelector('.response-folder-link');
+            if (link) {
+                window.location.href = link.getAttribute('href');
+            }
+            return;
+        }
+
+        // File card click - download
+        var fileCard = e.target.closest('[data-item-type="file"]');
+        if (fileCard && !e.target.closest('.response-folder-action-btn')) {
+            var link = fileCard.querySelector('.response-folder-link');
+            if (link) {
+                window.location.href = link.getAttribute('href');
+            }
+            return;
+        }
+
+        // Edit category button
+        var editCatBtn = e.target.closest('[data-action="edit-category"]');
+        if (editCatBtn) {
+            e.stopPropagation();
+            document.getElementById('categoryModalLabel').textContent = '<?php $this->_('AdminMain.files.edit'); ?>';
+            document.getElementById('categoryId').value = editCatBtn.getAttribute('data-id');
+            document.getElementById('categoryName').value = editCatBtn.getAttribute('data-name');
+            document.getElementById('categoryDescription').value = editCatBtn.getAttribute('data-description');
+
+            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('categoryModal'));
+            modal.show();
+            return;
+        }
+
+        // Edit file button - load edit form into modal via AJAX
+        var editFileBtn = e.target.closest('[data-action="edit-file"]');
+        if (editFileBtn) {
+            e.stopPropagation();
+            var fileId = editFileBtn.getAttribute('data-id');
+            var modalContent = document.getElementById('editFileModalContent');
+
+            // Show modal with loading spinner
+            modalContent.innerHTML = '<div class="modal-body text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            var editModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editFileModal'));
+            editModal.show();
+
+            // Fetch edit form via AJAX
+            fetch('<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/edit/'); ?>' + fileId, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(response) { return response.text(); })
+            .then(function(html) {
+                modalContent.innerHTML = html;
+                // Execute scripts in injected content
+                modalContent.querySelectorAll('script').forEach(function(oldScript) {
+                    var newScript = document.createElement('script');
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            });
+            return;
+        }
+
+        // Add category button - reset form
+        if (e.target.closest('#addCategoryBtn')) {
+            document.getElementById('categoryModalLabel').textContent = '<?php $this->_('AdminMain.files.add_category'); ?>';
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            document.getElementById('categoryDescription').value = '';
+            return;
+        }
+
+        // Add download button - reset form
+        if (e.target.closest('#addDownloadBtn')) {
+            document.getElementById('downloadModalLabel').textContent = '<?php $this->_('AdminMain.files.add_download'); ?>';
+            document.getElementById('downloadForm').reset();
+            document.getElementById('downloadId').value = '';
+            // Reset logged-in sections visibility
+            document.querySelectorAll('.download_logged_in').forEach(function(s) { s.style.display = 'none'; });
+            document.getElementById('modalDownloadClientGroups').style.display = 'none';
+            document.getElementById('modalDownloadPackages').style.display = 'none';
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('pathSection').style.display = 'none';
+            return;
+        }
+
+        // Save category button
+        if (e.target.closest('#saveCategoryBtn')) {
+            var form = document.getElementById('categoryForm');
+            if (form.checkValidity()) {
+                form.submit();
+            } else {
+                form.reportValidity();
+            }
+            return;
+        }
+
+        // Save download button
+        if (e.target.closest('#saveDownloadBtn')) {
+            var form = document.getElementById('downloadForm');
+            // Select all assigned options before submitting
+            var assignedClientGroups = document.getElementById('modalAssignedClientGroups');
+            var assignedPackages = document.getElementById('modalAssignedPackages');
+            if (assignedClientGroups) {
+                Array.from(assignedClientGroups.options).forEach(function(option) { option.selected = true; });
+            }
+            if (assignedPackages) {
+                Array.from(assignedPackages.options).forEach(function(option) { option.selected = true; });
+            }
+            if (form.checkValidity()) {
+                form.submit();
+            } else {
+                form.reportValidity();
+            }
+            return;
+        }
     });
+
+    // Change handling via document delegation
+    document.addEventListener('change', function(e) {
+        // Toggle public/logged-in access
+        if (e.target.matches('#downloadModal input[name="type"]')) {
+            var showLoggedIn = e.target.value === 'logged_in';
+            document.querySelectorAll('.download_logged_in').forEach(function(section) {
+                section.style.display = showLoggedIn ? 'block' : 'none';
+            });
+            if (!showLoggedIn) {
+                document.getElementById('modalDownloadClientGroups').style.display = 'none';
+                document.getElementById('modalDownloadPackages').style.display = 'none';
+            }
+            return;
+        }
+
+        // Client groups checkbox
+        if (e.target.matches('#modalAvailableToClientGroups')) {
+            document.getElementById('modalDownloadClientGroups').style.display = e.target.checked ? 'block' : 'none';
+            return;
+        }
+
+        // Packages checkbox
+        if (e.target.matches('#modalAvailableToPackages')) {
+            document.getElementById('modalDownloadPackages').style.display = e.target.checked ? 'block' : 'none';
+            return;
+        }
+
+        // File source toggle (upload/path)
+        if (e.target.matches('#downloadModal input[name="file_type"]')) {
+            document.getElementById('uploadSection').style.display = e.target.value === 'upload' ? 'block' : 'none';
+            document.getElementById('pathSection').style.display = e.target.value === 'path' ? 'block' : 'none';
+            return;
+        }
+    });
+
+    // Dual-select move buttons via delegation
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.dual-select-btn');
+        if (!btn) return;
+
+        if (btn.classList.contains('modal_client_group')) {
+            if (btn.classList.contains('move_left')) moveOptions('modalAvailableClientGroups', 'modalAssignedClientGroups');
+            if (btn.classList.contains('move_right')) moveOptions('modalAssignedClientGroups', 'modalAvailableClientGroups');
+        }
+        if (btn.classList.contains('modal_packages')) {
+            if (btn.classList.contains('move_left')) moveOptions('modalAvailablePackages', 'modalAssignedPackages');
+            if (btn.classList.contains('move_right')) moveOptions('modalAssignedPackages', 'modalAvailablePackages');
+        }
+    });
+
+    // Double-click to move in dual-select
+    document.addEventListener('dblclick', function(e) {
+        if (e.target.closest('#modalAvailableClientGroups')) moveOptions('modalAvailableClientGroups', 'modalAssignedClientGroups');
+        if (e.target.closest('#modalAssignedClientGroups')) moveOptions('modalAssignedClientGroups', 'modalAvailableClientGroups');
+        if (e.target.closest('#modalAvailablePackages')) moveOptions('modalAvailablePackages', 'modalAssignedPackages');
+        if (e.target.closest('#modalAssignedPackages')) moveOptions('modalAssignedPackages', 'modalAvailablePackages');
+    });
+
+    // Apply file icons on initial load
+    applyFileIcons();
+
+    // Re-apply file icons after AJAX widget reload via MutationObserver
+    var widget = document.getElementById('files_widget');
+    if (widget) {
+        new MutationObserver(function() {
+            applyFileIcons();
+        }).observe(widget, { childList: true, subtree: true });
+    }
+})();
 </script>

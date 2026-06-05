@@ -1,0 +1,15 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo (isset($message) ? $message : null);
+
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.merge.boxtitle_merge', true));
+?>
+    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-info-circle me-3 fs-4"></i>
+        <div><?php $this->_('AdminClients.merge.text_unavailable');?></div>
+    </div>
+<?php
+$this->Widget->end();
+?>

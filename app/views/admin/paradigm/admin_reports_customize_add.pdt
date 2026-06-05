@@ -1,0 +1,222 @@
+<?php
+echo (isset($message) ? $message : null);
+?>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminReportsCustomize.index.box_title');?></h5>
+    </div>
+    <div class="card-filter-bar">
+        <ul class="nav nav-tabs-custom border-0 mb-0" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="<?php echo $this->base_uri . 'reports/';?>">
+                    <?php $this->_('AdminReportsCustomize.index.reports');?>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="<?php echo $this->base_uri . 'reports_customize';?>">
+                    <?php $this->_('AdminReportsCustomize.index.customize');?>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <?php
+    $this->Form->create(null, ['id' => 'report_add_form', 'class' => 'disable-on-submit']);
+    ?>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="name" class="form-label"><?php $this->_('AdminReportsCustomize.add.field_name');?></label>
+            <?php
+            $this->Form->fieldText('name', (isset($vars->name) ? $vars->name : null), ['id' => 'name', 'class' => 'form-control']);
+            ?>
+        </div>
+
+        <div class="mb-3">
+            <label for="query" class="form-label"><?php $this->_('AdminReportsCustomize.add.field_query');?></label>
+            <?php
+            $this->Form->fieldTextarea('query', (isset($vars->query) ? $vars->query : null), ['id' => 'query', 'class' => 'form-control', 'rows' => '6']);
+            ?>
+        </div>
+
+        <h6 class="fw-bold border-bottom pb-2 mb-3"><?php $this->_('AdminReportsCustomize.add.heading_fields');?></h6>
+
+        <div class="table-responsive mb-3">
+            <table class="table table-bordered" id="fields_table">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('AdminReportsCustomize.add.table_label');?></th>
+                        <th><?php $this->_('AdminReportsCustomize.add.table_name');?></th>
+                        <th><?php $this->_('AdminReportsCustomize.add.table_type');?></th>
+                        <th><?php $this->_('AdminReportsCustomize.add.table_required');?></th>
+                        <th style="width: 80px;"><?php $this->_('AdminReportsCustomize.add.table_options');?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                // Display each field row
+                $num_fields = max(1, count((isset($vars->fields['name']) ? $vars->fields['name'] : [])));
+                for ($i = 0; $i < $num_fields; $i++) {
+                ?>
+                    <tr class="field-row">
+                        <td>
+                            <?php $this->Form->fieldHidden('fields[id][]', (isset($vars->fields['id'][$i]) ? $vars->fields['id'][$i] : null), ['class' => 'input-id']);?>
+                            <?php $this->Form->fieldText('fields[label][]', (isset($vars->fields['label'][$i]) ? $vars->fields['label'][$i] : null), ['class' => 'form-control form-control-sm']);?>
+                        </td>
+                        <td>
+                            <?php $this->Form->fieldText('fields[name][]', (isset($vars->fields['name'][$i]) ? $vars->fields['name'][$i] : null), ['class' => 'form-control form-control-sm']);?>
+                        </td>
+                        <td>
+                            <?php $this->Form->fieldSelect('fields[type][]', (isset($field_types) ? $field_types : null), (isset($vars->fields['type'][$i]) ? $vars->fields['type'][$i] : null), ['class' => 'form-select form-select-sm type-select']);?>
+                            <div class="type-values mt-2" style="display: none;">
+                                <label class="form-label small"><?php $this->_('AdminReportsCustomize.add.field_values');?></label>
+                                <?php $this->Form->fieldTextarea('fields[values][]', (isset($vars->fields['values'][$i]) ? $vars->fields['values'][$i] : null), ['class' => 'form-control form-control-sm', 'rows' => '2']);?>
+                            </div>
+                        </td>
+                        <td>
+                            <?php $this->Form->fieldSelect('fields[required][]', (isset($required_types) ? $required_types : null), (isset($vars->fields['required'][$i]) ? $vars->fields['required'][$i] : null), ['class' => 'form-select form-select-sm required-select']);?>
+                            <div class="required-regex mt-2" style="display: none;">
+                                <label class="form-label small"><?php $this->_('AdminReportsCustomize.add.field_regex');?></label>
+                                <?php $this->Form->fieldText('fields[regex][]', (isset($vars->fields['regex'][$i]) ? $vars->fields['regex'][$i] : null), ['class' => 'form-control form-control-sm']);?>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-field" title="<?php $this->_('AdminReportsCustomize.add.text_remove');?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                <?php
+                }
+                ?>
+                </tbody>
+            </table>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-outline-primary" id="add_field">
+            <i class="bi bi-plus-lg me-1"></i><?php $this->_('AdminReportsCustomize.add.field_add_field');?>
+        </button>
+    </div>
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminReportsCustomize.add.field_submit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+    <?php
+    $this->Form->end();
+    ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fieldsTable = document.getElementById('fields_table');
+    const addFieldBtn = document.getElementById('add_field');
+
+    if (!fieldsTable || !addFieldBtn) return;
+
+    // Initialize existing rows
+    initializeFieldRows();
+
+    // Add new field row
+    addFieldBtn.addEventListener('click', function() {
+        const tbody = fieldsTable.querySelector('tbody');
+        const firstRow = tbody.querySelector('.field-row');
+        if (!firstRow) return;
+
+        const newRow = firstRow.cloneNode(true);
+
+        // Clear all input values in the cloned row
+        newRow.querySelectorAll('input[type="text"], input[type="hidden"], textarea').forEach(function(input) {
+            input.value = '';
+        });
+
+        // Reset selects to first option
+        newRow.querySelectorAll('select').forEach(function(select) {
+            select.selectedIndex = 0;
+        });
+
+        // Hide conditional fields
+        newRow.querySelectorAll('.type-values, .required-regex').forEach(function(el) {
+            el.style.display = 'none';
+        });
+
+        tbody.appendChild(newRow);
+        initializeFieldRows();
+    });
+
+    // Event delegation for remove buttons
+    fieldsTable.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.remove-field');
+        if (!removeBtn) return;
+
+        const tbody = fieldsTable.querySelector('tbody');
+        const rows = tbody.querySelectorAll('.field-row');
+
+        if (rows.length > 1) {
+            const row = removeBtn.closest('.field-row');
+            const form = document.getElementById('report_add_form');
+            const hiddenId = row.querySelector('.input-id');
+
+            // Move hidden ID to form to preserve it for deletion
+            if (hiddenId && hiddenId.value && form) {
+                form.appendChild(hiddenId);
+            }
+
+            row.remove();
+        }
+    });
+
+    function initializeFieldRows() {
+        fieldsTable.querySelectorAll('.field-row').forEach(function(row) {
+            const typeSelect = row.querySelector('.type-select');
+            const requiredSelect = row.querySelector('.required-select');
+            const typeValues = row.querySelector('.type-values');
+            const requiredRegex = row.querySelector('.required-regex');
+
+            if (typeSelect && typeValues) {
+                // Initial state
+                toggleTypeValues(typeSelect, typeValues);
+
+                // Remove existing listeners by cloning
+                const newTypeSelect = typeSelect.cloneNode(true);
+                typeSelect.parentNode.replaceChild(newTypeSelect, typeSelect);
+
+                newTypeSelect.addEventListener('change', function() {
+                    toggleTypeValues(this, typeValues);
+                });
+            }
+
+            if (requiredSelect && requiredRegex) {
+                // Initial state
+                toggleRequiredRegex(requiredSelect, requiredRegex);
+
+                // Remove existing listeners by cloning
+                const newRequiredSelect = requiredSelect.cloneNode(true);
+                requiredSelect.parentNode.replaceChild(newRequiredSelect, requiredSelect);
+
+                newRequiredSelect.addEventListener('change', function() {
+                    toggleRequiredRegex(this, requiredRegex);
+                });
+            }
+        });
+    }
+
+    function toggleTypeValues(select, valuesDiv) {
+        const value = select.value;
+        if (value === 'select') {
+            valuesDiv.style.display = 'block';
+        } else {
+            valuesDiv.style.display = 'none';
+        }
+    }
+
+    function toggleRequiredRegex(select, regexDiv) {
+        const value = select.value;
+        if (value === 'custom') {
+            regexDiv.style.display = 'block';
+        } else {
+            regexDiv.style.display = 'none';
+        }
+    }
+});
+</script>

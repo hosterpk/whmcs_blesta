@@ -1,5 +1,7 @@
 <?php
 
+use Blesta\Core\Util\Filters\ExtensionFilters;
+
 /**
  * Admin Company Plugin Settings
  *
@@ -18,13 +20,7 @@ class AdminCompanyPlugins extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['PluginManager', 'Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
+        $this->uses(['PluginManager']);
     }
 
     /**
@@ -40,6 +36,14 @@ class AdminCompanyPlugins extends AdminController
      */
     public function installed()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyPlugins.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('plugins', $this->PluginManager->getAll($this->company_id));
@@ -51,6 +55,14 @@ class AdminCompanyPlugins extends AdminController
      */
     public function available()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyPlugins.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('plugins', $this->PluginManager->getAvailable($this->company_id));
@@ -204,15 +216,19 @@ class AdminCompanyPlugins extends AdminController
                 // no break, automation is the default tab
             case 'automation':
                 $data = $this->renderSettingsAutomation($plugin);
+                $has_content = !empty($data['tasks']);
                 break;
             case 'actions':
                 $data = $this->renderSettingsActions($plugin);
+                $has_content = !empty($data['actions']);
                 break;
             case 'events':
                 $data = $this->renderSettingsEvents($plugin);
+                $has_content = !empty($data['events']);
                 break;
         }
 
+        $this->set('has_tab_content', $has_content);
         $this->set('tab', $this->partial('admin_company_plugins_settings_' . $name, $data));
     }
 

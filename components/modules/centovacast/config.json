@@ -1,5 +1,5 @@
 {
-    "version": "1.9.2",
+    "version": "2.0.0",
     "name": "Centovacast.name",
     "description": "Centovacast.description",
     "authors": [
@@ -21,8 +21,19 @@
         "group": "Centovacast.module_group"
     },
     "email_tags": {
-        "module": ["hostname", "server_name"],
-        "package": ["servertype", "apptypes", "usesource", "maxclients", "maxbitrate", "transferlimit", "diskquota"],
+        "module": [
+            "hostname",
+            "server_name"
+        ],
+        "package": [
+            "servertype",
+            "apptypes",
+            "usesource",
+            "maxclients",
+            "maxbitrate",
+            "transferlimit",
+            "diskquota"
+        ],
         "service": [
             "centovacast_hostname",
             "centovacast_username",
@@ -30,5 +41,6 @@
             "centovacast_title",
             "centovacast_genre"
         ]
-    }
+    },
+    "icon": "bi-broadcast"
 }

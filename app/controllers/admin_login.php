@@ -46,7 +46,7 @@ class AdminLogin extends AppController
         if (
             $this->Session->read('blesta_id') > 0
             && $this->Session->read('blesta_staff_id') > 0
-            && ($this->action !== 'up' && $this->action !== 'drop')
+            && ($this->action !== 'up' && $this->action !== 'drop' && $this->action !== 'extend')
         ) {
             $this->redirect($this->base_uri);
         }
@@ -114,31 +114,56 @@ class AdminLogin extends AppController
                         }
 
                         // Set default widget displays
-                        $home_widgets = [
-                            $this->PluginManager->systemHash('widget_system_overview_admin_main')
-                                => ['section' => 'section1', 'open' => true],
-                            $this->PluginManager->systemHash('widget_system_status_admin_main')
-                                => ['section' => 'section3', 'open' => true],
-                            $this->PluginManager->systemHash('widget_feed_reader_admin_main')
-                                => ['section' => 'section2', 'open' => true]
+                        $widgets = [
+                            'widget_staff_home' => [
+                                $this->PluginManager->systemHash('widget_system_overview_admin_main') => [
+                                    'open' => true,
+                                    'width' => 'full',
+                                    'column' => null,
+                                    'order' => 0
+                                ],
+                                $this->PluginManager->systemHash('widget_feed_reader_admin_main') => [
+                                    'open' => true,
+                                    'width' => 'half',
+                                    'column' => 0,
+                                    'order' => 1
+                                ],
+                                $this->PluginManager->systemHash('widget_system_status_admin_main') => [
+                                    'open' => true,
+                                    'width' => 'half',
+                                    'column' => 0,
+                                    'order' => 2
+                                ],
+                            ],
+                            'widget_staff_billing' => [
+                                $this->PluginManager->systemHash('widget_billing_overview_admin_main') => [
+                                    'open' => true,
+                                    'width' => 'full',
+                                    'column' => null,
+                                    'order' => 0
+                                ],
+                                $this->PluginManager->systemHash('widget_order_admin_main') => [
+                                    'open' => true,
+                                    'width' => 'full',
+                                    'column' => null,
+                                    'order' => 1
+                                ]
+                            ]
                         ];
-                        $this->Staff->saveHomeWidgetsState(
-                            $staff_id,
-                            Configure::get('Blesta.company_id'),
-                            $home_widgets
-                        );
-
-                        $billing_widgets = [
-                            $this->PluginManager->systemHash('widget_billing_overview_admin_main')
-                                => ['open' => true, 'section' => 'section1'],
-                            $this->PluginManager->systemHash('widget_order_admin_main')
-                                => ['open' => true, 'section' => 'section1']
-                        ];
-                        $this->Staff->saveBillingWidgetsState(
-                            $staff_id,
-                            Configure::get('Blesta.company_id'),
-                            $billing_widgets
-                        );
+                        foreach ($widgets as $widget_location => $widgets_state) {
+                            match ($widget_location) {
+                                'widget_staff_home' => $this->Staff->saveHomeWidgetsState(
+                                    $staff_id,
+                                    Configure::get('Blesta.company_id'),
+                                    $widgets_state
+                                ),
+                                'widget_staff_billing' => $this->Staff->saveBillingWidgetsState(
+                                    $staff_id,
+                                    Configure::get('Blesta.company_id'),
+                                    $widgets_state
+                                )
+                            };
+                        }
 
                         $this->License->loadRemoteConfig($this->post['license_key']);
 
@@ -346,8 +371,12 @@ class AdminLogin extends AppController
             $staff = $this->Staff->getByUserId($token->user_id);
 
             if ($staff && $staff->status == 'active' && $this->PasswordResets->validate($this->get['sid'])) {
-                // Update the user's password
-                $this->Users->edit($token->user_id, $this->post);
+                // Update the user's password (only allow password fields to prevent mass assignment)
+                $user_vars = [
+                    'new_password' => $this->post['new_password'],
+                    'confirm_password' => $this->post['confirm_password'] ?? null,
+                ];
+                $this->Users->edit($token->user_id, $user_vars);
 
                 if (!($errors = $this->Users->errors())) {
                     $this->post['username'] = $staff->username;
@@ -420,7 +449,51 @@ class AdminLogin extends AppController
     public function drop()
     {
         $this->Session->clear('blesta_step_up');
+
+        if ($this->isAjax()) {
+            $this->outputAsJson(['success' => true]);
+            return false;
+        }
+
         $this->redirect($this->base_uri . 'settings/company/');
+    }
+
+    /**
+     * Extend step up authentication session
+     */
+    public function extend()
+    {
+        if (
+            !$this->isAjax()
+            || strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'
+        ) {
+            $this->outputAsJson([
+                'success' => false,
+                'message' => Language::_('AppController.!error.invalid_csrf', true)
+            ]);
+            return false;
+        }
+
+        $step_up = $this->Session->read('blesta_step_up');
+
+        if (empty($step_up) || time() >= (int) $step_up) {
+            $this->Session->clear('blesta_step_up');
+            $this->outputAsJson([
+                'success' => false,
+                'message' => Language::_('AdminLogin.!error.step_up_expired', true)
+            ]);
+            return false;
+        }
+
+        $expires_at = time() + Configure::get('Blesta.session_ttl');
+        $this->Session->write('blesta_step_up', $expires_at);
+
+        $this->outputAsJson([
+            'success' => true,
+            'expires_at' => $expires_at,
+            'message' => Language::_('AdminLogin.!success.step_up_extended', true)
+        ]);
+        return false;
     }
 
     /**

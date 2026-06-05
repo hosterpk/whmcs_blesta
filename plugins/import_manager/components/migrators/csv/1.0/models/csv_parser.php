@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generic CSV Parser Migrator.
  *

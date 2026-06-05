@@ -1,4 +1,7 @@
 <?php
+
+namespace Blesta\Helpers\SettingsProcessor;
+
 use Blesta\Core\Util\Helpers\Helper;
 
 /**
@@ -56,8 +59,10 @@ class SettingsProcessor extends Helper
             }
 
             // Validate that max > min
-            if ($min !== null && $max !== null && $min_normalized !== null && $max_normalized !== null
-                && (float)$max_normalized <= (float)$min_normalized) {
+            if (
+                $min !== null && $max !== null && $min_normalized !== null && $max_normalized !== null
+                && (float)$max_normalized <= (float)$min_normalized
+            ) {
                 $errors[$currency][] = 'max_less_than_min';
             }
         }

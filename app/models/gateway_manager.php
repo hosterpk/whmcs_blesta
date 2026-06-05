@@ -1,5 +1,15 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Exception;
+use Language;
+use Loader;
+use ReflectionClass;
+use Router;
+use stdClass;
+
 /**
  * Gateway manager. Handles installing/uninstalling and configuring payment
  * gateways.
@@ -74,7 +84,7 @@ class GatewayManager extends AppModel
         if (!empty($settings) && is_array($settings)) {
             $settings = $this->Form->collapseObjectArray($settings, 'value', 'key');
             $settings['allowed_gateways'] = (isset($settings['allowed_gateways'])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings['allowed_gateways']))
+                ? safe_unserialize(base64_decode($settings['allowed_gateways']))
                 : []
             );
         }
@@ -172,7 +182,7 @@ class GatewayManager extends AppModel
         if (!empty($settings) && is_array($settings)) {
             $settings = $this->Form->collapseObjectArray($settings, 'value', 'key');
             $settings['allowed_gateways'] = (isset($settings['allowed_gateways'])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings['allowed_gateways']))
+                ? safe_unserialize(base64_decode($settings['allowed_gateways']))
                 : [null]
             );
         }
@@ -188,7 +198,7 @@ class GatewayManager extends AppModel
             if (!isset($this->Companies)) {
                 Loader::loadModels($this, ['Companies']);
             }
-            
+
             $default_setting = $this->Companies->getSetting($company_id, 'default_merchant_gateway');
             if ($default_setting && $default_setting->value) {
                 $default_gateways = json_decode($default_setting->value, true);
@@ -268,7 +278,7 @@ class GatewayManager extends AppModel
         if (!empty($settings) && is_array($settings)) {
             $settings = $this->Form->collapseObjectArray($settings, 'value', 'key');
             $settings['allowed_gateways'] = (isset($settings['allowed_gateways'])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings['allowed_gateways']))
+                ? safe_unserialize(base64_decode($settings['allowed_gateways']))
                 : [null]
             );
         }
@@ -330,7 +340,7 @@ class GatewayManager extends AppModel
         if (!empty($settings) && is_array($settings)) {
             $settings = $this->Form->collapseObjectArray($settings, 'value', 'key');
             $settings['allowed_gateways'] = (isset($settings['allowed_gateways'])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings['allowed_gateways']))
+                ? safe_unserialize(base64_decode($settings['allowed_gateways']))
                 : [null]
             );
         }
@@ -380,9 +390,14 @@ class GatewayManager extends AppModel
         }
 
         // Trigger the GatewayManager.get event
-        extract($this->executeAndParseEvent('GatewayManager.get', [
+        $event = $this->executeAndParseEvent('GatewayManager.get', [
             'gateway' => $gateway
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $gateway;
     }
@@ -430,7 +445,8 @@ class GatewayManager extends AppModel
         $files = scandir(COMPONENTDIR . 'gateways');
         foreach ($files as $file) {
             // If the file is not a hidden file, and is a directory, accept it
-            if (substr($file, 0, 1) != '.'
+            if (
+                substr($file, 0, 1) != '.'
                 && is_dir(COMPONENTDIR . 'gateways' . DS . $file)
                 && in_array($file, $types)
             ) {
@@ -446,7 +462,8 @@ class GatewayManager extends AppModel
                 $gateway_files = scandir(COMPONENTDIR . 'gateways' . DS . $file);
                 foreach ($gateway_files as $gateway_file) {
                     // If the file is not a hidden file, and is a directory, accept it
-                    if (substr($gateway_file, 0, 1) != '.'
+                    if (
+                        substr($gateway_file, 0, 1) != '.'
                         && is_dir(COMPONENTDIR . 'gateways' . DS . $file . DS . $gateway_file)
                     ) {
                         // Set the gateway fields from the gateway class
@@ -467,7 +484,7 @@ class GatewayManager extends AppModel
             ksort($gateways);
             return $gateways;
         }
-        return (isset($gateways[$type]) ? $gateways[$type] : []);
+        return ($gateways[$type] ?? []);
     }
 
     /**
@@ -487,7 +504,7 @@ class GatewayManager extends AppModel
             $this->Record->where('company_id', '=', $company_id);
         }
 
-        return (boolean) $this->Record->fetch();
+        return (bool) $this->Record->fetch();
     }
 
     /**
@@ -502,7 +519,12 @@ class GatewayManager extends AppModel
     public function add(array $vars)
     {
         // Trigger the GatewayManager.addBefore event
-        extract($this->executeAndParseEvent('GatewayManager.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('GatewayManager.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $gw = $this->loadGateway($vars['class'], $vars['type']);
 
@@ -577,9 +599,15 @@ class GatewayManager extends AppModel
     public function edit($gateway_id, array $vars)
     {
         // Trigger the GatewayManager.editBefore event
-        extract($this->executeAndParseEvent(
-            'GatewayManager.editBefore', ['gateway_id' => $gateway_id, 'vars' => $vars]
-        ));
+        $event = $this->executeAndParseEvent(
+            'GatewayManager.editBefore',
+            ['gateway_id' => $gateway_id, 'vars' => $vars]
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $gateway = $this->get($gateway_id);
 
@@ -624,7 +652,7 @@ class GatewayManager extends AppModel
                 // Update the currencies
                 if (isset($vars['currencies'])) {
                     $this->setCurrencies($gateway_id, $vars['currencies']);
-                    
+
                     // For merchant gateways, automatically set as default for new currencies with no default
                     if ($gateway->type == 'merchant') {
                         $this->setDefaultCurrencies($gateway, $vars['currencies']);
@@ -678,7 +706,12 @@ class GatewayManager extends AppModel
     public function delete($gateway_id)
     {
         // Trigger the GatewayManager.deleteBefore event
-        extract($this->executeAndParseEvent('GatewayManager.deleteBefore', ['gateway_id' => $gateway_id]));
+        $event = $this->executeAndParseEvent('GatewayManager.deleteBefore', ['gateway_id' => $gateway_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $installed_gateway = $this->get($gateway_id);
 
@@ -884,6 +917,7 @@ class GatewayManager extends AppModel
             'logo' => Router::makeURI(($dirname == DS ? '' : $dirname) . DS
                 . str_replace(ROOTWEBDIR, '', COMPONENTDIR . 'gateways' . DS
                 . $type . DS . $class . DS . $gateway->getLogo())),
+            'icon' => $gateway->getIcon(),
             'installed' => $this->isInstalled($class, $type, $company_id),
             'currencies' => $gateway->getCurrencies(),
             'description' => $gateway->getDescription()
@@ -913,7 +947,7 @@ class GatewayManager extends AppModel
             $gw = $this->loadGateway($gateway->class, $gateway->type);
             $gateway->info = $this->getGatewayInfo($gw, $gateway->type, $company_id);
             $gateway->name = $gateway->info['name'];
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Do nothing
         }
 
@@ -932,7 +966,7 @@ class GatewayManager extends AppModel
         try {
             // Set gateway info
             $gw = $this->loadGateway($gateway->class, $gateway->type);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
 
@@ -997,10 +1031,10 @@ class GatewayManager extends AppModel
 
         // Get current currencies for this gateway
         $current_currencies = array_column($this->getCurrencies($gateway_id), 'currency');
-        
+
         // Find currencies being removed
         $removed_currencies = array_diff($current_currencies, $currencies);
-        
+
         if (empty($removed_currencies)) {
             return true;
         }
@@ -1047,7 +1081,7 @@ class GatewayManager extends AppModel
         // Get current default merchant gateway settings
         $default_setting = $this->Companies->getSetting($gateway->company_id, 'default_merchant_gateway');
         $default_gateways = [];
-        
+
         if ($default_setting && $default_setting->value) {
             $default_gateways = json_decode($default_setting->value, true);
             if (!is_array($default_gateways)) {

@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 /**
@@ -134,7 +135,7 @@ class DirectAdminApi
         }
         if (empty($arguments)) {
             $response = $this->contactApi($call[2], $call[0]);
-        } else if (empty($call[3])) {
+        } elseif (empty($call[3])) {
             $response = $this->contactApi($call[2], $call[0], $arguments);
         } else {
             $response = $this->contactApi($call[2], $call[0], array_merge($call[3], $arguments));
@@ -162,7 +163,7 @@ class DirectAdminApi
      */
     public function setUrl($url, $port = '2222')
     {
-        $this->apiUrl = rtrim($url, "/") . ":" . $port;
+        $this->apiUrl = rtrim($url, '/') . ':' . $port;
     }
 
     /**

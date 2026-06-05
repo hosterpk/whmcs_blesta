@@ -1,9 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
+
 use Blesta\Core\Util\Input\Fields\InputFields;
 use Blesta\Core\Util\Filters\Common\FiltersInterface;
-use \Loader;
-use \Language;
+use Loader;
+use Language;
 
 /**
  * Coupon Filters

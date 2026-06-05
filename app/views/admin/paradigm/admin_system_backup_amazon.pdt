@@ -1,0 +1,156 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminSystemBackup.amazon.boxtitle_backup', true), ['id' => 'admin_system_backup_amazon']);
+?>
+    <?php $this->Form->create(null, ['id' => 'amazons3', 'class' => 'disable-on-submit']); ?>
+
+    <!-- Test Amazon S3 Button -->
+    <div class="mb-4">
+        <button type="button" class="btn btn-sm btn-outline-secondary test-amazons3">
+            <i class="bi bi-check-circle me-1"></i>
+            <?php $this->_('AdminSystemBackup.amazon.field.test');?>
+        </button>
+    </div>
+
+    <!-- Amazon S3 Region -->
+    <div class="mb-3">
+        <label for="amazons3_region" class="form-label">
+            <?php $this->_('AdminSystemBackup.amazon.field.amazons3_region');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.amazons3_region', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldSelect('amazons3_region', (isset($regions) ? $regions : null), (isset($vars['amazons3_region']) ? $vars['amazons3_region'] : 'us-east-1'), ['id' => 'amazons3_region', 'class' => 'form-select']);
+        ?>
+    </div>
+
+    <!-- Amazon S3 Access Key -->
+    <div class="mb-3">
+        <label for="amazons3_access_key" class="form-label">
+            <?php $this->_('AdminSystemBackup.amazon.field.amazons3_accesskey');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.amazons3_access_key', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('amazons3_access_key', (isset($vars['amazons3_access_key']) ? $vars['amazons3_access_key'] : null), ['id' => 'amazons3_access_key', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- Amazon S3 Secret Key -->
+    <div class="mb-3">
+        <label for="amazons3_secret_key" class="form-label">
+            <?php $this->_('AdminSystemBackup.amazon.field.amazons3_secretkey');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.amazons3_secret_key', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('amazons3_secret_key', (isset($vars['amazons3_secret_key']) ? $vars['amazons3_secret_key'] : null), ['id' => 'amazons3_secret_key', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- Amazon S3 Bucket -->
+    <div class="mb-3">
+        <label for="amazons3_bucket" class="form-label">
+            <?php $this->_('AdminSystemBackup.amazon.field.amazons3_bucket');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.amazons3_bucket', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('amazons3_bucket', (isset($vars['amazons3_bucket']) ? $vars['amazons3_bucket'] : null), ['id' => 'amazons3_bucket', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- Amazon S3 Rate -->
+    <div class="mb-3">
+        <label for="amazons3_rate" class="form-label">
+            <?php $this->_('AdminSystemBackup.amazon.field.amazons3_rate');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.amazons3_rate', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldSelect('amazons3_rate', $frequency, (isset($vars['amazons3_rate']) ? $vars['amazons3_rate'] : null), ['id' => 'amazons3_rate', 'class' => 'form-select']);
+        ?>
+    </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminSystemBackup.amazon.field.backupsubmit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+    <?php $this->Form->end(); ?>
+<?php $this->Widget->end(); ?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Test Amazon S3 functionality
+    const testAmazonButton = document.querySelector('.test-amazons3');
+    const amazonForm = document.getElementById('amazons3');
+
+    if (testAmazonButton && amazonForm) {
+        testAmazonButton.addEventListener('click', function() {
+            // Disable the form
+            const formElements = amazonForm.querySelectorAll('input, select, button, textarea');
+            formElements.forEach(element => {
+                element.disabled = true;
+            });
+
+            // Create FormData from the form
+            const formData = new FormData(amazonForm);
+
+            // Send AJAX request
+            fetch('<?php echo $this->base_uri . 'settings/system/backup/amazontest/';?>', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Hide any existing error sections
+                const existingErrors = document.querySelectorAll('.card-body .error_section, .card-body .alert-danger, .card-body .alert-success');
+                existingErrors.forEach(error => error.remove());
+
+                // Insert the response message at the top of the card body
+                const cardBody = document.querySelector('.card-body');
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data;
+                cardBody.insertBefore(tempDiv.firstElementChild, cardBody.firstChild);
+
+                // Re-enable the form
+                formElements.forEach(element => {
+                    element.disabled = false;
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Re-enable the form
+                formElements.forEach(element => {
+                    element.disabled = false;
+                });
+            });
+        });
+    }
+});
+</script>

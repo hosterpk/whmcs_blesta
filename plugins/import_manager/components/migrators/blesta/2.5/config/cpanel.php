@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('cpanel.map', [
     'module' => 'cpanel',
     'module_row_key' => 'hostn',

@@ -18,18 +18,13 @@ class AdminSystemStaff extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'Settings', 'Staff', 'StaffGroups']);
+        $this->uses(['Settings', 'Staff', 'StaffGroups']);
         $this->components(['SettingsCollection']);
 
         // Create an array helper
         $this->ArrayHelper = $this->DataStructure->create('Array');
 
         if (!$this->isAjax()) {
-            // Set the left nav for all settings pages to settings_leftnav
-            $this->set(
-                'left_nav',
-                $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-            );
         }
     }
 
@@ -186,10 +181,40 @@ class AdminSystemStaff extends AdminController
             // Begin transaction
             $this->Users->begin();
 
-            $this->Users->edit($staff->user_id, $this->post);
+            // Whitelist user fields to prevent mass assignment
+            $user_vars = array_intersect_key(
+                $this->post,
+                array_flip(
+                    [
+                        'username',
+                        'new_password',
+                        'confirm_password',
+                        'recovery_email',
+                        'two_factor_mode',
+                        'two_factor_key',
+                        'two_factor_pin'
+                    ]
+                )
+            );
+            $this->Users->edit($staff->user_id, $user_vars);
             $user_errors = $this->Users->errors();
 
-            $this->Staff->edit($staff->id, $this->post);
+            // Whitelist staff fields to prevent mass assignment
+            $staff_vars = array_intersect_key(
+                $this->post,
+                array_flip(
+                    [
+                        'first_name',
+                        'last_name',
+                        'email',
+                        'email_mobile',
+                        'number_mobile',
+                        'status',
+                        'groups'
+                    ]
+                )
+            );
+            $this->Staff->edit($staff->id, $staff_vars);
             $staff_errors = $this->Staff->errors();
 
             $errors = array_merge(($user_errors ? $user_errors : []), ($staff_errors ? $staff_errors : []));
@@ -349,6 +374,7 @@ class AdminSystemStaff extends AdminController
         $this->set('permissions', $this->Permissions->getAll('staff', $this->company_id));
         $this->set('bcc_notices', $this->getEmailGroups('bcc'));
         $this->set('subscription_notices', $this->getEmailGroups('to'));
+        $this->set('notifications', $this->getNotifications());
     }
 
     /**
@@ -409,6 +435,13 @@ class AdminSystemStaff extends AdminController
             foreach ($notices as $notice) {
                 $vars->notices[] = $notice->action;
             }
+
+            // Set notifications
+            $notifications = (!empty($vars->notifications) ? $vars->notifications : []);
+            $vars->notifications = [];
+            foreach ($notifications as $notification) {
+                $vars->notifications[] = $notification->action;
+            }
         }
 
         // Determine if this staff group is assigned to the current staff member - need to
@@ -430,6 +463,7 @@ class AdminSystemStaff extends AdminController
         $this->set('permissions', $this->Permissions->getAll('staff', $staff_group->company_id));
         $this->set('bcc_notices', $this->getEmailGroups('bcc'));
         $this->set('subscription_notices', $this->getEmailGroups('to'));
+        $this->set('notifications', $this->getNotifications());
     }
 
     /**
@@ -518,5 +552,58 @@ class AdminSystemStaff extends AdminController
         }
 
         return $email_groups;
+    }
+
+    /**
+     * Fetches all the notification actions, loads the notification language
+     * definitions, and translates notification names and descriptions.
+     *
+     * @param string|null $type The action type: 'system', 'plugin', 'module', or null for all (optional)
+     * @return array An array of processed notification objects with translated labels
+     */
+    private function getNotifications(?string $type = null)
+    {
+        $this->uses(['StaffGroups', 'Notifications']);
+
+        // Get company notifications
+        $notifications = $this->Notifications->getActions('staff');
+
+        if (!empty($notifications)) {
+            Language::loadLang('notifications');
+
+            $actions = [];
+            foreach ($notifications as &$notification) {
+                if (!is_null($type) && $notification->type !== $type) {
+                    continue;
+                }
+
+                // Load language file from plugin or module
+                if (!empty($notification->dir)) {
+                    $dir = match ($notification->type) {
+                        'plugin' => PLUGINDIR . $notification->dir . DS . 'language' . DS,
+                        'module' => COMPONENTDIR . 'modules' . DS . $notification->dir . DS . 'language' . DS,
+                        default => ROOTWEBDIR . 'language' . DS
+                    };
+
+                    Language::loadLang('notifications', null, $dir);
+                }
+
+                // Set translated labels
+                $notification->lang = Language::_(
+                    'Notifications.notification.' . $notification->action . '_name',
+                    true
+                );
+                $notification->lang_description = Language::_(
+                    'Notifications.notification.' . $notification->action . '_desc',
+                    true
+                );
+
+                $actions[] = $notification;
+            }
+
+            return $actions;
+        }
+
+        return [];
     }
 }

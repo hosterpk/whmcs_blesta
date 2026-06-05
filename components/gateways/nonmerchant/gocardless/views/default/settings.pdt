@@ -1,41 +1,53 @@
-<ul>
-    <li>
-        <?php
-            $this->Form->label($this->_('Gocardless.access_token', true), 'access_token');
-            $this->Form->fieldText('access_token', (isset($meta['access_token']) ? $meta['access_token'] : null), ['id' => 'access_token']);
-        ?>
-    </li>
-    <li>
-        <?php
-            $this->Form->label($this->_('Gocardless.webhook_secret', true), 'webhook_secret', ['class' => 'inline']);
-            ?>
-            <span class="tooltip block"><?php $this->_('AppController.tooltip.text'); ?><div><?php $this->_('Gocardless.!tooltip.webhook_secret'); ?></div></span>
-            <?php
-            $this->Form->fieldText('webhook_secret', (isset($meta['webhook_secret']) ? $meta['webhook_secret'] : null), ['id' => 'webhook_secret', 'class' => 'block']);
-        ?>
-    </li>
-    <li>
-        <?php
-            $this->Form->label($this->_('Gocardless.pay_type', true));
 
-            $this->Form->fieldRadio('pay_type', 'both', ((isset($meta['pay_type']) ? $meta['pay_type'] : 'both') == 'both'), ['id' => 'pay_type_both']);
-            $this->Form->label($this->_('Gocardless.pay_type_both', true), 'pay_type_both', ['class' => 'inline']);
-
-            $this->Form->fieldRadio('pay_type', 'onetime', ((isset($meta['pay_type']) ? $meta['pay_type'] : 'both') == 'onetime'), ['id' => 'pay_type_onetime']);
-            $this->Form->label($this->_('Gocardless.pay_type_onetime', true), 'pay_type_onetime', ['class' => 'inline']);
-
-            $this->Form->fieldRadio('pay_type', 'subscribe', ((isset($meta['pay_type']) ? $meta['pay_type'] : 'both') == 'subscribe'), ['id' => 'pay_type_subscribe']);
-            $this->Form->label($this->_('Gocardless.pay_type_subscribe', true), 'pay_type_subscribe', ['class' => 'inline']);
-        ?>
-    </li>
-    <li>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Gocardless.access_token', true), 'access_token', ['class' => 'form-label']);
+    $this->Form->fieldText('access_token', (isset($meta['access_token']) ? $meta['access_token'] : null), ['id' => 'access_token', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <label for="webhook_secret" class="form-label">
+        <?php $this->_('Gocardless.webhook_secret'); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_('Gocardless.!tooltip.webhook_secret', true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText('webhook_secret', (isset($meta['webhook_secret']) ? $meta['webhook_secret'] : null), ['id' => 'webhook_secret', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <label class="form-label"><?php $this->_('Gocardless.pay_type'); ?></label>
+    <div class="form-check">
         <?php
-            $this->Form->fieldCheckbox('dev_mode', 'true', ((isset($meta['dev_mode']) ? $meta['dev_mode'] : 'false') == 'true'), ['id' => 'dev_mode']);
-            $this->Form->label($this->_('Gocardless.dev_mode', true), 'dev_mode', ['class' => 'inline']);
+        $this->Form->fieldRadio('pay_type', 'both', ((isset($meta['pay_type']) ? $meta['pay_type'] : 'both') == 'both'), ['id' => 'pay_type_both', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('Gocardless.pay_type_both', true), 'pay_type_both', ['class' => 'form-check-label']);
         ?>
-        <span class="tooltip"><?php $this->_('AppController.tooltip.text'); ?><div><?php $this->_('Gocardless.dev_mode_note'); ?></div></span>
-    </li>
-</ul>
+    </div>
+    <div class="form-check">
+        <?php
+        $this->Form->fieldRadio('pay_type', 'onetime', ((isset($meta['pay_type']) ? $meta['pay_type'] : 'both') == 'onetime'), ['id' => 'pay_type_onetime', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('Gocardless.pay_type_onetime', true), 'pay_type_onetime', ['class' => 'form-check-label']);
+        ?>
+    </div>
+    <div class="form-check">
+        <?php
+        $this->Form->fieldRadio('pay_type', 'subscribe', ((isset($meta['pay_type']) ? $meta['pay_type'] : 'both') == 'subscribe'), ['id' => 'pay_type_subscribe', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('Gocardless.pay_type_subscribe', true), 'pay_type_subscribe', ['class' => 'form-check-label']);
+        ?>
+    </div>
+</div>
+<div class="mb-3">
+    <div class="form-check">
+        <?php
+        $this->Form->fieldCheckbox('dev_mode', 'true', ((isset($meta['dev_mode']) ? $meta['dev_mode'] : 'false') == 'true'), ['id' => 'dev_mode', 'class' => 'form-check-input']);
+        ?>
+        <label for="dev_mode" class="form-check-label">
+            <?php $this->_('Gocardless.dev_mode'); ?>
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('Gocardless.dev_mode_note', true)); ?>"></i>
+        </label>
+    </div>
+</div>
 
 <div class="title_row">
     <h3><?php $this->_('Gocardless.webhook'); ?></h3>

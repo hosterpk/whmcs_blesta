@@ -38,6 +38,7 @@ $lang['AdminTools.getlognames.text_accountaccess'] = 'Account Access';
 $lang['AdminTools.getlognames.text_transactions'] = 'Transactions';
 $lang['AdminTools.getlognames.text_cron'] = 'Cron';
 $lang['AdminTools.getlognames.text_invoice_delivery'] = 'Invoice Delivery';
+$lang['AdminTools.getlognames.text_system'] = 'System';
 
 
 // Convert Currency
@@ -57,7 +58,7 @@ $lang['AdminTools.utilities.boxtitle_utilities'] = 'Utilities';
 
 $lang['AdminTools.utilities.heading_utility'] = 'Utility';
 $lang['AdminTools.utilities.heading_description'] = 'Description';
-$lang['AdminTools.utilities.heading_options'] = 'Options';
+$lang['AdminTools.utilities.heading_options'] = 'Actions';
 
 $lang['AdminTools.utilities.update_collation'] = 'Update Database Collation';
 $lang['AdminTools.utilities.field_update_to_utf8mb4'] = 'Update to utf8mb4';
@@ -65,6 +66,38 @@ $lang['AdminTools.utilities.text_update_to_utf8mb4'] = 'Update the character set
 $lang['AdminTools.utilities.text_update_to_utf8mb4_requirements'] = 'Please upgrade to MySQL to 5.7+ or MariaDB to 10.2.2+ to support utf8mb4 characters such as emojis.';
 $lang['AdminTools.utilities.text_update_to_utf8mb4_supported'] = 'Database already supports utf8mb4.';
 $lang['AdminTools.utilities.text_update_to_utf8mb4_config'] = 'To insert and fetch utf8mb4 characters update your blesta.php configuration file to use \'charset_query\' => "SET NAMES \'utf8mb4\'".';
+
+$lang['AdminTools.utilities.clear_file_cache'] = 'Clear File Cache';
+$lang['AdminTools.utilities.field_clear_file_cache'] = 'Clear Cache';
+$lang['AdminTools.utilities.text_clear_file_cache'] = 'Clear cached files including navigation, views, and plugin caches. This may cause slightly slower page loads until the caches are rebuilt.';
+$lang['AdminTools.utilities.integrity_check'] = 'System Integrity Check';
+$lang['AdminTools.utilities.text_integrity_check'] = 'Verify core files against the shipped manifest to identify modified or missing files.';
+$lang['AdminTools.utilities.field_integrity_check'] = 'Run Check';
+
+$lang['AdminTools.!success.cache_cleared'] = 'The file cache has been successfully cleared.';
+
+// Integrity Check
+$lang['AdminTools.integritycheck.page_title'] = 'System Integrity Check';
+$lang['AdminTools.integritycheck.boxtitle_integritycheck'] = 'System Integrity Check';
+$lang['AdminTools.integritycheck.text_description'] = 'Verify installed files against the manifest shipped with this release. This checks file integrity by comparing SHA256 hashes and can help identify files that have been modified, which is useful for troubleshooting and prior to performing upgrades.';
+$lang['AdminTools.integritycheck.field_run_check'] = 'Run Integrity Check';
+$lang['AdminTools.integritycheck.field_download_report'] = 'Download Report';
+$lang['AdminTools.integritycheck.field_run_again'] = 'Run Again';
+$lang['AdminTools.integritycheck.text_checking'] = 'Checking files, please wait. This may take a moment...';
+$lang['AdminTools.integritycheck.heading_status'] = 'Status';
+$lang['AdminTools.integritycheck.heading_file'] = 'File';
+$lang['AdminTools.integritycheck.heading_category'] = 'Category';
+$lang['AdminTools.integritycheck.status_modified'] = 'Modified';
+$lang['AdminTools.integritycheck.status_missing'] = 'Missing';
+$lang['AdminTools.integritycheck.category_core'] = 'Core';
+$lang['AdminTools.integritycheck.category_vendor'] = 'Vendor';
+$lang['AdminTools.integritycheck.text_total_files'] = 'Total Files';
+$lang['AdminTools.integritycheck.text_ok'] = 'OK';
+$lang['AdminTools.integritycheck.text_no_issues'] = 'All files match the manifest. No modifications or missing files detected.';
+$lang['AdminTools.integritycheck.text_error'] = 'An error occurred while checking files.';
+$lang['AdminTools.integritycheck.text_manifest_not_found'] = 'The manifest file (manifest.json) was not found. This file is included with official releases and is required to perform an integrity check.';
+$lang['AdminTools.integritycheck.text_summary'] = 'Checked %1$s files: %2$s OK, %3$s modified, %4$s missing.';
+$lang['AdminTools.integritycheck.text_manifest_version'] = 'Manifest version: %1$s (generated %2$s)';
 
 
 // Logs
@@ -99,7 +132,7 @@ $lang['AdminTools.renewals.heading_date_cancelation'] = 'Cancellation Date';
 $lang['AdminTools.renewals.heading_date_changes'] = 'Change Date';
 $lang['AdminTools.renewals.heading_date_status'] = 'Update Date';
 $lang['AdminTools.renewals.heading_date_next_attempt'] = 'Next Attempt';
-$lang['AdminTools.renewals.heading_options'] = 'Options';
+$lang['AdminTools.renewals.heading_options'] = 'Actions';
 $lang['AdminTools.renewals.confirm_dequeue'] = 'Are you sure you want to remove this service from the renewal queue?';
 $lang['AdminTools.renewals.status_pending'] = 'Pending';
 $lang['AdminTools.renewals.status_error'] = 'Error';
@@ -107,8 +140,10 @@ $lang['AdminTools.renewals.option_dequeue'] = 'Dequeue';
 $lang['AdminTools.renewals.option_change_max'] = 'Change Maximum';
 
 $lang['AdminTools.renewals.modal_cancel'] = 'Are you sure to cancel this pending service changes?';
+$lang['AdminTools.renewals.modal_cancel_paid'] = 'Are you sure you want to cancel this pending service change? The related invoice has already been paid and will not be voided.';
 $lang['AdminTools.renewals.option_cancel'] = 'Cancel';
 $lang['AdminTools.renewals.field_void_invoice'] = 'Void Invoice';
+$lang['AdminTools.renewals.field_void_invoice_paid_tooltip'] = 'This invoice has already been paid and cannot be voided from the queue.';
 
 $lang['AdminTools.renewals.modal_retry'] = 'Are you sure to retry this errored service changes?';
 $lang['AdminTools.renewals.option_retry'] = 'Retry';
@@ -314,6 +349,24 @@ $lang['AdminTools.logcron.no_output'] = 'No output recorded for this log.';
 $lang['AdminTools.logcron.no_results'] = 'There are no cron logs.';
 
 
+// System logs
+$lang['AdminTools.logsystem.page_title'] = 'Tools Logs';
+$lang['AdminTools.logsystem.text_date'] = 'Date';
+$lang['AdminTools.logsystem.text_level'] = 'Level';
+$lang['AdminTools.logsystem.text_message'] = 'Message';
+$lang['AdminTools.logsystem.no_results'] = 'There are no system log entries.';
+$lang['AdminTools.logsystem.no_log_dir'] = 'The log directory is not configured or is not readable. Configure it under Settings > System > General.';
+
+$lang['AdminTools.logsystem.level_emergency'] = 'Emergency';
+$lang['AdminTools.logsystem.level_alert'] = 'Alert';
+$lang['AdminTools.logsystem.level_critical'] = 'Critical';
+$lang['AdminTools.logsystem.level_error'] = 'Error';
+$lang['AdminTools.logsystem.level_warning'] = 'Warning';
+$lang['AdminTools.logsystem.level_notice'] = 'Notice';
+$lang['AdminTools.logsystem.level_info'] = 'Info';
+$lang['AdminTools.logsystem.level_debug'] = 'Debug';
+
+
 // Invoice Delivery logs
 $lang['AdminTools.loginvoicedelivery.page_title'] = 'Tools Logs';
 
@@ -331,7 +384,7 @@ $lang['AdminTools.blacklist.heading_type'] = 'Type';
 $lang['AdminTools.blacklist.heading_list'] = 'List';
 $lang['AdminTools.blacklist.heading_block_outgoing'] = 'Block Outgoing';
 $lang['AdminTools.blacklist.heading_note'] = 'Note';
-$lang['AdminTools.blacklist.heading_options'] = 'Options';
+$lang['AdminTools.blacklist.heading_options'] = 'Actions';
 
 $lang['AdminTools.blacklist.text_type_ip'] = 'IP Address';
 $lang['AdminTools.blacklist.text_type_email'] = 'Email Address';
@@ -351,4 +404,4 @@ $lang['AdminTools.blacklistadd.field_rule'] = 'Rule';
 $lang['AdminTools.blacklistadd.field_type'] = 'Type';
 $lang['AdminTools.blacklistadd.field_block_outgoing'] = 'Block outgoing emails to this address';
 $lang['AdminTools.blacklistadd.field_note'] = 'Note';
-$lang['AdminTools.blacklistadd.field_submit'] = 'Add Rule';
+$lang['AdminTools.blacklistadd.field_submit'] = 'Create Rule';

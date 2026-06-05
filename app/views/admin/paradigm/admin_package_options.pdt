@@ -1,0 +1,364 @@
+<?php
+echo ($message ?? null);
+
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminPackageOptions.index.boxtitle_options', true), ['id' => 'admin_package_options']);
+?>
+
+<!-- Card Filter Bar -->
+<div class="card-filter-bar">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 w-100">
+        <!-- Left: Stats + Clipboard Indicator -->
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-secondary"><strong id="statsOptionsCount"><?php echo $this->Html->safe($editor_stats['options_count'] ?? 0); ?></strong> <?php $this->_('AdminPackageOptions.index.category_options'); ?></span>
+            <span class="text-secondary"><strong id="statsGroupsCount"><?php echo $this->Html->safe($editor_stats['groups_count'] ?? 0); ?></strong> <?php $this->_('AdminPackageOptions.index.category_groups'); ?></span>
+            <span class="text-secondary"><strong id="statsUnassignedCount"><?php echo $this->Html->safe($editor_stats['unassigned_count'] ?? 0); ?></strong> <?php $this->_('AdminPackageOptions.index.text_unassigned_count'); ?></span>
+
+            <!-- Clipboard Indicator -->
+            <div id="clipboardIndicator" class="clipboard-indicator" style="display: none;">
+                <i class="bi bi-clipboard-check text-info"></i>
+                <span class="badge bg-info" id="clipboardBadge">0</span>
+                <span class="text-secondary small"><?php $this->_('AdminPackageOptions.index.text_in_clipboard'); ?></span>
+                <button class="btn btn-link btn-sm p-0 ms-2" id="btnClearClipboard" title="<?php $this->_('AdminPackageOptions.index.btn_clear_clipboard'); ?>">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Right: Action Buttons -->
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importGroupModal">
+                <i class="bi bi-upload me-1"></i><?php $this->_('AdminPackageOptions.index.categorylink_importgroup'); ?>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary btn-create-group">
+                <i class="bi bi-folder-plus me-1"></i><?php $this->_('AdminPackageOptions.index.categorylink_creategroup'); ?>
+            </button>
+            <button class="btn btn-sm btn-primary btn-create-option">
+                <i class="bi bi-plus-lg me-1"></i><?php $this->_('AdminPackageOptions.index.categorylink_createoption'); ?>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Editor Container -->
+<div class="card-body p-0">
+    <div class="options-editor-container">
+        <!-- Left Column: Available Options -->
+        <div class="options-available">
+            <div class="options-section-header">
+                <h6 class="mb-2"><?php $this->_('AdminPackageOptions.index.heading_available_options'); ?></h6>
+                <input type="search" class="form-control" placeholder="<?php $this->_('AdminPackageOptions.index.text_filter_options'); ?>" id="filterAvailableOptions">
+            </div>
+            <div class="options-available-list" id="availableOptionsList">
+                <?php if (!empty($all_options)) { ?>
+                    <?php foreach (($all_options ?? []) as $option) { ?>
+                        <div class="option-card" data-option-id="<?php echo $this->Html->safe($option['id']); ?>">
+                            <div class="option-card-left">
+                                <i class="bi <?php echo $this->Html->safe($type_icons[$option['type']] ?? 'bi-gear'); ?> option-card-icon"></i>
+                                <div class="option-card-info">
+                                    <div class="option-card-title"><?php echo $this->Html->safe($option['label']); ?></div>
+                                    <div class="option-card-meta">
+                                        <span><?php echo $this->Html->safe($option['type']); ?></span>
+                                        <?php if (count($option['groups']) >= 2) { ?>
+                                            <span><i class="bi bi-collection"></i> <?php $this->_('AdminPackageOptions.index.text_in_x_groups', false, count($option['groups'])); ?></span>
+                                        <?php } ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="option-card-right">
+                                <div class="option-card-actions">
+                                    <button class="btn btn-sm btn-outline-secondary btn-copy-option" data-option-id="<?php echo $this->Html->safe($option['id']); ?>" title="<?php $this->_('AdminPackageOptions.index.option_copy'); ?>">
+                                        <i class="bi bi-copy"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary btn-edit-option" data-option-id="<?php echo $this->Html->safe($option['id']); ?>" title="<?php $this->_('AdminPackageOptions.index.option_edit'); ?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <?php
+                                    $this->Form->create($this->base_uri . 'package_options/delete/', ['class' => 'd-inline']);
+                                    $this->Form->fieldHidden('id', $this->Html->safe($option['id']));
+                                    ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                        data-confirm-message="<?php echo $this->Html->safe($this->_('AdminPackageOptions.index.confirm_delete_option', true)); ?>"
+                                        title="<?php $this->_('AdminPackageOptions.index.option_delete'); ?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <?php $this->Form->end(); ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php } ?>
+                <?php } else { ?>
+                    <div class="empty-state">
+                        <i class="bi bi-sliders empty-state-icon"></i>
+                        <div class="empty-state-text"><?php $this->_('AdminPackageOptions.index.text_no_options'); ?></div>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
+
+        <!-- Right Column: Option Groups -->
+        <div class="options-groups">
+            <div class="options-section-header">
+                <h6 class="mb-2"><?php $this->_('AdminPackageOptions.index.heading_option_groups'); ?></h6>
+                <div class="d-flex gap-2">
+                    <input type="search" class="form-control flex-grow-1" placeholder="<?php $this->_('AdminPackageOptions.index.text_filter_groups'); ?>" id="filterGroups">
+                    <button class="btn btn-sm btn-outline-secondary" id="collapseAllGroups" title="<?php $this->_('AdminPackageOptions.index.btn_collapse_all'); ?>">
+                        <i class="bi bi-arrows-collapse"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="options-groups-list" id="optionGroupsList">
+                <?php if (!empty($all_groups)) { ?>
+                    <?php foreach (($all_groups ?? []) as $group) { ?>
+                        <?php $group_option_count = count($group['options'] ?? []); ?>
+                        <div class="option-group<?php echo $group_option_count === 0 ? ' empty' : ''; ?>" data-group-id="<?php echo $this->Html->safe($group['id']); ?>">
+                            <div class="option-group-header">
+                                <div class="option-group-title">
+                                    <i class="bi bi-chevron-down"></i>
+                                    <span class="option-group-name"><?php echo $this->Html->safe($group['name']); ?></span>
+                                    <span class="option-group-count"><?php echo $this->_('AdminPackageOptions.index.text_options_count_group', true, $group_option_count); ?></span>
+                                </div>
+                                <div class="option-group-actions">
+                                    <button class="btn btn-sm btn-outline-success paste-button" data-group-id="<?php echo $this->Html->safe($group['id']); ?>" title="<?php $this->_('AdminPackageOptions.index.option_paste'); ?>" disabled>
+                                        <i class="bi bi-clipboard-check"></i>
+                                    </button>
+                                    <a class="btn btn-sm btn-outline-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'package_options/exportgroup/' . $group['id'] . '/'); ?>" title="<?php $this->_('AdminPackageOptions.index.option_export'); ?>">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-secondary btn-open-logic<?php echo $group_option_count < 2 ? ' logic-disabled' : ''; ?>" data-group-id="<?php echo $this->Html->safe($group['id']); ?>" data-group-name="<?php echo $this->Html->safe($group['name']); ?>" title="<?php $this->_($group_option_count >= 2 ? 'AdminPackageOptions.index.option_logic' : 'AdminPackageOptions.index.option_logic_disabled'); ?>">
+                                        <i class="bi bi-diagram-3"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary btn-edit-group" data-group-id="<?php echo $this->Html->safe($group['id']); ?>" title="<?php $this->_('AdminPackageOptions.index.option_edit'); ?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <?php
+                                    $this->Form->create($this->base_uri . 'package_options/deletegroup/', ['class' => 'd-inline']);
+                                    $this->Form->fieldHidden('id', $this->Html->safe($group['id']));
+                                    ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                        data-confirm-message="<?php echo $this->Html->safe($this->_('AdminPackageOptions.index.confirm_delete_group', true)); ?>"
+                                        title="<?php $this->_('AdminPackageOptions.index.option_delete'); ?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <?php $this->Form->end(); ?>
+                                </div>
+                            </div>
+                            <div class="option-group-content" data-group-content="<?php echo $this->Html->safe($group['id']); ?>">
+                                <div class="option-group-dropzone" data-group-dropzone="<?php echo $this->Html->safe($group['id']); ?>">
+                                    <?php if ($group_option_count > 0) { ?>
+                                        <?php foreach (($group['options'] ?? []) as $group_opt) { ?>
+                                            <div class="option-card-compact" data-option-id="<?php echo $this->Html->safe($group_opt['id']); ?>">
+                                                <div class="option-card-compact-left">
+                                                    <i class="bi <?php echo $this->Html->safe($type_icons[$group_opt['type']] ?? 'bi-gear'); ?> option-card-compact-icon"></i>
+                                                    <div class="option-card-compact-info">
+                                                        <div class="option-card-compact-title"><?php echo $this->Html->safe($group_opt['label']); ?></div>
+                                                        <div class="option-card-compact-meta">
+                                                            <span><?php echo $this->Html->safe($group_opt['type']); ?></span>
+                                                            <?php if (($group_opt['group_count'] ?? 0) >= 2) { ?>
+                                                                <span><i class="bi bi-collection"></i> <?php $this->_('AdminPackageOptions.index.text_in_x_groups', false, $group_opt['group_count']); ?></span>
+                                                            <?php } ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="option-card-compact-right">
+                                                    <div class="option-card-compact-actions">
+                                                        <button class="btn btn-sm btn-outline-secondary btn-edit-option" data-option-id="<?php echo $this->Html->safe($group_opt['id']); ?>" title="<?php $this->_('AdminPackageOptions.index.option_edit'); ?>">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                    </div>
+                                                    <button class="btn btn-sm border-0 text-secondary btn-remove-from-group" data-option-id="<?php echo $this->Html->safe($group_opt['id']); ?>" data-group-id="<?php echo $this->Html->safe($group['id']); ?>" title="<?php $this->_('AdminPackageOptions.index.option_remove_from_group'); ?>">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        <?php } ?>
+                                    <?php } else { ?>
+                                        <div class="dropzone-empty-state">
+                                            <i class="bi bi-inbox"></i>
+                                            <div><?php $this->_('AdminPackageOptions.index.text_drop_options'); ?></div>
+                                        </div>
+                                    <?php } ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php } ?>
+                <?php } else { ?>
+                    <div class="empty-state">
+                        <i class="bi bi-collection empty-state-icon"></i>
+                        <div class="empty-state-text"><?php $this->_('AdminPackageOptions.index.text_no_groups'); ?></div>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+$this->Widget->end();
+?>
+
+<!-- Create Option Modal (empty shell, loaded via AJAX or JS-based form) -->
+<div class="modal fade" id="createOptionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i><?php $this->_('AdminPackageOptions.modal.title_create_option'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Option Modal (shell, content loaded via AJAX) -->
+<div class="modal fade" id="editOptionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i><?php $this->_('AdminPackageOptions.modal.title_edit_option'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-folder-plus me-2"></i><?php $this->_('AdminPackageOptions.modal.title_create_group'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Group Modal (shell, content loaded via AJAX) -->
+<div class="modal fade" id="editGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i><?php $this->_('AdminPackageOptions.modal.title_edit_group'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Group Modal -->
+<div class="modal fade" id="importGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-upload me-2"></i><?php $this->_('AdminPackageOptions.modal.title_import_group'); ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary"><?php $this->_('AdminPackageOptions.modal.text_import_info'); ?></p>
+                <?php
+                $this->Form->create(null, ['id' => 'importGroupForm', 'enctype' => 'multipart/form-data']);
+                ?>
+                    <div class="dropzone-empty-state mb-3" id="importDropZone" style="cursor: pointer;">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <div><?php $this->_('AdminPackageOptions.modal.text_drag_drop'); ?></div>
+                        <div class="text-secondary small"><?php $this->_('AdminPackageOptions.modal.text_or_browse'); ?></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btnBrowseImport"><?php $this->_('AdminPackageOptions.modal.btn_browse'); ?></button>
+                    </div>
+                    <?php $this->Form->fieldFile('import_file', ['id' => 'importFileInput', 'accept' => '.json', 'class' => 'd-none']); ?>
+                    <?php $this->Form->fieldHidden('import', '1'); ?>
+
+                    <!-- Validation Errors -->
+                    <div id="importErrors" class="alert alert-danger" style="display: none;">
+                        <strong><?php $this->_('AdminPackageOptions.modal.text_validation_errors'); ?></strong>
+                        <ul id="errorList" class="mb-0 mt-1"></ul>
+                    </div>
+
+                    <!-- Import Preview -->
+                    <div id="importPreview" style="display: none;">
+                        <h6 class="mb-2"><?php $this->_('AdminPackageOptions.modal.text_options_to_import'); ?></h6>
+                        <div class="mb-3">
+                            <label class="form-label"><?php $this->_('AdminPackageOptions.addgroup.field_name'); ?></label>
+                            <input type="text" class="form-control form-control-sm" id="previewGroupName">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><?php $this->_('AdminPackageOptions.addgroup.field_description'); ?></label>
+                            <input type="text" class="form-control form-control-sm" id="previewDescription">
+                        </div>
+                        <div class="mb-2 text-secondary small"><span id="previewOptionCount">0</span> options</div>
+                        <div id="previewOptionsList"></div>
+                    </div>
+                <?php
+                $this->Form->end();
+                ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminPackageOptions.modal.btn_cancel'); ?></button>
+                <button type="button" class="btn btn-primary" id="confirmImportBtn" disabled><?php $this->_('AdminPackageOptions.modal.btn_import_group'); ?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Logic Modal -->
+<div class="modal fade" id="logicModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-diagram-3 me-2"></i>
+                    <span id="logicModalTitle"><?php $this->_('AdminPackageOptions.index.option_logic'); ?></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Page-specific JS data -->
+<script>
+    const blestaOptionsData = {
+        baseUri: '<?php echo $this->Html->safe($this->base_uri); ?>',
+        csrfToken: '<?php echo $this->Form->getCsrfToken();?>',
+        options: <?php echo json_encode($all_options ?? []); ?>,
+        groups: <?php echo json_encode($all_groups ?? []); ?>,
+        typeIcons: <?php echo json_encode($type_icons ?? []); ?>,
+        defaultCurrency: '<?php echo $this->Html->safe($editor_default_currency ?? 'USD'); ?>'
+    };
+</script>
+<script src="<?php echo $this->view_dir; ?>javascript/options-editor.min.js"></script>

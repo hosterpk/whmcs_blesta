@@ -32,7 +32,7 @@ $lang['ClientManagers.index.heading_email'] = 'Email';
 $lang['ClientManagers.index.heading_name'] = 'Full Name';
 $lang['ClientManagers.index.heading_company'] = 'Company';
 $lang['ClientManagers.index.heading_status'] = 'Status';
-$lang['ClientManagers.index.heading_options'] = 'Options';
+$lang['ClientManagers.index.heading_options'] = 'Actions';
 
 $lang['ClientManagers.index.text_status_accepted'] = 'Accepted';
 $lang['ClientManagers.index.text_status_pending'] = 'Pending';
@@ -79,7 +79,7 @@ $lang['ClientManagers.accounts.heading_client_id'] = 'Client #';
 $lang['ClientManagers.accounts.heading_email'] = 'Email';
 $lang['ClientManagers.accounts.heading_name'] = 'Full Name';
 $lang['ClientManagers.accounts.heading_company'] = 'Company';
-$lang['ClientManagers.accounts.heading_options'] = 'Options';
+$lang['ClientManagers.accounts.heading_options'] = 'Actions';
 
 $lang['ClientManagers.accounts.option_manage'] = 'Manage';
 $lang['ClientManagers.accounts.option_give_up_access'] = 'Give Up Access';

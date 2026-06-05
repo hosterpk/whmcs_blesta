@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Common;
 
 use Blesta\Core\Automation\Type\Common\AutomationTypeInterface;
@@ -118,8 +119,8 @@ abstract class AbstractTask implements LoggableInterface, RunnableInterface
 
         // Load the language file
         $class = explode('\\', get_class($this));
-        $name = ($filename !== null ? $filename : Loader::fromCamelCase(end($class)));
-        $path = ($directory !== null ? $directory : $defaultDirectory);
+        $name = ($filename ?? Loader::fromCamelCase(end($class)));
+        $path = ($directory ?? $defaultDirectory);
         Language::loadLang($name, $langCode, $path);
     }
 

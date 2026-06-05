@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Package Option Condition Set management
  *
@@ -69,7 +76,9 @@ class PackageOptionConditionSets extends AppModel
     {
         $set->option = $this->PackageOptions->get($set->option_id);
         $set->option_value_ids = array_map(
-            function ($value) { return $value->value_id; },
+            function ($value) {
+                return $value->value_id;
+            },
             $this->Record->select()->
                 from('package_option_condition_set_values')->
                 where('package_option_condition_set_values.condition_set_id', '=', $set->id)->
@@ -116,12 +125,12 @@ class PackageOptionConditionSets extends AppModel
         }
         if (isset($filters['package_id'])) {
             $this->Record->innerJoin(
-                    'package_option',
-                    'package_option.option_group_id',
-                    '=',
-                    'package_option_condition_sets.option_group_id',
-                    false
-                )
+                'package_option',
+                'package_option.option_group_id',
+                '=',
+                'package_option_condition_sets.option_group_id',
+                false
+            )
                 ->innerJoin(
                     'packages',
                     'packages.id',

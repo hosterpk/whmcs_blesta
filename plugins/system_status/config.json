@@ -1,7 +1,8 @@
 {
-    "version": "1.14.1",
+    "version": "2.0.1",
     "name": "SystemStatusPlugin.name",
     "description": "SystemStatusPlugin.description",
+    "icon": "bi bi-speedometer",
     "authors": [
         {
             "name": "Phillips Data, Inc.",

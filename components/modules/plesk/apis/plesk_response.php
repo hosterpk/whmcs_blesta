@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk API response handler
  *
@@ -33,7 +34,7 @@ class PleskResponse
 
         try {
             $this->xml = new SimpleXMLElement($response);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
     }
@@ -47,13 +48,13 @@ class PleskResponse
     {
         if ($this->xml && $this->xml instanceof SimpleXMLElement) {
             $response = $this->xml->xpath($this->xml_container_path);
-            $response = (isset($response[0]) ? $response[0] : $response);
+            $response = ($response[0] ?? $response);
 
             // Only check the first result for status
             if (empty($response)) {
                 // System error
                 $response = $this->xml->xpath('/packet/system');
-                $response = (isset($response[0]) ? $response[0] : $response);
+                $response = ($response[0] ?? $response);
                 return (string)$response->status;
             }
             return (string)$response->result->status;
@@ -84,13 +85,13 @@ class PleskResponse
         if ($this->xml && $this->xml instanceof SimpleXMLElement) {
             $response = $this->xml->xpath($this->xml_container_path);
 
-            $response = (isset($response[0]) ? $response[0] : $response);
+            $response = ($response[0] ?? $response);
 
             // Check for system error
             if (empty($response)) {
                 // System error
                 $response = $this->xml->xpath('/packet/system');
-                $response = (isset($response[0]) ? $response[0] : $response);
+                $response = ($response[0] ?? $response);
                 return json_decode(json_encode($response));
             }
 
@@ -121,12 +122,12 @@ class PleskResponse
     private function formatResponse($data)
     {
         $response = $data->xpath($this->xml_container_path);
-        $response = (isset($response[0]) ? $response[0] : $response);
+        $response = ($response[0] ?? $response);
 
         if (empty($response)) {
             // System error
             $response = $this->xml->xpath('/packet/system');
-            $response = (isset($response[0]) ? $response[0] : $response);
+            $response = ($response[0] ?? $response);
         }
         return json_decode(json_encode($response));
     }

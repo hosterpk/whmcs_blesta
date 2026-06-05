@@ -5,6 +5,8 @@ $lang['Enom.description'] = 'Enom, Inc. is a domain name registrar and Web hosti
 $lang['Enom.module_row'] = 'Account';
 $lang['Enom.module_row_plural'] = 'Accounts';
 
+$lang['Enom.back_to_manage'] = 'Back';
+
 // Module management
 $lang['Enom.add_module_row'] = 'Add Account';
 $lang['Enom.manage.module_rows_title'] = 'Accounts';

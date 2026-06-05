@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Fetch Products, TLDs, Product Pricing, and TLD Pricing
  *
@@ -35,11 +36,11 @@ class WhmcsProducts
      *
      * @param int $relid The ID of the product/configoption/etc.
      * @return array A numerically indexed array of pricing each containing:
-     * 	- term
-     * 	- period
-     * 	- price
-     * 	- setupfee
-     * 	- currency
+     *  - term
+     *  - period
+     *  - price
+     *  - setupfee
+     *  - currency
      */
     public function getPricing($relid, $type = 'product')
     {
@@ -51,7 +52,7 @@ class WhmcsProducts
 
         $onetime = false;
         if ($type == 'product') {
-            $onetime = (boolean)$this->remote->select()->
+            $onetime = (bool)$this->remote->select()->
                 from('tblproducts')->where('id', '=', $relid)->
                 where('paytype', '=', 'onetime')->fetch();
         }
@@ -106,10 +107,10 @@ class WhmcsProducts
      *
      * @param int $product_id The product ID
      * @return array A numerically indexed array of pricing each containing:
-     * 	- term
-     * 	- period
-     * 	- price
-     * 	- currency
+     *  - term
+     *  - period
+     *  - price
+     *  - currency
      */
     private function getPricingOverrides($product_id)
     {
@@ -158,11 +159,11 @@ class WhmcsProducts
      * @param int $tld The domain TLD
      * @param string $type The type of pricing to fetch ('domainregister', 'domaintransfer', 'domainrenew')
      * @return array A numerically indexed array of pricing each containing:
-     * 	- term
-     * 	- period
-     * 	- price
-     * 	- setupfee
-     * 	- currency
+     *  - term
+     *  - period
+     *  - price
+     *  - setupfee
+     *  - currency
      */
     public function getTldPricing($tld, $type = null)
     {
@@ -199,7 +200,7 @@ class WhmcsProducts
                     if ((float)$price->{$price_point} <= 0) {
                         $price->{$price_point} = null;
                     }
-                    
+
                     if (is_null($price->{$price_point})) {
                         continue;
                     }
@@ -233,11 +234,11 @@ class WhmcsProducts
      *
      * @param int $product_id The product ID
      * @return array A numerically indexed array of pricing each containing:
-     * 	- term
-     * 	- period
-     * 	- price
-     * 	- setupfee
-     * 	- currency
+     *  - term
+     *  - period
+     *  - price
+     *  - setupfee
+     *  - currency
      */
     private function getTldPricingOverrides($tld)
     {
@@ -276,10 +277,12 @@ class WhmcsProducts
         foreach ($prices2 as $price) {
             $add = true;
             foreach ($prices1 as $a_price) {
-                if ($a_price['term'] == $price['term'] &&
+                if (
+                    $a_price['term'] == $price['term'] &&
                     $a_price['period'] == $price['period'] &&
                     (string)$a_price['price'] == (string)$price['price'] &&
-                    $a_price['currency'] == $price['currency']) {
+                    $a_price['currency'] == $price['currency']
+                ) {
                     $add = false;
                     break;
                 }

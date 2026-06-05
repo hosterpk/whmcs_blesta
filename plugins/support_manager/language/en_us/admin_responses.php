@@ -26,6 +26,9 @@ $lang['AdminResponses.!text.closed_parenthesis'] = ')';
 $lang['AdminResponses.index.boxtitle_responses'] = 'Predefined Responses';
 $lang['AdminResponses.index.add_response'] = 'Add Response Here';
 $lang['AdminResponses.index.add_category'] = 'Add Category Here';
+$lang['AdminResponses.index.btn_back'] = 'Back';
+$lang['AdminResponses.index.btn_add_category'] = 'Add Category';
+$lang['AdminResponses.index.btn_add_response'] = 'Add Response';
 
 $lang['AdminResponses.index.text_up_level'] = 'Go Up a Level';
 $lang['AdminResponses.index.edit'] = 'Edit';

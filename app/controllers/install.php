@@ -69,6 +69,9 @@ class Install extends Controller
     {
         parent::preAction();
 
+        // Set error reporting
+        error_reporting(-1);
+
         // Check if installed
         Configure::load('blesta');
         $db_info = Configure::get('Blesta.database_info');
@@ -461,7 +464,7 @@ class Install extends Controller
                 'user' => $user,
                 'pass' => $password,
                 'persistent' => false,
-                'charset_query' => "SET NAMES 'utf8'",
+                'charset_query' => "SET NAMES 'utf8mb4'",
                 'sqlmode_query' => "SET sql_mode='TRADITIONAL'",
                 'options' => []
             ];
@@ -475,6 +478,32 @@ class Install extends Controller
                 $this->Console->output('Checking InnoDB support... ');
                 if (!$this->checkDb()) {
                     $this->Console->output("FAILED\n");
+                    exit(3);
+                }
+                $this->Console->output("OK\n");
+
+                // Check minimum DB version (MySQL 5.7.7 / MariaDB 10.2.2)
+                $this->Console->output('Checking database version... ');
+                $pdo = $this->Upgrades->query("SELECT VERSION() as version")->fetch();
+                $comment = $this->Upgrades->query("SHOW VARIABLES LIKE 'version_comment'")->fetch();
+                $db_version = $pdo->version ?? '';
+                $version_comment = $comment->Value ?? '';
+
+                if (
+                    (stripos($version_comment, 'MariaDB') !== false
+                        && version_compare($db_version, '10.2.2', '<'))
+                    || (stripos($version_comment, 'MariaDB') === false
+                        && version_compare($db_version, '5.7.7', '<'))
+                ) {
+                    Language::loadLang('system_requirements');
+                    $this->Console->output("FAILED\n");
+                    $this->Console->output(
+                        Language::_(
+                            'SystemRequirements.!error.db_version.minimum',
+                            true,
+                            $db_version
+                        ) . "\n"
+                    );
                     exit(3);
                 }
                 $this->Console->output("OK\n");
@@ -638,7 +667,7 @@ class Install extends Controller
                     'user' => $this->post['user'],
                     'pass' => $this->post['password'],
                     'persistent' => false,
-                    'charset_query' => "SET NAMES 'utf8'",
+                    'charset_query' => "SET NAMES 'utf8mb4'",
                     'sqlmode_query' => "SET sql_mode='TRADITIONAL'",
                     'options' => []
                 ];
@@ -649,6 +678,28 @@ class Install extends Controller
 
                     if (!$this->checkDb()) {
                         $error = 'Failed InnoDB support check.';
+                    }
+
+                    // Check minimum DB version (MySQL 5.7.7 / MariaDB 10.2.2)
+                    if (!$error) {
+                        $pdo = $this->Upgrades->query("SELECT VERSION() as version")->fetch();
+                        $comment = $this->Upgrades->query("SHOW VARIABLES LIKE 'version_comment'")->fetch();
+                        $db_version = $pdo->version ?? '';
+                        $version_comment = $comment->Value ?? '';
+
+                        if (
+                            (stripos($version_comment, 'MariaDB') !== false
+                                && version_compare($db_version, '10.2.2', '<'))
+                            || (stripos($version_comment, 'MariaDB') === false
+                                && version_compare($db_version, '5.7.7', '<'))
+                        ) {
+                            Language::loadLang('system_requirements');
+                            $error = Language::_(
+                                'SystemRequirements.!error.db_version.minimum',
+                                true,
+                                $db_version
+                            );
+                        }
                     }
 
                     // Preset queries
@@ -780,7 +831,7 @@ class Install extends Controller
             $hostname = isset($this->params['hostname']) ? $this->params['hostname'] : php_uname('n');
             $domain = isset($this->params['domain']) ? $this->params['domain'] : $hostname;
             $docroot = isset($this->params['docroot']) ? $this->params['docroot'] : $docroot;
-            
+
             // Update all email from addresses using the current host name
             $this->Emails->updateFromDomain($domain, Configure::get('Blesta.company_id'));
         }
@@ -795,7 +846,7 @@ class Install extends Controller
 
         // Attempt to create the uploads directory above the web directory if it does not already exist
         $webdir = str_replace('/', DS, str_replace('index.php/', '', WEBDIR));
-        
+
         $public_root_web = strpos(realpath($docroot), realpath(ROOTWEBDIR)) !== false
             ? rtrim(str_replace($webdir == DS ? '' : $webdir, '', ROOTWEBDIR), DS) . DS
             : $docroot;
@@ -982,9 +1033,9 @@ HT;
         // Requirements and their values
         $reqs = [
             'php' => [
-                'message' => Language::_('SystemRequirements.!error.php.minimum', true, '7.2.0', PHP_VERSION),
+                'message' => Language::_('SystemRequirements.!error.php.minimum', true, '8.2.0', PHP_VERSION),
                 'req' => true,
-                'cur' => version_compare(PHP_VERSION, '7.2.0', '>=')
+                'cur' => version_compare(PHP_VERSION, '8.2.0', '>=')
             ],
             'ext-pdo' => [
                 'message' => Language::_('SystemRequirements.!error.extension.minimum', true, 'pdo'),
@@ -1018,28 +1069,11 @@ HT;
             ], // To auto-write config file to config dir
         ];
 
-        if (version_compare(PHP_VERSION, '8.1.0', '>=')) {
-            $reqs['ext-ioncube-sourceguardian'] = [
-                'message' => Language::_(
-                    'SystemRequirements.!' . (extension_loaded('SourceGuardian') ? 'info' : 'error') . '.ext-ioncube-sourceguardian.minimum',
-                    true
-                ),
-                'req' => true,
-                'cur' => extension_loaded('SourceGuardian') || extension_loaded($ioncube_ext)
-            ];
-        } elseif (version_compare(PHP_VERSION, '8.0.0', '>=')) {
-            $reqs['ext-sourceguardian'] = [
-                'message' => Language::_('SystemRequirements.!error.extension.minimum', true, 'SourceGuardian'),
-                'req' => true,
-                'cur' => extension_loaded('SourceGuardian')
-            ];
-        } else {
-            $reqs['ext-ioncube'] = [
-                'message' => $ioncube_message,
-                'req' => true,
-                'cur' => extension_loaded($ioncube_ext)
-            ];
-        }
+        $reqs['ext-ioncube'] = [
+            'message' => $ioncube_message,
+            'req' => true,
+            'cur' => extension_loaded($ioncube_ext)
+        ];
 
         return $reqs;
     }

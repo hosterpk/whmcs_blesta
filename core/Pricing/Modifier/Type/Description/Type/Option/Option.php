@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Description\Type\Option;
 
 use Blesta\Core\Pricing\Modifier\Type\Description\Type\AbstractDescription;
@@ -17,12 +18,12 @@ class Option extends AbstractDescription
     /**
      * {@inheritdoc}
      */
-    public function get(array $meta, array $oldMeta = null)
+    public function get(array $meta, ?array $oldMeta = null)
     {
         $description = '';
 
         // Determine the type of meta info we have to work with
-        $type = (isset($meta['_data']['type']) ? $meta['_data']['type'] : null);
+        $type = ($meta['_data']['type'] ?? null);
         switch ($type) {
             case 'option':
                 $description = $this->getOption($meta, $oldMeta);
@@ -46,7 +47,7 @@ class Option extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getOption(array $meta, array $oldMeta = null)
+    private function getOption(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
         $state = $fields['state'];
@@ -121,8 +122,8 @@ class Option extends AbstractDescription
             $languageValues = array_merge(
                 [$term, $fields['option'], $fields['value']],
                 ($qty
-                    ? [$fields['qty'], (isset($oldFields['qty']) ? $oldFields['qty'] : '')]
-                    : [(isset($oldFields['value']) ? $oldFields['value'] : '')]
+                    ? [$fields['qty'], ($oldFields['qty'] ?? '')]
+                    : [($oldFields['value'] ?? '')]
                 ),
                 ($showDates ? [$fields['startDate'], $fields['endDate']] : [])
             );
@@ -139,7 +140,7 @@ class Option extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getSetup(array $meta, array $oldMeta = null)
+    private function getSetup(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
 
@@ -154,7 +155,7 @@ class Option extends AbstractDescription
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    private function getCancel(array $meta, array $oldMeta = null)
+    private function getCancel(array $meta, ?array $oldMeta = null)
     {
         $fields = $this->getBaseFields($meta);
 
@@ -205,10 +206,10 @@ class Option extends AbstractDescription
         }
 
         if (isset($meta['option']) && is_object($meta['option'])) {
-            $option = isset($meta['option']->label) ? $meta['option']->label : '';
-            $value = isset($meta['option']->value_name) ? $meta['option']->value_name : '';
-            $qty = isset($meta['option']->qty) ? $meta['option']->qty : '';
-            $type = isset($meta['option']->type) ? $meta['option']->type : '';
+            $option = $meta['option']->label ?? '';
+            $value = $meta['option']->value_name ?? '';
+            $qty = $meta['option']->qty ?? '';
+            $type = $meta['option']->type ?? '';
         }
 
         return array_merge(

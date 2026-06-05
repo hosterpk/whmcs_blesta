@@ -1,0 +1,113 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'clients/contactlog/' . ($client->id ?? null) . '/'), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.contactlog.boxtitle_logs', true), ['id' => 'admin_clients_contactlog'], ($render_section ?? null));
+
+if (($contact_logs ?? false) && ($num_logs = count($contact_logs)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="contact_logs">
+        <thead>
+            <tr>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/contactlog/' . ($client->id ?? null) . '/?sort=first_name&order=' . ($sort == 'first_name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.contactlog.text_name');?>
+                        <?php if ($sort == 'first_name') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th><?php $this->_('AdminClients.contactlog.text_type');?></th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/contactlog/' . ($client->id ?? null) . '/?sort=date_changed&order=' . ($sort == 'date_changed' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.contactlog.text_date');?>
+                        <?php if ($sort == 'date_changed') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th style="width: 50px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php for ($i = 0; $i < $num_logs; $i++) { ?>
+            <tr style="cursor: pointer;" data-collapse-row aria-expanded="false">
+                <td>
+                    <a href="<?php echo $this->base_uri . 'clients/editcontact/' . ($contact_logs[$i]->client_id ?? null) . '/' . ($contact_logs[$i]->contact_id ?? null) . '/';?>" class="text-decoration-none">
+                        <?php echo ($contact_logs[$i]->first_name ?? null) . ' ' . ($contact_logs[$i]->last_name ?? null);?>
+                    </a>
+                </td>
+                <td>
+                    <?php
+                    if (!empty($contact_logs[$i]->contact->contact_type_name)) {
+                        if ($contact_logs[$i]->contact->contact_type_is_lang) {
+                            $this->_($contact_logs[$i]->contact->contact_type_name);
+                        } else {
+                            echo $this->Html->safe($contact_logs[$i]->contact->contact_type_name);
+                        }
+                    } else {
+                        $this->_('AdminClients.contactlog.contact_type_' . $contact_logs[$i]->contact->contact_type);
+                    }
+                    ?>
+                </td>
+                <td><?php echo $this->Date->cast(($contact_logs[$i]->date_changed ?? null), 'date_time');?></td>
+                <td class="text-end">
+                    <i class="bi bi-chevron-down"></i>
+                </td>
+            </tr>
+            <tr class="collapse" id="log-details-<?php echo $this->Html->safe($contact_logs[$i]->id ?? $i);?>">
+                <td colspan="4" style="padding: 0; background-color: var(--bg-secondary);">
+                    <div class="p-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead>
+                                    <tr>
+                                        <th><?php $this->_('AdminClients.contactlog.text_field');?></th>
+                                        <th><?php $this->_('AdminClients.contactlog.text_previous');?></th>
+                                        <th><?php $this->_('AdminClients.contactlog.text_new');?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($contact_logs[$i]->change as $field => $values) { ?>
+                                    <tr>
+                                        <td><?php echo $this->Html->safe($field ?? null);?></td>
+                                        <td><?php echo $this->Html->safe($values['prev'] ?? null);?></td>
+                                        <td><?php echo $this->Html->safe($values['cur'] ?? null);?></td>
+                                    </tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+<?php
+    if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        $this->Widget->footer();
+        $this->Pagination->build();
+    }
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.contactlog.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    // Dispatch blestaAjaxComplete for AJAX section loading on client profile
+    if (document.readyState !== 'loading') {
+        document.dispatchEvent(new Event('blestaAjaxComplete'));
+    }
+})();
+</script>

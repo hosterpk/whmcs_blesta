@@ -1,7 +1,8 @@
 {
-    "version": "1.12.1",
+    "version": "2.0.1",
     "name": "SystemOverviewPlugin.name",
     "description": "SystemOverviewPlugin.description",
+    "icon": "bi bi-bar-chart-fill",
     "authors": [
         {
             "name": "Phillips Data, Inc.",

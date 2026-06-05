@@ -13,6 +13,7 @@ $lang['Logicboxes.module_row_plural'] = 'Accounts';
 
 // Module management
 $lang['Logicboxes.add_module_row'] = 'Add Account';
+$lang['Logicboxes.back_to_manage'] = 'Back to Manage';
 $lang['Logicboxes.manage.module_rows_title'] = 'Accounts';
 $lang['Logicboxes.manage.module_rows_heading.registrar'] = 'Registrar Name';
 $lang['Logicboxes.manage.module_rows_heading.reseller_id'] = 'Reseller ID';

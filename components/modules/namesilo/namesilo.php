@@ -296,7 +296,8 @@ class Namesilo extends RegistrarModule
         // Get a batch of 100 domains for which to fetch contacts
         $queued_client_domains = [];
         foreach ($client_domains as $client_id => $domains) {
-            if (!is_null($remaining_batch_slots)
+            if (
+                !is_null($remaining_batch_slots)
                 && !empty($queued_client_domains)
                 && (count($queued_client_domains) + count($domains)) > $remaining_batch_slots
             ) {
@@ -354,7 +355,6 @@ class Namesilo extends RegistrarModule
                     $contactsInfo = $domains_api->getContacts(['contact_id' => $contact_id]);
                         $this->processResponse($this->api, $contactsInfo);
                     if ((self::$codes[$domainInfo->status()][1] ?? 'fail') == 'fail') {
-
                         continue;
                     }
 
@@ -595,8 +595,7 @@ class Namesilo extends RegistrarModule
         $parent_package = null,
         $parent_service = null,
         $status = 'pending'
-    )
-    {
+    ) {
         $row = $this->getModuleRow();
         $api = $this->getApi($row->meta->user, $row->meta->key, $row->meta->sandbox == 'true');
 
@@ -1068,7 +1067,7 @@ class Namesilo extends RegistrarModule
      */
     public function manageAddRow(array &$vars)
     {
-        $action = isset($_GET['action']) ? $_GET['action'] : null;
+        $action = $_GET['action'] ?? null;
 
         // Load the view into this object, so helpers can be automatically added to the view
         $this->view = new View((!empty($action) ? $action : 'add_row'), 'default');
@@ -1097,7 +1096,7 @@ class Namesilo extends RegistrarModule
             }
 
             $response = $domains->getList($vars)->response();
-            $domain_list = (isset($response->domains->domain) ? $response->domains->domain : null);
+            $domain_list = ($response->domains->domain ?? null);
 
             $vars['domains'] = [];
 
@@ -1129,12 +1128,21 @@ class Namesilo extends RegistrarModule
                 }
             }
 
+            // Fetch module
+            Loader::loadModels($this, ['ModuleManager']);
+            $module = $this->ModuleManager->getByClass(
+                \Illuminate\Support\Str::snake(get_class($this)),
+                Configure::get('Blesta.company_id')
+            );
+            $module = ($module[0] ?? []);
+            $this->view->set('module', (object) $module);
+
             // Set view
             $this->view->set('vars', (object) $vars);
 
             return $this->view->fetch();
         } elseif ($action == 'get_renew_info') {
-            $service_id = isset($_GET['service_id']) ? $_GET['service_id'] : null;
+            $service_id = $_GET['service_id'] ?? null;
             if (is_null($service_id)) {
                 // exit() to prevent any output other than json from being rendered
                 exit();
@@ -1160,6 +1168,15 @@ class Namesilo extends RegistrarModule
             if (empty($vars['sandbox'])) {
                 $vars['sandbox'] = 'false';
             }
+
+            // Fetch module
+            Loader::loadModels($this, ['ModuleManager']);
+            $module = $this->ModuleManager->getByClass(
+                \Illuminate\Support\Str::snake(get_class($this)),
+                Configure::get('Blesta.company_id')
+            );
+            $module = ($module[0] ?? []);
+            $this->view->set('module', (object) $module);
 
             // Set view
             $this->view->set('vars', (object) $vars);
@@ -1190,6 +1207,14 @@ class Namesilo extends RegistrarModule
             $vars = (array) $module_row->meta;
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -1307,7 +1332,7 @@ class Namesilo extends RegistrarModule
             }
         } else {
             // Fetch the 1st server from the list of servers in the selected group
-            $rows = $this->getModuleRows(isset($vars->module_group) ? $vars->module_group : null);
+            $rows = $this->getModuleRows($vars->module_group ?? null);
             if (isset($rows[0])) {
                 $module_row = $rows[0];
             }
@@ -1329,7 +1354,7 @@ class Namesilo extends RegistrarModule
             $fields->fieldSelect(
                 'meta[type]',
                 $types,
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null),
+                ($vars->meta['type'] ?? null),
                 ['id' => 'namesilo_type']
             )
         );
@@ -1373,7 +1398,7 @@ class Namesilo extends RegistrarModule
             $type->attach(
                 $fields->fieldText(
                     'meta[ns][]',
-                    (isset($vars->meta['ns'][$i - 1]) ? $vars->meta['ns'][$i - 1] : null),
+                    ($vars->meta['ns'][$i - 1] ?? null),
                     ['id' => 'namesilo_ns' . $i]
                 )
             );
@@ -1515,7 +1540,7 @@ class Namesilo extends RegistrarModule
             }
         }
 
-        return (isset($module_fields) ? $module_fields : new ModuleFields());
+        return ($module_fields ?? new ModuleFields());
     }
 
     /**
@@ -1591,7 +1616,7 @@ class Namesilo extends RegistrarModule
         }
 
         // Determine whether this is an AJAX request
-        return (isset($module_fields) ? $module_fields : new ModuleFields());
+        return ($module_fields ?? new ModuleFields());
     }
 
     /**
@@ -1611,11 +1636,7 @@ class Namesilo extends RegistrarModule
                 // Set the fields
                 $fields = array_merge(Configure::get('Namesilo.domain_fields'), $extension_fields);
 
-                if (!isset($vars->transfer) || $vars->transfer == '0') {
-                    $fields = array_merge($fields, Configure::get('Namesilo.nameserver_fields'));
-                } else {
-                    $fields = array_merge($fields, Configure::get('Namesilo.transfer_fields'));
-                }
+                $fields = !isset($vars->transfer) || $vars->transfer == '0' ? array_merge($fields, Configure::get('Namesilo.nameserver_fields')) : array_merge($fields, Configure::get('Namesilo.transfer_fields'));
 
                 if ($client) {
                     // We should already have the domain name don't make editable
@@ -1633,31 +1654,31 @@ class Namesilo extends RegistrarModule
 
                 foreach ($fields as $key => $field) {
                     // Build the field
-                    $label = $module_fields->label((isset($field['label']) ? $field['label'] : ''), $key);
+                    $label = $module_fields->label(($field['label'] ?? ''), $key);
 
                     $type = null;
                     if ($field['type'] == 'text') {
                         $type = $module_fields->fieldText(
                             $key,
-                            (isset($vars->{$key}) ? $vars->{$key} :
-                                (isset($field['options']) ? $field['options'] : '')),
+                            ($vars->{$key} ??
+                                ($field['options'] ?? '')),
                             ['id' => $key]
                         );
                     } elseif ($field['type'] == 'select') {
                         $type = $module_fields->fieldSelect(
                             $key,
                             (isset($field['options']) ? $please_select + $field['options'] : $please_select),
-                            (isset($vars->{$key}) ? $vars->{$key} : ''),
+                            ($vars->{$key} ?? ''),
                             ['id' => $key]
                         );
                     } elseif ($field['type'] == 'checkbox') {
-                        $type = $module_fields->fieldCheckbox($key, (isset($field['options']) ? $field['options'] : 1));
-                        $label = $module_fields->label((isset($field['label']) ? $field['label'] : ''), $key);
+                        $type = $module_fields->fieldCheckbox($key, ($field['options'] ?? 1));
+                        $label = $module_fields->label(($field['label'] ?? ''), $key);
                     } elseif ($field['type'] == 'hidden') {
                         $type = $module_fields->fieldHidden(
                             $key,
-                            (isset($vars->{$key}) ? $vars->{$key} :
-                                (isset($field['options']) ? $field['options'] : '')),
+                            ($vars->{$key} ??
+                                ($field['options'] ?? '')),
                             ['id' => $key]
                         );
                     }
@@ -1675,7 +1696,7 @@ class Namesilo extends RegistrarModule
             }
         }
 
-        return (isset($module_fields) ? $module_fields : false);
+        return ($module_fields ?? false);
     }
 
     /**
@@ -1699,7 +1720,7 @@ class Namesilo extends RegistrarModule
             $fields->fieldSelect(
                 'renew',
                 [0, '1 year', '2 years', '3 years', '4 years', '5 years'],
-                (isset($vars->renew) ? $vars->renew : null),
+                ($vars->renew ?? null),
                 ['id' => 'renew']
             )
         );
@@ -1755,6 +1776,7 @@ class Namesilo extends RegistrarModule
                 'tabEmailForwarding' => Language::_('Namesilo.tab_email_forwarding.title', true),
                 'tabNameservers' => Language::_('Namesilo.tab_nameservers.title', true),
                 'tabHosts' => Language::_('Namesilo.tab_hosts.title', true),
+                'tabDomainForwarding' => Language::_('Namesilo.tab_domain_forwarding.title', true),
                 'tabDnssec' => Language::_('Namesilo.tab_dnssec.title', true),
                 'tabDnsRecords' => Language::_('Namesilo.tab_dnsrecord.title', true),
                 'tabSettings' => Language::_('Namesilo.tab_settings.title', true),
@@ -1815,6 +1837,10 @@ class Namesilo extends RegistrarModule
                 'tabClientHosts' => [
                     'name' => Language::_('Namesilo.tab_hosts.title', true),
                     'icon' => 'fas fa-hdd'
+                ],
+                'tabClientDomainForwarding' => [
+                    'name' => Language::_('Namesilo.tab_domain_forwarding.title', true),
+                    'icon' => 'fas fa-share'
                 ],
                 'tabClientDnssec' => [
                     'name' => Language::_('Namesilo.tab_dnssec.title', true),
@@ -1954,6 +1980,21 @@ class Namesilo extends RegistrarModule
     }
 
     /**
+     * Admin Domain Forwarding tab
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param array $get Any GET parameters
+     * @param array $post Any POST parameters
+     * @param array $files Any FILES parameters
+     * @return string The string representing the contents of this tab
+     */
+    public function tabDomainForwarding($package, $service, array $get = null, array $post = null, array $files = null)
+    {
+        return $this->manageDomainForwarding('tab_domain_forwarding', $package, $service, $get, $post, $files);
+    }
+
+    /**
      * Admin DNSSEC tab
      *
      * @param stdClass $package A stdClass object representing the current package
@@ -2041,6 +2082,21 @@ class Namesilo extends RegistrarModule
     public function tabClientHosts($package, $service, array $get = null, array $post = null, array $files = null)
     {
         return $this->manageHosts('tab_client_hosts', $package, $service, $get, $post, $files);
+    }
+
+    /**
+     * Client Domain Forwarding tab
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param array $get Any GET parameters
+     * @param array $post Any POST parameters
+     * @param array $files Any FILES parameters
+     * @return string The string representing the contents of this tab
+     */
+    public function tabClientDomainForwarding($package, $service, array $get = null, array $post = null, array $files = null)
+    {
+        return $this->manageDomainForwarding('tab_client_domain_forwarding', $package, $service, $get, $post, $files);
     }
 
     /**
@@ -2237,8 +2293,8 @@ class Namesilo extends RegistrarModule
         $module = $this->getModule();
         $contact_meta = $this->ModuleClientMeta->get($service->client_id, 'contacts', $module->id, $service->module_row_id);
         if ($contact_meta) {
-            foreach(json_decode($contact_meta->value, true) ?? [] as $contact_id => $contact_name) {
-                $contacts[$contact_id] = $contact_name . "-" . $contact_id;
+            foreach (json_decode($contact_meta->value, true) ?? [] as $contact_id => $contact_name) {
+                $contacts[$contact_id] = $contact_name . '-' . $contact_id;
             }
         }
 
@@ -2289,11 +2345,7 @@ class Namesilo extends RegistrarModule
         }
 
         if (($get['action'] ?? '') == 'manage') {
-            if (array_key_exists('contact_id', $get)) {
-                return $this->handleContactEdit($view, $package, $service, $get, $post);
-            } else {
-                return $this->handleContactAdd($view, $package, $service, $get, $post);
-            }
+            return array_key_exists('contact_id', $get) ? $this->handleContactEdit($view, $package, $service, $get, $post) : $this->handleContactAdd($view, $package, $service, $get, $post);
         }
 
         if (($get['action'] ?? '') == 'delete') {
@@ -2501,7 +2553,7 @@ class Namesilo extends RegistrarModule
     private function formatContact($contact, $whois_fields)
     {
         $vars = ['contact_id' => $contact->contact_id];
-        foreach ($contact as $contact_field => $value){
+        foreach ($contact as $contact_field => $value) {
             if (!array_key_exists($contact_field, $whois_fields) || !is_string($value)) {
                 continue;
             }
@@ -2522,7 +2574,8 @@ class Namesilo extends RegistrarModule
      * @param array $post Any POST parameters
      * @return string The string representing the contents of this tab
      */
-    private function handleContactList($view, $package, $service, array $get = null, array $post = []) {
+    private function handleContactList($view, $package, $service, array $get = null, array $post = [])
+    {
 
         if (!isset($this->ModuleClientMeta)) {
             Loader::loadModels($this, ['ModuleClientMeta']);
@@ -2607,8 +2660,7 @@ class Namesilo extends RegistrarModule
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $vars = new stdClass();
 
         // if the domain is pending transfer display a notice of such
@@ -2711,8 +2763,7 @@ class Namesilo extends RegistrarModule
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $vars = new stdClass();
 
         // if the domain is pending transfer display a notice of such
@@ -2954,17 +3005,84 @@ class Namesilo extends RegistrarModule
         $ds = $dns->dnsSecListRecords(['domain' => $fields->domain])->response();
 
         // get a consistent format because xml parsing in php is inconsistent
-        if (isset($ds->ds_record) && !is_array($ds->ds_record)) {
-            $ds->ds_record = [$ds->ds_record];
-        } else {
-            $ds->ds_record = $ds->ds_record;
-        }
+        $ds->ds_record = isset($ds->ds_record) && !is_array($ds->ds_record) ? [$ds->ds_record] : $ds->ds_record;
 
         $vars->selects = Configure::get('Namesilo.dnssec');
         $vars->records = $ds->ds_record;
         $this->view->set('vars', $vars);
         $this->view->set('client_id', $service->client_id);
         $this->view->set('service_id', $service->id);
+        $this->view->setDefaultView(self::$defaultModuleView);
+
+        return $this->view->fetch();
+    }
+
+    /**
+     * Handle updating Domain Forwarding information
+     *
+     * @param string $view The name of the view to fetch
+     * @param stdClass $package An stdClass object representing the package
+     * @param stdClass $service An stdClass object representing the service
+     * @param array $get Any GET arguments (optional)
+     * @param array $post Any POST arguments (optional)
+     * @param array $files Any FILES data (optional)
+     * @return string The rendered view
+     */
+    private function manageDomainForwarding(
+        $view,
+        $package,
+        $service,
+        array $get = null,
+        array $post = null,
+        array $files = null
+    ) {
+        $checkDomainStatus = $this->checkDomainStatus($service, $package);
+        if (isset($checkDomainStatus)) {
+            return $checkDomainStatus;
+        }
+
+        $row = $this->getModuleRow($service->module_row_id ?? $package->module_row);
+        $api = $this->getApi($row->meta->user, $row->meta->key, $row->meta->sandbox == 'true');
+        $domains = new NamesiloDomains($api);
+
+        $fields = $this->serviceFieldsToObject($service->fields);
+
+        if (!empty($post)) {
+            if (!empty($post['forward_to'])) {
+                if (filter_var($post['forward_to'], FILTER_VALIDATE_URL)) {
+                    $url_parts = parse_url($post['forward_to']);
+                    $domain_forward_response = $domains->domainForward([
+                        'domain'   => $fields->domain,
+                        'protocol' => $url_parts['scheme'] ?? 'https',
+                        'address'  => $url_parts['host'] ?? '',
+                        'method'   => $post['forward_method'],
+                    ]);
+                    $this->processResponse($api, $domain_forward_response);
+                } else {
+                    $this->Input->setErrors(['forward_to' => ['error' => Language::_('Namesilo.tab_domain_forwarding.invalid_url', true)]]);
+                }
+            }
+        }
+
+        $forward_method = [
+            '301'     => Language::_('Namesilo.tab_domain_forwarding.permanent_forward', true),
+            '302'     => Language::_('Namesilo.tab_domain_forwarding.temp_forward', true),
+            'cloaked' => Language::_('Namesilo.tab_domain_forwarding.cloaked', true),
+        ];
+
+        $info_response = $domains->getDomainInfo(['domain' => $fields->domain])->response();
+
+        $this->view = new View($view, 'default');
+        $this->view->base_uri = $this->base_uri;
+        Loader::loadHelpers($this, ['Form', 'Html']);
+
+        $this->view->set('is_domain_forward', $info_response->traffic_type === 'Forwarded');
+        $this->view->set('active_forward_url', $info_response->forward_url);
+        $this->view->set('active_forward_method', array_search($info_response->forward_type, $forward_method, true));
+        $this->view->set('forward_method', $forward_method);
+        $this->view->set('protocol', ['https' => 'https', 'http' => 'http']);
+        $this->view->set('info_response', $info_response);
+        $this->view->set('domain', $fields->domain);
         $this->view->setDefaultView(self::$defaultModuleView);
 
         return $this->view->fetch();
@@ -2988,8 +3106,7 @@ class Namesilo extends RegistrarModule
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $vars = new stdClass();
 
         // if the domain is pending transfer display a notice of such
@@ -3063,7 +3180,8 @@ class Namesilo extends RegistrarModule
         return $this->view->fetch();
     }
 
-    private function getDnsFields($post, $fields) {
+    private function getDnsFields($post, $fields)
+    {
         $dns_fields = [
             'domain' => $fields->domain,
             'rrtype' => $post['record_type'],
@@ -3099,8 +3217,7 @@ class Namesilo extends RegistrarModule
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $vars = new stdClass();
 
         // if the domain is pending transfer display a notice of such
@@ -3212,7 +3329,7 @@ class Namesilo extends RegistrarModule
         }
 
         $attributes = $xpath_result[0]->attributes();
-        if (isset($attributes->premium) && $attributes->premium == "1") {
+        if (isset($attributes->premium) && $attributes->premium == '1') {
             $this->Input->setErrors(
                 ['availability' => ['premium' => Language::_('Namesilo.!error.premium_domain', true, $domain)]]
             );
@@ -3349,7 +3466,7 @@ class Namesilo extends RegistrarModule
         );
 
         if ($cache) {
-            return unserialize(base64_decode($cache));
+            return safe_unserialize(base64_decode($cache));
         }
 
         // Fetch namesilo TLDs
@@ -3390,7 +3507,7 @@ class Namesilo extends RegistrarModule
                         strtotime(Configure::get('Blesta.cache_length')) - time(),
                         Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'namesilo' . DS
                     );
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Write to cache failed, so disable caching
                     Configure::set('Caching.on', false);
                 }
@@ -3478,7 +3595,7 @@ class Namesilo extends RegistrarModule
                     'rule' => [
                         [$this, 'validateConnection'],
                         $vars['user'],
-                        isset($vars['sandbox']) ? $vars['sandbox'] : 'false'
+                        $vars['sandbox'] ?? 'false'
                     ],
                     'message' => Language::_('Namesilo.!error.key.valid_connection', true)
                 ]
@@ -3489,7 +3606,7 @@ class Namesilo extends RegistrarModule
                         [$this, 'validatePortfolio'],
                         $vars['key'],
                         $vars['user'],
-                        isset($vars['sandbox']) ? $vars['sandbox'] : 'false'
+                        $vars['sandbox'] ?? 'false'
                     ],
                     'message' => Language::_('Namesilo.!error.portfolio.valid_portfolio', true)
                 ]
@@ -3832,7 +3949,7 @@ class Namesilo extends RegistrarModule
         );
 
         if ($cache) {
-            $result = unserialize(base64_decode($cache));
+            $result = safe_unserialize(base64_decode($cache));
         }
 
         Loader::loadModels($this, ['Currencies']);
@@ -3858,7 +3975,7 @@ class Namesilo extends RegistrarModule
                         strtotime(Configure::get('Blesta.cache_length')) - time(),
                         Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'namesilo' . DS
                     );
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Write to cache failed, so disable caching
                     Configure::set('Caching.on', false);
                 }

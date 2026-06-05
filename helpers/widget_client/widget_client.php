@@ -1,6 +1,12 @@
 <?php
+
+namespace Blesta\Helpers\WidgetClient;
+
 use Blesta\Core\Util\Input\Fields\InputField;
 use Blesta\Core\Util\Widgets\AbstractWidget;
+use Language;
+use Loader;
+
 /**
  * Simplifies the creation of widgets for the client interface
  *
@@ -77,7 +83,7 @@ class WidgetClient extends AbstractWidget
      *  - inner_content (everything but the title)
      * @return mixed An HTML string containing the widget, void if the string is output automatically
      */
-    public function create($title = null, array $attributes = null, $render = null)
+    public function create($title = null, ?array $attributes = null, $render = null)
     {
         // Don't output until this section is completely built
         $output = $this->setOutput(true);
@@ -253,7 +259,7 @@ class WidgetClient extends AbstractWidget
             foreach ($this->widget_buttons as $button) {
                 $attributes = array_merge($defaults, (array)$button);
                 unset($attributes['icon']);
-                $icon = isset($button['icon']) ? $button['icon'] : 'fas fa-cog';
+                $icon = $button['icon'] ?? 'fas fa-cog';
                 $html .= '<a' . $this->buildAttributes($attributes) . '><i class="' . $this->_($icon, true)
                     . '"></i></a>';
             }
@@ -324,8 +330,8 @@ class WidgetClient extends AbstractWidget
                     [
                         'class' => $this->concat(
                             ' ',
-                            ((isset($element['current']) ? $element['current'] : null) ? 'active' : ''),
-                            ((isset($element['highlight']) ? $element['highlight'] : null) && !(isset($element['current']) ? $element['current'] : null)
+                            (($element['current'] ?? null) ? 'active' : ''),
+                            (($element['highlight'] ?? null) && !($element['current'] ?? null)
                                 ? 'highlight'
                                 : '')
                         )
@@ -333,7 +339,7 @@ class WidgetClient extends AbstractWidget
                 );
             }
 
-            $html .= '<li' . $li_attr . '><a' . $a_attr . '>' . (isset($element['name']) ? $element['name'] : null) . '</a></li>' . $this->eol;
+            $html .= '<li' . $li_attr . '><a' . $a_attr . '>' . ($element['name'] ?? null) . '</a></li>' . $this->eol;
 
             $i++;
         }
@@ -348,7 +354,7 @@ class WidgetClient extends AbstractWidget
      * @param array $attributes A set of link button HTML attributes (optional)
      * @return string A string of HTML
      */
-    private function buildLinkButtons(array $attributes = null)
+    private function buildLinkButtons(?array $attributes = null)
     {
         $default_attributes = ['class' => 'btn btn-sm btn-light'];
         // Override default attributes
@@ -358,10 +364,10 @@ class WidgetClient extends AbstractWidget
         if (!empty($this->link_buttons)) {
             $html = '<div class="float-right">' . $this->eol;
             foreach ($this->link_buttons as $element) {
-                $icon = ['class' => isset($element['icon']) ? $element['icon'] : 'fas fa-plus-circle'];
+                $icon = ['class' => $element['icon'] ?? 'fas fa-plus-circle'];
                 $element['attributes'] = array_merge(
                     $attributes,
-                    (array)(isset($element['attributes']) ? $element['attributes'] : [])
+                    (array)($element['attributes'] ?? [])
                 );
                 $html .= '<a' . $this->buildAttributes($element['attributes']) . '><i' . $this->buildAttributes($icon)
                     . '></i> ' . $this->_($element['name'], true) . '</a>' . $this->eol;
@@ -469,7 +475,7 @@ class WidgetClient extends AbstractWidget
             $html .= '
                 <script type="text/javascript">
                     $(document).ready(function () {
-                        $("' . (isset($this->id) ? '#'. $this->id : '') . '.card").on("click", "a.ajax", function(e) {
+                        $("' . (isset($this->id) ? '#' . $this->id : '') . '.card").on("click", "a.ajax", function(e) {
                             e.preventDefault();
                             var form = $(this).parents(".card").find("form.widget_filter_form");
 
@@ -506,7 +512,7 @@ class WidgetClient extends AbstractWidget
         $html .= '
             <script type="text/javascript">
                 $(document).ready(function () {
-                    $("' . (isset($this->id) ? '#'. $this->id . ' ' : '') . '.filter-toggle").click(function () {
+                    $("' . (isset($this->id) ? '#' . $this->id . ' ' : '') . '.filter-toggle").click(function () {
                         $(this).parents(".card").find("form.widget_filter_form").toggle();
                     });
                 });
@@ -534,7 +540,7 @@ class WidgetClient extends AbstractWidget
         $html = '<div class="col-md-3 form-group">';
 
         // Draw the primary label/field
-        $field->params['attributes']['class'] = (array)(isset($field->params['attributes']['class']) ? $field->params['attributes']['class'] : []);
+        $field->params['attributes']['class'] = (array)($field->params['attributes']['class'] ?? []);
         $field->params['attributes']['class'][] = 'control-label';
         $html .= call_user_func_array([$this->Form, $field->type], $field->params);
 
@@ -558,16 +564,10 @@ class WidgetClient extends AbstractWidget
                         . '</label>
                     </div>';
             } else {
-                $input->params['attributes']['class'] = (array)(isset($input->params['attributes']['class']) ? $input->params['attributes']['class'] : []);
+                $input->params['attributes']['class'] = (array)($input->params['attributes']['class'] ?? []);
                 $input->params['attributes']['class'][] = 'form-control';
 
-                if ($input->type == 'fieldSelect') {
-                    $input->params['attributes']['data-value'] =
-                        isset($input->params['selected_value']) ? $input->params['selected_value'] : '';
-                } else {
-                    $input->params['attributes']['data-value'] =
-                        isset($input->params['value']) ? $input->params['value'] : '';
-                }
+                $input->params['attributes']['data-value'] = $input->type == 'fieldSelect' ? $input->params['selected_value'] ?? '' : $input->params['value'] ?? '';
 
                 if ($input->type == 'fieldTextarea') {
                     $input->params['attributes']['rows'] = 5;

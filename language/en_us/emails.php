@@ -35,6 +35,8 @@ $lang['Emails.!error.include_attachments'] = 'Whether to include attachments mus
 $lang['Emails.!error.status.format'] = 'Invalid status.';
 $lang['Emails.!error.email_id.exists'] = 'Invalid email ID.';
 $lang['Emails.!error.company_id.unique'] = 'The email group ID and company ID for the given language is already taken.';
+$lang['Emails.!error.snapshot_id.exists'] = 'Invalid snapshot ID.';
+$lang['Emails.!error.snapshot_id.belongs_to_email'] = 'The snapshot does not belong to the specified email.';
 
 $lang['Emails.!error.action.exists'] = 'The action given is an invalid email group action.';
 $lang['Emails.!error.to_addresses.empty'] = 'At least one To address must be provided.';

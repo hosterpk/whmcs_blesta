@@ -2,6 +2,8 @@
 // Errors
 $lang['Multicraft.!error.module_row.missing'] = 'An internal error occurred. The module row is unavailable.';
 
+$lang['Multicraft.back_to_manage'] = 'Back';
+
 
 // Module
 $lang['Multicraft.name'] = 'Multicraft';

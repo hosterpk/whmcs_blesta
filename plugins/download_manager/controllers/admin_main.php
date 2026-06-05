@@ -27,6 +27,22 @@ class AdminMain extends DownloadManagerController
         // Set the Data Structure Array
         $this->helpers(['DataStructure']);
         $this->ArrayHelper = $this->DataStructure->create('Array');
+
+        // Check if mod_http2 is enabled and mod_xsendfile is not
+        $modules = [];
+        if (function_exists('apache_get_modules')) {
+            $modules = apache_get_modules();
+        }
+
+        if (
+            (in_array('mod_http2', $modules) || (str_contains($_SERVER['SERVER_PROTOCOL'] ?? '', 'HTTP/2')))
+            && !in_array('mod_xsendfile', $modules)
+        ) {
+            $this->setMessage('info', Language::_('AdminMain.!performance.xsendfile', true), false, null, false);
+        }
+
+        // Set the sidebar for all admin_main actions
+        $this->structure->set('side_bar', ['partials/download_manager_sidebar', $this->view]);
     }
 
     /**
@@ -42,6 +58,8 @@ class AdminMain extends DownloadManagerController
      */
     public function files()
     {
+        $this->uses(['ClientGroups']);
+
         // Get the current category
         $parent_category_id = ($this->get[0] ?? null);
         $category = null;
@@ -49,17 +67,24 @@ class AdminMain extends DownloadManagerController
             $category = $this->DownloadManagerCategories->get($parent_category_id);
         }
 
+        // Get all client groups and packages for selection
+        $client_groups = $this->ArrayHelper->numericToKey($this->ClientGroups->getAll($this->company_id), 'id', 'name');
+
         $vars = [
             'categories' => $this->DownloadManagerCategories->getAll($this->company_id, $parent_category_id),
             'files' => $this->DownloadManagerFiles->getAll($this->company_id, $parent_category_id),
             'category' => $category, // current category
-            'parent_category' => ($category ? $this->DownloadManagerCategories->get($category->parent_id) : null)
+            'parent_category' => ($category ? $this->DownloadManagerCategories->get($category->parent_id) : null),
+            'client_groups' => $client_groups,
+            'packages' => $this->getAvailablePackages()
         ];
 
         // Set variables to the view
         foreach ($vars as $key => $value) {
             $this->set($key, $value);
         }
+
+        return $this->renderAjaxWidgetIfAsync(true);
     }
 
     /**
@@ -79,7 +104,9 @@ class AdminMain extends DownloadManagerController
             'negate_order' => ($order == 'asc' ? 'desc' : 'asc'),
             'page' => $page,
             'base_url' => $this->base_url,
-            'public_uri' => $this->public_uri
+            'public_uri' => $this->public_uri,
+            'files' => $this->DownloadManagerUrls->getFileRoutes($this->company_id),
+            'categories' => $this->DownloadManagerUrls->getCategoryRoutes($this->company_id)
         ];
 
         // Overwrite default pagination settings
@@ -453,6 +480,12 @@ class AdminMain extends DownloadManagerController
         // Set variables to the view
         foreach ($vars as $key => $value) {
             $this->set($key, $value);
+        }
+
+        // If AJAX request, render modal content only
+        if ($this->isAjax() && empty($this->post)) {
+            echo $this->view->fetch('admin_main_edit');
+            return false;
         }
     }
 

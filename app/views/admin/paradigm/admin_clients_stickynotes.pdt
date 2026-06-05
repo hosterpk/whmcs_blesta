@@ -1,0 +1,73 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+if (!empty($sticky_notes)) {
+?>
+<div class="sticky-note-section">
+    <?php
+    echo (isset($sticky_notes) ? $sticky_notes : null);
+    ?>
+</div>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var stickyNoteSection = document.querySelector('.sticky-note-section');
+    var moreStickyNotes = document.getElementById('moreStickyNotes');
+    var moreStickyNotesContent = document.querySelector('.more-sticky-notes');
+
+    if (stickyNoteSection) {
+        // Show/hide unstick button on hover
+        stickyNoteSection.addEventListener('mouseenter', function(e) {
+            var noteItem = e.target.closest('.sticky-note-item');
+            if (noteItem) {
+                var unstickBtn = noteItem.querySelector('.unstick-button');
+                if (unstickBtn) {
+                    unstickBtn.style.visibility = 'visible';
+                }
+            }
+        }, true);
+
+        stickyNoteSection.addEventListener('mouseleave', function(e) {
+            var noteItem = e.target.closest('.sticky-note-item');
+            if (noteItem) {
+                var unstickBtn = noteItem.querySelector('.unstick-button');
+                if (unstickBtn) {
+                    unstickBtn.style.visibility = 'hidden';
+                }
+            }
+        }, true);
+
+        if (moreStickyNotes) {
+            moreStickyNotes.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                var unstickLink = moreStickyNotes.querySelector('.unstick-link');
+                if (!unstickLink) {
+                    return;
+                }
+
+                var href = unstickLink.getAttribute('href');
+                var showMore = moreStickyNotesContent && getComputedStyle(moreStickyNotesContent).display !== 'none';
+
+                fetch(href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: 'show_more=' + (showMore ? '1' : '0')
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.view) {
+                        stickyNoteSection.innerHTML = data.view;
+                    } else {
+                        stickyNoteSection.remove();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
+    }
+});
+</script>
+<?php } ?>

@@ -1,0 +1,128 @@
+
+        <?php
+        $category_name = (isset($current_category->name) ? $current_category->name : null);
+
+        if (!empty($category_name)) {
+        ?>
+        <h6 class="form-section-header"><?php echo (isset($category_name) ? $this->Html->safe($category_name) : null);?></h6>
+        <?php
+        }
+
+        if (!empty($categories) || !empty($articles)) {
+        ?>
+        <div class="pad clear" id="knowledgebase_items">
+            <div class="row g-3">
+                <?php
+                // List categories
+                foreach ((isset($categories) ? $categories : []) as $category) {
+                    $icon = ((isset($category->access) ? $category->access : null) == 'public') ? 'bi-folder2-open' : 'bi-folder-fill';
+                ?>
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                    <div class="response-folder-card<?php echo ((isset($category->access) ? $category->access : null) == 'public') ? ' public' : '';?>" role="link" tabindex="0" data-href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_knowledgebase/index/' . (isset($category->id) ? $category->id : null) . '/');?>">
+                        <div class="response-folder-icon">
+                            <i class="bi <?php echo (isset($icon) ? $this->Html->safe($icon) : null);?>"></i>
+                        </div>
+                        <div class="response-folder-name"><?php echo (isset($category->name) ? $this->Html->safe($category->name) : null);?></div>
+                        <?php if (isset($category->item_count) && $category->item_count > 0) { ?>
+                        <span class="response-folder-count badge bg-secondary"><?php echo $this->Html->safe($category->item_count);?></span>
+                        <?php } ?>
+                        <div class="response-folder-actions">
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_knowledgebase/editcategory/' . (isset($category->id) ? $category->id : null) . '/');?>" class="response-folder-action-btn" title="<?php $this->_('AdminKnowledgebase.index.edit');?>">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <?php
+                            $this->Form->create($this->base_uri . 'plugin/support_manager/admin_knowledgebase/deletecategory/', ['class' => 'd-inline']);
+                            $this->Form->fieldHidden('id', (isset($category->id) ? $category->id : null));
+                            ?>
+                            <button type="button" class="response-folder-action-btn response-folder-delete-btn modal-confirm-delete" data-confirm-message="<?php $this->_('AdminKnowledgebase.modal.delete_category');?>" title="<?php $this->_('AdminKnowledgebase.index.delete');?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <?php $this->Form->end();?>
+                        </div>
+                    </div>
+                </div>
+                <?php
+                }
+                // List articles
+                foreach ((isset($articles) ? $articles : []) as $article) {
+                    $icon = ((isset($article->access) ? $article->access : null) == 'public' && !empty($article->categories)) ? 'bi-file-earmark-text' : 'bi-file-earmark';
+                ?>
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                    <div class="response-folder-card response-item-card<?php echo ((isset($article->access) ? $article->access : null) == 'public' && !empty($article->categories)) ? ' public' : '';?>" role="link" tabindex="0" data-href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_knowledgebase/edit/' . (isset($article->id) ? $article->id : null) . '/' . ((isset($current_category) ? $current_category : null) ? (isset($current_category->id) ? $current_category->id : null) . '/' : ''));?>">
+                        <div class="response-folder-icon">
+                            <i class="bi <?php echo (isset($icon) ? $this->Html->safe($icon) : null);?>"></i>
+                        </div>
+                        <div class="response-folder-name"><?php echo (isset($article->title) ? $this->Html->safe($article->title) : null);?></div>
+                        <div class="response-folder-actions">
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/knowledgebase/view/' . (isset($article->id) ? $article->id : null) . '/' . (isset($article->uri_title) ? $article->uri_title : null) . '/' . ((isset($current_category) ? $current_category : null) ? (isset($current_category->id) ? $current_category->id : null) . '/' : ''));?>" target="_blank" class="response-folder-action-btn" title="<?php $this->_('AdminKnowledgebase.index.view');?>">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_knowledgebase/edit/' . (isset($article->id) ? $article->id : null) . '/' . ((isset($current_category) ? $current_category : null) ? (isset($current_category->id) ? $current_category->id : null) . '/' : ''));?>" class="response-folder-action-btn" title="<?php $this->_('AdminKnowledgebase.index.edit');?>">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <?php
+                            $this->Form->create($this->base_uri . 'plugin/support_manager/admin_knowledgebase/delete/', ['class' => 'd-inline']);
+                            $this->Form->fieldHidden('id', (isset($article->id) ? $article->id : null));
+                            if ((isset($current_category) ? $current_category : null)) {
+                                $this->Form->fieldHidden('category_id', (isset($current_category->id) ? $current_category->id : null));
+                            }
+                            ?>
+                            <button type="button" class="response-folder-action-btn response-folder-delete-btn modal-confirm-delete" data-confirm-message="<?php $this->_('AdminKnowledgebase.modal.delete_article');?>" title="<?php $this->_('AdminKnowledgebase.index.delete');?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <?php $this->Form->end();?>
+                        </div>
+                    </div>
+                </div>
+                <?php
+                }
+                ?>
+            </div>
+        </div>
+        <?php
+        }
+
+        // Show empty message if no items
+        if (empty($categories) && empty($articles)) {
+        ?>
+            <div class="card-body text-center text-muted py-5">
+                <i class="bi bi-journal-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3 mb-0"><?php $this->_('AdminKnowledgebase.index.no_results');?></p>
+            </div>
+        <?php
+        }
+        ?>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle card click navigation
+    document.querySelectorAll('#knowledgebase_items .response-folder-card[data-href]').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            // Don't navigate if clicking on action buttons, links, or forms
+            if (e.target.closest('.response-folder-actions')) {
+                return;
+            }
+            var href = this.dataset.href;
+            if (href) {
+                window.location.href = href;
+            }
+        });
+
+        // Handle keyboard navigation (Enter key)
+        card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.target.closest('.response-folder-actions')) {
+                var href = this.dataset.href;
+                if (href) {
+                    window.location.href = href;
+                }
+            }
+        });
+    });
+
+    // Prevent action button clicks from triggering card navigation
+    document.querySelectorAll('#knowledgebase_items .response-folder-action-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+});
+</script>

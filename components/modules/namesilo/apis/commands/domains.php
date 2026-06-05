@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Namesilo Domain Management
  *
@@ -90,7 +91,7 @@ class NamesiloDomains
     {
         return $this->api->submit('contactAdd', $vars);
     }
-    
+
     /**
      * Updates a contact
      *
@@ -190,11 +191,7 @@ class NamesiloDomains
      */
     public function setAutoRenewal($domain, $autorenew = false)
     {
-        if (!$autorenew) {
-            $action = 'remove';
-        } else {
-            $action = 'add';
-        }
+        $action = !$autorenew ? 'remove' : 'add';
         return $this->api->submit($action . 'AutoRenewal', ['domain' => $domain]);
     }
 
@@ -260,5 +257,41 @@ class NamesiloDomains
     public function emailVerification(array $vars)
     {
         return $this->api->submit('emailVerification', $vars);
+    }
+
+    /**
+     * Add/update domain forwarding
+     * 
+     * @param array $vars An array of data
+     * 
+     * @return NamesiloResponse
+     */
+    public function domainForward(array $vars)
+    {
+        return $this->api->submit('domainForward', $vars);
+    }
+
+    /**
+     * Add/update domain forwarding
+     * 
+     * @param array $vars An array of data
+     * 
+     * @return NamesiloResponse
+     */
+    public function domainForwardSubDomain(array $vars)
+    {
+        return $this->api->submit('domainForwardSubDomain', $vars);
+    }
+
+    /**
+     * Add/update domain forwarding
+     * 
+     * @param array $vars An array of data
+     * 
+     * @return NamesiloResponse
+     */
+    public function domainForwardSubDomainDelete(array $vars)
+    {
+        return $this->api->submit('domainForwardSubDomainDelete', $vars);
     }
 }

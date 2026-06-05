@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Description\Type\Discount;
 
 use Blesta\Core\Pricing\Modifier\Type\Description\Type\AbstractDescription;
@@ -17,12 +18,12 @@ class Discount extends AbstractDescription
     /**
      * {@inheritdoc}
      */
-    public function get(array $meta, array $oldMeta = null)
+    public function get(array $meta, ?array $oldMeta = null)
     {
         $description = '';
 
         // Determine the type of meta info we have to work with
-        $type = (isset($meta['_data']['type']) ? $meta['_data']['type'] : null);
+        $type = ($meta['_data']['type'] ?? null);
         switch ($type) {
             case 'coupon':
                 $description = $this->getCoupon($meta);
@@ -69,8 +70,8 @@ class Discount extends AbstractDescription
         $amount = '';
 
         if (isset($meta['coupon_amount']) && is_object($meta['coupon_amount'])) {
-            $type = isset($meta['coupon_amount']->type) ? $meta['coupon_amount']->type : '';
-            $amount = isset($meta['coupon_amount']->amount) ? $meta['coupon_amount']->amount : '';
+            $type = $meta['coupon_amount']->type ?? '';
+            $amount = $meta['coupon_amount']->amount ?? '';
         }
 
         return compact('coupon', 'type', 'amount');

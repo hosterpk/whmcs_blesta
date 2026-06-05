@@ -1,0 +1,17 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+if (Configure::get('System.debug') && Configure::get('System.query_logging')) {
+    $queries = \Blesta\Core\Database\QueryLogger::getQueries();
+    $total_time = \Blesta\Core\Database\QueryLogger::getTotalTime();
+    $slow_queries = \Blesta\Core\Database\QueryLogger::getSlowQueries();
+    $queries_json = base64_encode(json_encode($queries));
+?>
+<div class="alert alert-info">
+    <strong>Database Queries:</strong> <?php echo $this->Html->safe(count($queries));?> queries in <?php echo $this->Html->safe(round($total_time, 2));?>ms
+    <?php if (count($slow_queries) > 0) { ?>
+        <span style="color:red;">(<?php echo $this->Html->safe(count($slow_queries));?> slow queries >50ms)</span>
+    <?php } ?>
+    | <a href="#" onclick="console.table(JSON.parse(atob('<?php echo $this->Html->safe($queries_json);?>'))); return false;">View in Console</a>
+</div>
+<?php } ?>

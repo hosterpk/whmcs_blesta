@@ -1,5 +1,7 @@
 <?php
-use \Minphp\Session\Session;
+
+use Minphp\Session\Session;
+
 /**
  * Order forms listing
  *
@@ -29,7 +31,7 @@ class Forms extends OrderController
             . '/css/styles.css" rel="stylesheet" type="text/css" />'
         );
     }
-    
+
     /**
      * List available order forms
      */
@@ -42,7 +44,8 @@ class Forms extends OrderController
         $visibility = ['public'];
         $client_id = $this->Session->read('blesta_client_id');
 
-        if ($client_id > 0
+        if (
+            $client_id > 0
             && ($client = $this->Clients->get($client_id, false))
         ) {
             $visibility[] = 'client';
@@ -77,7 +80,7 @@ class Forms extends OrderController
      */
     public function a()
     {
-        $code = isset($this->get[0]) ? $this->get[0] : null;
+        $code = $this->get[0] ?? null;
 
         return ($this->setAffiliateCode($code) ? $this->redirect($this->base_uri . 'order') : $this->redirect($this->base_uri));
     }

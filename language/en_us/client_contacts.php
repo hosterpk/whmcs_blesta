@@ -30,7 +30,7 @@ $lang['ClientContacts.index.boxtitle_contacts'] = 'Contacts';
 $lang['ClientContacts.index.heading_name'] = 'Name';
 $lang['ClientContacts.index.heading_email'] = 'Email';
 $lang['ClientContacts.index.heading_type'] = 'Type';
-$lang['ClientContacts.index.heading_options'] = 'Options';
+$lang['ClientContacts.index.heading_options'] = 'Actions';
 $lang['ClientContacts.index.option_edit'] = 'Edit';
 $lang['ClientContacts.index.option_delete'] = 'Delete';
 

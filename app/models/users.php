@@ -1,5 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use Session;
+use stdClass;
+
 /**
  * User management
  *
@@ -36,7 +45,6 @@ class Users extends AppModel
      */
     public function login(Session $session, array $vars)
     {
-
         // Load the auth component, to handle various authentication requests
         Loader::loadComponents($this, ['Auth']);
 
@@ -76,7 +84,7 @@ class Users extends AppModel
             $rules = [
                 'username' => [
                     'attempts' => [
-                        'rule' => [[$this, 'validateLoginAttempts'], (isset($vars['ip_address']) ? $vars['ip_address'] : null)],
+                        'rule' => [[$this, 'validateLoginAttempts'], ($vars['ip_address'] ?? null)],
                         'message' => $this->_('Users.!error.username.attempts'),
                         // prevent disclosing information about username/passwords
                         // also prevent DOS due to Users::auth() executing
@@ -159,7 +167,8 @@ class Users extends AppModel
                 $session->write('ip', $vars['ip_address']);
 
                 // Set a cookie so the session will persist
-                if ((isset($vars['remember_me']) && $vars['remember_me'] == 'true')
+                if (
+                    (isset($vars['remember_me']) && $vars['remember_me'] == 'true')
                     || $session->read('blesta_session_cookie') === true
                 ) {
                     // Set the persistent session cookie
@@ -175,7 +184,7 @@ class Users extends AppModel
                 // Log this user
                 $log = [
                     'user_id' => $user->id,
-                    'ip_address' => (isset($vars['ip_address']) ? $vars['ip_address'] : null),
+                    'ip_address' => ($vars['ip_address'] ?? null),
                     'company_id' => Configure::get('Blesta.company_id'),
                     'result' => 'success'
                 ];
@@ -212,7 +221,7 @@ class Users extends AppModel
                 // Log this user
                 $log = [
                     'user_id' => $user->id,
-                    'ip_address' => (isset($vars['ip_address']) ? $vars['ip_address'] : null),
+                    'ip_address' => ($vars['ip_address'] ?? null),
                     'company_id' => Configure::get('Blesta.company_id'),
                     'result' => 'failure'
                 ];
@@ -310,7 +319,8 @@ class Users extends AppModel
         if ($user) {
             if ($this->checkPassword($vars['password'], $user->password)) {
                 $authorized = true;
-            } elseif (Configure::get('Blesta.auth_legacy_passwords')
+            } elseif (
+                Configure::get('Blesta.auth_legacy_passwords')
                 && $this->checkPassword(
                     $vars['password'],
                     $user->password,
@@ -514,6 +524,13 @@ class Users extends AppModel
                 ];
                 $this->Record->duplicate('file_name', '=', $avatar['file_name'])->
                     insert('user_avatars', $avatar);
+            } elseif (array_key_exists('avatar', $vars) && $vars['avatar'] === null) {
+                // Remove avatar
+                $user = $this->get($user_id);
+                if (!empty($user->avatar)) {
+                    @unlink($user->avatar);
+                    $this->Record->from('user_avatars')->where('user_id', '=', $user_id)->delete();
+                }
             }
 
             if (empty($fields)) {
@@ -587,10 +604,15 @@ class Users extends AppModel
             ->where('id', '=', $user_id)
             ->fetch();
 
-        // Trigger the Transactions.get event
-        extract($this->executeAndParseEvent('Transactions.get', [
+        // Trigger the Users.get event
+        $event = $this->executeAndParseEvent('Users.get', [
             'user' => $user
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $user;
     }
@@ -660,7 +682,7 @@ class Users extends AppModel
      */
     public function getOtp($user_id, $otp)
     {
-        return (boolean) $this->Record->select(['user_id'])->from('user_otps')->
+        return (bool) $this->Record->select(['user_id'])->from('user_otps')->
             where('user_id', '=', $user_id)->where('otp', '=', $otp)->fetch();
     }
 
@@ -822,10 +844,10 @@ class Users extends AppModel
 
                 $temp = explode(':', $stored_hash);
 
-                $algo = isset($temp[0]) ? $temp[0] : 'sha256';
-                $iterations = isset($temp[1]) ? $temp[1] : 1000;
-                $salt = isset($temp[2]) ? $temp[2] : null;
-                $hash = isset($temp[3]) ? $temp[3] : null;
+                $algo = $temp[0] ?? 'sha256';
+                $iterations = $temp[1] ?? 1000;
+                $salt = $temp[2] ?? null;
+                $hash = $temp[3] ?? null;
 
                 $new_hash = hash_pbkdf2($algo, $password, $salt, $iterations, 0, true);
                 return substr(base64_encode($new_hash), 0, 32) == $hash;
@@ -839,7 +861,7 @@ class Users extends AppModel
                 }
 
                 $temp = explode(':', $stored_hash);
-                $salt = isset($temp[1]) ? $temp[1] : null;
+                $salt = $temp[1] ?? null;
                 if ($salt) {
                     return md5($salt . html_entity_decode($password)) . ':' . $salt == $stored_hash;
                 }
@@ -1151,17 +1173,17 @@ class Users extends AppModel
             if ($validate_pass) {
                 $rules['current_password'] = [
                     'matches' => [
-                        'rule' => [[$this, 'validatePasswordEquals'], (isset($vars['user_id']) ? $vars['user_id'] : null)],
+                        'rule' => [[$this, 'validatePasswordEquals'], ($vars['user_id'] ?? null)],
                         'message' => $this->_('Users.!error.current_password.matches')
                     ]
                 ];
 
                 if (isset($vars['two_factor_mode']) && $vars['two_factor_mode'] != 'none') {
                     $user = new stdClass();
-                    $user->id = (isset($vars['user_id']) ? $vars['user_id'] : null);
+                    $user->id = ($vars['user_id'] ?? null);
                     $user->two_factor_mode = $vars['two_factor_mode'];
-                    $user->two_factor_key = isset($vars['two_factor_key']) ? $vars['two_factor_key'] : null;
-                    $user->two_factor_pin = isset($vars['two_factor_pin']) ? $vars['two_factor_pin'] : null;
+                    $user->two_factor_key = $vars['two_factor_key'] ?? null;
+                    $user->two_factor_pin = $vars['two_factor_pin'] ?? null;
 
                     // Validate OTP
                     $rules['otp'] = [

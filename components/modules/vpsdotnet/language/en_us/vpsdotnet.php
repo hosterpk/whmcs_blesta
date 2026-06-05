@@ -6,6 +6,8 @@ $lang['Vpsdotnet.module_row'] = 'VPS.NET Master Server';
 $lang['Vpsdotnet.module_row_plural'] = 'Servers';
 $lang['Vpsdotnet.module_group'] = 'VPS.NET Master Group';
 
+$lang['Vpsdotnet.back_to_manage'] = 'Back';
+
 $lang['Vpsdotnet.order_options.first'] = 'First non-full server';
 
 
@@ -26,6 +28,8 @@ $lang['Vpsdotnet.manage.module_rows.confirm_delete'] = 'Are you sure you want to
 $lang['Vpsdotnet.manage.module_rows_no_results'] = 'There are no servers.';
 
 $lang['Vpsdotnet.manage.module_groups_title'] = 'VPS.NET Master Server Groups';
+$lang['Vpsdotnet.manage.tab_rows'] = 'Servers';
+$lang['Vpsdotnet.manage.tab_groups'] = 'Server Groups';
 $lang['Vpsdotnet.manage.module_groups_heading.name'] = 'Group Name';
 $lang['Vpsdotnet.manage.module_groups_heading.servers'] = 'Server Count';
 $lang['Vpsdotnet.manage.module_groups_heading.options'] = 'Options';

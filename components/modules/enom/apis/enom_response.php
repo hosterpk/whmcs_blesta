@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Enom API response handler
  *
@@ -28,7 +29,7 @@ class EnomResponse
 
         try {
             $this->xml = new SimpleXMLElement($this->raw, LIBXML_NOCDATA);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Invalid response
         }
     }
@@ -70,7 +71,7 @@ class EnomResponse
     {
         if ($this->xml && $this->xml instanceof SimpleXMLElement && $this->xml->ErrCount > 0) {
             $errors = [];
-            for ($i=1; $i<=$this->xml->ErrCount; $i++) {
+            for ($i = 1; $i <= $this->xml->ErrCount; $i++) {
                 $errors[] = (string)$this->xml->errors->{'Err' . $i};
             }
             return $this->formatResponse($errors);

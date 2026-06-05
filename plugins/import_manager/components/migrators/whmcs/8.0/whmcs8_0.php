@@ -1,4 +1,5 @@
 <?php
+
 require_once dirname(__FILE__) . DS . '..' . DS . 'whmcs_migrator.php';
 
 /**
@@ -21,7 +22,7 @@ class Whmcs8_0 extends WhmcsMigrator
     {
         parent::__construct($local);
 
-        set_time_limit(60*60*15); // 15 minutes
+        set_time_limit(60 * 60 * 15); // 15 minutes
 
         Language::loadLang(['whmcs8_0'], null, dirname(__FILE__) . DS . 'language' . DS);
 
@@ -95,7 +96,7 @@ class Whmcs8_0 extends WhmcsMigrator
 
         try {
             $this->remote = new Record($db_info);
-            $this->remote->query("SET NAMES utf8");
+            $this->remote->query('SET NAMES utf8');
             $this->remote->query("SET sql_mode='TRADITIONAL'");
         } catch (Throwable $e) {
             $this->Input->setErrors([[$e->getMessage()]]);
@@ -149,37 +150,37 @@ class Whmcs8_0 extends WhmcsMigrator
     {
         return [
             [
-                'label' => Language::_("Whmcs8_0.settings.host", true),
+                'label' => Language::_('Whmcs8_0.settings.host', true),
                 'field' => 'host',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs8_0.settings.database", true),
+                'label' => Language::_('Whmcs8_0.settings.database', true),
                 'field' => 'database',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs8_0.settings.user", true),
+                'label' => Language::_('Whmcs8_0.settings.user', true),
                 'field' => 'user',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs8_0.settings.pass", true),
+                'label' => Language::_('Whmcs8_0.settings.pass', true),
                 'field' => 'pass',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs8_0.settings.key", true),
+                'label' => Language::_('Whmcs8_0.settings.key', true),
                 'field' => 'key',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Whmcs8_0.settings.balance_credit", true),
+                'label' => Language::_('Whmcs8_0.settings.balance_credit', true),
                 'field' => 'balance_credit',
                 'type' => 'bool'
             ],
             [
-                'label' => Language::_("Whmcs8_0.settings.enable_debug", true),
+                'label' => Language::_('Whmcs8_0.settings.enable_debug', true),
                 'field' => 'enable_debug',
                 'type' => 'bool'
             ],
@@ -279,7 +280,7 @@ class Whmcs8_0 extends WhmcsMigrator
 
         // Set default client group
         $client_groups = $this->ClientGroups->getAll(Configure::get('Blesta.company_id'));
-        $this->mappings['client_groups'][0] = isset($client_groups[0]->id) ? $client_groups[0]->id : null;
+        $this->mappings['client_groups'][0] = $client_groups[0]->id ?? null;
 
         // Import client groups
         $groups = $this->fetchall ? $this->WhmcsClients->getGroups()->fetchAll() : $this->WhmcsClients->getGroups();
@@ -511,9 +512,7 @@ class Whmcs8_0 extends WhmcsMigrator
 
             $vars = [
                 'client_id' => $this->mappings['clients'][$note->userid],
-                'staff_id' => isset($this->mappings['staff'][$note->adminid])
-                    ? $this->mappings['staff'][$note->adminid]
-                    : 0,
+                'staff_id' => $this->mappings['staff'][$note->adminid] ?? 0,
                 'title' => $title,
                 'description' => trim($title) == trim($note->note) ? null : $note->note,
                 'stickied' => $note->sticky ? 1 : 0,
@@ -559,11 +558,13 @@ class Whmcs8_0 extends WhmcsMigrator
             }
 
             // Check if the gateway is already installed
-            if ($this->GatewayManager->isInstalled(
-                $mapping['gateway'],
-                $mapping['type'],
-                Configure::get('Blesta.company_id')
-            )) {
+            if (
+                $this->GatewayManager->isInstalled(
+                    $mapping['gateway'],
+                    $mapping['type'],
+                    Configure::get('Blesta.company_id')
+                )
+            ) {
                 $local_gateway = $this->GatewayManager->getByClass(
                     $mapping['gateway'],
                     Configure::get('Blesta.company_id')

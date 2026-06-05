@@ -1,0 +1,6 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+            <?php echo (isset($content) ? $content : null);?>
+        </div>

@@ -1,4 +1,17 @@
 <?php
+
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use PDOException;
+use Record;
+use stdClass;
+use Throwable;
+
 /**
  * Quotations management
  *
@@ -44,7 +57,12 @@ class Quotations extends AppModel
     public function add(array $vars)
     {
         // Trigger the Quotations.addBefore event
-        extract($this->executeAndParseEvent('Quotations.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Quotations.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Fetch client settings on quotes
         Loader::loadComponents($this, ['SettingsCollection']);
@@ -160,7 +178,8 @@ class Quotations extends AppModel
                 ) {
                     for ($j = 0; $j < $num_taxes; $j++) {
                         // Skip all but inclusive_calculated for tax exempt users
-                        if (($client_settings['tax_exempt'] ?? 'false') == 'true'
+                        if (
+                            ($client_settings['tax_exempt'] ?? 'false') == 'true'
                             && ($tax_rules[$j]->type != 'inclusive_calculated')
                         ) {
                             continue;
@@ -228,7 +247,12 @@ class Quotations extends AppModel
     public function edit($quotation_id, array $vars)
     {
         // Trigger the Quotations.editBefore event
-        extract($this->executeAndParseEvent('Quotations.editBefore', ['quotation_id' => $quotation_id, 'vars' => $vars]));
+        $event = $this->executeAndParseEvent('Quotations.editBefore', ['quotation_id' => $quotation_id, 'vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (!isset($this->Invoices)) {
             Loader::loadModels($this, ['Invoices']);
@@ -312,7 +336,7 @@ class Quotations extends AppModel
             $line_rules['id'] = [
                 'quotation_invoiced' => [
                     'if_set' => true,
-                    'rule' => function($id) use ($quotation) {
+                    'rule' => function ($id) use ($quotation) {
                         return $quotation->status == 'invoiced';
                     },
                     'negate' => true,
@@ -337,7 +361,8 @@ class Quotations extends AppModel
         // If the quotation wasn't already a draft, or we're not moving from a draft
         // then we can't update the id_format or id_value
         $update_statuses = ['draft'];
-        if (!in_array($quotation->status, $update_statuses)
+        if (
+            !in_array($quotation->status, $update_statuses)
             || ($quotation->status == $vars['status'])
             || $vars['status'] == 'void'
         ) {
@@ -684,7 +709,7 @@ class Quotations extends AppModel
         ];
 
         $this->Record->select($fields)
-            ->appendValues([$this->replacement_keys['quotations']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['quotations']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('quotations')
             ->where('quotations.id', '=', $quotation_id);
 
@@ -976,7 +1001,7 @@ class Quotations extends AppModel
                 ->where('quotations.id', '=', $query)
                 ->orLike(
                     "CONVERT(REPLACE(quotations.id_format, '"
-                    . $this->replacement_keys['quotations']['ID_VALUE_TAG']
+                    . ($this->replacement_keys['quotations']['ID_VALUE_TAG'] ?? '{num}')
                     . "', quotations.id_value) USING utf8)",
                     '%' . $query . '%',
                     true,
@@ -984,7 +1009,7 @@ class Quotations extends AppModel
                 )
                 ->orLike(
                     "REPLACE(clients.id_format, '"
-                    . $this->replacement_keys['clients']['ID_VALUE_TAG']
+                    . ($this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}')
                     . "', clients.id_value)",
                     '%' . $query . '%',
                     true,
@@ -1017,7 +1042,7 @@ class Quotations extends AppModel
         ])
             ->appendValues(
                 [
-                    $this->replacement_keys['quotations']['ID_VALUE_TAG']
+                    $this->replacement_keys['quotations']['ID_VALUE_TAG'] ?? '{num}'
                 ]
             )
             ->from('quotation_invoices')
@@ -1052,8 +1077,7 @@ class Quotations extends AppModel
         }
 
         $this->Input->setRules($this->getInvoiceRules($vars));
-        if ($this->Input->validates($vars))
-        {
+        if ($this->Input->validates($vars)) {
             // Generate the first invoice
             $first_items = [];
             foreach ($quotation->line_items as $line_item) {
@@ -1171,8 +1195,8 @@ class Quotations extends AppModel
         $this->Record->select($fields)
             ->appendValues(
                 [
-                    $this->replacement_keys['quotations']['ID_VALUE_TAG'],
-                    $this->replacement_keys['clients']['ID_VALUE_TAG']
+                    $this->replacement_keys['quotations']['ID_VALUE_TAG'] ?? '{num}',
+                    $this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'
                 ]
             )
             ->from('quotations')
@@ -1199,7 +1223,9 @@ class Quotations extends AppModel
         }
 
         // Get quotations by status
-        $this->Record->where('quotations.status', '=', $filters['status']);
+        if ($filters['status'] !== 'all') {
+            $this->Record->where('quotations.status', '=', $filters['status']);
+        }
 
         // Filter by client group ID
         if (isset($options['client_group_id'])) {
@@ -1631,15 +1657,19 @@ class Quotations extends AppModel
                     for ($j = 0; $j < $num_lines; $j++) {
                         // Ensure tax status remains unchanged
                         if ($quotation->line_items[$j]->id == $lines[$i]['id']) {
-                            if ((!$lines[$i]['tax'] && !empty($quotation->line_items[$j]->taxes)) ||
-                                ($lines[$i]['tax'] && empty($quotation->line_items[$j]->taxes))) {
+                            if (
+                                (!$lines[$i]['tax'] && !empty($quotation->line_items[$j]->taxes)) ||
+                                ($lines[$i]['tax'] && empty($quotation->line_items[$j]->taxes))
+                            ) {
                                 $tax_change = true;
                                 break 2;
                             }
 
                             // Ensure amount and quantity remain unchanged
-                            if ($lines[$i]['amount'] != $quotation->line_items[$j]->amount ||
-                                $lines[$i]['qty'] != $quotation->line_items[$j]->qty) {
+                            if (
+                                $lines[$i]['amount'] != $quotation->line_items[$j]->amount ||
+                                $lines[$i]['qty'] != $quotation->line_items[$j]->qty
+                            ) {
                                 $tax_change = true;
                                 break 2;
                             }
@@ -1940,7 +1970,8 @@ class Quotations extends AppModel
                     Loader::loadModels($this, ['Contacts', 'Countries']);
 
                     // Fetch the contact to which quotations should be addressed
-                    if (!($billing = $this->Contacts->get((int)$data->client->settings['inv_address_to']))
+                    if (
+                        !($billing = $this->Contacts->get((int)$data->client->settings['inv_address_to']))
                         || $billing->client_id != $data->client_id
                     ) {
                         $billing = $this->Contacts->get($data->client->contact_id);

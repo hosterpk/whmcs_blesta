@@ -1,4 +1,5 @@
 <?php
+
 // Domain fields
 Configure::set('RealtimeRegister.domain_fields', [
     'domain' => [
@@ -1647,4 +1648,3 @@ Thank you for your business!',
 <p>Thank you for your business!</p>'
     ]
 ]);
-

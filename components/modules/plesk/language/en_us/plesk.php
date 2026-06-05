@@ -94,6 +94,7 @@ $lang['Plesk.module_row'] = 'Server';
 $lang['Plesk.module_row_plural'] = 'Servers';
 $lang['Plesk.module_group'] = 'Server Group';
 
+$lang['Plesk.back_to_manage'] = 'Back';
 
 // Service fields
 $lang['Plesk.service_field.domain'] = 'Domain';
@@ -171,6 +172,8 @@ $lang['Plesk.add_module_row'] = 'Add Server';
 $lang['Plesk.add_module_group'] = 'Add Server Group';
 $lang['Plesk.manage.module_rows_title'] = 'Servers';
 $lang['Plesk.manage.module_groups_title'] = 'Server Groups';
+$lang['Plesk.manage.tab_rows'] = 'Servers';
+$lang['Plesk.manage.tab_groups'] = 'Server Groups';
 $lang['Plesk.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Plesk.manage.module_rows_heading.ip_address'] = 'IP Address';
 $lang['Plesk.manage.module_rows_heading.accounts'] = 'Accounts';

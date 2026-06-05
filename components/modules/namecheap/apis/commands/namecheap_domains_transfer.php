@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Namecheap Domain Transfer Management
  *

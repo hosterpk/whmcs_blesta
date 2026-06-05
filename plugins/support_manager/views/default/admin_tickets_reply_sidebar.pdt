@@ -1,0 +1,231 @@
+<?php
+/**
+ * Ticket Reply Sidebar
+ *
+ * @var View $this
+ * @var stdClass $ticket The ticket object
+ * @var stdClass $vars The form variables
+ * @var stdClass|null $client The client object
+ * @var stdClass|null $service The service object
+ * @var array $departments List of departments
+ * @var array $department_staff List of department staff
+ * @var array $priorities List of priorities
+ * @var array $statuses List of statuses
+ * @var array $service_ids List of client services
+ * @var array $contacts List of client contacts
+ */
+
+// Determine accordion state - expand if contacts are selected or if recipients have values
+$has_selected_contacts = !empty($vars->contacts);
+$has_recipients = !empty($vars->recipients) && !(count($vars->recipients) == 1 && empty($vars->recipients[0]));
+$accordion_expanded = $has_selected_contacts || $has_recipients;
+?>
+<!-- Ticket Details -->
+<div class="side-content-section">
+    <h6 class="side-content-title">
+        <i class="bi bi-info-circle"></i>
+        <?php $this->_('AdminTickets.reply.heading_ticket_details');?>
+    </h6>
+
+    <!-- Client -->
+    <div class="mb-3">
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_client');?></label>
+        <div class="d-flex align-items-center gap-2">
+            <?php
+            if (!empty($client)) {
+            ?>
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . (isset($client->id) ? $client->id : null) . '/');?>"><?php echo $this->Html->concat(' ', $this->Html->safe($client->first_name), $this->Html->safe($client->last_name));?></a>
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/loginasclient/' . (isset($client->id) ? $client->id : null) . '/');?>" class="btn btn-sm btn-link p-0 text-primary" title="<?php $this->_('AdminTickets.reply.login_as_client');?>" target="_blank">
+                <i class="bi bi-box-arrow-in-right"></i>
+            </a>
+            <?php
+            } elseif (!empty($ticket->email)) {
+            ?>
+            <a href="mailto:<?php echo (isset($ticket->email) ? $this->Html->safe($ticket->email) : null);?>"><?php echo (isset($ticket->email) ? $this->Html->safe($ticket->email) : null);?></a>
+            <?php
+            }
+            ?>
+        </div>
+    </div>
+
+    <!-- Contacts & Recipients Accordion -->
+    <div class="accordion accordion-flush mb-3" id="contactsRecipientsAccordion">
+        <div class="accordion-item border-0 bg-transparent">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-transparent px-0 py-1<?php echo $accordion_expanded ? '' : ' collapsed'; ?>" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#contactsRecipientsCollapse"
+                        aria-expanded="<?php echo $accordion_expanded ? 'true' : 'false'; ?>">
+                    <?php $this->_('AdminTickets.reply.heading_contacts_recipients');?>
+                </button>
+            </h2>
+            <div id="contactsRecipientsCollapse" class="accordion-collapse collapse<?php echo $accordion_expanded ? ' show' : ''; ?>"
+                 data-bs-parent="#contactsRecipientsAccordion">
+                <div class="accordion-body p-0 pt-2">
+
+                    <!-- Contacts -->
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary mb-1">
+                            <?php $this->_('AdminTickets.reply.heading_contacts');?>
+                            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo $this->Html->safe($this->_('AdminTickets.!tooltip.contacts', true));?>"></i>
+                        </label>
+                        <div id="contacts_list">
+                            <?php
+                            if (!empty($contacts)) {
+                                foreach ($contacts as $contact_id => $contact) {
+                            ?>
+                                <div class="form-check">
+                                    <?php $this->Form->fieldCheckbox('contacts[]', $contact_id, in_array($contact_id, $vars->contacts ?? []), ['id' => 'contact_' . $contact_id, 'class' => 'form-check-input', 'form' => 'create_ticket']); ?>
+                                    <label class="form-check-label small" for="contact_<?php echo $this->Html->safe($contact_id);?>"><?php echo $this->Html->safe($contact);?></label>
+                                </div>
+                            <?php
+                                }
+                            } else {
+                            ?>
+                                <div class="text-muted small"><?php $this->_('AdminTickets.add.text_no_contacts');?></div>
+                            <?php
+                            }
+                            ?>
+                        </div>
+                    </div>
+
+                    <!-- Recipients -->
+                    <div>
+                        <label class="form-label small text-secondary mb-1">
+                            <?php $this->_('AdminTickets.reply.heading_recipients');?>
+                            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo $this->Html->safe($this->_('AdminTickets.!tooltip.recipients', true));?>"></i>
+                        </label>
+                        <div id="recipients_container">
+                            <?php
+                            if (empty($vars->recipients)) {
+                                $vars->recipients = [''];
+                            }
+
+                            foreach ($vars->recipients as $recipient) {
+                            ?>
+                                <div class="recipient d-flex align-items-center mb-2 gap-2">
+                                    <?php $this->Form->fieldText('recipients[]', $recipient, ['placeholder' => 'email@example.com', 'class' => 'form-control form-control-sm', 'form' => 'create_ticket']); ?>
+                                    <a href="#" class="remove_recipient text-danger"><i class="bi bi-x-lg"></i></a>
+                                </div>
+                            <?php
+                            }
+                            ?>
+                        </div>
+                        <a href="#" class="add_recipient small fw-bold">
+                            <i class="bi bi-plus-circle me-1"></i><?php $this->_('AdminTickets.reply.text_add_recipient');?>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department -->
+    <div class="mb-3">
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_department');?></label>
+        <?php $this->Form->fieldSelect('department_id', (isset($departments) ? $departments : null), (isset($vars->department_id) ? $vars->department_id : null), ['id' => 'department_id', 'class' => 'form-select form-select-sm', 'form' => 'create_ticket']);?>
+    </div>
+
+    <!-- Assigned To -->
+    <div class="mb-3">
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_staff_id');?></label>
+        <?php $this->Form->fieldSelect('ticket_staff_id', (isset($department_staff) ? $department_staff : null), (isset($vars->ticket_staff_id) ? $vars->ticket_staff_id : null), ['id' => 'ticket_staff_id', 'class' => 'form-select form-select-sm', 'form' => 'create_ticket']);?>
+    </div>
+
+    <!-- Priority -->
+    <div class="mb-3">
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_priority');?></label>
+        <?php $this->Form->fieldSelect('priority', (isset($priorities) ? $priorities : null), (isset($vars->priority) ? $vars->priority : null), ['id' => 'priority', 'class' => 'form-select form-select-sm', 'form' => 'create_ticket']);?>
+    </div>
+
+    <!-- Status -->
+    <div class="mb-3">
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_status');?></label>
+        <?php $this->Form->fieldSelect('status', (isset($statuses) ? $statuses : null), (isset($vars->status) ? $vars->status : null), ['id' => 'status', 'class' => 'form-select form-select-sm', 'form' => 'create_ticket']);?>
+    </div>
+
+    <!-- Service -->
+    <div class="mb-3" id="service_id_container"<?php echo empty($service_ids) ? ' style="display:none;"' : '';?>>
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_service');?></label>
+        <?php $this->Form->fieldSelect('service_id', (isset($service_ids) ? $service_ids : null), (isset($vars->service_id) ? $vars->service_id : null), ['id' => 'service_id', 'class' => 'form-select form-select-sm', 'form' => 'create_ticket']);?>
+        <?php
+        if (!empty($service)) {
+        ?>
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editservice/' . (isset($client->id) ? $client->id : null) . '/' . (isset($service->id) ? $service->id : null) . '/');?>" class="small"><?php echo $this->Html->safe('(ID: ' . $service->id_code . ')');?></a>
+        <?php
+        }
+        ?>
+    </div>
+
+    <!-- Date Added -->
+    <div class="mb-3">
+        <label class="form-label small text-secondary mb-1"><?php $this->_('AdminTickets.reply.heading_date_added');?></label>
+        <div class="small"><?php echo $this->Date->cast((isset($ticket->date_added) ? $ticket->date_added : null), 'date_time');?></div>
+    </div>
+
+    <?php
+    // Check if AI is enabled
+    $ai_enabled = false;
+    if (isset($ai_settings['sm_ai_enabled']) && $ai_settings['sm_ai_enabled'] === 'true') {
+        $ai_enabled = true;
+    }
+    ?>
+    <?php if ($ai_enabled) { ?>
+    <!-- AI Regenerate Button -->
+    <div class="d-grid">
+        <button type="button" class="btn btn-sm btn-outline-secondary ai-icon" id="regenerateAiBtn" data-ticket-id="<?php echo $this->Html->safe($ticket->id ?? '');?>" style="display: none;">
+            <i class="bi bi-arrow-clockwise me-2"></i><?php $this->_('AdminTickets.reply.button_regenerate_ai');?>
+        </button>
+    </div>
+    <?php } ?>
+</div>
+
+<?php
+// Customer Rating Section
+$rating = (int) ($ticket->rating ?? 0);
+if ($rating > 0 || !empty($vars->rating_comment)) {
+?>
+<div class="side-content-section">
+    <h6 class="side-content-title">
+        <i class="bi bi-star-fill"></i>
+        <?php $this->_('AdminTickets.reply.heading_rating');?>
+    </h6>
+
+    <!-- Star Rating Display -->
+    <div class="ticket-rating-stars mb-2">
+        <?php
+        $max_rating = 5;
+        for ($i = 1; $i <= $rating; $i++) {
+            $max_rating--;
+        ?>
+            <i class="bi bi-star-fill ticket-rating-star filled"></i>
+        <?php
+        }
+        for ($i = 1; $i <= $max_rating; $i++) {
+        ?>
+            <i class="bi bi-star ticket-rating-star"></i>
+        <?php
+        }
+        ?>
+        <span class="ticket-rating-value"><?php echo number_format($rating, 1);?></span>
+    </div>
+
+    <?php if (!empty($ticket->date_rated)) { ?>
+    <!-- Rating Metadata -->
+    <div class="ticket-rating-meta mb-2">
+        <i class="bi bi-clock"></i>
+        <?php $this->_('AdminTickets.reply.text_date_rated', false, $this->Date->cast($ticket->date_rated, 'date_time'));?>
+    </div>
+    <?php } ?>
+
+    <?php if (!empty($vars->rating_comment)) { ?>
+    <!-- Customer Comment -->
+    <div class="ticket-rating-comment">
+        <i class="bi bi-chat-left-quote"></i>
+        <p class="mb-0"><?php echo $this->Html->safe(preg_replace('/\s+/', ' ', $vars->rating_comment));?></p>
+    </div>
+    <?php } ?>
+</div>
+<?php
+}
+?>

@@ -26,7 +26,7 @@ $lang['AdminSystemApi.index.heading_user'] = 'User';
 $lang['AdminSystemApi.index.heading_key'] = 'Key';
 $lang['AdminSystemApi.index.heading_company'] = 'Company';
 $lang['AdminSystemApi.index.heading_date'] = 'Date Created';
-$lang['AdminSystemApi.index.heading_options'] = 'Options';
+$lang['AdminSystemApi.index.heading_options'] = 'Actions';
 $lang['AdminSystemApi.index.option_edit'] = 'Edit';
 $lang['AdminSystemApi.index.option_delete'] = 'Delete';
 $lang['AdminSystemApi.index.no_results'] = 'There are no API users.';
@@ -36,7 +36,7 @@ $lang['AdminSystemApi.add.boxtitle_add'] = 'Add API User';
 $lang['AdminSystemApi.add.field_company'] = 'Company';
 $lang['AdminSystemApi.add.field_user'] = 'User';
 $lang['AdminSystemApi.add.field_notes'] = 'Notes';
-$lang['AdminSystemApi.add.field_apisubmit'] = 'Add User';
+$lang['AdminSystemApi.add.field_apisubmit'] = 'Create User';
 
 $lang['AdminSystemApi.edit.boxtitle_edit'] = 'Edit API User';
 $lang['AdminSystemApi.edit.field_company'] = 'Company';

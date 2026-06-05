@@ -1,0 +1,692 @@
+<?php /** @var View $this **/ ?>
+
+
+<?php
+if (!(isset($is_ajax) ? $is_ajax : false)) {
+?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+<?php
+}
+?>
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyBilling.editcoupon.boxtitle_edit', true), ['id' => 'admin_company_billing_editcoupon']);
+    ?>
+            <?php $this->Form->create(null, ['id' => 'coupon', 'class' => 'disable-on-submit']);?>
+                <!-- Basic Section -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.editcoupon.heading_basic');?></h6>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <?php $this->Form->fieldCheckbox('status', 'active', ((isset($vars->status) ? $vars->status : 'active') == 'active'), ['id' => 'status', 'class' => 'form-check-input']);?>
+                            <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_status', true), 'status', ['class' => 'form-check-label']);?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <?php $this->Form->fieldRadio('recurring', '0', (isset($vars->recurring) ? $vars->recurring : '0') == '0', ['id' => 'recurring_no', 'class' => 'form-check-input recurring']);?>
+                            <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_recurring_no', true), 'recurring_no', ['class' => 'form-check-label']);?>
+                        </div>
+                        <div class="form-check">
+                            <?php $this->Form->fieldRadio('recurring', '1', (isset($vars->recurring) ? $vars->recurring : '0') == '1', ['id' => 'recurring_yes', 'class' => 'form-check-input recurring']);?>
+                            <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_recurring_yes', true), 'recurring_yes', ['class' => 'form-check-label']);?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <?php $this->Form->fieldCheckbox('apply_package_options', '1', (isset($vars->apply_package_options) ? $vars->apply_package_options : '1') == '1', ['id' => 'apply_package_options', 'class' => 'form-check-input']);?>
+                            <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_apply_package_options', true), 'apply_package_options', ['class' => 'form-check-label']);?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <?php $this->Form->fieldCheckbox('internal_use_only', '1', (isset($vars->internal_use_only) ? $vars->internal_use_only : null) == '1', ['id' => 'internal_use_only', 'class' => 'form-check-input']);?>
+                            <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_internal_use_only', true), 'internal_use_only', ['class' => 'form-check-label']);?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_code', true), 'code', ['class' => 'form-label']);?>
+                        <div class="input-group">
+                            <?php $this->Form->fieldText('code', (isset($vars->code) ? $vars->code : null), ['id' => 'code', 'class' => 'form-control', 'placeholder' => $this->_('AdminCompanyBilling.editcoupon.field_code', true)]);?>
+                            <button class="btn btn-outline-secondary generate-code" type="button">
+                                <i class="bi bi-arrow-clockwise me-1"></i><?php $this->_('AdminCompanyBilling.editcoupon.text_generate_code');?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limitations Section -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.editcoupon.heading_limitations');?></h6>
+
+                <h6 class="form-section-subheader"><?php $this->_('AdminCompanyBilling.editcoupon.heading_usage');?></h6>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_start_date', true), 'start_date', ['class' => 'form-label']);?>
+                        <?php $this->Form->fieldText('start_date', (isset($vars->start_date) ? $vars->start_date : null), ['id' => 'start_date', 'class' => 'form-control date']);?>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_end_date', true), 'end_date', ['class' => 'form-label']);?>
+                        <?php $this->Form->fieldText('end_date', (isset($vars->end_date) ? $vars->end_date : null), ['id' => 'end_date', 'class' => 'form-control date']);?>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="max_qty" class="form-label">
+                            <?php $this->_('AdminCompanyBilling.editcoupon.field_max_qty');?>
+                            <i class="bi bi-question-circle text-secondary ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.coupon_quantity', true));?>"></i>
+                        </label>
+                        <div class="d-flex align-items-center gap-2">
+                            <?php $this->Form->fieldText('max_qty', (isset($vars->max_qty) ? $vars->max_qty : null), ['id' => 'max_qty', 'class' => 'form-control', 'placeholder' => 'Unlimited', 'type' => 'number', 'min' => '0', 'style' => 'max-width: 200px;']);?>
+                            <span class="text-muted">
+                                <?php $this->_('AdminCompanyBilling.editcoupon.text_used_qty', false, (isset($coupon->used_qty) ? $this->Html->safe($coupon->used_qty) : '0'));?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="renew_limitation" style="<?php echo (isset($vars->recurring) && $vars->recurring == '1') ? '' : 'display:none;';?>">
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <?php $this->Form->fieldRadio('limit_recurring', '0', (isset($vars->limit_recurring) ? $vars->limit_recurring : '0') == '0', ['id' => 'limit_recurring_no', 'class' => 'form-check-input']);?>
+                                <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_limit_recurring_no', true), 'limit_recurring_no', ['class' => 'form-check-label']);?>
+                            </div>
+                            <div class="form-check">
+                                <?php $this->Form->fieldRadio('limit_recurring', '1', (isset($vars->limit_recurring) ? $vars->limit_recurring : '0') == '1', ['id' => 'limit_recurring_yes', 'class' => 'form-check-input']);?>
+                                <?php $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_limit_recurring_yes', true), 'limit_recurring_yes', ['class' => 'form-check-label']);?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Term Limitations Section -->
+                <h6 class="form-section-subheader"><?php $this->_('AdminCompanyBilling.editcoupon.heading_terms');?></h6>
+
+                <p class="form-section-subtitle">
+                    <?php $this->_('AdminCompanyBilling.editcoupon.description_terms');?>
+                </p>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 100px;"><?php $this->_('AdminCompanyBilling.editcoupon.text_enabled');?></th>
+                                <th style="width: 150px;"><?php $this->_('AdminCompanyBilling.editcoupon.text_period');?></th>
+                                <th>
+                                    <?php $this->_('AdminCompanyBilling.editcoupon.text_terms');?>
+                                    <i class="bi bi-question-circle text-secondary ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.!tooltip.coupon_term_value', true));?>"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $i = 0;
+                            foreach ((isset($periods) ? $periods : []) as $key => $period) {
+                            ?>
+                            <tr>
+                                <td class="text-center">
+                                    <?php $this->Form->fieldCheckbox('terms[' . $i . '][period]', $key, (isset($vars->terms[$i]['period']) && $vars->terms[$i]['period'] == $key), ['id' => 'enabled_' . $i, 'class' => 'form-check-input']);?>
+                                </td>
+                                <td>
+                                    <?php echo $this->Html->safe($period);?>
+                                </td>
+                                <td>
+                                    <?php
+                                    if ($key == 'onetime') {
+                                        echo '<span class="text-muted">' . $this->_('AdminCompanyBilling.editcoupon.not_applicable', true) . '</span>';
+                                        $this->Form->fieldHidden('terms[' . $i . '][term]', '');
+                                    } else {
+                                        $this->Form->fieldText('terms[' . $i . '][term]', (isset($vars->terms[$i]['term']) ? $vars->terms[$i]['term'] : null), ['class' => 'form-control form-control-sm terms', 'id' => 'terms_' . $i, 'placeholder' => 'e.g., 1,3,6,12']);
+                                    }
+                                    ?>
+                                </td>
+                            </tr>
+                            <?php
+                                $i++;
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Configurable Options Section -->
+                <h6 class="form-section-subheader"><?php $this->_('AdminCompanyBilling.editcoupon.heading_configurable_options');?></h6>
+
+                <p class="form-section-subtitle">
+                    <?php $this->_('AdminCompanyBilling.editcoupon.description_configurable_options');?>
+                </p>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered" id="package_options_table">
+                        <thead>
+                            <tr>
+                                <th style="width: 250px;"><?php $this->_('AdminCompanyBilling.editcoupon.field_option_group');?></th>
+                                <th style="width: 250px;"><?php $this->_('AdminCompanyBilling.editcoupon.field_option');?></th>
+                                <th><?php $this->_('AdminCompanyBilling.editcoupon.field_option_values');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="package_option_row">
+                                <td>
+                                    <?php $this->Form->fieldSelect('package_options[0][option_group_id]', ($package_option_groups ?? null), ($vars->package_options[0]['option_group_id'] ?? null), ['class' => 'form-select option_group_select']);?>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldSelect('package_options[0][option_id]', $vars->package_options[0]['package_options'] ?? ['' => $this->_('AdminCompanyBilling.editcoupon.text_select_option', true)], ($vars->package_options[0]['option_id'] ?? null), ['class' => 'form-select option_select', 'disabled' => true]);?>
+                                </td>
+                                <td class="option_values_field">
+                                    <span class="text-muted"><?php $this->_('AdminCompanyBilling.editcoupon.text_select_option');?></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Discount Options Section -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.editcoupon.heading_discount');?></h6>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 200px;"><?php $this->_('AdminCompanyBilling.editcoupon.text_currency');?></th>
+                                <th style="width: 200px;"><?php $this->_('AdminCompanyBilling.editcoupon.text_type');?></th>
+                                <th><?php $this->_('AdminCompanyBilling.editcoupon.text_value');?></th>
+                                <th style="width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="currency_rows">
+                            <?php
+                            $num_amounts = max(1, count((isset($vars->amounts['currency']) ? $vars->amounts['currency'] : [])));
+                            for ($i = 0; $i < $num_amounts; $i++) {
+                            ?>
+                            <tr class="currency_row">
+                                <td>
+                                    <?php $this->Form->fieldSelect('amounts[currency][]', (isset($currencies) ? $currencies : null), (isset($vars->amounts['currency'][$i]) ? $vars->amounts['currency'][$i] : null), ['class' => 'form-select']);?>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldSelect('amounts[type][]', (isset($types) ? $types : null), (isset($vars->amounts['type'][$i]) ? $vars->amounts['type'][$i] : null), ['class' => 'form-select']);?>
+                                </td>
+                                <td>
+                                    <?php $this->Form->fieldText('amounts[amount][]', (isset($vars->amounts['amount'][$i]) ? $vars->amounts['amount'][$i] : null), ['class' => 'form-control', 'placeholder' => '0.00']);?>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger currency_row_remove" title="<?php $this->_('AdminCompanyBilling.editcoupon.option_remove');?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mb-4">
+                    <button type="button" class="btn btn-outline-secondary btn-sm currency_row_add">
+                        <i class="bi bi-plus-lg me-1"></i><?php $this->_('AdminCompanyBilling.editcoupon.categorylink_addcurrency');?>
+                    </button>
+                </div>
+
+                <!-- Packages Section -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.editcoupon.heading_packages');?></h6>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <?php
+                        $this->Form->label($this->_('AdminCompanyBilling.editcoupon.field_package_group_id', true), 'package_group_id', ['class' => 'form-label']);
+                        $this->Form->fieldSelect('package_group_id', (isset($package_groups) ? $package_groups : null), (isset($vars->package_group_id) ? $vars->package_group_id : null), ['id' => 'package_group_id', 'class' => 'form-select']);
+                        ?>
+                    </div>
+                </div>
+
+                <div class="dual-select-container mb-4">
+                    <div class="dual-select-panel">
+                        <label class="form-label"><?php $this->_('AdminCompanyBilling.editcoupon.text_assigned_packages');?></label>
+                        <div class="dual-select-dropzone">
+                            <div class="drag-list" id="assigned_packages">
+                                <?php
+                                if (!empty($vars->packages)) {
+                                    foreach ($vars->packages as $package_id => $package_name) {
+                                        $classes = [];
+                                        if (isset($package_attributes[$package_id]['class'])) {
+                                            $classes = explode(' ', $package_attributes[$package_id]['class']);
+                                        }
+                                ?>
+                                <div class="drag-item <?php echo implode(' ', $classes);?>" data-value="<?php echo $this->Html->safe($package_id);?>" draggable="true"><?php echo $this->Html->safe($package_name);?></div>
+                                <?php
+                                    }
+                                }
+                                ?>
+                            </div>
+                        </div>
+                        <?php $this->Form->fieldMultiSelect('packages[]', (isset($vars->packages) ? array_keys($vars->packages) : null), [], ['id' => 'assigned', 'style' => 'display:none;']);?>
+                    </div>
+
+                    <div class="dual-select-controls">
+                        <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move_left" title="<?php $this->_('AdminCompanyBilling.editcoupon.text_assigned_packages');?>">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move_right" title="<?php $this->_('AdminCompanyBilling.editcoupon.text_available_packages');?>">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="dual-select-panel">
+                        <label class="form-label"><?php $this->_('AdminCompanyBilling.editcoupon.text_available_packages');?></label>
+                        <div class="dual-select-dropzone">
+                            <div class="drag-list" id="available_packages">
+                                <?php
+                                if (!empty($packages)) {
+                                    foreach ($packages as $package_id => $package_name) {
+                                        $classes = [];
+                                        if (isset($package_attributes[$package_id]['class'])) {
+                                            $classes = explode(' ', $package_attributes[$package_id]['class']);
+                                        }
+                                ?>
+                                <div class="drag-item <?php echo implode(' ', $classes);?>" data-value="<?php echo $this->Html->safe($package_id);?>" draggable="true"><?php echo $this->Html->safe($package_name);?></div>
+                                <?php
+                                    }
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit('save', $this->_('AdminCompanyBilling.editcoupon.field_couponsubmit', true), ['class' => 'btn btn-primary']);
+                    ?>
+                </div>
+
+                <?php $this->Form->end();?>
+    <?php $this->Widget->end(); ?>
+<?php
+if (!(isset($is_ajax) ? $is_ajax : false)) {
+?>
+</div>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Select all assigned packages on submit
+    document.getElementById('coupon').addEventListener('submit', function() {
+        const assignedSelect = document.getElementById('assigned');
+        if (assignedSelect) {
+            Array.from(assignedSelect.options).forEach(option => option.selected = true);
+        }
+
+        // Also set hidden inputs for draggable items
+        const assignedPackages = document.getElementById('assigned_packages');
+        const items = assignedPackages.querySelectorAll('.drag-item');
+        const hiddenSelect = document.getElementById('assigned');
+
+        // Clear existing options
+        hiddenSelect.innerHTML = '';
+
+        // Add all assigned packages as selected options
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.getAttribute('data-value');
+            option.selected = true;
+            hiddenSelect.appendChild(option);
+        });
+    });
+
+    // Currency row add/remove functionality
+    const currencyRowsContainer = document.getElementById('currency_rows');
+    const addCurrencyBtn = document.querySelector('.currency_row_add');
+
+    function updateRemoveButtons() {
+        const rows = currencyRowsContainer.querySelectorAll('.currency_row');
+        rows.forEach(row => {
+            const removeBtn = row.querySelector('.currency_row_remove');
+            if (rows.length === 1) {
+                removeBtn.disabled = true;
+                removeBtn.style.opacity = '0.5';
+            } else {
+                removeBtn.disabled = false;
+                removeBtn.style.opacity = '1';
+            }
+        });
+    }
+
+    addCurrencyBtn?.addEventListener('click', function() {
+        const firstRow = currencyRowsContainer.querySelector('.currency_row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Clear values in cloned row
+        newRow.querySelectorAll('select, input').forEach(field => {
+            if (field.tagName === 'SELECT') {
+                field.selectedIndex = 0;
+            } else {
+                field.value = '';
+            }
+        });
+
+        currencyRowsContainer.appendChild(newRow);
+        updateRemoveButtons();
+    });
+
+    currencyRowsContainer?.addEventListener('click', function(e) {
+        if (e.target.closest('.currency_row_remove')) {
+            const rows = currencyRowsContainer.querySelectorAll('.currency_row');
+            if (rows.length > 1) {
+                e.target.closest('.currency_row').remove();
+                updateRemoveButtons();
+            }
+        }
+    });
+
+    updateRemoveButtons();
+
+    // Generate coupon code
+    const generateCodeBtn = document.querySelector('.generate-code');
+    const codeInput = document.getElementById('code');
+
+    generateCodeBtn?.addEventListener('click', function() {
+        const length = Math.floor(Math.random() * 5) + 8;
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < length; i++) {
+            code += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        codeInput.value = code;
+    });
+
+    // Show/hide renew limitation
+    const recurringRadios = document.querySelectorAll('.recurring');
+    const renewLimitation = document.getElementById('renew_limitation');
+
+    function showRenewLimitation() {
+        const recurringYes = document.getElementById('recurring_yes');
+        if (recurringYes && recurringYes.checked) {
+            renewLimitation.style.display = '';
+        } else {
+            renewLimitation.style.display = 'none';
+            const limitRecurringNo = document.getElementById('limit_recurring_no');
+            if (limitRecurringNo) {
+                limitRecurringNo.checked = true;
+            }
+        }
+    }
+
+    recurringRadios.forEach(radio => {
+        radio.addEventListener('change', showRenewLimitation);
+    });
+
+    // Terms input handling
+    const termsInputs = document.querySelectorAll('.terms');
+    termsInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const index = this.id.replace('terms_', '');
+            const checkbox = document.getElementById('enabled_' + index);
+            if (checkbox) {
+                checkbox.checked = this.value !== '';
+            }
+        });
+    });
+
+    // Package group filter
+    const packageGroupSelect = document.getElementById('package_group_id');
+    const availablePackages = document.getElementById('available_packages');
+
+    function setAvailablePackages() {
+        const selectedGroup = packageGroupSelect.value;
+        const items = availablePackages.querySelectorAll('.drag-item');
+
+        items.forEach(item => {
+            if (selectedGroup === '') {
+                item.style.display = '';
+            } else {
+                const itemClasses = item.className.split(' ');
+                const groupClass = 'group_' + selectedGroup;
+                if (itemClasses.includes(groupClass)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    packageGroupSelect?.addEventListener('change', setAvailablePackages);
+
+    // Drag & Drop Functionality
+    const assignedPackagesList = document.getElementById('assigned_packages');
+    const availablePackagesList = document.getElementById('available_packages');
+    const moveLeftBtn = document.querySelector('.move_left');
+    const moveRightBtn = document.querySelector('.move_right');
+
+    let draggedItem = null;
+
+    function setupDragItems() {
+        document.querySelectorAll('#assigned_packages .drag-item, #available_packages .drag-item').forEach(item => {
+            // Click to select
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (e.ctrlKey || e.metaKey) {
+                    this.classList.toggle('selected');
+                } else {
+                    document.querySelectorAll('.drag-item').forEach(i => i.classList.remove('selected'));
+                    this.classList.add('selected');
+                }
+            });
+
+            // Drag events
+            item.addEventListener('dragstart', function(e) {
+                draggedItem = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.textContent);
+            });
+
+            item.addEventListener('dragend', function(e) {
+                this.classList.remove('dragging');
+                document.querySelectorAll('.drag-list').forEach(l => l.classList.remove('drag-over'));
+            });
+        });
+
+        // Setup drop zones
+        [assignedPackagesList, availablePackagesList].forEach(list => {
+            if (!list) return;
+
+            list.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+
+            list.addEventListener('dragleave', function(e) {
+                if (!this.contains(e.relatedTarget)) {
+                    this.classList.remove('drag-over');
+                }
+            });
+
+            list.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+
+                if (draggedItem && draggedItem.parentNode !== this) {
+                    this.appendChild(draggedItem);
+                    draggedItem.classList.remove('selected');
+                    draggedItem = null;
+                }
+            });
+        });
+    }
+
+    setupDragItems();
+
+    // Arrow button functionality
+    moveLeftBtn?.addEventListener('click', function() {
+        const selectedItems = availablePackagesList.querySelectorAll('.drag-item.selected');
+        if (selectedItems.length > 0) {
+            selectedItems.forEach(item => {
+                assignedPackagesList.appendChild(item);
+                item.classList.remove('selected');
+            });
+        }
+    });
+
+    moveRightBtn?.addEventListener('click', function() {
+        const selectedItems = assignedPackagesList.querySelectorAll('.drag-item.selected');
+        if (selectedItems.length > 0) {
+            selectedItems.forEach(item => {
+                availablePackagesList.appendChild(item);
+                item.classList.remove('selected');
+            });
+        }
+    });
+
+    // Clear selection when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.drag-item')) {
+            document.querySelectorAll('.drag-item.selected').forEach(item => item.classList.remove('selected'));
+        }
+    });
+
+    // Package Options functionality
+    const initialLoad = true;
+    const packageOptionIndex = 0;
+    const packageOptionId = '<?php echo ($vars->package_options[0]['option_id'] ?? '');?>';
+    const packageOptionValue = '<?php echo !isset($vars->package_options[0]) ? '' : (!empty($vars->package_options[0]['option_value_ids']) ? json_encode($vars->package_options[0]['option_value_ids']) : ($vars->package_options[0]['regex_pattern'] ?? $vars->package_options[0]['min_quantity'] ?? ''));?>';
+    const selectOptionText = '<?php echo $this->_('AdminCompanyBilling.editcoupon.text_select_option', true);?>';
+    const baseUri = '<?php echo $this->Html->_($this->base_uri, true);?>';
+    const optionValuesLabel = '<?php echo $this->_('AdminCompanyBilling.editcoupon.field_option_values', true);?>';
+    const minQuantityLabel = '<?php echo $this->_('AdminCompanyBilling.editcoupon.field_min_quantity', true);?>';
+    const regexPatternLabel = '<?php echo $this->_('AdminCompanyBilling.editcoupon.field_regex_pattern', true);?>';
+    const anyValueText = '<?php echo $this->_('AdminCompanyBilling.editcoupon.text_any_value', true);?>';
+    const tooltipText = '<?php echo $this->_('AppController.tooltip.text', true);?>';
+    const regexTooltip = '<?php echo $this->_('AdminCompanyBilling.editcoupon.tooltip_regex_pattern', true);?>';
+
+    // Handle option group selection
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('option_group_select')) {
+            const groupId = e.target.value;
+            const row = e.target.closest('tr');
+            const optionSelect = row.querySelector('.option_select');
+            const valuesField = row.querySelector('.option_values_field');
+
+            // Reset option select and values
+            optionSelect.innerHTML = '<option value="">' + selectOptionText + '</option>';
+            valuesField.innerHTML = '<span class="text-muted">' + selectOptionText + '</span>';
+
+            if (groupId) {
+                optionSelect.disabled = false;
+
+                fetch(baseUri + 'settings/company/billing/getpackageoptions/' + groupId, {
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        Object.entries(data).forEach(([id, name]) => {
+                            const option = document.createElement('option');
+                            option.value = id;
+                            option.textContent = name;
+                            if (packageOptionId == id) {
+                                option.selected = true;
+                            }
+                            optionSelect.appendChild(option);
+                        });
+
+                        if (packageOptionId && optionSelect.value === packageOptionId) {
+                            optionSelect.dispatchEvent(new Event('change'));
+                        }
+                    });
+            } else {
+                optionSelect.disabled = true;
+            }
+        }
+
+        if (e.target.classList.contains('option_select')) {
+            const optionId = e.target.value;
+            const row = e.target.closest('tr');
+            const valuesField = row.querySelector('.option_values_field');
+            const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+
+            valuesField.innerHTML = '<span class="text-muted">' + selectOptionText + '</span>';
+
+            if (optionId) {
+                fetch(baseUri + 'settings/company/billing/getpackageoptiondetails/' + optionId, {
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.type) {
+                            buildOptionValuesField(valuesField, data, rowIndex);
+                        }
+                    });
+            }
+        }
+    });
+
+    function buildOptionValuesField(container, optionData, rowIndex) {
+        let html = '';
+        const baseName = 'package_options[' + rowIndex + ']';
+
+        switch(optionData.type) {
+            case 'radio':
+            case 'select':
+            case 'checkbox':
+                html = '<select name="' + baseName + '[option_value_ids][]" class="form-select" multiple size="8">';
+                Object.entries(optionData.values).forEach(([id, name]) => {
+                    html += '<option value="' + id + '">' + name + '</option>';
+                });
+                html += '</select>';
+                container.innerHTML = html;
+                break;
+
+            case 'quantity':
+                container.innerHTML = '<input type="number" name="' + baseName + '[min_quantity]" value="' + (initialLoad ? packageOptionValue : '') + '" class="form-control" min="0" placeholder="' + minQuantityLabel + '" />';
+                break;
+
+            case 'text':
+            case 'textarea':
+            case 'password':
+                container.innerHTML = '<div class="d-flex align-items-center gap-2">' +
+                    '<input type="text" name="' + baseName + '[regex_pattern]" value="' + (initialLoad ? packageOptionValue : '') + '" class="form-control" placeholder="' + anyValueText + '" />' +
+                    '<i class="bi bi-question-circle text-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="' + regexTooltip + '" style="cursor: help; flex-shrink: 0;"></i>' +
+                    '</div>';
+
+                const newTooltip = container.querySelector('[data-bs-toggle="tooltip"]');
+                if (newTooltip) {
+                    new bootstrap.Tooltip(newTooltip);
+                }
+                break;
+        }
+    }
+
+    // Trigger initial option group change if there's a pre-selected value
+    const optionGroupSelect = document.querySelector('.option_group_select');
+    if (optionGroupSelect && optionGroupSelect.value) {
+        optionGroupSelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+<?php
+}
+?>

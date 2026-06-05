@@ -280,6 +280,6 @@ class ClientInvoices extends ClientController
             return [];
         }
 
-        return \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($setting->value);
+        return safe_unserialize($setting->value);
     }
 }

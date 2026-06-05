@@ -1,0 +1,170 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminSystemBackup.ftp.boxtitle_backup', true), ['id' => 'admin_system_backup_ftp']);
+?>
+    <?php $this->Form->create(null, ['id' => 'sftp', 'class' => 'disable-on-submit']); ?>
+
+    <!-- Test SFTP Button -->
+    <div class="mb-4">
+        <button type="button" class="btn btn-sm btn-outline-secondary test-sftp">
+            <i class="bi bi-check-circle me-1"></i>
+            <?php $this->_('AdminSystemBackup.ftp.field.test');?>
+        </button>
+    </div>
+
+    <!-- FTP Host -->
+    <div class="mb-3">
+        <label for="ftp_host" class="form-label">
+            <?php $this->_('AdminSystemBackup.ftp.field.ftp_host');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.ftp_host', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('ftp_host', (isset($vars['ftp_host']) ? $vars['ftp_host'] : null), ['id' => 'ftp_host', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- FTP Port -->
+    <div class="mb-3">
+        <label for="ftp_port" class="form-label">
+            <?php $this->_('AdminSystemBackup.ftp.field.ftp_port');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.ftp_port', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('ftp_port', (isset($vars['ftp_port']) ? $vars['ftp_port'] : null), ['id' => 'ftp_port', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- FTP Username -->
+    <div class="mb-3">
+        <label for="ftp_username" class="form-label">
+            <?php $this->_('AdminSystemBackup.ftp.field.ftp_username');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.ftp_username', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('ftp_username', (isset($vars['ftp_username']) ? $vars['ftp_username'] : null), ['id' => 'ftp_username', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- FTP Password -->
+    <div class="mb-3">
+        <label for="ftp_password" class="form-label">
+            <?php $this->_('AdminSystemBackup.ftp.field.ftp_password');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.ftp_password', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldPassword('ftp_password', ['id' => 'ftp_password', 'value' => (isset($vars['ftp_password']) ? $vars['ftp_password'] : null), 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- FTP Path -->
+    <div class="mb-3">
+        <label for="ftp_path" class="form-label">
+            <?php $this->_('AdminSystemBackup.ftp.field.ftp_path');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.ftp_path', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldText('ftp_path', (isset($vars['ftp_path']) ? $vars['ftp_path'] : null), ['id' => 'ftp_path', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <!-- FTP Rate -->
+    <div class="mb-3">
+        <label for="ftp_rate" class="form-label">
+            <?php $this->_('AdminSystemBackup.ftp.field.ftp_rate');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemBackup.!tooltip.ftp_rate', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldSelect('ftp_rate', $frequency, (isset($vars['ftp_rate']) ? $vars['ftp_rate'] : null), ['id' => 'ftp_rate', 'class' => 'form-select']);
+        ?>
+    </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminSystemBackup.ftp.field.backupsubmit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+    <?php $this->Form->end(); ?>
+<?php $this->Widget->end(); ?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Test SFTP functionality
+    const testSftpButton = document.querySelector('.test-sftp');
+    const sftpForm = document.getElementById('sftp');
+
+    if (testSftpButton && sftpForm) {
+        testSftpButton.addEventListener('click', function() {
+            // Disable the form
+            const formElements = sftpForm.querySelectorAll('input, select, button, textarea');
+            formElements.forEach(element => {
+                element.disabled = true;
+            });
+
+            // Create FormData from the form
+            const formData = new FormData(sftpForm);
+
+            // Send AJAX request
+            fetch('<?php echo $this->base_uri . 'settings/system/backup/ftptest/';?>', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Hide any existing error sections
+                const existingErrors = document.querySelectorAll('.card-body .error_section, .card-body .alert-danger, .card-body .alert-success');
+                existingErrors.forEach(error => error.remove());
+
+                // Insert the response message at the top of the card body
+                const cardBody = document.querySelector('.card-body');
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data;
+                cardBody.insertBefore(tempDiv.firstElementChild, cardBody.firstChild);
+
+                // Re-enable the form
+                formElements.forEach(element => {
+                    element.disabled = false;
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Re-enable the form
+                formElements.forEach(element => {
+                    element.disabled = false;
+                });
+            });
+        });
+    }
+});
+</script>

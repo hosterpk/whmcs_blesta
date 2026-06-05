@@ -1,0 +1,20 @@
+[
+    {
+        "key": "autodebit",
+        "client_id": 73,
+        "value": "1",
+        "encrypted": 0
+    },
+    {
+        "key": "invoice_method",
+        "client_id": 73,
+        "value": "email",
+        "encrypted": 0
+    },
+    {
+        "key": "language",
+        "client_id": 73,
+        "value": "en_us",
+        "encrypted": 0
+    }
+]

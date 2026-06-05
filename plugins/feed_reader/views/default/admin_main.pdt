@@ -2,97 +2,91 @@
         <?php
         $this->Widget->clear();
         $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
+        $this->Widget->setWidgetButton('widget-width');
         $this->Widget->setWidgetButton('arrow');
         $this->Widget->setWidgetButton(['href'=>$this->base_uri . 'widget/feed_reader/admin_main/settings/', 'class'=>'ajax setting']);
-        $this->Widget->create($this->_('AdminMain.index.boxtitle_feed', true), ['id'=>'widget_feed_reader_admin_main' . ((isset($billing) ? $billing : 'false') == 'true' ? '_billing' : '')], (isset($render_section) ? $render_section : null));
+        $this->Widget->create($this->_('AdminMain.index.boxtitle_feed', true), ['id'=>'widget_feed_reader_admin_main' . (($billing ?? 'false') == 'true' ? '_billing' : '')], (isset($render_section) ? $render_section : null));
         ?>
         <?php
-        if (($num_articles = count((isset($articles) ? $articles : []))) > 0) {
+        if (($num_articles = count(($articles ?? []))) > 0) {
         ?>
-        <div class="rss_feed_area">
-            <ul class="rss_list">
-                <?php
-                for ($i=0; $i<$num_articles; $i++) {
-                ?>
-                <li>
-                    <span>
-                        <em><?php echo $this->Date->cast((isset($articles[$i]->date) ? $articles[$i]->date : null), 'date_time');?></em>
-                        <a class="override" href="<?php echo (isset($articles[$i]->data['link']) ? $articles[$i]->data['link'] : null);?>" target="_blank"><?php echo (isset($articles[$i]->data['title']) ? $articles[$i]->data['title'] : null);?></a>
-                    </span>
-                    <div>
-                        <?php echo (isset($articles[$i]->data['description']) ? $articles[$i]->data['description'] : null);?>
+            <?php
+            for ($i=0; $i<$num_articles; $i++) {
+            ?>
+                <div class="feed-item">
+                    <div class="feed-item-date">
+                        <i class="bi bi-calendar3 me-1"></i>
+                        <?php echo $this->Date->cast(($articles[$i]->date ?? null), 'date');?>
                     </div>
-                </li>
+                    <h6 class="feed-item-title">
+                        <a href="<?php echo ($articles[$i]->data['link'] ?? null);?>" target="_blank" class="text-decoration-none">
+                            <?php echo ($articles[$i]->data['title'] ?? null);?>
+                            <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                        </a>
+                    </h6>
+                    <p class="feed-item-summary">
+                        <?php echo \Illuminate\Support\Str::of($articles[$i]->data['description'] ?? null)->stripTags();?>
+                    </p>
+                </div>
+            <?php
+            }
+            ?>
+            <div class="feed-item text-small">
                 <?php
+                if (($last_updated ?? null)) {
+                    $this->_('AdminMain.index.last_updated', false, $this->Date->cast($last_updated, 'date_time'));
                 }
                 ?>
-            </ul>
-            <div class="bottom_row">
-                <div>
-                    <a href="https://twitter.com/blesta" class="twitter-follow-button" data-show-count="false">Follow @blesta</a>
-                    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-                    <?php
-                    if ((isset($reload_twitter_follow) ? $reload_twitter_follow : null)) {
-                    ?>
-                    <script type="text/javascript">
-                    $(document).ready(function() {
-                        // Reload the twitter button after widget content reloads
-                        $(this).blestaRequest("GET", "//platform.twitter.com/widgets.js", "", {}, {}, {dataType: "script", cache:true})
-                    });
-                    </script>
-                    <?php
-                    }
-                    ?>
-                    <span class="link">
+            </div>
+            <div class="text-center">
+                <nav aria-label="Feed pagination">
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
                         <?php
-                        if ((isset($last_updated) ? $last_updated : null)) {
-                            $this->_('AdminMain.index.last_updated', false, $this->Date->cast($last_updated, 'date_time'));
-                        }
-                        ?>
-                    </span>
-                    <ul class="switch_link">
-                        <?php
-                        if ((isset($total_pages) ? $total_pages : null) > 1) {
+                        if (($total_pages ?? null) > 1) {
                         ?>
                             <?php
-                            if ((isset($page) ? $page : null) > 1) {
+                            if (($page ?? null) > 1) {
                             ?>
-                            <li>
-                                <a class="ajax override" href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/index/' . ($page-1) . '/');?>">‹ prev</a>
+                            <li class="page-item">
+                                <a class="page-link ajax override" href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/index/' . ($page-1) . '/');?>">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
                             </li>
                             <?php
                             }
                             ?>
+                            <li class="page-item active">
+                                <a class="page-link" href="#">
+                                    <span><?php echo ($page ?? 1);?></span>
+                                    <?php
+                                    if (($total_pages ?? null) > 1) {
+                                    ?>
+                                    <span class="d-none d-sm-inline"> / <?php echo ($total_pages ?? 1);?></span>
+                                    <?php
+                                    }
+                                    ?>
+                                </a>
+                            </li>
                             <?php
-                            if ((isset($page) ? $page : null) < (isset($total_pages) ? $total_pages : null)) {
+                            if (($page ?? null) < (isset($total_pages) ? $total_pages : null)) {
                             ?>
-                                <?php
-                                if ((isset($page) ? $page : null) > 1) {
-                                ?>
-                                <li>
-                                    <span>|</span>
-                                </li>
-                                <?php
-                                }
-                                ?>
-                            <li>
-                                <a class="ajax override" href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/index/' . ($page+1) . '/');?>">next ›</a>
+                            <li class="page-item">
+                                <a class="page-link ajax override" href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/index/' . ($page+1) . '/');?>">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
                             </li>
                         <?php
                             }
                         }
                         ?>
                     </ul>
-                </div>
+                </nav>
             </div>
-        </div>
         <?php
         } else {
         ?>
-        <div class="inner">
-            <div class="empty_section">
-                <div class="empty_box"><?php $this->_('AdminMain.index.no_results');?></div>
-            </div>
+        <div class="text-center p-4">
+            <div class="text-muted"><?php $this->_('AdminMain.index.no_results');?></div>
         </div>
         <?php
         }

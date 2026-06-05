@@ -1,0 +1,16 @@
+{
+    "id": 22,
+    "id_format": "QUOTE-{num}",
+    "id_value": 13,
+    "client_id": 73,
+    "staff_id": 38,
+    "title": "Seed Test Quote — Website Redesign",
+    "status": "pending",
+    "subtotal": "650.0000",
+    "total": "650.0000",
+    "currency": "USD",
+    "notes": "This is a seed test quotation.",
+    "private_notes": "Internal notes for staff only.",
+    "date_created": "2026-02-20 00:00:00",
+    "date_expires": "2026-03-22 00:00:00"
+}

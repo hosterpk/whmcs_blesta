@@ -1,4 +1,5 @@
 <?php
+
 /**
  * System Overview settings
  *
@@ -14,18 +15,18 @@ class SystemOverviewSettings extends SystemOverviewModel
      * @var array A list of default system overview settings
      */
     private static $default_settings = [
-        ['key'=>'clients_active', 'value'=>1, 'order'=>1],
-        ['key'=>'active_users_today', 'value'=>1, 'order'=>2],
-        ['key'=>'services_active', 'value'=>1, 'order'=>3],
-        ['key'=>'services_scheduled_cancellation', 'value'=>0, 'order'=>4],
-        ['key'=>'recurring_invoices', 'value'=>1, 'order'=>5],
-        ['key'=>'pending_orders', 'value'=>0, 'order'=>6],
-        ['key'=>'open_tickets', 'value'=>0, 'order'=>7],
-        ['key'=>'show_one_tab', 'value'=>0, 'order'=>8],
-        ['key'=>'graph_clients', 'value'=>1, 'order'=>9],
-        ['key'=>'graph_services', 'value'=>1, 'order'=>10],
-        ['key'=>'show_legend', 'value'=>1, 'order'=>11],
-        ['key'=>'date_range', 'value'=>7, 'order'=>12],
+        ['key' => 'clients_active', 'value' => 1, 'order' => 1],
+        ['key' => 'active_users_today', 'value' => 1, 'order' => 2],
+        ['key' => 'services_active', 'value' => 1, 'order' => 3],
+        ['key' => 'services_scheduled_cancellation', 'value' => 0, 'order' => 4],
+        ['key' => 'recurring_invoices', 'value' => 1, 'order' => 5],
+        ['key' => 'pending_orders', 'value' => 0, 'order' => 6],
+        ['key' => 'open_tickets', 'value' => 0, 'order' => 7],
+        ['key' => 'show_one_tab', 'value' => 0, 'order' => 8],
+        ['key' => 'graph_clients', 'value' => 1, 'order' => 9],
+        ['key' => 'graph_services', 'value' => 1, 'order' => 10],
+        ['key' => 'show_legend', 'value' => 1, 'order' => 11],
+        ['key' => 'date_range', 'value' => 7, 'order' => 12],
     ];
 
     /**
@@ -47,37 +48,37 @@ class SystemOverviewSettings extends SystemOverviewModel
     public function add($staff_id, $company_id, array $vars)
     {
         $rules = [
-            'staff_id'=>[
-                'exists'=>[
-                    'rule'=>[[$this, 'validateExists'], 'id', 'staff'],
-                    'message'=>$this->_('SystemOverviewSettings.!error.staff_id.exists')
+            'staff_id' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateExists'], 'id', 'staff'],
+                    'message' => $this->_('SystemOverviewSettings.!error.staff_id.exists')
                 ]
             ],
-            'company_id'=>[
-                'exists'=>[
-                    'rule'=>[[$this, 'validateExists'], 'id', 'companies'],
-                    'message'=>$this->_('SystemOverviewSettings.!error.company_id.exists')
+            'company_id' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateExists'], 'id', 'companies'],
+                    'message' => $this->_('SystemOverviewSettings.!error.company_id.exists')
                 ]
             ],
-            'settings[][key]'=>[
-                'empty'=>[
-                    'rule'=>'isEmpty',
-                    'negate'=>true,
-                    'message'=>$this->_('SystemOverviewSettings.!error.settings[][key].empty')
+            'settings[][key]' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => $this->_('SystemOverviewSettings.!error.settings[][key].empty')
                 ]
             ],
-            'settings[][value]'=>[
-                'length'=>[
-                    'rule'=>['maxLength', 255],
-                    'message'=>$this->_('SystemOverviewSettings.!error.settings[][value].length')
+            'settings[][value]' => [
+                'length' => [
+                    'rule' => ['maxLength', 255],
+                    'message' => $this->_('SystemOverviewSettings.!error.settings[][value].length')
                 ]
             ]
         ];
 
         $input = [
-            'staff_id'=>$staff_id,
-            'company_id'=>$company_id,
-            'settings'=>$vars
+            'staff_id' => $staff_id,
+            'company_id' => $company_id,
+            'settings' => $vars
         ];
 
         $this->Input->setRules($rules);
@@ -85,11 +86,11 @@ class SystemOverviewSettings extends SystemOverviewModel
         if ($this->Input->validates($input)) {
             // Save each setting
             foreach ($input['settings'] as $setting) {
-                $value = isset($setting['value']) ? $setting['value'] : '';
-                $order = isset($setting['order']) ? $setting['order'] : null;
+                $value = $setting['value'] ?? '';
+                $order = $setting['order'] ?? null;
 
                 // Set input settings
-                $settings = ['staff_id'=>$staff_id, 'company_id'=>$company_id, 'key'=>$setting['key'], 'value'=>$value];
+                $settings = ['staff_id' => $staff_id, 'company_id' => $company_id, 'key' => $setting['key'], 'value' => $value];
 
                 // Set order if given
                 if ($order != null) {

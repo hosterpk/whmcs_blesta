@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\ServiceProviders\Common;
 
 use Pimple\ServiceProviderInterface;
@@ -15,5 +16,4 @@ use Pimple\ServiceProviderInterface;
 #[\AllowDynamicProperties]
 abstract class AbstractServiceProvider implements ServiceProviderInterface
 {
-
 }

@@ -1,0 +1,74 @@
+<?php /** @var View $this **/ ?>
+
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminSystemGeneral.addtype.boxtitle_addtype', true), ['id' => 'admin_system_general_addtype']);
+?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+            <div class="mb-3">
+                <label for="name" class="form-label">
+                    <?php $this->_('AdminSystemGeneral.addtype.field_name');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'name',
+                    (isset($vars->name) ? $vars->name : null),
+                    ['id' => 'name', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="type" class="form-label">
+                    <?php $this->_('AdminSystemGeneral.addtype.field_type');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.!paymenttypes.type', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'type',
+                    (isset($types) ? $types : []),
+                    (isset($vars->type) ? $vars->type : null),
+                    ['id' => 'type', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="form-check mb-3">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'is_lang',
+                    '1',
+                    ((isset($vars->is_lang) ? $vars->is_lang : null) == '1'),
+                    ['id' => 'is_lang', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="is_lang" class="form-check-label">
+                    <?php $this->_('AdminSystemGeneral.addtype.field_is_lang');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.!paymenttypes.is_lang', true));?>"></i>
+                </label>
+            </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminSystemGeneral.addtype.field_typesubmit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+            <?php $this->Form->end();?>
+<?php $this->Widget->end(); ?>
+        </div>

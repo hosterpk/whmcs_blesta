@@ -59,8 +59,8 @@ $lang['SupportManagerTickets.priority.low'] = 'Low';
 
 
 // Statuses
-$lang['SupportManagerTickets.status.open'] = 'Awaiting Staff Reply';
-$lang['SupportManagerTickets.status.awaiting_reply'] = 'Awaiting Client Reply';
+$lang['SupportManagerTickets.status.open'] = 'Awaiting Staff';
+$lang['SupportManagerTickets.status.awaiting_reply'] = 'Awaiting Client';
 $lang['SupportManagerTickets.status.in_progress'] = 'In Progress';
 $lang['SupportManagerTickets.status.on_hold'] = 'On Hold';
 $lang['SupportManagerTickets.status.closed'] = 'Closed';
@@ -83,3 +83,20 @@ $lang['SupportManagerTickets.log.service_id'] = 'The related service has been ch
 $lang['SupportManagerTickets.log.unassigned'] = 'Not Assigned';
 
 $lang['SupportManagerTickets.reassign_note'] = 'This ticket was re-assigned to %1$s. Previous client replies were re-assigned to this client and may have been made by another person.'; // %1$s is the client name
+
+// Bell notification strings
+$lang['SupportManagerTickets.bell.ticket_updated.title'] = 'Ticket #%1$s Updated'; // %1$s is the ticket code
+$lang['SupportManagerTickets.bell.new_ticket.title'] = 'New Ticket #%1$s'; // %1$s is the ticket code
+$lang['SupportManagerTickets.bell.ticket_updated.message'] = '%1$s replied to ticket #%2$s: %3$s'; // %1$s is the client name, %2$s is the ticket code, %3$s is the summary
+$lang['SupportManagerTickets.bell.new_ticket.message'] = '%1$s opened ticket #%2$s: %3$s'; // %1$s is the client name, %2$s is the ticket code, %3$s is the summary
+$lang['SupportManagerTickets.bell.ticket_assigned.title'] = 'Ticket #%1$s Assigned'; // %1$s is the ticket code
+$lang['SupportManagerTickets.bell.ticket_assigned.message'] = 'Ticket #%1$s assigned to you: %2$s'; // %1$s is the ticket code, %2$s is the summary
+
+
+// Inline image errors
+$lang['SupportManagerTickets.!error.inline_image.upload'] = 'The image could not be uploaded. Please try again.';
+$lang['SupportManagerTickets.!error.inline_image.size'] = 'The image exceeds the maximum allowed size of %1$sMB.'; // %1$s is the max size in MB
+$lang['SupportManagerTickets.!error.inline_image.type'] = 'Invalid image type. Only JPEG, PNG, GIF, and WebP images are allowed.';
+$lang['SupportManagerTickets.!error.inline_image.path'] = 'The upload directory could not be created.';
+$lang['SupportManagerTickets.!error.inline_image.write'] = 'The image could not be saved. Please try again.';
+$lang['SupportManagerTickets.!error.inline_image.base64'] = 'Inline base64 images are not allowed. Please paste or drag images into the editor to upload them.';

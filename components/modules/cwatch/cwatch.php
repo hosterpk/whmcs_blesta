@@ -9,6 +9,7 @@
  * @license http://blesta.com/license/ The Blesta License Agreement
  * @link http://blesta.com/ Blesta
  */
+
 use Blesta\Core\Util\Common\Traits\Container;
 use Blesta\Core\Util\Ftp\Ftp;
 use Blesta\Core\Util\Validate\Server;
@@ -77,6 +78,14 @@ class Cwatch extends Module
         $view = $this->getView('add_row');
         Loader::loadHelpers($view, ['Form', 'Html', 'Widget']);
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $view->set('module', (object) $module);
         $view->set('vars', (object) $vars);
         return $view->fetch();
     }
@@ -98,6 +107,14 @@ class Cwatch extends Module
             $vars = $module_row->meta;
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $view->set('module', (object) $module);
         $view->set('vars', (object) $vars);
         return $view->fetch();
     }
@@ -256,7 +273,7 @@ class Cwatch extends Module
             $fields->fieldSelect(
                 'meta[cwatch_package_type]',
                 $this->getPackageTypes(),
-                (isset($vars->meta['cwatch_package_type']) ? $vars->meta['cwatch_package_type'] : 'multi_license'),
+                ($vars->meta['cwatch_package_type'] ?? 'multi_license'),
                 ['id' => 'cwatch_package_type']
             )
         );
@@ -288,52 +305,54 @@ class Cwatch extends Module
             $fields->fieldSelect(
                 'meta[cwatch_license_type]',
                 $license_types['language'],
-                (isset($vars->meta['cwatch_license_type']) ? $vars->meta['cwatch_license_type'] : ''),
+                ($vars->meta['cwatch_license_type'] ?? ''),
                 ['id' => 'cwatch_license_type']
             )
         );
         $fields->setField($license_type);
 
         $html = "<script type=\"text/javascript\">
-                $(document).ready(function() {
+                (function() {
                     toggleLicenseField();
-                    $('#cwatch_package_type').change(function () {
+                    document.getElementById('cwatch_package_type').addEventListener('change', function() {
                         toggleLicenseField();
                     });
 
                     // Add a section to display available terms for each license type
-                    if (!$('#license_type_terms').length) {
-                        $('#cwatch_license_type').parent().append(
-                            '<div id=\"license_type_terms\" class=\"pad\"></div>'
-                        );
+                    if (!document.getElementById('license_type_terms')) {
+                        var termsDiv = document.createElement('div');
+                        termsDiv.id = 'license_type_terms';
+                        termsDiv.className = 'pad';
+                        document.getElementById('cwatch_license_type').parentNode.appendChild(termsDiv);
                     }
 
                     // Make a list of terms by license type
                     var license_terms = {";
         foreach ($license_types['terms'] as $license_type => $terms) {
-            $html .= "'" . $license_type . "': '" . implode(", ", $terms) . "',";
+            $html .= "'" . $license_type . "': '" . implode(', ', $terms) . "',";
         }
         $html .= "};
 
                     // When type license type is changed, display the available terms for the new type
-                    $('#cwatch_license_type').change(function() {
-                        $('#license_type_terms').html(
+                    var licenseTypeEl = document.getElementById('cwatch_license_type');
+                    licenseTypeEl.addEventListener('change', function() {
+                        document.getElementById('license_type_terms').innerHTML =
                             '" . Language::_('CWatch.package_fields.available_terms', true) . ": '
-                                + license_terms[$(this).val()]
-                        );
+                                + license_terms[this.value];
                     });
                     // Trigger the change event
-                    $('#cwatch_license_type').change();
-                });
+                    licenseTypeEl.dispatchEvent(new Event('change'));
 
-                function toggleLicenseField() {
-                    // Hide/show license types based on package type
-                    if ($('#cwatch_package_type').val() == 'single_license') {
-                        $('#cwatch_license_type').parent().show();
-                    } else {
-                        $('#cwatch_license_type').parent().hide();
+                    function toggleLicenseField() {
+                        // Hide/show license types based on package type
+                        var licenseTypeParent = document.getElementById('cwatch_license_type').parentNode;
+                        if (document.getElementById('cwatch_package_type').value == 'single_license') {
+                            licenseTypeParent.style.display = '';
+                        } else {
+                            licenseTypeParent.style.display = 'none';
+                        }
                     }
-                }
+                })();
             </script>
         ";
         $fields->setHtml($html);
@@ -379,7 +398,7 @@ class Cwatch extends Module
 
                 $license_types['terms'][$license_type->licenseType] = [];
                 foreach ($license_type->compatibility as $license_term) {
-                   $license_types['terms'][$license_type->licenseType][$license_term->term] = $license_term->friendlyName;
+                    $license_types['terms'][$license_type->licenseType][$license_term->term] = $license_term->friendlyName;
                 }
             }
         }
@@ -448,7 +467,8 @@ class Cwatch extends Module
             if ($this->Input->errors()) {
                 // Error
                 // Delete the user if this is the only service using this email
-                if ($vars['cwatch_email']
+                if (
+                    $vars['cwatch_email']
                     && !$account_emails_meta
                     || !array_key_exists($vars['cwatch_email'], $account_emails_meta->value)
                     || (array_key_exists($vars['cwatch_email'], $account_emails_meta->value)
@@ -495,7 +515,8 @@ class Cwatch extends Module
 
         $customer_id = null;
         $user_response = $api->getUser($vars['cwatch_email']);
-        if ($user_response->status() == 200
+        if (
+            $user_response->status() == 200
             && ($users = $user_response->response())
             && isset($users[0]->id)
         ) {
@@ -517,7 +538,7 @@ class Cwatch extends Module
         }
 
         foreach ($return_fields as $field) {
-            $return[] = ['key' => $field, 'value' => isset($vars[$field]) ? $vars[$field] : '', 'encrypted' => 0];
+            $return[] = ['key' => $field, 'value' => $vars[$field] ?? '', 'encrypted' => 0];
         }
 
         return $return;
@@ -554,7 +575,8 @@ class Cwatch extends Module
         $service_fields = $this->serviceFieldsToObject($service->fields);
         if (!property_exists($service_fields, 'cwatch_customer_id')) {
             $user_response = $api->getUser($service_fields->cwatch_email);
-            if ($user_response->status() == 200
+            if (
+                $user_response->status() == 200
                 && ($users = $user_response->response())
                 && isset($users[0]->id)
             ) {
@@ -564,7 +586,7 @@ class Cwatch extends Module
 
         $fields = ['cwatch_email', 'cwatch_firstname', 'cwatch_lastname', 'cwatch_country', 'cwatch_customer_id'];
         foreach ($fields as $field) {
-            $vars[$field] = isset($vars[$field]) ? $vars[$field] : $service_fields->{$field};
+            $vars[$field] = $vars[$field] ?? $service_fields->{$field};
         }
 
         $vars['cwatch_email'] = strtolower($vars['cwatch_email']);
@@ -593,7 +615,7 @@ class Cwatch extends Module
         ];
 
         foreach ($return_fields as $field) {
-            $return[] = ['key' => $field, 'value' => isset($vars[$field]) ? $vars[$field] : '', 'encrypted' => 0];
+            $return[] = ['key' => $field, 'value' => $vars[$field] ?? '', 'encrypted' => 0];
         }
 
         return $return;
@@ -673,7 +695,7 @@ class Cwatch extends Module
 
         if ($this->Input->errors()) {
             // On error, deactivate any licenses that were added
-            $this->deactivateLicenses($license_keys, isset($vars['cwatch_email']) ? $vars['cwatch_email'] : '');
+            $this->deactivateLicenses($license_keys, $vars['cwatch_email'] ?? '');
 
             $license_keys = [];
         }
@@ -751,7 +773,8 @@ class Cwatch extends Module
         // Get the current license if there is one
         $current_license = null;
         foreach ($licenses as $license) {
-            if (strtolower($license->status) == 'valid'
+            if (
+                strtolower($license->status) == 'valid'
                 && ($service_licenses === null || in_array($license->licenseKey, $service_licenses))
             ) {
                 $current_license = $license;
@@ -781,7 +804,8 @@ class Cwatch extends Module
         // If the license type of the package selected package is different than that of the current license
         // upgrade the current license to the new type if it is a higher plan
         $paid_license_types = [1 => 'STARTER', 2 => 'PRO', 3 => 'PREMIUM'];
-        if (in_array($package->meta->cwatch_license_type, $paid_license_types)
+        if (
+            in_array($package->meta->cwatch_license_type, $paid_license_types)
             && $current_license
             && array_search($current_license->pricingTerm, $paid_license_types)
             && array_search($package->meta->cwatch_license_type, $paid_license_types)
@@ -795,7 +819,7 @@ class Cwatch extends Module
             // Make a request to change the pricing level (type) for this license
             $price_change_response = $api->changeLicensePricing(
                 $package->meta->cwatch_license_type,
-                isset($users[0]->id) ? $users[0]->id : '',
+                $users[0]->id ?? '',
                 $current_license->licenseKey
             );
 
@@ -912,9 +936,7 @@ class Cwatch extends Module
         $unused_licenses_by_type = [];
         // Get a count of licenses to provide for each type
         foreach ($license_type_quantities as $license_type => $value) {
-            $license_type_quantities[$license_type] = isset($vars['configoptions'][$license_type])
-                ? $vars['configoptions'][$license_type]
-                : 0;
+            $license_type_quantities[$license_type] = $vars['configoptions'][$license_type] ?? 0;
 
             $unused_licenses_by_type[$license_type] = [];
         }
@@ -926,7 +948,8 @@ class Cwatch extends Module
 
         // Count how many licenses to add
         foreach ($licenses as $license) {
-            if (strtolower($license->status) == 'valid'
+            if (
+                strtolower($license->status) == 'valid'
                 && ($service_licenses === null || in_array($license->licenseKey, $service_licenses))
                 && array_key_exists($license->pricingTerm, $license_type_quantities)
             ) {
@@ -1039,9 +1062,10 @@ class Cwatch extends Module
 
         $account_emails_meta = $this->ModuleClientMeta->get($service->client_id, 'cwatch_account_emails', $module->id);
         $service_fields = $this->serviceFieldsToObject($service->fields);
-        if ($account_emails_meta
+        if (
+            $account_emails_meta
             && array_key_exists($service_fields->cwatch_email, $account_emails_meta->value)
-         ) {
+        ) {
             // Deactivate licenses
             $api_errors = $this->deactivateLicenses($service_fields->cwatch_licenses, $service_fields->cwatch_email);
 
@@ -1151,7 +1175,7 @@ class Cwatch extends Module
 
             $this->log('deleteuser', json_encode($api->lastRequest()), 'input', true);
             $this->log('deleteuser', $response->raw(), 'output', $response->status() == 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $errors['api']['internal'] = $e->getMessage();
         }
 
@@ -1178,7 +1202,7 @@ class Cwatch extends Module
         $fields = new ModuleFields();
 
         $requestor = $this->getFromContainer('requestor');
-        $client_id = (isset($requestor->client_id) ? $requestor->client_id : $this->Session->read('blesta_client_id'));
+        $client_id = ($requestor->client_id ?? $this->Session->read('blesta_client_id'));
         $client = $this->Clients->get($client_id);
 
         // Provision the license assigned to this package
@@ -1187,7 +1211,7 @@ class Cwatch extends Module
             $domain = $fields->label(Language::_('Cwatch.service_field.domain', true), 'cwatch_domain');
             // Create domain field and attach to domain label
             $domain->attach(
-                $fields->fieldText('cwatch_domain', (isset($vars->cwatch_domain) ? $vars->cwatch_domain : null), ['id' => 'cwatch_domain'])
+                $fields->fieldText('cwatch_domain', ($vars->cwatch_domain ?? null), ['id' => 'cwatch_domain'])
             );
             // Set the label as a field
             $fields->setField($domain);
@@ -1199,7 +1223,7 @@ class Cwatch extends Module
         $email->attach(
             $fields->fieldText(
                 'cwatch_email',
-                (isset($vars->cwatch_email) ? $vars->cwatch_email : ($client->email ?? null)),
+                ($vars->cwatch_email ?? ($client->email ?? null)),
                 ['id' => 'cwatch_email']
             )
         );
@@ -1212,7 +1236,7 @@ class Cwatch extends Module
         $firstname->attach(
             $fields->fieldText(
                 'cwatch_firstname',
-                (isset($vars->cwatch_firstname) ? $vars->cwatch_firstname : ($client->first_name ?? null)),
+                ($vars->cwatch_firstname ?? ($client->first_name ?? null)),
                 ['id' => 'cwatch_firstname']
             )
         );
@@ -1225,7 +1249,7 @@ class Cwatch extends Module
         $lastname->attach(
             $fields->fieldText(
                 'cwatch_lastname',
-                (isset($vars->cwatch_lastname) ? $vars->cwatch_lastname : ($client->last_name ?? null)),
+                ($vars->cwatch_lastname ?? ($client->last_name ?? null)),
                 ['id' => 'cwatch_lastname']
             )
         );
@@ -1239,7 +1263,7 @@ class Cwatch extends Module
             $fields->fieldSelect(
                 'cwatch_country',
                 $this->Form->collapseObjectArray($this->Countries->getList(), ['name', 'alt_name'], 'alpha2', ' - '),
-                (isset($vars->cwatch_country) ? $vars->cwatch_country : ($client->country ?? null)),
+                ($vars->cwatch_country ?? ($client->country ?? null)),
                 ['id' => 'cwatch_country']
             )
         );
@@ -1356,32 +1380,32 @@ class Cwatch extends Module
                     $ftp = $this->Security->create(
                         'Net',
                         'SFTP',
-                        [(isset($post['host']) ? $post['host'] : null), (isset($post['port']) ? $post['port'] : null)]
+                        [($post['host'] ?? null), ($post['port'] ?? null)]
                     );
 
-                    $success = $ftp->login((isset($post['username']) ? $post['username'] : null), (isset($post['password']) ? $post['password'] : null))
-                        && $ftp->chdir((isset($post['path']) ? $post['path'] : null));
+                    $success = $ftp->login(($post['username'] ?? null), ($post['password'] ?? null))
+                        && $ftp->chdir(($post['path'] ?? null));
                 } else {
                     // Set regular FTP options
-                    $ftp_options = array(
+                    $ftp_options = [
                         'passive' => true,
-                        'port' => (isset($post['port']) ? $post['port'] : null),
+                        'port' => ($post['port'] ?? null),
                         'timeout' => 30,
-                        'curlOptions' => array(
+                        'curlOptions' => [
                             CURLOPT_PROTOCOLS => CURLPROTO_FTP,
-                        )
-                    );
+                        ]
+                    ];
                     $protocol = 'ftp://';
 
                     $ftp = new Ftp();
-                    $ftp->setServer($protocol . (isset($post['host']) ? $post['host'] : null));
+                    $ftp->setServer($protocol . ($post['host'] ?? null));
                     $ftp->setCredentials(
-                        (isset($post['username']) ? $post['username'] : null),
-                        (isset($post['password']) ? $post['password'] : null)
+                        ($post['username'] ?? null),
+                        ($post['password'] ?? null)
                     );
                     $ftp->setOptions($ftp_options);
 
-                    $success = $ftp->listDir((isset($post['path']) ? $post['path'] : null));
+                    $success = $ftp->listDir(($post['path'] ?? null));
                 }
 
                 // Attempt to login to test the connection and navigate to the given path. Show success or error
@@ -1393,7 +1417,7 @@ class Cwatch extends Module
                 } else {
                     echo $this->setMessage('error', $error_message);
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->setMessage('error', $error_message);
             }
 
@@ -1402,12 +1426,12 @@ class Cwatch extends Module
             $scanner = $api->addScanner(
                 $service_fields->cwatch_email,
                 [
-                    'domain' => (isset($post['domainname']) ? $post['domainname'] : null),
-                    'password' => (isset($post['password']) ? $post['password'] : null),
-                    'login' => (isset($post['username']) ? $post['username'] : null),
-                    'host' => (isset($post['host']) ? $post['host'] : null),
-                    'port' => (isset($post['port']) ? $post['port'] : null),
-                    'path' => (isset($post['path']) ? $post['path'] : null),
+                    'domain' => ($post['domainname'] ?? null),
+                    'password' => ($post['password'] ?? null),
+                    'login' => ($post['username'] ?? null),
+                    'host' => ($post['host'] ?? null),
+                    'port' => ($post['port'] ?? null),
+                    'path' => ($post['path'] ?? null),
                     'protocol' => $use_sftp ? 'SFTP' : 'FTP'
                 ]
             );
@@ -1537,21 +1561,21 @@ class Cwatch extends Module
         $service_fields = $this->serviceFieldsToObject($service->fields);
         $service_licenses = $service_fields->cwatch_licenses;
 
-        $license_key = isset($get['key']) ? $get['key'] : '';
+        $license_key = $get['key'] ?? '';
 
         // Get cWatch API
         $api = $this->getApi();
 
         if (!empty($post)) {
             // Default the action to add_site
-            $post['action'] = isset($post['action']) ? $post['action'] : 'add_site';
+            $post['action'] = $post['action'] ?? 'add_site';
 
             switch ($post['action']) {
                 case 'upgrade_site':
                     $this->upgradeLicenseForSite(
                         $service_fields->cwatch_email,
-                        isset($post['domain']) ? $post['domain'] : '',
-                        isset($post['licenseKey']) ? $post['licenseKey'] : ''
+                        $post['domain'] ?? '',
+                        $post['licenseKey'] ?? ''
                     );
                     break;
                 case 'deactivate_license':
@@ -1560,7 +1584,7 @@ class Cwatch extends Module
                 case 'remove_domain':
                     $api_response = $api->removeSite(
                         $service_fields->cwatch_email,
-                        isset($post['domain']) ? $post['domain'] : ''
+                        $post['domain'] ?? ''
                     );
                     break;
                 case 'add_site':
@@ -1569,8 +1593,8 @@ class Cwatch extends Module
                     $api_response = $api->addSite(
                         [
                             'email' => $service_fields->cwatch_email,
-                            'domain' => isset($post['domain']) ? $post['domain'] : '',
-                            'licenseKey' => isset($post['licenseKey']) ? $post['licenseKey'] : '',
+                            'domain' => $post['domain'] ?? '',
+                            'licenseKey' => $post['licenseKey'] ?? '',
                             'initiateDns' => isset($post['initiateDns']) && $post['initiateDns'] == 1 ? true : false,
                             'autoSsl' => isset($post['autoSsl']) && $post['autoSsl'] == 1 ? true : false
                         ]
@@ -1601,7 +1625,8 @@ class Cwatch extends Module
         // Sort provisions by license
         $provisions_by_license = [];
         foreach ($site_provisions as $site_provision) {
-            if (strtolower($site_provision->status) != 'add_site_fail'
+            if (
+                strtolower($site_provision->status) != 'add_site_fail'
                 && strtolower($site_provision->status) != 'add_site_completed'
                 && in_array($site_provision->licenseKey, $service_licenses)
             ) {
@@ -1764,7 +1789,8 @@ class Cwatch extends Module
         $licenses = [];
         if (empty($licenses_errors)) {
             foreach ($licenses_response->response() as $license) {
-                if (strtolower($license->status) == 'valid'
+                if (
+                    strtolower($license->status) == 'valid'
                     && in_array($license->licenseKey, $service_fields->cwatch_licenses)
                 ) {
                     $licenses[] = $license;
@@ -1824,9 +1850,9 @@ class Cwatch extends Module
     private function getApi()
     {
         $row = $this->getModuleRow();
-        $username = isset($row->meta->username) ? $row->meta->username : '';
-        $password = isset($row->meta->password) ? $row->meta->password : '';
-        $sandbox = isset($row->meta->cwatch_sandbox) ? $row->meta->cwatch_sandbox : 'false';
+        $username = $row->meta->username ?? '';
+        $password = $row->meta->password ?? '';
+        $sandbox = $row->meta->cwatch_sandbox ?? 'false';
 
         return new CwatchApi($username, $password, $sandbox == 'true');
     }
@@ -1868,7 +1894,8 @@ class Cwatch extends Module
         Loader::loadModels($this, ['Packages']);
         $rules = $this->getServiceRules($vars, true);
 
-        if (($package = $this->Packages->getByPricingID($service->pricing_id))
+        if (
+            ($package = $this->Packages->getByPricingID($service->pricing_id))
             && $package->meta->cwatch_package_type !== 'single_license'
         ) {
             unset($rules['cwatch_domain']);
@@ -1887,7 +1914,7 @@ class Cwatch extends Module
      */
     private function getServiceRules(array $vars = null, $edit = false)
     {
-        $client_id = isset($vars['client_id']) ? $vars['client_id'] : 0;
+        $client_id = $vars['client_id'] ?? 0;
         $rules = [
             'cwatch_email' => [
                 'format' => [
@@ -1905,7 +1932,8 @@ class Cwatch extends Module
                             $module->id
                         );
 
-                        if ($account_emails
+                        if (
+                            $account_emails
                             && array_key_exists($email, $account_emails->value)
                             && $account_emails->value[$email] > 0
                         ) {
@@ -1917,7 +1945,8 @@ class Cwatch extends Module
                         $user_response = $api->getUser($email);
                         $user_errors = $user_response->errors();
 
-                        if ($user_errors
+                        if (
+                            $user_errors
                             || (($user = $user_response->response())
                                 && !empty($user))
                         ) {
@@ -2039,12 +2068,18 @@ class Cwatch extends Module
         try {
             $api = new CwatchApi($username, $password, $sandbox == 'true');
 
+            $this->log('getadmin', json_encode($api->lastRequest()), 'input', true);
             $summary_response = $api->getAdmin();
+
+            // Log request data
+            $this->log('getadmin', $summary_response->raw(), 'output', $summary_response->status() == 200);
+
             if (!$summary_response->errors()) {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
+            $this->log('getadmin', $e->getMessage(), 'output', false);
         }
         return false;
     }

@@ -14,7 +14,4 @@ namespace Blesta\Core\Util\Helpers\Common;
 #[\AllowDynamicProperties]
 abstract class AbstractHelper
 {
-    protected $models;
-    protected $components;
-    protected $helpers;
 }

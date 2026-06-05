@@ -1,135 +1,160 @@
-<div class="container">
-    <div class="card">
-        <div class="card-header p-3 h3">
-            <i class="fas fa-download"></i>
-            Blesta Web Installer
-            <img class="float-right blesta-logo" src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" />
-        </div>
-        <div class="card-body">
-            <?php
-            echo (isset($message) ? $message : null);
-            ?>
+<?php /** @var View $this **/ ?>
 
-            <?php
-            $this->Form->create(null, ['class' => 'disable-on-submit']);
-            ?>
-            <div class="checkbox">
-                <label>
+<div class="installer-container">
+    <div class="installer-header-section">
+        <img src="<?php echo $this->view_dir . 'images/logo.svg';?>" alt="Blesta" class="installer-logo installer-logo-dark">
+        <img src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" class="installer-logo installer-logo-light">
+        <div class="logo-divider"></div>
+        <div class="installer-label">Installer</div>
+    </div>
+
+    <div class="installer-wrapper">
+        <?php
+        $this->Form->create(null, ['class' => 'disable-on-submit']);
+        ?>
+            <!-- Terms and Conditions -->
+            <div class="terms-section">
+                <div class="terms-checkbox">
                     <?php
-                    $this->Form->fieldCheckbox('agree', 'yes', (isset($vars->agree) ? $vars->agree : null) == 'yes');
+                    $this->Form->fieldCheckbox('agree', 'yes', ($vars->agree ?? null) == 'yes', ['id' => 'agree-terms', 'class' => 'form-check-input']);
                     ?>
-                    I agree to the terms and conditions as explained at <a href="http://www.blesta.com/license/" target="_blank">http://www.blesta.com/license/</a>
-                </label>
+                    <label for="agree-terms">
+                        I agree to the terms and conditions as explained at
+                        <a href="http://www.blesta.com/license/" target="_blank">http://www.blesta.com/license/</a>
+                    </label>
+                </div>
             </div>
 
-            <div class="requirements">
+            <!-- Main Installer Sections -->
+            <div class="installer-sections <?php echo (($vars->agree ?? null) == 'yes' ? 'enabled' : '');?>" id="installer-sections">
                 <?php
-                if ($pass_min !== true) {
-                ?>
-                <div class="alert alert-danger">
-                    <p>
+                if (($pass_min ?? false) !== true) {
+                    ?>
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="bi bi-x-circle-fill me-3 fs-5"></i>
+                    <div>
                         Installation can not continue. You must correct the failed minimum system requirements.
-                    </p>
+                    </div>
                 </div>
-                <?php
-                } elseif ($pass_rec !== true) {
-                ?>
-                <div class="alert alert-warning">
-                    <p>
+                    <?php
+                } elseif (($pass_rec ?? false) !== true) {
+                    ?>
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-3 fs-5"></i>
+                    <div>
                         Your system meets the minimum requirements but does not meet the recommend requirements. It's recommended that you meet these requirements before continuing.
-                    </p>
+                    </div>
                 </div>
-                <?php
+                    <?php
                 }
                 ?>
 
-                <div id="requirements">
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="badge <?php echo ($pass_min === true ? 'badge-success' : 'badge-danger');?> py-2"><i class="<?php echo ($pass_min === true ? 'fas fa-check' : 'fas fa-times');?> fa-fw fa-lg"></i></span>
-                            <a href="#min-requirements" class="<?php echo ($pass_min !== true ? '' : 'collapsed');?>" data-toggle="collapse" data-parent="#requirements">Minimum Requirements</a>
-                        </div>
-                        <div class="card-collapse collapse <?php echo ($pass_min !== true ? 'in' : '');?>" id="min-requirements">
-                            <ul class="list-group">
-                                <?php
-                                foreach ($min_requirements as $key => $value) {
-                                ?>
-                                    <li class="list-group-item">
-                                        <?php (print (isset($value['message']) ? $this->Html->safe($value['message']) : null));?>
-                                        <span class="float-right label <?php echo (!isset($pass_min[$key]) ? 'badge-success' : 'badge-danger');?>"><i class="<?php echo (!isset($pass_min[$key]) ? 'fas fa-check' : 'fas fa-exclamation-triangle');?> fa-fw"></i></span>
+                <?php echo ($message ?? null);?>
+
+                <div class="accordion mb-3" id="requirements-accordion">
+                    <!-- Minimum Requirements -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button <?php echo (($pass_min ?? false) === true ? 'accordion-success' : 'accordion-danger');?>" type="button" data-bs-toggle="collapse" data-bs-target="#minimum-requirements" aria-expanded="true" aria-controls="minimum-requirements">
+                                <i class="bi <?php echo (($pass_min ?? false) === true ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger');?>"></i>
+                                <span>Minimum Requirements</span>
+                            </button>
+                        </h2>
+                        <div id="minimum-requirements" class="accordion-collapse collapse <?php echo (($pass_min ?? false) !== true ? 'show' : '');?>" data-bs-parent="#requirements-accordion">
+                            <div class="accordion-body p-0">
+                                <ul class="requirements-list">
+                                    <?php
+                                    foreach ($min_requirements ?? [] as $key => $value) {
+                                        ?>
+                                    <li>
+                                        <span><?php echo $this->Html->safe($value['message'] ?? $key);?></span>
+                                        <i class="bi <?php echo (!isset($pass_min[$key]) ? 'bi-check-circle-fill requirement-check' : 'bi-x-circle-fill requirement-fail');?>"></i>
                                     </li>
-                                <?php
-                                }
-                                ?>
-                            </ul>
+                                        <?php
+                                    }
+                                    ?>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="badge <?php echo ($pass_rec === true ? 'badge-success' : 'badge-warning');?> py-2"><i class="fas <?php echo ($pass_rec === true ? 'fa-check' : 'fa-exclamation-triangle');?> fa-fw fa-lg"></i></span>
-                            <a href="#rec-requirements" class="<?php echo ($pass_min === true && $pass_rec !== true ? '' : 'collapsed');?>" data-toggle="collapse" data-parent="#requirements">Recommended Requirements</a>
-                        </div>
-                        <div class="card-collapse collapse <?php echo ($pass_min === true && $pass_rec !== true ? 'in' : '');?>" id="rec-requirements">
-                            <ul class="list-group">
-                                <?php
-                                foreach ($rec_requirements as $key => $value) {
-                                ?>
-                                    <li class="list-group-item">
-                                        <?php (print (isset($value['message']) ? $this->Html->safe($value['message']) : null));?>
-                                        <span class="float-right label <?php echo (!isset($pass_rec[$key]) ? 'badge-success' : 'badge-warning');?>"><i class="fas <?php echo (!isset($pass_rec[$key]) ? 'fa-check' : 'fa-exclamation-triangle');?> fa-fw"></i></span>
+
+                    <!-- Recommended Requirements -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button <?php echo (($pass_rec ?? false) === true ? 'accordion-success' : 'accordion-warning');?> collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#recommended-requirements" aria-expanded="false" aria-controls="recommended-requirements">
+                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                <span>Recommended Requirements</span>
+                            </button>
+                        </h2>
+                        <div id="recommended-requirements" class="accordion-collapse collapse <?php echo (($pass_min ?? false) === true && ($pass_rec ?? false) !== true ? 'show' : '');?>" data-bs-parent="#requirements-accordion">
+                            <div class="accordion-body" style="padding: 0;">
+                                <ul class="requirements-list">
+                                    <?php
+                                    foreach ($rec_requirements ?? [] as $key => $value) {
+                                        ?>
+                                    <li>
+                                        <span><?php echo $this->Html->safe($value['message'] ?? $key);?></span>
+                                        <i class="bi <?php echo (!isset($pass_rec[$key]) ? 'bi-check-circle-fill requirement-check' : 'bi-x-circle-fill requirement-fail');?>"></i>
                                     </li>
-                                <?php
-                                }
-                                ?>
-                            </ul>
+                                        <?php
+                                    }
+                                    ?>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <?php
-                if ($pass_min !== true || $pass_rec !== true) {
-                    $this->Form->fieldButton('reload', 'Reload', ['class' => 'btn btn-secondary btn-block', 'id' => 'reload']);
-                }
-                ?>
-            </div>
 
-            <?php
-            if ($pass_min === true) {
-            ?>
-            <div class="db_info install_progress mt-4">
-                <h3>Database Information</h3>
-                <p>Haven't created a database yet? <a href="http://docs.blesta.com/display/user/Installing+Blesta" class="btn btn-sm btn-light border" target="_blank"><i class="fas fa-lightbulb"></i> Learn how</a></p>
-                <div class="form-group">
-                    <label>Database host</label>
-                    <?php $this->Form->fieldText('host', (isset($vars->host) ? $vars->host : 'localhost'), ['class' => 'form-control']);?>
+                <!-- Reload Button -->
+                <div class="reload-section">
+                    <button type="button" class="btn btn-secondary btn-lg" id="reload-btn">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reload
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>Database port</label>
-                    <?php $this->Form->fieldText('port', (isset($vars->port) ? $vars->port : '3306'), ['class' => 'form-control']);?>
-                </div>
-                <div class="form-group">
-                    <label>Database name</label>
-                    <?php $this->Form->fieldText('database', (isset($vars->database) ? $vars->database : null), ['class' => 'form-control']);?>
-                </div>
-                <div class="form-group">
-                    <label>Database user</label>
-                    <?php $this->Form->fieldText('user', (isset($vars->user) ? $vars->user : null), ['class' => 'form-control']);?>
-                </div>
-                <div class="form-group">
-                    <label>Database password</label>
-                    <?php $this->Form->fieldPassword('password', ['class' => 'form-control']);?>
-                </div>
-                <?php $this->Form->fieldSubmit('install', 'Install', ['class' => 'btn btn-secondary btn-block']);?>
-                <div class="progress" style="display: none;">
-                    <div class="progress-bar progress-bar-striped bg-success" role="progressbar"></div>
+
+                <!-- Database Information -->
+                <div class="database-section">
+                    <h2>Database Information</h2>
+                    <div class="database-help">
+                        <span>Haven't created a database yet?</span>
+                        <a href="http://docs.blesta.com/display/user/Installing+Blesta" target="_blank">
+                            <i class="bi bi-question-circle"></i>
+                            Learn how
+                        </a>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="dbHost" class="form-label">Database host</label>
+                            <?php $this->Form->fieldText('host', ($vars->host ?? 'localhost'), ['class' => 'form-control', 'required' => true]);?>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="dbPort" class="form-label">Database port</label>
+                            <?php $this->Form->fieldText('port', ($vars->port ?? '3306'), ['class' => 'form-control', 'required' => true]);?>
+                        </div>
+                        <div class="col-12">
+                            <label for="dbName" class="form-label">Database name</label>
+                            <?php $this->Form->fieldText('database', ($vars->database ?? null), ['class' => 'form-control', 'required' => true]);?>
+                        </div>
+                        <div class="col-12">
+                            <label for="dbUser" class="form-label">Database user</label>
+                            <?php $this->Form->fieldText('user', ($vars->user ?? null), ['class' => 'form-control', 'required' => true]);?>
+                        </div>
+                        <div class="col-12">
+                            <label for="dbPassword" class="form-label">Database password</label>
+                            <?php $this->Form->fieldPassword('password', ['class' => 'form-control', 'placeholder' => '••••••••', 'required' => true]);?>
+                        </div>
+                    </div>
+
+                    <div class="install-section">
+                        <button type="submit" name="install" class="btn btn-primary btn-install">
+                            <i class="bi bi-download me-2"></i>Install
+                        </button>
+                    </div>
                 </div>
             </div>
-            <?php
-            }
-            ?>
-
-            <?php
-            $this->Form->end();
-            ?>
-        </div>
+        <?php
+        $this->Form->end();
+        ?>
     </div>
 </div>

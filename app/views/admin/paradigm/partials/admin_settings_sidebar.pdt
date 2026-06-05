@@ -1,0 +1,513 @@
+<?php /** @var View $this **/ ?>
+
+<!-- Settings Search -->
+<div class="settings-search">
+    <div class="settings-search-wrapper">
+        <input type="text" class="form-control form-control-sm" placeholder="Search settings..." id="settingsSearch">
+        <button type="button" class="settings-search-clear" id="settingsSearchClear" aria-label="Clear search">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Company/System Toggle -->
+<div class="settings-type-toggle">
+    <div class="btn-group w-100" role="group" aria-label="Settings type selection">
+        <?php
+        $is_company = (strpos($_SERVER['REQUEST_URI'], '/settings/company/') !== false);
+        $is_system = (strpos($_SERVER['REQUEST_URI'], '/settings/system/') !== false);
+        ?>
+        <input type="radio" class="btn-check" name="settingsType" id="companySettings" value="company"<?php echo $is_company ? ' checked' : '';?>>
+        <label class="btn btn-outline-primary" for="companySettings">Company</label>
+
+        <input type="radio" class="btn-check" name="settingsType" id="systemSettings" value="system"<?php echo $is_system ? ' checked' : '';?>>
+        <label class="btn btn-outline-primary" for="systemSettings">System</label>
+    </div>
+</div>
+
+<!-- Settings Navigation List -->
+<div class="settings-nav">
+    <?php
+    // Icon mapping from FontAwesome to Bootstrap Icons
+    $icon_map = [
+        'tools' => 'gear',
+        'pencil-ruler' => 'palette',
+        'clock' => 'arrow-repeat',
+        'calculator' => 'credit-card',
+        'file-invoice' => 'file-earmark-text',
+        'puzzle-piece' => 'plugin',
+        'comment-dots' => 'chat-dots',
+        'university' => 'bank',
+        'money-bill-wave' => 'cash-stack',
+        'envelope-open-text' => 'envelope',
+        'users' => 'people',
+        'dollar-sign' => 'currency-dollar',
+        'sitemap' => 'diagram-3',
+        'rss' => 'rss-fill',
+        'server' => 'hdd-network',
+        'user-tie' => 'person-badge',
+        'code' => 'code-slash',
+        'database' => 'database',
+        'cloud-upload-alt' => 'cloud-arrow-up',
+        'building' => 'building',
+        'question-circle' => 'question-circle',
+        'shopping-bag' => 'shop',
+        'sliders-h' => 'person-gear',
+        'plug' => 'plugin',
+        'user-friends' => 'person-lines-fill',
+        'hdd' => 'database-exclamation',
+        'robot' => 'stars',
+        'cloud-download-alt' => 'cloud-arrow-up',
+        'life-ring' => 'info-circle',
+        'shopping-cart' => 'cart-check'
+    ];
+
+    // Build search metadata from language definitions
+    // Keys match strtolower(preg_replace('/[^a-z0-9]+/i', '', $displayName))
+    $search_metadata_keys = [
+        'localization', 'internationalization', 'encryption', 'contacttypes',
+        'marketing', 'smartsearch', 'humanverification',
+        'themes', 'template', 'layout', 'customize', 'navigation', 'actions',
+        'invoiceandchargeoptions', 'invoicecustomization', 'invoicedelivery',
+        'latefees', 'notices', 'coupons', 'acceptedpaymenttypes', 'credithandling',
+        'messengers', 'messengerconfiguration', 'messagetemplates',
+        'basictaxsettings', 'taxrules',
+        'mailsettings', 'emailtemplates', 'htmltemplates', 'signatures',
+        'generalclientsettings', 'clientcustomfields', 'requiredclientfields',
+        'currencysetup', 'activecurrencies',
+        'general', 'feedsettings',
+        'automation', 'electronicinvoices', 'modules', 'paymentgateways',
+        'plugins', 'clientgroups',
+        'basicsetup', 'geoipsettings', 'maintenance', 'licensekey', 'paymenttypes',
+        'ondemand', 'secureftp', 'amazons3',
+        'managestaff', 'staffgroups',
+        'resources', 'releasenotes', 'aboutblesta',
+        'companies', 'apiaccess', 'ai', 'upgradeoptions', 'marketplace'
+    ];
+    $search_metadata = [];
+    foreach ($search_metadata_keys as $key) {
+        $search_metadata[$key] = [
+            'keywords' => $this->_('AdminSettings.search.keywords_' . $key, true),
+            'description' => $this->_('AdminSettings.search.description_' . $key, true)
+        ];
+    }
+
+    // Render both company and system navigation
+    $nav_sets = [
+        'company' => (isset($company_nav) ? $company_nav : []),
+        'system' => (isset($system_nav) ? $system_nav : [])
+    ];
+
+    foreach ($nav_sets as $settings_type => $nav) {
+        if (!$nav || ($num_nav = count($nav)) == 0) {
+            continue;
+        }
+
+        for ($i = 0; $i < $num_nav; $i++) {
+            $name = (isset($nav[$i]['name']) ? $this->Html->safe($nav[$i]['name']) : null);
+            $uri = (isset($nav[$i]['uri']) ? $nav[$i]['uri'] : null);
+            $icon = (isset($nav[$i]['icon']) ? $nav[$i]['icon'] : 'gear');
+            $has_children = (isset($nav[$i]['children']) ? $nav[$i]['children'] : false) && count($nav[$i]['children']) > 0;
+
+            // Map FontAwesome icon to Bootstrap Icon
+            $bi_icon = isset($icon_map[$icon]) ? $icon_map[$icon] : 'gear';
+
+            // Determine if this group is active (current URI or any child matches)
+            $is_active = false;
+            $request_path = strtolower(rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '', '/'));
+            if ($has_children) {
+                foreach ($nav[$i]['children'] as $child) {
+                    $child_path = strtolower(rtrim(parse_url($child['uri'] ?? '', PHP_URL_PATH) ?? '', '/'));
+                    if ($child_path && ($request_path === $child_path || str_starts_with($request_path, $child_path . '/'))) {
+                        $is_active = true;
+                        break;
+                    }
+                }
+            }
+            // Also check if parent URI itself matches
+            if (!$is_active && $uri) {
+                $parent_path = strtolower(rtrim(parse_url($uri, PHP_URL_PATH) ?? '', '/'));
+                $is_active = $parent_path && ($request_path === $parent_path || str_starts_with($request_path, $parent_path . '/'));
+            }
+
+            // Generate unique collapse ID (include settings type to avoid duplicates)
+            $collapse_id = $settings_type . 'SettingsGroup' . $i;
+
+            // Get group category name for metadata
+            $group_name_clean = strtolower(preg_replace('/[^a-z0-9]+/i', '', $name));
+    ?>
+
+    <!-- Settings Group -->
+    <div class="settings-group" data-settings-type="<?php echo $settings_type;?>">
+        <?php if ($has_children) { ?>
+        <!-- Collapsible Header -->
+        <a class="settings-group-header<?php echo !$is_active ? ' collapsed' : '';?>"
+           data-bs-toggle="collapse"
+           href="#<?php echo $collapse_id;?>"
+           role="button"
+           aria-expanded="<?php echo $is_active ? 'true' : 'false';?>"
+           aria-controls="<?php echo $collapse_id;?>"
+           data-search-name="<?php echo $this->Html->safe($name);?>"
+           data-search-keywords="<?php echo strtolower($name . ' ' . $group_name_clean);?>"
+           data-search-description="<?php echo $this->Html->safe($name);?>"
+           data-search-category="<?php echo $settings_type;?>">
+            <i class="bi bi-<?php echo $bi_icon;?>"></i>
+            <span><?php echo $name;?></span>
+            <i class="bi bi-chevron-right ms-auto"></i>
+        </a>
+
+        <!-- Collapsible Content -->
+        <div class="collapse<?php echo $is_active ? ' show' : '';?>" id="<?php echo $collapse_id;?>">
+            <?php
+            $sub_nav = $nav[$i]['children'];
+            $num_children = count($sub_nav);
+
+            // Pre-check whether any child directly matches the current page
+            $has_direct_child_match = false;
+            $fallback_child_index = -1;
+            $parent_path = strtolower(rtrim(parse_url($uri ?? '', PHP_URL_PATH) ?? '', '/'));
+            if ($is_active) {
+                foreach ($sub_nav as $check_child) {
+                    $check_path = strtolower(rtrim(parse_url($check_child['uri'] ?? '', PHP_URL_PATH) ?? '', '/'));
+                    if ($check_path) {
+                        $check_index = basename($check_path) == 'index' && $request_path === $parent_path;
+                        if ($request_path === $check_path || str_starts_with($request_path, $check_path . '/') || $check_index) {
+                            $has_direct_child_match = true;
+                            break;
+                        }
+                    }
+                }
+
+                // If no direct match, find the best child by matching action name suffixes
+                // e.g. "editgroup" ends with "group" (from "groups") → matches Staff Groups
+                if (!$has_direct_child_match) {
+                    $request_action = explode('/', trim(substr($request_path, strlen($parent_path)), '/'))[0] ?? '';
+
+                    if ($request_action) {
+                        $best_len = 0;
+                        for ($k = 0; $k < $num_children; $k++) {
+                            $ck_path = strtolower(rtrim(parse_url($sub_nav[$k]['uri'] ?? '', PHP_URL_PATH) ?? '', '/'));
+                            $child_action = rtrim(explode('/', trim(substr($ck_path, strlen($parent_path)), '/'))[0] ?? '', 's');
+
+                            if ($child_action !== '' && str_ends_with($request_action, $child_action) && strlen($child_action) > $best_len) {
+                                $fallback_child_index = $k;
+                                $best_len = strlen($child_action);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for ($j = 0; $j < $num_children; $j++) {
+                $child_name = (isset($sub_nav[$j]['name']) ? $this->Html->safe($sub_nav[$j]['name']) : null);
+                $child_uri = (isset($sub_nav[$j]['uri']) ? $sub_nav[$j]['uri'] : null);
+
+                // Check if this child is the current page
+                $child_path = strtolower(rtrim(parse_url($child_uri ?? '', PHP_URL_PATH) ?? '', '/'));
+                $is_index = $child_path && basename($child_path) == 'index' && $request_path === $parent_path;
+                $is_current = $child_path && ($request_path === $child_path || str_starts_with($request_path, $child_path . '/') || $is_index);
+
+                // If group is active but no child directly matches, highlight the best match
+                if (!$is_current && !$has_direct_child_match && $is_active && $j === $fallback_child_index) {
+                    $is_current = true;
+                }
+
+                // Get clean name for metadata lookup
+                $child_name_clean = strtolower(preg_replace('/[^a-z0-9]+/i', '', $child_name));
+                $metadata = isset($search_metadata[$child_name_clean]) ? $search_metadata[$child_name_clean] : [
+                    'keywords' => strtolower($child_name),
+                    'description' => $child_name
+                ];
+            ?>
+            <a href="<?php echo $this->Html->safe($child_uri);?>"
+               class="settings-nav-item<?php echo $is_current ? ' active' : '';?>"
+               data-search-name="<?php echo $this->Html->safe($child_name);?>"
+               data-search-keywords="<?php echo $this->Html->safe($metadata['keywords']);?>"
+               data-search-description="<?php echo $this->Html->safe($metadata['description']);?>"
+               data-search-category="<?php echo $settings_type . ' ' . $group_name_clean;?>">
+                <?php echo $child_name;?>
+            </a>
+            <?php
+            }
+            ?>
+        </div>
+        <?php } else { ?>
+        <!-- Single Link (No Children) -->
+        <?php
+        $single_metadata = isset($search_metadata[$group_name_clean]) ? $search_metadata[$group_name_clean] : [
+            'keywords' => strtolower($name),
+            'description' => $name
+        ];
+        ?>
+        <a href="<?php echo $this->Html->safe($uri);?>"
+           class="settings-group-header<?php echo $is_active ? ' active' : '';?>"
+           data-search-name="<?php echo $this->Html->safe($name);?>"
+           data-search-keywords="<?php echo $this->Html->safe($single_metadata['keywords']);?>"
+           data-search-description="<?php echo $this->Html->safe($single_metadata['description']);?>"
+           data-search-category="<?php echo $settings_type;?>">
+            <i class="bi bi-<?php echo $bi_icon;?>"></i>
+            <span><?php echo $name;?></span>
+        </a>
+        <?php } ?>
+    </div>
+
+    <?php
+        } // end for loop
+    } // end foreach nav_sets
+    ?>
+</div>
+
+<script>
+/**
+ * Settings Navigation Search and Filter
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('settingsSearch');
+    const clearButton = document.getElementById('settingsSearchClear');
+    const companyRadio = document.getElementById('companySettings');
+    const systemRadio = document.getElementById('systemSettings');
+    const settingsNav = document.querySelector('.settings-nav');
+
+    if (!searchInput || !clearButton || !companyRadio || !systemRadio || !settingsNav) {
+        return;
+    }
+
+    // Store initial state of all groups (collapsed/expanded)
+    const initialGroupStates = new Map();
+
+    // Capture initial state
+    function captureInitialState() {
+        const allGroups = settingsNav.querySelectorAll('.settings-group');
+        allGroups.forEach(group => {
+            const collapseElement = group.querySelector('.collapse');
+            if (collapseElement) {
+                const groupId = collapseElement.id;
+                const isExpanded = collapseElement.classList.contains('show');
+                initialGroupStates.set(groupId, isExpanded);
+            }
+        });
+    }
+
+    // Restore groups to their initial state
+    function restoreInitialState() {
+        const selectedType = companyRadio.checked ? 'company' : 'system';
+        const allGroups = settingsNav.querySelectorAll('.settings-group');
+
+        allGroups.forEach(group => {
+            const groupType = group.getAttribute('data-settings-type');
+
+            // Only restore groups of the currently selected type
+            if (groupType !== selectedType) {
+                return;
+            }
+
+            // Show the group
+            group.style.display = '';
+
+            const collapseElement = group.querySelector('.collapse');
+            if (collapseElement) {
+                const groupId = collapseElement.id;
+                const shouldBeExpanded = initialGroupStates.get(groupId);
+
+                if (shouldBeExpanded && !collapseElement.classList.contains('show')) {
+                    // Expand the group
+                    new bootstrap.Collapse(collapseElement, {
+                        show: true
+                    });
+                } else if (!shouldBeExpanded && collapseElement.classList.contains('show')) {
+                    // Collapse the group
+                    new bootstrap.Collapse(collapseElement, {
+                        hide: true
+                    });
+                }
+            }
+
+            // Show all items within the group
+            const items = group.querySelectorAll('.settings-nav-item');
+            items.forEach(item => {
+                item.style.display = '';
+            });
+        });
+
+        // Remove no-results message if present
+        const existingNoResults = settingsNav.querySelector('.settings-no-results');
+        if (existingNoResults) {
+            existingNoResults.remove();
+        }
+    }
+
+    // Update clear button visibility
+    function updateClearButton() {
+        if (searchInput.value.trim()) {
+            clearButton.classList.add('show');
+        } else {
+            clearButton.classList.remove('show');
+        }
+    }
+
+    // Clear search and restore state
+    function clearSearch() {
+        searchInput.value = '';
+        updateClearButton();
+        restoreInitialState();
+    }
+
+    // Settings type toggle handler
+    function handleSettingsTypeToggle() {
+        const selectedType = companyRadio.checked ? 'company' : 'system';
+        const allGroups = settingsNav.querySelectorAll('.settings-group');
+
+        // Clear search when switching types
+        clearSearch();
+
+        allGroups.forEach(group => {
+            const groupType = group.getAttribute('data-settings-type');
+
+            if (groupType === selectedType) {
+                group.style.display = '';
+                // Restore all items visibility within the group
+                const items = group.querySelectorAll('.settings-nav-item');
+                items.forEach(item => {
+                    item.style.display = '';
+                });
+            } else {
+                group.style.display = 'none';
+            }
+        });
+    }
+
+    // Search filter handler
+    function handleSearch() {
+        const query = searchInput.value.toLowerCase().trim();
+        const selectedType = companyRadio.checked ? 'company' : 'system';
+        const allGroups = settingsNav.querySelectorAll('.settings-group');
+
+        // Update clear button visibility
+        updateClearButton();
+
+        // If no query, restore initial state and return
+        if (!query) {
+            restoreInitialState();
+            return;
+        }
+
+        allGroups.forEach(group => {
+            const groupType = group.getAttribute('data-settings-type');
+
+            // Only process groups of the currently selected type
+            if (groupType !== selectedType) {
+                return;
+            }
+
+            const items = group.querySelectorAll('.settings-nav-item');
+            const groupHeader = group.querySelector('.settings-group-header');
+            const collapseElement = group.querySelector('.collapse');
+            let hasVisibleItems = false;
+            let groupHeaderMatches = false;
+
+            // Check if group header matches search
+            if (groupHeader) {
+                const headerName = groupHeader.getAttribute('data-search-name') || '';
+                const headerKeywords = groupHeader.getAttribute('data-search-keywords') || '';
+                const headerDescription = groupHeader.getAttribute('data-search-description') || '';
+                const headerCategory = groupHeader.getAttribute('data-search-category') || '';
+                const headerSearchableText = `${headerName} ${headerKeywords} ${headerDescription} ${headerCategory}`.toLowerCase();
+
+                if (headerSearchableText.includes(query)) {
+                    groupHeaderMatches = true;
+                }
+            }
+
+            // Filter child items based on search query
+            items.forEach(item => {
+                const name = item.getAttribute('data-search-name') || '';
+                const keywords = item.getAttribute('data-search-keywords') || '';
+                const description = item.getAttribute('data-search-description') || '';
+                const category = item.getAttribute('data-search-category') || '';
+
+                // Combine all searchable text
+                const searchableText = `${name} ${keywords} ${description} ${category}`.toLowerCase();
+
+                if (searchableText.includes(query) || groupHeaderMatches) {
+                    item.style.display = '';
+                    hasVisibleItems = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide group based on whether header or items match
+            if (hasVisibleItems || groupHeaderMatches) {
+                group.style.display = '';
+
+                // Auto-expand groups with matching items or header
+                if (collapseElement && (hasVisibleItems || groupHeaderMatches)) {
+                    if (!collapseElement.classList.contains('show')) {
+                        // Expand the group
+                        new bootstrap.Collapse(collapseElement, {
+                            show: true
+                        });
+                    }
+                }
+            } else {
+                group.style.display = 'none';
+            }
+        });
+
+        // If no results found, show a "no results" message
+        const visibleGroups = Array.from(settingsNav.querySelectorAll('.settings-group')).filter(group => {
+            const groupType = group.getAttribute('data-settings-type');
+            return groupType === selectedType && group.style.display !== 'none';
+        });
+
+        // Remove existing no-results message
+        const existingNoResults = settingsNav.querySelector('.settings-no-results');
+        if (existingNoResults) {
+            existingNoResults.remove();
+        }
+
+        // Show no results message if needed
+        if (query && visibleGroups.length === 0) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'settings-no-results';
+            noResultsDiv.innerHTML = `
+                <div style="padding: 2rem 1rem; text-align: center; color: var(--secondary-color);">
+                    <i class="bi bi-search" style="font-size: 2rem; opacity: 0.5; margin-bottom: 0.5rem; display: block;"></i>
+                    <div style="font-size: 0.9rem;">No settings found for "${searchInput.value}"</div>
+                    <div style="font-size: 0.8rem; margin-top: 0.25rem;">Try a different search term</div>
+                </div>
+            `;
+            settingsNav.appendChild(noResultsDiv);
+        }
+    }
+
+    // Event listeners
+    companyRadio.addEventListener('change', handleSettingsTypeToggle);
+    systemRadio.addEventListener('change', handleSettingsTypeToggle);
+    searchInput.addEventListener('input', handleSearch);
+    clearButton.addEventListener('click', clearSearch);
+
+    // Capture initial state on page load
+    captureInitialState();
+
+    // Initialize on page load (show company or system based on current URL)
+    handleSettingsTypeToggle();
+
+    // Optional: Add keyboard shortcut to focus search (Ctrl+K or Cmd+K)
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+    });
+
+    // Initialize Bootstrap collapse for proper state management
+    const collapseElements = document.querySelectorAll('.settings-nav .collapse');
+    collapseElements.forEach(function(element) {
+        new bootstrap.Collapse(element, {
+            toggle: false
+        });
+    });
+});
+</script>

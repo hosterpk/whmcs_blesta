@@ -172,6 +172,7 @@
                 <?php
                 $this->Form->create($this->base_uri . 'order/checkout/index/' . (isset($order_form->label) ? $order_form->label : null), ['id' => 'checkout_form']);
                 $this->Form->fieldHidden('agree_tos', '');
+                $this->Form->fieldHidden('agree_recurring_consent', '');
                 $this->Form->fieldHidden('set_vars', 'true');
                 ?>
                     <div class="section-title">

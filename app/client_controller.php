@@ -17,10 +17,10 @@ class ClientController extends AppController
     {
         parent::preAction();
 
-        $class_name = get_class($this);
-        Language::loadLang(Loader::fromCamelCase($class_name));
+        Language::loadLang(Loader::fromCamelCase(get_class($this)));
 
         // Allow states and dialog to be fetched without login
+        $class_name = get_class($this);
         if (($class_name == 'ClientMain' && (in_array(strtolower($this->action), ['getstates', 'setlanguage'])))
             || $class_name == 'ClientDialog'
         ) {

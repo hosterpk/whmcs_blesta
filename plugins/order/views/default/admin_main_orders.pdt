@@ -1,185 +1,264 @@
+<?php /** @var View $this */ ?>
 
-        <?php
-        $links = [
-            [
-                'name' => $this->_('AdminMain.index.category_pending', true) . ' <span>(' . ($status_count['pending'] ?? null) . ')</span>',
-                'current' => (($status ?? null) == 'pending' ? true : false),
-                'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/pending/', 'class' => 'ajax']
-            ],
-            [
-                'name' => $this->_('AdminMain.index.category_accepted', true) . ' <span>(' . ($status_count['accepted'] ?? null) . ')</span>',
-                'current' => (($status ?? null) == 'accepted' ? true : false),
-                'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/accepted/', 'class' => 'ajax']
-            ],
-            [
-                'name' => $this->_('AdminMain.index.category_fraud', true) . ' <span>(' . ($status_count['fraud'] ?? null) . ')</span>',
-                'current' => (($status ?? null) == 'fraud' ? true : false),
-                'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/fraud/', 'class' => 'ajax']
-            ],
-            [
-                'name' => $this->_('AdminMain.index.category_canceled', true) . ' <span>(' . ($status_count['canceled'] ?? null) . ')</span>',
-                'current' => (($status ?? null) == 'canceled' ? true : false),
-                'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/canceled/', 'class' => 'ajax']
-            ]
-        ];
+<?php
+$links = [
+    [
+        'name' => $this->_('AdminMain.index.category_pending', true) . ' <span class="badge bg-secondary ms-1">' . ($status_count['pending'] ?? '0') . '</span>',
+        'current' => (($status ?? null) == 'pending' ? true : false),
+        'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/pending/', 'class' => 'ajax']
+    ],
+    [
+        'name' => $this->_('AdminMain.index.category_accepted', true) . ' <span class="badge bg-secondary ms-1">' . ($status_count['accepted'] ?? '0') . '</span>',
+        'current' => (($status ?? null) == 'accepted' ? true : false),
+        'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/accepted/', 'class' => 'ajax']
+    ],
+    [
+        'name' => $this->_('AdminMain.index.category_fraud', true) . ' <span class="badge bg-secondary ms-1">' . ($status_count['fraud'] ?? '0') . '</span>',
+        'current' => (($status ?? null) == 'fraud' ? true : false),
+        'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/fraud/', 'class' => 'ajax']
+    ],
+    [
+        'name' => $this->_('AdminMain.index.category_canceled', true) . ' <span class="badge bg-secondary ms-1">' . ($status_count['canceled'] ?? '0') . '</span>',
+        'current' => (($status ?? null) == 'canceled' ? true : false),
+        'attributes' => ['href' => $this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/canceled/', 'class' => 'text-danger ajax']
+    ]
+];
 
-        $this->Widget->clear();
-        $this->Widget->setLinks($links);
-        $this->Widget->setBadgeUri($this->base_uri . 'plugin/order/admin_main/clientorderscount/' . ($client->id ?? null) . '/' . ($status ?? null));
-        $this->Widget->setFilters($filters ?? new \Blesta\Core\Util\Input\Fields\InputFields(), $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null)), !empty($filter_vars));
-        $this->Widget->setAjaxFiltering();
-        $this->Widget->setWidgetButton('arrow');
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
-        $this->Widget->create($this->_('AdminMain.index.boxtitle_order', true), ['id' => 'plugin_order_admin_main_orders'], ($render_section ?? null));
-        $this->Form->create($this->base_uri . 'widget/order/admin_main/updatestatus/?client_id=' . ($client->id ?? null), ['class' => 'disable-on-submit']);
+$this->Widget->clear();
+$this->Widget->setLinks($links);
+$this->Widget->setBadgeUri($this->base_uri . 'plugin/order/admin_main/clientorderscount/' . ($client->id ?? null) . '/' . ($status ?? null));
+$this->Widget->setFilters($filters ?? new \Blesta\Core\Util\Input\Fields\InputFields(), $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null)), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setWidgetButton('arrow');
+$this->Widget->setBodyWrapper(false);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setStyleSheet($this->view_dir . 'css/styles.css');
+$this->Widget->create($this->_('AdminMain.index.boxtitle_order', true), ['id' => 'plugin_order_admin_main_orders'], ($render_section ?? null));
+$this->Form->create($this->base_uri . 'widget/order/admin_main/updatestatus/?client_id=' . ($client->id ?? null), ['class' => 'disable-on-submit']);
 
-        if (!empty($orders)) {
-        ?>
-            <table class="table" id="orders">
-                <tr class="heading_row">
-                    <td class="fixed_small center">
+if (!empty($orders)) {
+?>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="orders">
+            <thead>
+                <tr>
+                    <th style="width: 40px;" class="text-center">
                         <?php
-                        $this->Form->fieldCheckbox('order_id[]', 'all');
+                        $this->Form->fieldCheckbox('order_id[]', 'all', false, ['class' => 'form-check-input']);
                         ?>
-                    </td>
-                    <td class="icon"></td>
-                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=order_number&order=' . ($sort == 'order_number' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'order_number' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_order_number');?></a></span></td>
-                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=invoice_id_code&order=' . ($sort == 'invoice_id_code' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'invoice_id_code' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_invoice_id_code');?></a></span></td>
-                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=total&order=' . ($sort == 'total' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'total' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_total');?></a></span></td>
-                    <td><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=paid&order=' . ($sort == 'paid' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'paid' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_paid');?></a></span></td>
-                    <td class="last"><span><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'date_added' ? ' ' . $order : '');?>"><?php $this->_('AdminMain.index.heading_date_added');?></a></span></td>
+                    </th>
+                    <th style="width: 40px;"></th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=order_number&order=' . ($sort == 'order_number' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminMain.index.heading_order_number');?>
+                            <?php if ($sort == 'order_number') { ?>
+                                <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=invoice_id_code&order=' . ($sort == 'invoice_id_code' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminMain.index.heading_invoice_id_code');?>
+                            <?php if ($sort == 'invoice_id_code') { ?>
+                                <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=total&order=' . ($sort == 'total' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminMain.index.heading_total');?>
+                            <?php if ($sort == 'total') { ?>
+                                <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=paid&order=' . ($sort == 'paid' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminMain.index.heading_paid');?>
+                            <?php if ($sort == 'paid') { ?>
+                                <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orders/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminMain.index.heading_date_added');?>
+                            <?php if ($sort == 'date_added') { ?>
+                                <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
                 </tr>
-
+            </thead>
+            <tbody>
                 <?php
-                $i = 0;
                 foreach ($orders as $order) {
                 ?>
-                <tr class="<?php echo $this->Html->concat(' ', 'expand', 'order_info', (($i++%2 == 1) ? 'odd_row' : ''));?>">
-                    <td class="center">
-                        <?php $this->Form->fieldCheckbox('order_id[]', ($order->id ?? null));?>
+                <tr class="order-row" data-collapse-row data-order-id="<?php echo ($order->id ?? null) ? $this->Html->safe($order->id) : null; ?>" style="cursor: pointer;">
+                    <td class="text-center">
+                        <?php $this->Form->fieldCheckbox('order_id[]', ($order->id ?? null), false, ['class' => 'form-check-input order-checkbox']);?>
                     </td>
-                    <td class="icon">
-                        <i class="fas <?php echo (($order->date_closed ?? null) != null ? 'fa-check-circle' : 'fa-times-circle');?>"></i>
+                    <td class="text-center">
+                        <i class="bi <?php echo (($order->date_closed ?? null) != null ? 'bi-check-circle text-success' : 'bi-x-circle text-danger');?>"></i>
                     </td>
                     <td>
-                        <span class="tooltip quiet">
-                            <?php echo (isset($order->order_number) ? $this->Html->safe($order->order_number) : null);?>
-                            <div>
-                                <p>
-                                    <?php echo (isset($order->order_form_name) ? $this->Html->safe($order->order_form_name) : null);?>
-                                    <br />
-                                    <?php echo (isset($order->ip_address) ? $this->Html->safe($order->ip_address) : null);?>
-                                    <br />
-                                    <?php
-                                    if ((isset($order->geo_ip) ? $order->geo_ip : null) && (isset($order->geo_ip['location']) ? $order->geo_ip['location'] : null)) {
-                                        $location = $order->geo_ip['location'];
-                                    ?>
-                                    <br />
-                                    <strong><?php $this->_('AdminMain.index.text_location');?></strong>
-                                    <br />
-                                    <?php echo $this->Html->safe($this->Html->concat(', ', (isset($location['city']) ? $location['city'] : null), (isset($location['region']) ? $location['region'] : null)));?>
-                                    <?php echo (isset($location['postal_code']) ? $this->Html->safe($location['postal_code']) : null);?>
-                                    <br />
-                                    <?php
-                                        echo (isset($location['country_name']) ? $this->Html->safe($location['country_name']) : null);
-                                    }
-                                    ?>
-                                </p>
-                            </div>
+                        <span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<?php echo $this->Html->safe(($order->order_form_name ?? null) . '<br>' . ($order->ip_address ?? null));?>">
+                            <?php echo ($order->order_number ?? null) ? $this->Html->safe($order->order_number) : null; ?>
                         </span>
                     </td>
-                    <td><a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editinvoice/' . (isset($order->client_id) ? $order->client_id : null) . '/' . (isset($order->invoice_id) ? $order->invoice_id : null));?>"><?php echo (isset($order->invoice_id_code) ? $this->Html->safe($order->invoice_id_code) : null);?></a></td>
+                    <td><a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editinvoice/' . ($order->client_id ?? null) . '/' . ($order->invoice_id ?? null));?>"><?php echo ($order->invoice_id_code ?? null) ? $this->Html->safe($order->invoice_id_code) : null; ?></a></td>
                     <td><?php echo $this->CurrencyFormat->format($order->total, $order->currency, ['html_code'=>true]);?></td>
                     <td><?php echo $this->CurrencyFormat->format($order->paid, $order->currency, ['html_code'=>true]);?></td>
                     <td><?php echo $this->Date->cast(($order->date_added ?? null), 'date_time');?></td>
                 </tr>
-                <tr class="expand_details" id="orders_<?php echo (isset($order->id) ? $this->Html->safe($order->id) : null);?>">
-                    <td colspan="8" class="subtable">
+                <tr class="collapse">
+                    <td colspan="7" class="order-details-cell">
+                        <div class="order-details-content p-3" data-order-id="<?php echo ($order->id ?? null) ? $this->Html->safe($order->id) : null; ?>"></div>
                     </td>
                 </tr>
                 <?php
                 }
                 ?>
+            </tbody>
+        </table>
+    </div>
 
-            </table>
+<?php
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+?>
 
-            <?php
-            $this->Pagination->build();
-            ?>
-
-            <div id="update_orders" class="button_row pad_top email">
+    <div id="update_orders" class="bulk-actions-bar d-none">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <span class="selected-count" id="selectedCount">0 <?php $this->_('AdminMain.index.text_items_selected');?></span>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
                 <?php
-                $this->Form->fieldSubmit('save', $this->_('AdminMain.index.field_ordersubmit', true), ['class' => 'btn btn-primary btn-sm float-right']);
-                $this->Form->fieldSelect('status', ($statuses ?? null), ($vars->status ?? null), ['id' => 'order_status']);
-                $this->Form->label($this->_('AdminMain.index.field_markas', true), 'order_status');
+                $this->Form->label($this->_('AdminMain.index.field_markas', true), 'order_status', ['class' => 'form-label mb-0']);
+                $this->Form->fieldSelect('status', ($statuses ?? null), ($vars->status ?? null), ['id' => 'order_status', 'class' => 'form-select form-select-sm', 'style' => 'width: auto;']);
+                $this->Form->fieldSubmit('save', $this->_('AdminMain.index.field_ordersubmit', true), ['class' => 'btn btn-primary btn-sm']);
                 ?>
             </div>
-
-        <?php
-        } else {
-        ?>
-        <div class="empty_section">
-            <div class="empty_box"><?php $this->_('AdminMain.index.no_results');?></div>
         </div>
-        <?php
-        }
-        $this->Form->end();
-        $this->Widget->end();
-        ?>
+    </div>
+
+<?php
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-cart" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminMain.index.no_results');?></p>
+</div>
+<?php
+}
+$this->Form->end();
+$this->Widget->end();
+?>
 
 <script type="text/javascript">
+(function() {
+    'use strict';
 
-$(document).ready(function() {
-    $('#orders').blestaBindToolTips();
+    var widgetId = 'plugin_order_admin_main_orders';
+    var baseUri = '<?php echo $this->Html->safe($this->base_uri);?>';
+    var orderInfoLoaded = {};
+    var itemsSelectedText = '<?php echo $this->Html->safe($this->_('AdminMain.index.text_items_selected', true));?>';
 
-    $('#orders input').click(function() {
-        // Show/hide order update
-        if ($('#orders input:checked').size() > 0) {
-            // Check all checkboxes
-            if ($(this).val() == 'all') {
-                if ($(this).prop('checked')) {
-                    // Check all checkboxes
-                    $('#orders input').each(function() {
-                        $(this).prop('checked', true);
-                    });
+    function updateOrderControls() {
+        var widget = document.getElementById(widgetId);
+        if (!widget) return;
 
-                    // Show order update
-                    $('#update_orders').show();
-                }
-                else {
-                    // Uncheck all checkboxes
-                    $('#orders input').each(function() {
-                        $(this).prop('checked', false);
-                    });
+        var checkedBoxes = widget.querySelectorAll('.order-checkbox:checked');
+        var updateDiv = document.getElementById('update_orders');
+        var selectedCount = document.getElementById('selectedCount');
 
-                    // Hide order update
-                    $('#update_orders').hide();
-                }
-            }
-            else {
-                // Check individual checkboxes
-                if ($(this).prop('checked')) {
-                    $('#update_orders').show();
-                }
-                else {
-                    // Uncheck 'all'
-                    $('#orders input[value=all]').prop('checked', false);
-                }
-            }
+        if (updateDiv) {
+            updateDiv.classList.toggle('d-none', checkedBoxes.length === 0);
         }
-        else {
-            // Hide order update
-            $('#update_orders').hide();
+
+        if (selectedCount) {
+            selectedCount.textContent = checkedBoxes.length + ' ' + itemsSelectedText;
+        }
+    }
+
+    function loadOrderDetails(orderId, container) {
+        if (orderInfoLoaded[orderId]) return;
+
+        container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+        fetch(baseUri + 'plugin/order/admin_main/orderinfo/' + orderId, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(response) { return response.text(); })
+        .then(function(html) {
+            container.innerHTML = html;
+            orderInfoLoaded[orderId] = true;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="text-danger p-3">Failed to load order details</div>';
+        });
+    }
+
+    // Select all checkbox
+    document.addEventListener('change', function(e) {
+        if (!e.target.closest('#' + widgetId)) return;
+
+        if (e.target.matches('input[value="all"]')) {
+            var widget = document.getElementById(widgetId);
+            var isChecked = e.target.checked;
+            widget.querySelectorAll('.order-checkbox').forEach(function(cb) {
+                cb.checked = isChecked;
+            });
+            updateOrderControls();
+        }
+
+        if (e.target.classList.contains('order-checkbox')) {
+            var widget = document.getElementById(widgetId);
+            var allCheckboxes = widget.querySelectorAll('.order-checkbox');
+            var checkedCheckboxes = widget.querySelectorAll('.order-checkbox:checked');
+            var selectAll = widget.querySelector('input[value="all"]');
+            if (selectAll) {
+                selectAll.checked = allCheckboxes.length === checkedCheckboxes.length;
+            }
+            updateOrderControls();
         }
     });
 
+    // Bootstrap collapse show event — load order details via AJAX
+    document.addEventListener('show.bs.collapse', function(e) {
+        if (!e.target.closest('#' + widgetId)) return;
+        var container = e.target.querySelector('.order-details-content');
+        if (!container) return;
+        var orderId = container.getAttribute('data-order-id');
+        if (orderId) {
+            loadOrderDetails(orderId, container);
+        }
+    });
 
-    // Fetch order info
-    $("#plugin_order_admin_main_orders").on('click', '.order_info a', function(e) {
-        e.stopPropagation();
+    // Click handler for expandable rows
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#' + widgetId)) return;
+        if (!e.target.closest('#orders')) return;
+        if (e.target.closest('a, button, input, label')) return;
+
+        var row = e.target.closest('tr[data-collapse-row]');
+        if (!row) return;
+
+        // Don't expand if clicking the checkbox column
+        var td = e.target.closest('td');
+        var tds = row.querySelectorAll('td');
+        if (td && tds[0] === td) return;
+
+        var collapseRow = row.nextElementSibling;
+        if (collapseRow && collapseRow.classList.contains('collapse')) {
+            var bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseRow, { toggle: false });
+            bsCollapse.toggle();
+        }
     });
-    $('.order_info').click(function() {
-        $(this).blestaUpdateRow('<?php echo $this->Html->safe($this->base_uri . 'plugin/order/admin_main/orderinfo/');?>' + $(this).next('tr').attr('id').split('_')[1], '.subtable');
-    });
-});
+
+    // Init tooltips
+    blestaBindToolTips();
+    updateOrderControls();
+})();
 </script>

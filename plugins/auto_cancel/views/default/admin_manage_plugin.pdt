@@ -1,51 +1,49 @@
+<?php /** @var View $this */ ?>
+
     <?php
     $this->Widget->clear();
+    $this->Widget->setBodyWrapper(false);
     $this->Widget->create($this->_('AdminManagePlugin.index.boxtitle_auto_cancel', true));
-    $this->Form->create();
+    $this->Form->create(null, ['class' => 'disable-on-submit']);
     ?>
-    <div class="inner">
-        <div class="title_row first">
-            <h3><?php $this->_('AdminManagePlugin.index.heading_settings');?></h3>
+        <div class="card-body">
+            <div class="mb-3">
+                <?php
+                $this->Form->label(
+                    $this->_('AdminManagePlugin.index.field.schedule_days', true),
+                    'schedule_days',
+                    ['class' => 'form-label']
+                );
+                $this->Form->fieldSelect(
+                    'schedule_days',
+                    ($days ?? null),
+                    ($vars->schedule_days ?? null),
+                    ['id' => 'schedule_days']
+                );
+                ?>
+            </div>
+            <div class="mb-3">
+                <?php
+                $this->Form->label(
+                    $this->_('AdminManagePlugin.index.field.cancel_days', true),
+                    'cancel_days',
+                    ['class' => 'form-label']
+                );
+                $this->Form->fieldSelect(
+                    'cancel_days',
+                    ($days ?? null),
+                    ($vars->cancel_days ?? null),
+                    ['id' => 'cancel_days']
+                );
+                ?>
+            </div>
         </div>
-
-        <div class="pad">
-            <ul>
-                <li>
-                    <?php
-                    $this->Form->label(
-                        $this->_('AdminManagePlugin.index.field.schedule_days', true),
-                        'schedule_days'
-                    );
-                    $this->Form->fieldSelect(
-                        'schedule_days',
-                        (isset($days) ? $days : null),
-                        (isset($vars->schedule_days) ? $vars->schedule_days : null),
-                        ['id' => 'schedule_days']
-                    );
-                    ?>
-                </li>
-                <li>
-                    <?php
-                    $this->Form->label(
-                        $this->_('AdminManagePlugin.index.field.cancel_days', true),
-                        'cancel_days'
-                    );
-                    $this->Form->fieldSelect(
-                        'cancel_days',
-                        (isset($days) ? $days : null),
-                        (isset($vars->cancel_days) ? $vars->cancel_days : null),
-                        ['id' => 'cancel_days']
-                    );
-                    ?>
-                </li>
-            </ul>
-        </div>
-        <div class="button_row">
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
             <?php
-            $this->Form->fieldSubmit('save', $this->_('AdminManagePlugin.index.field.submit', true), ['class' => 'btn btn-primary pull-right']);
+            $this->Form->fieldSubmit('save', $this->_('AdminManagePlugin.index.field.submit', true), ['class' => 'btn btn-primary']);
             ?>
         </div>
-    </div>
     <?php
     $this->Form->end();
     $this->Widget->end();

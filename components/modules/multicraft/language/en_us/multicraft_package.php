@@ -1,6 +1,9 @@
 <?php
 // Errors
 $lang['MulticraftPackage.!error.meta[server_name].format'] = 'Please set a name for the server.';
+
+$lang['Multicraft.back_to_manage'] = 'Back';
+
 $lang['MulticraftPackage.!error.meta[players].format'] = 'Please set the maximum number of player slots to allow.';
 $lang['MulticraftPackage.!error.meta[memory].format'] = 'Please set the maximum amount of memory as an integer in MB.';
 $lang['MulticraftPackage.!error.meta[jardir].format'] = 'Please select a valid JAR directory.';

@@ -1,0 +1,193 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyBilling.deliverymethods.boxtitle_deliverymethods', true), ['id' => 'admin_company_billing_deliverymethods']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <!-- Basic Delivery Methods -->
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.deliverymethods.heading_basic');?></h6>
+
+            <div class="mb-3">
+                <label class="form-label"><?php $this->_('AdminCompanyBilling.deliverymethods.field_delivery_methods');?></label>
+                <?php
+                foreach ($delivery_methods as $method => $name) {
+                    $disable = $method == 'email';
+                    $options = ['id' => 'delivery_method_' . $method, 'class' => 'form-check-input'];
+                    if ($disable) {
+                        $options['disabled'] = 'disabled';
+                    }
+                ?>
+                <div class="mb-2 form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'delivery_methods[]',
+                        $method,
+                        (isset($vars[$method]) ? $vars[$method] : $disable),
+                        $options
+                    );
+                    ?>
+                    <label for="delivery_method_<?php echo $this->Html->safe($method);?>" class="form-check-label">
+                        <?php echo $this->Html->safe($name);?>
+                    </label>
+                </div>
+                <?php
+                }
+                ?>
+            </div>
+
+            <!-- InterFax Settings -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminCompanyBilling.deliverymethods.heading_interfax');?></h6>
+            <p><?php $this->_('AdminCompanyBilling.deliverymethods.interfax_desc');?></p>
+
+            <div class="mb-3">
+                <label for="interfax_username" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.deliverymethods.field_interfax_username');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'interfax_username',
+                    (isset($vars['interfax_username']) ? $vars['interfax_username'] : null),
+                    ['id' => 'interfax_username', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="interfax_password" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.deliverymethods.field_interfax_password');?>
+                </label>
+                <?php
+                $this->Form->fieldPassword(
+                    'interfax_password',
+                    [
+                        'id' => 'interfax_password',
+                        'class' => 'form-control',
+                        'value' => (isset($vars['interfax_password']) ? $vars['interfax_password'] : null)
+                    ]
+                );
+                ?>
+            </div>
+
+            <!-- PostalMethods Settings -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminCompanyBilling.deliverymethods.heading_postalmethods');?></h6>
+            <p><?php $this->_('AdminCompanyBilling.deliverymethods.postalmethods_desc');?></p>
+
+            <div class="mb-3">
+                <label for="postalmethods_apikey" class="form-label">
+                    <?php $this->_('AdminCompanyBilling.deliverymethods.field_postalmethods_apikey');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.deliverymethods.note_apikey', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'postalmethods_apikey',
+                    (isset($vars['postalmethods_apikey']) ? $vars['postalmethods_apikey'] : null),
+                    ['id' => 'postalmethods_apikey', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'postalmethods_doublesided',
+                    'true',
+                    (isset($vars['postalmethods_doublesided']) ? $vars['postalmethods_doublesided'] : null) == 'true',
+                    ['id' => 'postalmethods_doublesided', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="postalmethods_doublesided" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.deliverymethods.field_postalmethods_doublesided');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.deliverymethods.note_doublesided', true));?>"></i>
+                </label>
+            </div>
+
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'postalmethods_colored',
+                    'true',
+                    (isset($vars['postalmethods_colored']) ? $vars['postalmethods_colored'] : null) == 'true',
+                    ['id' => 'postalmethods_colored', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="postalmethods_colored" class="form-check-label">
+                    <?php $this->_('AdminCompanyBilling.deliverymethods.field_postalmethods_colored');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminCompanyBilling.deliverymethods.note_colored', true));?>"></i>
+                </label>
+            </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyBilling.deliverymethods.field_submit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+        <?php $this->Form->end(); ?>
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    const replyEnvelopeCheckbox = document.getElementById('postalmethods_replyenvelope');
+    const returnCountrySelect = document.getElementById('postalmethods_return_country');
+
+    // Show/hide return address fields based on reply envelope checkbox
+    if (replyEnvelopeCheckbox) {
+        replyEnvelopeCheckbox.addEventListener('change', function() {
+            const returnFields = document.querySelectorAll('.postalmethods_return');
+            returnFields.forEach(field => {
+                field.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+        // Trigger on page load
+        replyEnvelopeCheckbox.dispatchEvent(new Event('change'));
+    }
+
+    // Load states when country changes
+    if (returnCountrySelect) {
+        returnCountrySelect.addEventListener('change', function() {
+            const countryCode = this.value;
+            const stateSelect = document.getElementById('postalmethods_return_state');
+
+            if (stateSelect) {
+                fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/company/taxes/getstates/');?>' + countryCode)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove all existing options
+                        stateSelect.innerHTML = '';
+
+                        // Sort and add new options
+                        const sortedData = Object.entries(data).sort((a, b) => a[1].localeCompare(b[1]));
+                        sortedData.forEach(([key, value]) => {
+                            const option = new Option(value, key);
+                            stateSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error loading states:', error));
+            }
+        });
+    }
+});
+</script>

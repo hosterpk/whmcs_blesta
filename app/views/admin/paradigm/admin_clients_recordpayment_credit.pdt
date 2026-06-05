@@ -1,0 +1,23 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$disable_credit = (!empty($credit) ? [] : ['disabled' => 'disabled']);
+$credit_amount = isset($credit) ? $this->CurrencyFormat->format($credit, isset($currency) ? $currency : null) : $this->CurrencyFormat->format(0, isset($currency) ? $currency : null);
+?>
+<div id="record_payment_fields" class="record-payment-fields">
+    <label class="form-label"><?php $this->_('AdminClients.recordpayment.field_payment_type', true);?></label>
+    <div class="payment-type-selector mb-3">
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('payment_type', 'record', ((isset($vars->payment_type) ? $vars->payment_type : 'record') == 'record' || empty($credit)), ['id' => 'payment_type_record', 'class' => 'form-check-input payment_type']);
+            $this->Form->label($this->_('AdminClients.recordpayment.field_payment_type_record', true), 'payment_type_record', ['class' => 'form-check-label']);
+            ?>
+        </div>
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('payment_type', 'credit', ((isset($vars->payment_type) ? $vars->payment_type : null) == 'credit' && !empty($credit)), array_merge(['id' => 'payment_type_credit', 'class' => 'form-check-input payment_type'], $disable_credit));
+            $this->Form->label($this->_('AdminClients.recordpayment.field_payment_type_credit', true, $credit_amount), 'payment_type_credit', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+</div>

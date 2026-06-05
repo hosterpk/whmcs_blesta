@@ -1,0 +1,14 @@
+[
+    {
+        "package_id": 76,
+        "lang": "en_us",
+        "html": "<p>Thank you for your order! Your service will be activated shortly.</p>",
+        "text": "Thank you for your order! Your service will be activated shortly."
+    },
+    {
+        "package_id": 76,
+        "lang": "es_es",
+        "html": "<p>¡Gracias por su pedido! Su servicio se activará en breve.</p>",
+        "text": "¡Gracias por su pedido! Su servicio se activará en breve."
+    }
+]

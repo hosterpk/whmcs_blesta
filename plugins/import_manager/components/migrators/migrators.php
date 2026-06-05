@@ -1,4 +1,5 @@
 <?php
+
 Loader::load(dirname(__FILE__) . DS . 'migrator.php');
 
 /**
@@ -27,7 +28,7 @@ class Migrators
         $name = Loader::toCamelCase($type . str_replace('.', '_', $version));
         $file = Loader::fromCamelCase($name);
 
-        if (!Loader::load(dirname(__FILE__) . DS. $type . DS . $version . DS . $file . '.php')) {
+        if (!Loader::load(dirname(__FILE__) . DS . $type . DS . $version . DS . $file . '.php')) {
             throw new Exception("Migrator '" . $name . "' does not exist");
         }
 

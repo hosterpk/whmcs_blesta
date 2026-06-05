@@ -20,13 +20,20 @@ $lang['AdminCompanyAutomation.!success.task_cleared'] = 'The cron task has been 
 // Index
 $lang['AdminCompanyAutomation.index.page_title'] = 'Settings > Company > Automation';
 $lang['AdminCompanyAutomation.index.boxtitle_automation'] = 'Automation';
+$lang['AdminCompanyAutomation.index.boxtitle_timeline'] = 'Task Execution Timeline - Last 24 Hours';
 
 $lang['AdminCompanyAutomation.index.field_automationsubmit'] = 'Update Settings';
 $lang['AdminCompanyAutomation.index.field_enabled'] = 'Enabled';
+$lang['AdminCompanyAutomation.index.field_refresh_timeline'] = 'Refresh';
 
 $lang['AdminCompanyAutomation.index.text_interval'] = 'Interval';
 $lang['AdminCompanyAutomation.index.text_starttime'] = 'Start Time';
 $lang['AdminCompanyAutomation.index.text_task_lastran'] = 'Task Last Ran:';
+$lang['AdminCompanyAutomation.index.text_timeline_execution'] = 'Execution';
+$lang['AdminCompanyAutomation.index.text_timeline_completed'] = 'Completed';
+$lang['AdminCompanyAutomation.index.text_timeline_running'] = 'Running';
+$lang['AdminCompanyAutomation.index.text_timeline_not_finished'] = 'Not finished yet';
+$lang['AdminCompanyAutomation.index.text_timeline_empty'] = 'No automation task runs were logged in the past 24 hours.';
 
 $lang['AdminCompanyAutomation.index.no_results'] = 'There are no cron tasks.';
 $lang['AdminCompanyAutomation.index.no_cron_lastran'] = 'Never';

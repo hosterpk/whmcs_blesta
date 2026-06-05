@@ -12,8 +12,10 @@
 $lang['AdminDialog.confirm.text_yes'] = 'Yes';
 $lang['AdminDialog.confirm.text_no'] = 'No';
 
+$lang['AdminDialog.password.title'] = 'Generate Password';
 $lang['AdminDialog.password.field_modal_password'] = 'Password';
 $lang['AdminDialog.password.field_modal_password_copied'] = 'I have copied this password to a safe place';
+$lang['AdminDialog.password.text_click_generate'] = 'Click Generate to create a secure password.';
 $lang['AdminDialog.password.btn_generate'] = 'Generate';
 $lang['AdminDialog.password.btn_modal_password'] = 'Password';
 $lang['AdminDialog.password.btn_cancel'] = 'Cancel';

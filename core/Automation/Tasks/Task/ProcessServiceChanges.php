@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -117,7 +118,7 @@ class ProcessServiceChanges extends AbstractTask
                 }
             } else {
                 // No invoice for this service change. Mark it as error
-                $this->ServiceChanges->edit($service_change->service_id, ['status' => 'error']);
+                $this->ServiceChanges->edit($service_change->id, ['status' => 'error']);
                 $this->log(
                     Language::_(
                         'Automation.task.process_service_changes.missing_invoice',
@@ -154,14 +155,19 @@ class ProcessServiceChanges extends AbstractTask
         );
 
         // Process queued service changes if setting enables us to do so, and invoice is closed
-        if ($settings['process_paid_service_changes'] == 'true' && $invoice->date_closed !== null
+        if (
+            $settings['process_paid_service_changes'] == 'true' && $invoice->date_closed !== null
             && in_array($invoice->status, ['active', 'proforma'])
         ) {
             // Attempt to process the service change
             $this->ServiceChanges->process($service_change->id);
 
-            // Log the result of the process
+            // A completed change has its row deleted; fall back to the pre-process record
             $updated_change = $this->ServiceChanges->get($service_change->id);
+            if (!$updated_change) {
+                $updated_change = clone $service_change;
+                $updated_change->status = 'completed';
+            }
 
             $this->log(
                 Language::_(
@@ -175,8 +181,12 @@ class ProcessServiceChanges extends AbstractTask
             // The service change expired and must be canceled
             $this->ServiceChanges->edit($service_change->id, ['status' => 'canceled']);
 
-            // Log that the change expired
+            // A canceled change has its row deleted; fall back to the pre-cancel record
             $updated_change = $this->ServiceChanges->get($service_change->id);
+            if (!$updated_change) {
+                $updated_change = clone $service_change;
+                $updated_change->status = 'canceled';
+            }
 
             $this->log(
                 Language::_(

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SolusVM API response handler
  *
@@ -33,7 +34,7 @@ class SolusvmResponse
         } else {
             // Make valid XML if no wrapper tag given
             $response = "<?xml version='1.0'?>\n<document>\n" .
-                substr_replace($response, '', 0, strpos($response, "\n")+1) .
+                substr_replace($response, '', 0, strpos($response, "\n") + 1) .
                 '</document>';
         }
 
@@ -42,12 +43,12 @@ class SolusvmResponse
 
         try {
             // Fix an API malformatted XML response where a tag ends but does not begin
-            if (preg_match("/<\/sessionexpire>/", $response) && !preg_match('/<sessionexpire>/', $response)) {
-                $response = preg_replace("/<\/sessionexpire>/", '', $response);
+            if (preg_match('/<\/sessionexpire>/', $response) && !preg_match('/<sessionexpire>/', $response)) {
+                $response = preg_replace('/<\/sessionexpire>/', '', $response);
             }
 
             $this->xml = new SimpleXMLElement($response);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Invalid response
         }
     }

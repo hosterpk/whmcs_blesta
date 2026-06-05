@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('namecheap.map', [
     'module' => 'namecheap',
     'module_row_key' => 'api_username',

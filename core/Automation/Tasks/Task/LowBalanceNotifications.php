@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -69,9 +70,7 @@ class LowBalanceNotifications extends AbstractTask
         $clients = $this->Clients->getAll($data->company_id, null, true);
 
         // Get the company hostname
-        $hostname = isset(Configure::get('Blesta.company')->hostname)
-            ? Configure::get('Blesta.company')->hostname
-            : '';
+        $hostname = Configure::get('Blesta.company')->hostname ?? '';
 
         foreach ($clients as $client) {
             // Skip if credit is not enabled for this client

@@ -16,7 +16,13 @@ $lang['Checkout.getpaymentaccounts.paymentaccount_ach'] = "ACH Accounts";
 $lang['Checkout.getpaymentaccounts.account_name'] = "%1\$s %2\$s - %3\$s x%4\$s"; // %1$s is the account first name, %2$s is the account last name, %3$s is the account type (card type or bank account type), %4$s is the last 4 of the account
 
 
+$lang['Checkout.!error.invalid_agree_recurring_consent'] = "You must consent to recurring billing to continue.";
+
 $lang['Checkout.index.field_agree_tos'] = "I have read and agree to the <a href=\"%1\$s\" target=\"_blank\">Terms and Conditions</a>"; // %1$s is the URI to the terms and conditions
+$lang['Checkout.index.field_agree_recurring_consent'] = "I authorize %1\$s to store my payment method and charge %2\$s beginning today, until I cancel. I can cancel anytime online through my account."; // %1$s is the company name, %2$s is the recurring amount details
+$lang['Checkout.index.recurring_every'] = "every %1\$s"; // %1$s is the period (e.g. "month")
+$lang['Checkout.index.recurring_every_term'] = "every %1\$s %2\$s"; // %1$s is the term (e.g. "6"), %2$s is the period (e.g. "months")
+$lang['Checkout.index.recurring_and'] = "and";
 $lang['Checkout.index.description_invoice'] = "Invoice #%1\$s"; // %1$s is the invoice number
 $lang['Checkout.index.totals.setup_fee'] = "Setup Fee:";
 $lang['Checkout.index.totals.discount'] = "Discount:";

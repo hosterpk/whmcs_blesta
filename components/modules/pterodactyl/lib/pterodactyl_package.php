@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Pterodactyl Package helper
  *
@@ -88,7 +89,8 @@ class PterodactylPackage
                 $rules['meta[' . $fieldName . ']'] = $rule_helper->parseEggVariable($envVariable);
 
                 foreach ($rules['meta[' . $fieldName . ']'] as $rule) {
-                    if (array_key_exists('if_set', $rule)
+                    if (
+                        array_key_exists('if_set', $rule)
                         && $rule['if_set'] == true
                         && empty($vars['meta'][$fieldName])
                     ) {
@@ -157,20 +159,19 @@ class PterodactylPackage
         // Set js to refetch options when the nest or egg is changed
         $fields->setHtml("
 			<script type=\"text/javascript\">
-				$(document).ready(function() {
-					// Re-fetch module options to pull in eggs and egg variables
-                    // when a nest or egg respectively is selected
-					$('#Pterodactyl_nest_id, #Pterodactyl_egg_id').change(function() {
-						fetchModuleOptions();
-					});
+				// Re-fetch module options to pull in eggs and egg variables
+				// when a nest or egg respectively is selected.
+				// Use namespaced delegation so duplicate handlers aren't added on each AJAX reload.
+				$(document).off('change.pterodactyl').on('change.pterodactyl', '#Pterodactyl_nest_id, #Pterodactyl_egg_id', function() {
+					fetchModuleOptions();
 				});
 			</script>
 		");
 
         // Set the select fields
         $selectFields = [
-            'location_id' => isset($packageLists['locations']) ? $packageLists['locations'] : [],
-            'nest_id' => isset($packageLists['nests']) ? $packageLists['nests'] : [],
+            'location_id' => $packageLists['locations'] ?? [],
+            'nest_id' => $packageLists['nests'] ?? [],
             'egg_id' => isset($packageLists['eggs'])
                 ? array_combine(array_keys($packageLists['eggs']), array_keys($packageLists['eggs']))
                 : [],
@@ -186,7 +187,7 @@ class PterodactylPackage
                 $fields->fieldSelect(
                     'meta[' . $selectField . ']',
                     $list,
-                    (isset($vars->meta[$selectField]) ? $vars->meta[$selectField] : null),
+                    ($vars->meta[$selectField] ?? null),
                     ['id' => 'Pterodactyl_' . $selectField]
                 )
             );
@@ -206,7 +207,7 @@ class PterodactylPackage
             $fields->fieldCheckbox(
                 'meta[dedicated_ip]',
                 '1',
-                (isset($vars->meta['dedicated_ip']) ? $vars->meta['dedicated_ip'] : null) == 1,
+                ($vars->meta['dedicated_ip'] ?? null) == 1,
                 ['id' => 'Pterodactyl_dedicated_ip', 'class' => 'inline']
             )
         );
@@ -229,7 +230,7 @@ class PterodactylPackage
             $field->attach(
                 $fields->fieldText(
                     'meta[' . $textField . ']',
-                    (isset($vars->meta[$textField]) ? $vars->meta[$textField] : null),
+                    ($vars->meta[$textField] ?? null),
                     ['id' => 'Pterodactyl_' . $textField]
                 )
             );
@@ -240,8 +241,8 @@ class PterodactylPackage
         }
 
         // Return standard package fields and attach any applicable egg fields
-        return isset($packageLists['eggs'][(isset($vars->meta['egg_id']) ? $vars->meta['egg_id'] : null)])
-            ? $this->attachEggFields($packageLists['eggs'][(isset($vars->meta['egg_id']) ? $vars->meta['egg_id'] : null)], $fields, $vars)
+        return isset($packageLists['eggs'][($vars->meta['egg_id'] ?? null)])
+            ? $this->attachEggFields($packageLists['eggs'][($vars->meta['egg_id'] ?? null)], $fields, $vars)
             : $fields;
     }
 
@@ -271,7 +272,7 @@ class PterodactylPackage
             $field->attach(
                 $fields->fieldText(
                     'meta[' . $key . ']',
-                    (isset($vars->meta[$key]) ? $vars->meta[$key] : $env_variable->attributes->default_value),
+                    ($vars->meta[$key] ?? $env_variable->attributes->default_value),
                     ['id' => $key]
                 )
             );
@@ -288,7 +289,7 @@ class PterodactylPackage
                 $fields->fieldCheckbox(
                     'meta[' . $checkboxKey . ']',
                     '1',
-                    (isset($vars->meta[$checkboxKey]) ? $vars->meta[$checkboxKey] : '0') == '1',
+                    ($vars->meta[$checkboxKey] ?? '0') == '1',
                     ['id' => $checkboxKey, 'class' => 'inline']
                 )
             );
@@ -333,13 +334,14 @@ class PterodactylPackage
         $rules = [
             'meta[location_id]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[location_id].format', true)
                 ],
                 'valid' => [
                     'rule' => [
                         'array_key_exists',
-                        isset($packageLists['locations']) ? $packageLists['locations'] : []
+                        $packageLists['locations'] ?? []
                     ],
                     'message' => Language::_('PterodactylPackage.!error.meta[location_id].valid', true)
                 ]
@@ -367,26 +369,28 @@ class PterodactylPackage
             ],
             'meta[nest_id]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[nest_id].format', true)
                 ],
                 'valid' => [
                     'rule' => [
                         'array_key_exists',
-                        isset($packageLists['nests']) ? $packageLists['nests'] : []
+                        $packageLists['nests'] ?? []
                     ],
                     'message' => Language::_('PterodactylPackage.!error.meta[nest_id].valid', true)
                 ]
             ],
             'meta[egg_id]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[egg_id].format', true)
                 ],
                 'valid' => [
                     'rule' => [
                         'array_key_exists',
-                        isset($packageLists['eggs']) ? $packageLists['eggs'] : []
+                        $packageLists['eggs'] ?? []
                     ],
                     'message' => Language::_('PterodactylPackage.!error.meta[egg_id].valid', true)
                 ]
@@ -401,30 +405,35 @@ class PterodactylPackage
             ],
             'meta[memory]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[memory].format', true)
                 ]
             ],
             'meta[swap]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^(?:\-1|[0-9]+)$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[swap].format', true)
                 ]
             ],
             'meta[cpu]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[cpu].format', true)
                 ]
             ],
             'meta[disk]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[disk].format', true)
                 ]
             ],
             'meta[io]' => [
                 'format' => [
+                    'pre_format' => 'strval',
                     'rule' => ['matches', '/^[0-9]+$/'],
                     'message' => Language::_('PterodactylPackage.!error.meta[io].format', true)
                 ]

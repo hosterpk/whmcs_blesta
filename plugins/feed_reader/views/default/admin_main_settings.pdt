@@ -2,7 +2,7 @@
         <?php
         $link_buttons = [
             [
-                'icon' => 'fas fa-plus',
+                'icon' => 'bi bi-plus-lg',
                 'name' => '',
                 'attributes' => [
                     'title' => $this->_('AdminMain.settings.add_feed', true),
@@ -20,40 +20,45 @@
 
         if (($num_feeds = count((isset($feeds) ? $feeds : []))) > 0) {
         ?>
-            <table class="table">
-                <tr class="heading_row">
-                    <td><span><?php $this->_('AdminMain.settings.heading_url');?></span></td>
-                    <td><span><?php $this->_('AdminMain.settings.heading_lastupdated');?></span></td>
-                    <td class="last"><span><?php $this->_('AdminMain.settings.heading_options');?></span></td>
-                </tr>
-                <?php
-                for ($i = 0; $i < $num_feeds; $i++) {
-                ?>
-                <tr class="<?php echo $this->Html->concat(' ', ($i%2 == 1) ? 'odd_row' : '');?>">
-                    <td>
-                        <a href="<?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?>" target="_blank"><?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?></a>
-                    </td>
-                    <td><?php echo $this->Date->cast((isset($feeds[$i]->updated) ? $this->Html->safe($feeds[$i]->updated) : null), 'date_time');?></td>
-                    <td>
-                        <a href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/refresh/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null));?>" class="ajax"><?php $this->_('AdminMain.settings.option_refresh');?></a>, <a href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/remove/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null));?>" class="manage ajax"><?php $this->_('AdminMain.settings.option_remove');?></a>
-                    </td>
-                </tr>
-                <?php
-                }
-                ?>
+            <table class="table table-striped mb-3">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('AdminMain.settings.heading_url');?></th>
+                        <th><?php $this->_('AdminMain.settings.heading_lastupdated');?></th>
+                        <th class="text-end"><?php $this->_('AdminMain.settings.heading_options');?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    for ($i = 0; $i < $num_feeds; $i++) {
+                    ?>
+                    <tr>
+                        <td>
+                            <a href="<?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?>" target="_blank"><?php echo (isset($feeds[$i]->url) ? $this->Html->safe($feeds[$i]->url) : null);?></a>
+                        </td>
+                        <td><?php echo $this->Date->cast((isset($feeds[$i]->updated) ? $this->Html->safe($feeds[$i]->updated) : null), 'date_time');?></td>
+                        <td class="text-end">
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/refresh/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null));?>" class="btn btn-sm btn-primary ajax" title="<?php $this->_('AdminMain.settings.option_refresh');?>"><i class="bi bi-arrow-clockwise"></i></a>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/remove/?feed_id=' . (isset($feeds[$i]->id) ? $feeds[$i]->id : null));?>" class="btn btn-sm btn-danger manage ajax" title="<?php $this->_('AdminMain.settings.option_remove');?>"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    <?php
+                    }
+                    ?>
+                </tbody>
             </table>
         <?php
         } else {
         ?>
-            <div class="empty_section">
-                <div class="empty_box"><?php $this->_('AdminMain.settings.no_feeds');?></div>
+            <div class="text-center p-4">
+                <p class="text-muted mb-0"><?php $this->_('AdminMain.settings.no_feeds');?></p>
             </div>
         <?php
         }
         ?>
 
-        <div class="button_row">
-            <a class="btn btn-default pull-right ajax" href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/index/1/');?>"><?php $this->_('AdminMain.settings.submit_cancel');?></a>
+        <div class="d-flex justify-content-end">
+            <a class="btn btn-outline-secondary ajax" href="<?php echo $this->Html->safe($this->base_uri . 'widget/feed_reader/admin_main/index/1/');?>"><?php $this->_('AdminMain.settings.submit_cancel');?></a>
         </div>
         <?php
         $this->Widget->end();

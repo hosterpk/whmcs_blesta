@@ -1,0 +1,52 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+// Display custom client fields
+if (!empty($custom_fields)) {
+?>
+<div class="row g-3">
+    <?php
+    foreach ($custom_fields as $field) {
+        $field_id = ($custom_field_prefix ?? null) . ($field->id ?? null);
+
+        if ($field->type === 'checkbox') {
+            ?>
+            <div class="col-12">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox($field_id, ($field->values ?? null), ($vars->{$field_id} ?? ($field->default ?? null)), ['id' => $field_id, 'class' => 'form-check-input']);
+                    $this->Form->label(($field->real_name ?? null), $field_id, ['class' => 'form-check-label'], true);
+                    ?>
+                </div>
+            </div>
+            <?php
+        } elseif ($field->type === 'textarea') {
+            ?>
+            <div class="col-12">
+                <?php
+                $this->Form->label(($field->real_name ?? null), $field_id, ['class' => 'form-label'], true);
+                $this->Form->fieldTextarea($field_id, ($vars->{$field_id} ?? ($field->default ?? null)), ['id' => $field_id, 'class' => 'form-control']);
+                ?>
+            </div>
+            <?php
+        } else {
+            // text and select fields use col-md-6
+            ?>
+            <div class="col-md-6">
+                <?php
+                $this->Form->label(($field->real_name ?? null), $field_id, ['class' => 'form-label'], true);
+                if ($field->type === 'text') {
+                    $this->Form->fieldText($field_id, ($vars->{$field_id} ?? ($field->default ?? null)), ['id' => $field_id, 'class' => 'form-control']);
+                } elseif ($field->type === 'select') {
+                    $this->Form->fieldSelect($field_id, ($field->values ?? []), ($vars->{$field_id} ?? ($field->default ?? null)), ['id' => $field_id, 'class' => 'form-select']);
+                }
+                ?>
+            </div>
+            <?php
+        }
+    }
+    ?>
+</div>
+<?php
+}
+?>

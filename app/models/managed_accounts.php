@@ -1,4 +1,13 @@
 <?php
+
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Managed Accounts Model
  *
@@ -58,9 +67,8 @@ class ManagedAccounts extends AppModel
             Loader::loadModels($this, ['Users']);
             Loader::loadComponents($this, ['Session']);
 
-            // Validate if the manager has permissions to manage the provided client
-            $managed_account = $this->get($contact_id, $client_id);
-            if (empty($managed_account->permissions)) {
+            // Validate if the manager is an active manager of the provided client
+            if (!$this->isActiveManager($contact_id, $client_id)) {
                 $this->Input->setErrors(['permissions' => ['manage' => $this->_('ManagedAccounts.!error.permissions.manage')]]);
 
                 return false;
@@ -106,9 +114,8 @@ class ManagedAccounts extends AppModel
             // Get contact
             $contact = $this->Contacts->get($contact_id);
 
-            // Validate if the manager has permissions to manage the provided client
-            $managed_account = $this->get($contact_id, $client_id);
-            if (empty($managed_account->permissions)) {
+            // Validate if the manager is an active manager of the provided client
+            if (!$this->isActiveManager($contact_id, $client_id)) {
                 $this->Input->setErrors(['permissions' => ['manage' => $this->_('ManagedAccounts.!error.permissions.manage')]]);
 
                 return false;
@@ -132,7 +139,7 @@ class ManagedAccounts extends AppModel
         $invitation = null;
         if (is_numeric($invitation_id)) {
             $invitation = $this->getInvitation($invitation_id);
-        } else if (is_string($invitation_id)) {
+        } elseif (is_string($invitation_id)) {
             $invitation = $this->getInvitationByToken($invitation_id);
         }
 
@@ -156,7 +163,7 @@ class ManagedAccounts extends AppModel
 
         // Set permissions
         if (!empty($manager)) {
-            $invitation->permissions = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($invitation->permissions ?? 'a:0:{}');
+            $invitation->permissions = safe_unserialize($invitation->permissions ?? 'a:0:{}');
             $this->setPermissions($manager->id, $client->id, $invitation->permissions ?? []);
         }
 
@@ -177,7 +184,7 @@ class ManagedAccounts extends AppModel
         $invitation = null;
         if (is_numeric($invitation_id)) {
             $invitation = $this->getInvitation($invitation_id);
-        } else if (is_string($invitation_id)) {
+        } elseif (is_string($invitation_id)) {
             $invitation = $this->getInvitationByToken($invitation_id);
         }
 
@@ -234,7 +241,7 @@ class ManagedAccounts extends AppModel
                             ->where('account_management_invitations.email', '=', $email)
                             ->where('account_management_invitations.client_id', '=', $client_id)
                             ->fetch();
-                        
+
                         return empty($invitation);
                     },
                     'message' => $this->_('ManagedAccounts.!error.email.invitation'),
@@ -331,7 +338,7 @@ class ManagedAccounts extends AppModel
 
             // Get the company hostname
             $hostname =
-                isset(Configure::get('Blesta.company')->hostname) ? Configure::get('Blesta.company')->hostname : '';
+                Configure::get('Blesta.company')->hostname ?? '';
 
             // Send email verification link
             $tags = [
@@ -371,13 +378,18 @@ class ManagedAccounts extends AppModel
             return false;
         }
 
+        // Manager session — verify active manager status first
+        if (!empty($client_id) && !$this->isActiveManager($contact_id, $client_id)) {
+            return false;
+        }
+
         $options = $this->getPermissionOptions($company_id);
 
         $parts = explode('.', $area, 2);
         $area = $parts[0] . (isset($parts[1]) ? '.*' : '');
 
         if (isset($options[$area])) {
-            return (boolean) $this->Record->select()->
+            return (bool) $this->Record->select()->
                 from('contact_permissions')->
                 where('contact_id', '=', $contact_id)->
                 where('client_id', '=', $client_id)->
@@ -499,6 +511,7 @@ class ManagedAccounts extends AppModel
                     'contacts.email',
                     false
                 )
+                ->where('account_management_invitations.client_id', '=', $client_id)
                 ->delete(['contact_permissions.*', 'account_management_invitations.*']);
         }
     }
@@ -546,6 +559,47 @@ class ManagedAccounts extends AppModel
     }
 
     /**
+     * Checks whether a contact is an active manager of a given client.
+     *
+     * A contact is considered an active manager if:
+     * 1. There exists an accepted invitation for (client_id, contact.email)
+     * 2. The contact has at least one contact_permissions row for (contact_id, client_id)
+     *
+     * @param int $contact_id The ID of the contact (manager)
+     * @param int $client_id The ID of the client being managed
+     * @return bool True if the contact is an active manager, false otherwise
+     */
+    public function isActiveManager(int $contact_id, int $client_id): bool
+    {
+        // Verify the contact exists and is a primary contact
+        $contact = $this->Contacts->get($contact_id);
+        if (!$contact || $contact->contact_type !== 'primary') {
+            return false;
+        }
+
+        // Check for an accepted invitation matching (client_id, contact.email)
+        $invitation = $this->Record->select()
+            ->from('account_management_invitations')
+            ->where('account_management_invitations.client_id', '=', $client_id)
+            ->where('account_management_invitations.email', '=', $contact->email)
+            ->where('account_management_invitations.status', '=', 'accepted')
+            ->fetch();
+
+        if (empty($invitation)) {
+            return false;
+        }
+
+        // Check for at least one permission row for (contact_id, client_id)
+        $permission = $this->Record->select()
+            ->from('contact_permissions')
+            ->where('contact_id', '=', $contact_id)
+            ->where('client_id', '=', $client_id)
+            ->fetch();
+
+        return !empty($permission);
+    }
+
+    /**
      * Fetches a managed account
      *
      * @param int $contact_id The ID of the contact to fetch
@@ -588,8 +642,17 @@ class ManagedAccounts extends AppModel
 
         $permissions = $this->Record->select(['contact_permissions.area'])
             ->from('contact_permissions')
+            ->innerJoin('contacts', 'contacts.id', '=', 'contact_permissions.contact_id', false)
+            ->innerJoin(
+                'account_management_invitations',
+                'account_management_invitations.email',
+                '=',
+                'contacts.email',
+                false
+            )
             ->where('contact_permissions.contact_id', '=', $contact_id)
             ->where('contact_permissions.client_id', '=', $client_id)
+            ->where('account_management_invitations.client_id', '=', $client_id)
             ->fetchAll();
         $permissions = $this->ArrayHelper->numericToKey($permissions);
 
@@ -777,7 +840,7 @@ class ManagedAccounts extends AppModel
             'clients.*', 'contacts.first_name', 'contacts.last_name', 'contacts.email', 'contacts.company',
             'contacts.id' => 'contact_id', 'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code'
         ])
-            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('contact_permissions')
             ->innerJoin('contacts', 'contacts.client_id', '=', 'contact_permissions.client_id', false)
             ->innerJoin('clients', 'clients.id', '=', 'contacts.client_id', false)
@@ -801,7 +864,7 @@ class ManagedAccounts extends AppModel
             'contacts.last_name', 'contacts.company', 'clients.id_format', 'clients.id_value', 'clients.user_id',
             'clients.client_group_id', 'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code'
         ])
-            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('account_management_invitations')
             ->leftJoin('contacts', 'contacts.email', '=', 'account_management_invitations.email', false)
             ->leftJoin('clients', 'clients.id', '=', 'contacts.client_id', false)

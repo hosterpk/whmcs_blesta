@@ -1,0 +1,653 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+
+// Build tabs for admin/client (admin first)
+$customize_tabs = [];
+$tab_order = ['admin', 'client'];
+foreach ($tab_order as $i => $type) {
+    if (!isset($theme_types[$type])) {
+        continue;
+    }
+    $customize_tabs[] = [
+        'name' => $this->Html->safe($theme_types[$type]),
+        'current' => ($i === 0),
+        'attributes' => [
+            'href' => '#' . $type . '_customize',
+            'data-bs-toggle' => 'tab',
+        ]
+    ];
+}
+$this->Widget->setTabs($customize_tabs);
+
+$this->Widget->create($this->_('AdminCompanyLookandfeel.customize.box_title', true), ['id' => 'admin_company_lookandfeel_customize'], ($render_section ?? null));
+
+$this->Form->create(null, ['enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+?>
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Admin Customize Tab -->
+        <div class="tab-pane fade show active" id="admin_customize" role="tabpanel">
+                <!-- Paradigm Preview Mockup -->
+                <div class="paradigm-preview mb-4">
+                    <div class="paradigm-preview-browser">
+                        <div class="paradigm-preview-browser-header">
+                            <div class="paradigm-preview-browser-dots">
+                                <span class="dot bg-danger"></span>
+                                <span class="dot bg-warning"></span>
+                                <span class="dot bg-success"></span>
+                            </div>
+                            <div class="paradigm-preview-browser-tab">
+                                <img src="<?php echo $this->Html->safe($admin_favicon ?? $admin_icon ?? $this->view_dir . 'images/favicon.ico'); ?>" class="paradigm-preview-favicon" id="admin_favicon_preview" alt="Favicon" data-default-src="<?php echo $this->view_dir . 'images/favicon.ico';?>">
+                                <span class="paradigm-preview-tab-title">Blesta Admin</span>
+                            </div>
+                            <div class="paradigm-preview-browser-address">
+                                <i class="bi bi-lock-fill"></i>
+                                <span><?php echo Configure::get('Blesta.company')->hostname ?? 'admin.example.com';?></span>
+                            </div>
+                        </div>
+                        <div class="paradigm-preview-layout">
+                            <div class="paradigm-preview-iconbar">
+                                <div class="paradigm-preview-icon"><i class="bi bi-list"></i></div>
+                                <div class="paradigm-preview-icon"><i class="bi bi-star"></i></div>
+                                <div class="paradigm-preview-icon"><i class="bi bi-grid"></i></div>
+                            </div>
+                            <div class="paradigm-preview-sidebar">
+                                <div class="paradigm-preview-company">My Company</div>
+                                <div class="paradigm-preview-nav-item active"><i class="bi bi-grid"></i> Dashboard</div>
+                                <div class="paradigm-preview-nav-item"><i class="bi bi-people"></i> Clients</div>
+                                <div class="paradigm-preview-nav-item"><i class="bi bi-receipt"></i> Billing</div>
+                            </div>
+                            <div class="paradigm-preview-main">
+                                <div class="paradigm-preview-topbar">
+                                    <?php $this->Form->fieldHidden('admin_logo_height', ($vars['admin_logo_height'] ?? null), ['id' => 'admin_logo_height']);?>
+                                    <img src="<?php echo $this->view_dir . 'images/logo.svg';?>"
+                                         class="paradigm-preview-logo default"
+                                         id="admin_logo_preview"
+                                         alt="Logo"
+                                         data-default-src-light="<?php echo $this->view_dir . 'images/logo-color.svg';?>"
+                                         data-default-src-dark="<?php echo $this->view_dir . 'images/logo.svg';?>"
+                                         data-custom-src-light="<?php echo !($admin_default_logo ?? true) ? $this->Html->safe($admin_logo) : '';?>"
+                                         data-custom-src-dark="<?php echo $this->Html->safe($admin_logo_dark ?? '');?>"
+                                         <?php echo (!empty($vars['admin_logo_height']) ? ' style="height: ' . $vars['admin_logo_height'] . 'px;"' : '');?>>
+                                    <div class="paradigm-preview-topbar-right">
+                                        <span class="paradigm-preview-search"><i class="bi bi-search"></i> Search</span>
+                                        <i class="bi bi-sun"></i>
+                                        <i class="bi bi-bell"></i>
+                                        <span class="paradigm-preview-user"><i class="bi bi-person-circle"></i></span>
+                                    </div>
+                                </div>
+                                <div class="paradigm-preview-content">
+                                    <div class="paradigm-preview-content-placeholder"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Logo (Light Mode) -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_logo_light');?></h6>
+                <?php
+                $has_admin_logo = !($admin_default_logo ?? true);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_admin_logo ? ' file-preview-empty' : ' has-image';?>" id="admin_logo_preview_container" style="width: 200px; height: 80px; padding: 20px;">
+                        <img id="admin_logo_file_preview"
+                             src="<?php echo $has_admin_logo ? $this->Html->safe($admin_logo) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_admin_logo ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_type', 'logo', true, ['id' => 'admin_type_logo', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_type_logo', true), 'admin_type_logo', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_type', 'url', false, ['id' => 'admin_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_type_url', true), 'admin_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="admin_logo_upload">
+                            <?php $this->Form->fieldFile('admin_logo', ['id' => 'admin_logo', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="admin_url_input">
+                            <?php $this->Form->fieldText('admin_url', ($has_admin_logo ? $admin_logo : null), ['id' => 'admin_url', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="logo_admin"<?php echo !$has_admin_logo ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_logo_admin', '0', ['id' => 'remove_logo_admin']);?>
+                    </div>
+                </div>
+
+                <!-- Admin Logo (Dark Mode) -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_logo_dark');?></h6>
+                <?php
+                $has_admin_logo_dark = !empty($admin_logo_dark);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_admin_logo_dark ? ' file-preview-empty' : ' has-image';?>" id="admin_logo_dark_preview_container" style="width: 200px; height: 80px; padding: 20px;">
+                        <img id="admin_logo_dark_file_preview"
+                             src="<?php echo $has_admin_logo_dark ? $this->Html->safe($admin_logo_dark) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_admin_logo_dark ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_dark_type', 'logo', true, ['id' => 'admin_dark_type_logo', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_dark_type_logo', true), 'admin_dark_type_logo', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_dark_type', 'url', false, ['id' => 'admin_dark_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_dark_type_url', true), 'admin_dark_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="admin_logo_dark_upload">
+                            <?php $this->Form->fieldFile('admin_logo_dark', ['id' => 'admin_logo_dark', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="admin_url_dark_input">
+                            <?php $this->Form->fieldText('admin_url_dark', ($admin_logo_dark ?? null), ['id' => 'admin_url_dark', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="logo_admin_dark"<?php echo !$has_admin_logo_dark ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_logo_admin_dark', '0', ['id' => 'remove_logo_admin_dark']);?>
+                    </div>
+                </div>
+
+                <!-- Admin Sidebar Icon (Light Mode) -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_icon_light');?></h6>
+                <?php
+                $has_admin_icon = !($admin_default_icon ?? true);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_admin_icon ? ' file-preview-empty' : ' has-image';?>" id="admin_icon_preview_container" style="width: 80px; height: 80px; padding: 20px;">
+                        <img id="admin_icon_file_preview"
+                             src="<?php echo $has_admin_icon ? $this->Html->safe($admin_icon) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_admin_icon ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_icon_type', 'image', true, ['id' => 'admin_icon_type_image', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_icon_type_image', true), 'admin_icon_type_image', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_icon_type', 'url', false, ['id' => 'admin_icon_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_icon_type_url', true), 'admin_icon_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="admin_icon_upload">
+                            <?php $this->Form->fieldFile('admin_icon_image', ['id' => 'admin_icon_image', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="admin_icon_url_input">
+                            <?php $this->Form->fieldText('admin_icon_url', (isset($admin_icon_url) ? $admin_icon_url : null), ['id' => 'admin_icon_url', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="icon_admin"<?php echo !$has_admin_icon ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_icon_admin', '0', ['id' => 'remove_icon_admin']);?>
+                    </div>
+                </div>
+
+                <!-- Admin Sidebar Icon (Dark Mode) -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_icon_dark');?></h6>
+                <?php
+                $has_admin_icon_dark = !empty($admin_icon_dark);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_admin_icon_dark ? ' file-preview-empty' : ' has-image';?>" id="admin_icon_dark_preview_container" style="width: 80px; height: 80px; padding: 20px;">
+                        <img id="admin_icon_dark_file_preview"
+                             src="<?php echo $has_admin_icon_dark ? $this->Html->safe($admin_icon_dark) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_admin_icon_dark ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_icon_dark_type', 'image', true, ['id' => 'admin_icon_dark_type_image', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_icon_dark_type_image', true), 'admin_icon_dark_type_image', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_icon_dark_type', 'url', false, ['id' => 'admin_icon_dark_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_icon_dark_type_url', true), 'admin_icon_dark_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="admin_icon_dark_upload">
+                            <?php $this->Form->fieldFile('admin_icon_image_dark', ['id' => 'admin_icon_image_dark', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="admin_icon_dark_url_input">
+                            <?php $this->Form->fieldText('admin_icon_url_dark', ($admin_icon_dark ?? null), ['id' => 'admin_icon_url_dark', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="icon_admin_dark"<?php echo !$has_admin_icon_dark ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_icon_admin_dark', '0', ['id' => 'remove_icon_admin_dark']);?>
+                    </div>
+                </div>
+
+                <!-- Admin Favicon -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_favicon');?></h6>
+                <?php
+                $has_admin_favicon = !empty($admin_favicon);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_admin_favicon ? ' file-preview-empty' : ' has-image';?>" id="admin_favicon_preview_container" style="width: 80px; height: 80px; padding: 20px;">
+                        <img id="admin_favicon_file_preview"
+                             src="<?php echo $has_admin_favicon ? $this->Html->safe($admin_favicon) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_admin_favicon ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_favicon_type', 'image', true, ['id' => 'admin_favicon_type_image', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_favicon_type_image', true), 'admin_favicon_type_image', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('admin_favicon_type', 'url', false, ['id' => 'admin_favicon_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.admin_favicon_type_url', true), 'admin_favicon_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="admin_favicon_upload">
+                            <?php $this->Form->fieldFile('admin_favicon_image', ['id' => 'admin_favicon_image', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="admin_favicon_url_input">
+                            <?php $this->Form->fieldText('admin_favicon_url', ($admin_favicon ?? null), ['id' => 'admin_favicon_url', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="favicon_admin"<?php echo !$has_admin_favicon ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_favicon_admin', '0', ['id' => 'remove_favicon_admin']);?>
+                    </div>
+                </div>
+        </div>
+
+        <!-- Client Customize Tab -->
+        <div class="tab-pane fade" id="client_customize" role="tabpanel">
+                <!-- Client Preview Mockup -->
+                <div class="paradigm-preview mb-4">
+                    <div class="paradigm-preview-browser">
+                        <div class="paradigm-preview-browser-header">
+                            <div class="paradigm-preview-browser-dots">
+                                <span class="dot bg-danger"></span>
+                                <span class="dot bg-warning"></span>
+                                <span class="dot bg-success"></span>
+                            </div>
+                            <div class="paradigm-preview-browser-tab">
+                                <img src="<?php echo $this->Html->safe($client_favicon ?? $client_icon ?? $this->view_dir . 'images/favicon.ico'); ?>" class="paradigm-preview-favicon" id="client_favicon_preview" alt="Favicon" data-default-src="<?php echo $this->view_dir . 'images/favicon.ico';?>">
+                                <span class="paradigm-preview-tab-title">Client Portal</span>
+                            </div>
+                            <div class="paradigm-preview-browser-address">
+                                <i class="bi bi-lock-fill"></i>
+                                <span><?php echo Configure::get('Blesta.company')->hostname ?? 'portal.example.com';?></span>
+                            </div>
+                        </div>
+                        <div class="paradigm-preview-client-layout"<?php if (isset($client_colors['theme_header_bg_color_top'])) {?> style="--client-header-bg: linear-gradient(180deg, #<?php echo $this->Html->safe($client_colors['theme_header_bg_color_top']);?> 0%, #<?php echo $this->Html->safe($client_colors['theme_header_bg_color_bottom']);?> 100%);"<?php } ?>>
+                            <div class="paradigm-preview-client-header">
+                                <?php $this->Form->fieldHidden('client_logo_height', ($vars['client_logo_height'] ?? null), ['id' => 'client_logo_height']);?>
+                                <img src="<?php echo (isset($client_logo) ? $this->Html->safe($client_logo) : $this->view_dir . 'images/logo-color.svg'); ?>"
+                                     class="paradigm-preview-client-logo<?php if ($client_default_logo ?? false) { echo ' default'; } ?>"
+                                     id="client_logo_preview"
+                                     alt="Logo"
+                                     data-default-src="<?php echo $this->view_dir . 'images/logo-color.svg';?>"
+                                     <?php echo (!empty($vars['client_logo_height']) ? ' style="height: ' . $vars['client_logo_height'] . 'px;"' : '');?>>
+                                <div class="paradigm-preview-client-nav">
+                                    <span>Dashboard</span>
+                                    <span>Services</span>
+                                    <span>Billing</span>
+                                    <span>Support</span>
+                                </div>
+                            </div>
+                            <div class="paradigm-preview-client-content">
+                                <div class="paradigm-preview-content-placeholder"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Client Logo -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_custom_logo');?></h6>
+                <?php
+                $has_client_logo = !($client_default_logo ?? true);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_client_logo ? ' file-preview-empty' : ' has-image';?>" id="client_logo_preview_container" style="width: 200px; height: 80px; padding: 20px;">
+                        <img id="client_logo_file_preview"
+                             src="<?php echo $has_client_logo ? $this->Html->safe($client_logo) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_client_logo ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('client_type', 'logo', true, ['id' => 'client_type_logo', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.client_type_logo', true), 'client_type_logo', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('client_type', 'url', false, ['id' => 'client_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.client_type_url', true), 'client_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="client_logo_upload">
+                            <?php $this->Form->fieldFile('client_logo', ['id' => 'client_logo', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="client_url_input">
+                            <?php $this->Form->fieldText('client_url', ($has_client_logo ? $client_logo : null), ['id' => 'client_url', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="logo_client"<?php echo !$has_client_logo ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_logo_client', '0', ['id' => 'remove_logo_client']);?>
+                    </div>
+                </div>
+
+                <!-- Client Icon -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_custom_icon');?></h6>
+                <?php
+                $has_client_icon = !($client_default_icon ?? true);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_client_icon ? ' file-preview-empty' : ' has-image';?>" id="client_icon_preview_container" style="width: 80px; height: 80px; padding: 20px;">
+                        <img id="client_icon_file_preview"
+                             src="<?php echo $has_client_icon ? $this->Html->safe($client_icon) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_client_icon ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('client_icon_type', 'image', true, ['id' => 'client_icon_type_image', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.client_icon_type_image', true), 'client_icon_type_image', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('client_icon_type', 'url', false, ['id' => 'client_icon_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.client_icon_type_url', true), 'client_icon_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="client_icon_upload">
+                            <?php $this->Form->fieldFile('client_icon_image', ['id' => 'client_icon_image', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="client_icon_url_input">
+                            <?php $this->Form->fieldText('client_icon_url', (isset($client_icon_url) ? $client_icon_url : null), ['id' => 'client_icon_url', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="icon_client"<?php echo !$has_client_icon ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_icon_client', '0', ['id' => 'remove_icon_client']);?>
+                    </div>
+                </div>
+
+                <!-- Client Favicon -->
+                <h6 class="form-section-header"><?php $this->_('AdminCompanyLookandfeel.customize.heading_favicon');?></h6>
+                <?php
+                $has_client_favicon = !empty($client_favicon);
+                ?>
+                <div class="d-flex align-items-start gap-3 mb-4">
+                    <div class="file-preview-container<?php echo !$has_client_favicon ? ' file-preview-empty' : ' has-image';?>" id="client_favicon_preview_container" style="width: 80px; height: 80px; padding: 20px;">
+                        <img id="client_favicon_file_preview"
+                             src="<?php echo $has_client_favicon ? $this->Html->safe($client_favicon) : '';?>"
+                             alt="Preview"
+                             class="file-preview-image"
+                             style="object-fit: contain;<?php echo !$has_client_favicon ? ' display: none;' : '';?>">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="mb-2">
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('client_favicon_type', 'image', true, ['id' => 'client_favicon_type_image', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.client_favicon_type_image', true), 'client_favicon_type_image', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <?php
+                                $this->Form->fieldRadio('client_favicon_type', 'url', false, ['id' => 'client_favicon_type_url', 'class' => 'form-check-input']);
+                                $this->Form->label($this->_('AdminCompanyLookandfeel.customize.field.client_favicon_type_url', true), 'client_favicon_type_url', ['class' => 'form-check-label']);
+                                ?>
+                            </div>
+                        </div>
+                        <div id="client_favicon_upload">
+                            <?php $this->Form->fieldFile('client_favicon_image', ['id' => 'client_favicon_image', 'class' => 'form-control mb-2']);?>
+                        </div>
+                        <div class="d-none" id="client_favicon_url_input">
+                            <?php $this->Form->fieldText('client_favicon_url', ($client_favicon ?? null), ['id' => 'client_favicon_url', 'class' => 'form-control mb-2', 'placeholder' => 'https://']);?>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-1 remove-image-btn" data-target="favicon_client"<?php echo !$has_client_favicon ? ' style="display: none;"' : '';?>>
+                            <i class="bi bi-trash"></i> <?php $this->_('AdminCompanyLookandfeel.customize.field.remove_image');?>
+                        </button>
+                        <?php $this->Form->fieldHidden('remove_favicon_client', '0', ['id' => 'remove_favicon_client']);?>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit(
+            'save',
+            $this->_('AdminCompanyLookandfeel.customize.text_submit', true),
+            ['class' => 'btn btn-primary']
+        );
+        ?>
+    </div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Current theme helper
+    function getCurrentTheme() {
+        return document.documentElement.getAttribute('data-theme') || 'dark';
+    }
+
+    // Update a theme-aware mockup image to show the correct variant
+    function updateMockupForTheme(mockupImg) {
+        if (!mockupImg) return;
+        var theme = getCurrentTheme();
+        var customSrc = mockupImg.getAttribute('data-custom-src-' + theme);
+        var customSrcLight = mockupImg.getAttribute('data-custom-src-light');
+        var defaultSrc = mockupImg.getAttribute('data-default-src-' + theme)
+            || mockupImg.getAttribute('data-default-src');
+
+        // Prefer theme-specific custom, fall back to light custom, then default
+        if (customSrc) {
+            mockupImg.src = customSrc;
+            mockupImg.style.display = '';
+            mockupImg.classList.remove('default');
+        } else if (customSrcLight) {
+            mockupImg.src = customSrcLight;
+            mockupImg.style.display = '';
+            mockupImg.classList.remove('default');
+        } else if (defaultSrc) {
+            mockupImg.src = defaultSrc;
+            mockupImg.style.display = '';
+            mockupImg.classList.add('default');
+        }
+    }
+
+    // Listen for theme changes via MutationObserver on data-theme attribute
+    var adminLogoMockup = document.getElementById('admin_logo_preview');
+    if (adminLogoMockup) {
+        // Set correct logo on initial load
+        updateMockupForTheme(adminLogoMockup);
+
+        new MutationObserver(function() {
+            updateMockupForTheme(adminLogoMockup);
+        }).observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
+    }
+
+    // Generic toggle helper for upload/url radio switches
+    function setupToggle(radioA, radioB, showOnA, showOnB) {
+        var elA = document.getElementById(radioA);
+        var elB = document.getElementById(radioB);
+        var divA = document.getElementById(showOnA);
+        var divB = document.getElementById(showOnB);
+
+        if (elA && elB && divA && divB) {
+            elB.addEventListener('change', function() {
+                divA.classList.add('d-none');
+                divB.classList.remove('d-none');
+            });
+            elA.addEventListener('change', function() {
+                divA.classList.remove('d-none');
+                divB.classList.add('d-none');
+            });
+        }
+    }
+
+    setupToggle('admin_type_logo', 'admin_type_url', 'admin_logo_upload', 'admin_url_input');
+    setupToggle('admin_dark_type_logo', 'admin_dark_type_url', 'admin_logo_dark_upload', 'admin_url_dark_input');
+    setupToggle('admin_icon_type_image', 'admin_icon_type_url', 'admin_icon_upload', 'admin_icon_url_input');
+    setupToggle('admin_icon_dark_type_image', 'admin_icon_dark_type_url', 'admin_icon_dark_upload', 'admin_icon_dark_url_input');
+    setupToggle('admin_favicon_type_image', 'admin_favicon_type_url', 'admin_favicon_upload', 'admin_favicon_url_input');
+    setupToggle('client_type_logo', 'client_type_url', 'client_logo_upload', 'client_url_input');
+    setupToggle('client_icon_type_image', 'client_icon_type_url', 'client_icon_upload', 'client_icon_url_input');
+    setupToggle('client_favicon_type_image', 'client_favicon_type_url', 'client_favicon_upload', 'client_favicon_url_input');
+
+    // File preview + remove button logic (mirrors myinfo avatar pattern)
+    var imageFields = [
+        {key: 'logo_admin', file: 'admin_logo', url: 'admin_url', preview: 'admin_logo_file_preview', container: 'admin_logo_preview_container', mockup: 'admin_logo_preview', mockupAttr: 'light', removeMockupDefault: true},
+        {key: 'logo_admin_dark', file: 'admin_logo_dark', url: 'admin_url_dark', preview: 'admin_logo_dark_file_preview', container: 'admin_logo_dark_preview_container', mockup: 'admin_logo_preview', mockupAttr: 'dark'},
+        {key: 'icon_admin', file: 'admin_icon_image', url: 'admin_icon_url', preview: 'admin_icon_file_preview', container: 'admin_icon_preview_container'},
+        {key: 'icon_admin_dark', file: 'admin_icon_image_dark', url: 'admin_icon_url_dark', preview: 'admin_icon_dark_file_preview', container: 'admin_icon_dark_preview_container'},
+        {key: 'favicon_admin', file: 'admin_favicon_image', url: 'admin_favicon_url', preview: 'admin_favicon_file_preview', container: 'admin_favicon_preview_container', mockup: 'admin_favicon_preview'},
+        {key: 'logo_client', file: 'client_logo', url: 'client_url', preview: 'client_logo_file_preview', container: 'client_logo_preview_container', mockup: 'client_logo_preview', removeMockupDefault: true},
+        {key: 'icon_client', file: 'client_icon_image', url: 'client_icon_url', preview: 'client_icon_file_preview', container: 'client_icon_preview_container'},
+        {key: 'favicon_client', file: 'client_favicon_image', url: 'client_favicon_url', preview: 'client_favicon_file_preview', container: 'client_favicon_preview_container', mockup: 'client_favicon_preview'}
+    ];
+
+    imageFields.forEach(function(field) {
+        var fileInput = document.getElementById(field.file);
+        var urlInput = document.getElementById(field.url);
+        var previewImg = document.getElementById(field.preview);
+        var container = document.getElementById(field.container);
+        var removeBtn = document.querySelector('.remove-image-btn[data-target="' + field.key + '"]');
+        var hiddenField = document.getElementById('remove_' + field.key);
+        var mockupImg = field.mockup ? document.getElementById(field.mockup) : null;
+
+        // Helper to update the mockup (theme-aware for admin logo, direct for others)
+        function setMockupSrc(src) {
+            if (!mockupImg) return;
+            if (field.mockupAttr) {
+                // Theme-aware: update the data attribute and refresh
+                mockupImg.setAttribute('data-custom-src-' + field.mockupAttr, src);
+                updateMockupForTheme(mockupImg);
+            } else {
+                mockupImg.src = src;
+                mockupImg.style.display = '';
+            }
+            if (field.removeMockupDefault) mockupImg.classList.remove('default');
+        }
+
+        function clearMockup() {
+            if (!mockupImg) return;
+            if (field.mockupAttr) {
+                // Clear the custom src for this variant and refresh
+                mockupImg.setAttribute('data-custom-src-' + field.mockupAttr, '');
+                updateMockupForTheme(mockupImg);
+            } else {
+                var defaultSrc = mockupImg.getAttribute('data-default-src')
+                    || mockupImg.getAttribute('data-default-src-light');
+                if (defaultSrc) {
+                    mockupImg.src = defaultSrc;
+                    mockupImg.style.display = '';
+                } else {
+                    mockupImg.style.display = 'none';
+                }
+            }
+            if (field.removeMockupDefault) mockupImg.classList.add('default');
+        }
+
+        // File input preview
+        if (fileInput && previewImg && container) {
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    var objectUrl = URL.createObjectURL(e.target.files[0]);
+                    previewImg.src = objectUrl;
+                    previewImg.style.display = 'block';
+                    container.classList.remove('file-preview-empty');
+                    container.classList.add('has-image');
+                    if (removeBtn) removeBtn.style.display = 'inline-block';
+                    if (hiddenField) hiddenField.value = '0';
+                    setMockupSrc(objectUrl);
+                }
+            });
+        }
+
+        // URL input preview
+        if (urlInput && previewImg && container) {
+            urlInput.addEventListener('input', function() {
+                if (this.value) {
+                    previewImg.src = this.value;
+                    previewImg.style.display = 'block';
+                    container.classList.remove('file-preview-empty');
+                    container.classList.add('has-image');
+                    if (removeBtn) removeBtn.style.display = 'inline-block';
+                    if (hiddenField) hiddenField.value = '0';
+                    setMockupSrc(this.value);
+                }
+            });
+        }
+
+        // Remove button
+        if (removeBtn && previewImg && container && hiddenField) {
+            removeBtn.addEventListener('click', function() {
+                if (fileInput) fileInput.value = '';
+                if (urlInput) urlInput.value = '';
+                previewImg.src = '';
+                previewImg.style.display = 'none';
+                container.classList.add('file-preview-empty');
+                container.classList.remove('has-image');
+                removeBtn.style.display = 'none';
+                hiddenField.value = '1';
+                clearMockup();
+            });
+        }
+    });
+});
+</script>

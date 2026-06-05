@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('stripe.map', [
     'gateway' => 'stripe_payments',
     'type' => 'merchant',

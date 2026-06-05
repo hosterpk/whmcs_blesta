@@ -1,86 +1,75 @@
+<?php /** @var View $this */ ?>
 
-        <?php
-        if (!(isset($is_ajax) ? $is_ajax : false)) {
-            echo (isset($left_nav) ? $left_nav : null);
-        ?>
-        <div id="right_outer">
+<?php
+echo (isset($message) ? $message : null);
+
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminPaymentMethods.index.affiliate_payment_method_add', true),
+            'href' => $this->Html->safe($this->base_uri . 'plugin/order/admin_payment_methods/add/')
+        ]
+    ]
+];
+$this->Widget->clear();
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminPaymentMethods.index.boxtitle_payment_methods', true), ['id'=>'admin_payment_methods'], (isset($render_section) ? $render_section : null));
+
+if (($payment_methods ?? null) && !empty($payment_methods)) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="payment_methods">
+        <thead>
+            <tr>
+                <th><?php $this->_('AdminPaymentMethods.index.heading_name');?></th>
+                <th style="width: 120px;"><?php $this->_('AdminPaymentMethods.index.heading_options');?></th>
+            </tr>
+        </thead>
+        <tbody>
             <?php
-            if (!(isset($render_section) ? $render_section : null)) {
-                echo (isset($message) ? $message : null);
+            foreach ($payment_methods as $payment_method) {
+            ?>
+            <tr>
+                <td><?php echo ($payment_method->name ?? null) ? $this->Html->safe($payment_method->name) : null; ?></td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo $this->base_uri . 'plugin/order/admin_payment_methods/edit/' . (($payment_method->id ?? null) ? $this->Html->safe($payment_method->id) : null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminPaymentMethods.index.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <?php
+                        $this->Form->create($this->base_uri . 'plugin/order/admin_payment_methods/delete/', ['class' => 'd-inline']);
+                        $this->Form->fieldHidden('id', ($payment_method->id ?? null));
+                        ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger modal-confirm-delete" data-confirm-message="<?php echo $this->Html->safe($this->_('AdminPaymentMethods.index.confirm_delete', true));?>" title="<?php $this->_('AdminPaymentMethods.index.option_delete');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php
+                        $this->Form->end();
+                        ?>
+                    </div>
+                </td>
+            </tr>
+            <?php
             }
             ?>
-            <section id="right_container">
-        <?php
-        }
-        ?>
-                <?php
-                $link_buttons = [
-                    [
-                        'icon' => 'fas fa-plus',
-                        'name' => '',
-                        'attributes' => [
-                            'title' => $this->_('AdminPaymentMethods.index.affiliate_payment_method_add', true),
-                            'href' => $this->Html->safe($this->base_uri . 'plugin/order/admin_payment_methods/add/')
-                        ]
-                    ]
-                ];
-                $this->Widget->clear();
-                $this->Widget->setLinkButtons($link_buttons);
-                $this->Widget->create($this->_('AdminPaymentMethods.index.boxtitle_payment_methods', true), ['id'=>'admin_payment_methods'], (isset($render_section) ? $render_section : null));
-
-                if ((isset($payment_methods) ? $payment_methods : null) && !empty($payment_methods)) {
-                ?>
-                <table class="table" id="payment_methods">
-                    <tr class="heading_row">
-                        <td><span><?php $this->_('AdminPaymentMethods.index.heading_name');?></span></td>
-                        <td class="last"><span><?php $this->_('AdminPaymentMethods.index.heading_options');?></span></td>
-                    </tr>
-                    <?php
-                    // Display all affiliates
-                    $i = 0;
-                    foreach ($payment_methods as $payment_method) {
-                    ?>
-                    <tr<?php echo ($i++ % 2 == 1) ? ' class="odd_row"' : '';?>>
-                        <td><?php echo (isset($payment_method->name) ? $this->Html->safe($payment_method->name) : null);?></td>
-                        <td>
-                            <a href="<?php echo $this->base_uri . 'plugin/order/admin_payment_methods/edit/' . (isset($payment_method->id) ? $this->Html->safe($payment_method->id) : null) . '/';?>"><?php $this->_('AdminPaymentMethods.index.option_edit');?></a>,
-                            <?php
-                            $this->Form->create($this->base_uri . 'plugin/order/admin_payment_methods/delete/');
-                            $this->Form->fieldHidden('id', (isset($payment_method->id) ? $payment_method->id : null));
-                            ?>
-                            <a href="<?php echo $this->base_uri . 'plugin/order/admin_payment_methods/delete/' . (isset($payment_method->id) ? $this->Html->safe($payment_method->id) : null) . '/';?>" class="manage" rel="<?php echo $this->Html->safe($this->_('AdminPaymentMethods.index.confirm_delete', true));?>"><?php $this->_('AdminPaymentMethods.index.option_delete');?></a>
-                            <?php
-                            $this->Form->end();
-                            ?>
-                        </td>
-                    </tr>
-                    <?php
-                    }
-                    ?>
-                </table>
-                <?php
-                    $this->Pagination->build();
-                } else {
-                ?>
-                <div class="empty_section">
-                    <div class="empty_box">
-                        <?php $this->_('AdminPaymentMethods.index.no_results');?>
-                    </div>
-                </div>
-                <?php
-                }
-                $this->Widget->end();
-                ?>
-        <?php
-        if (!(isset($is_ajax) ? $is_ajax : false)) {
-        ?>
-            </section>
-        </div>
-        <?php
-        }
-        ?>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#payment_methods a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->base_uri;?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
-    });
-</script>
+        </tbody>
+    </table>
+</div>
+<?php
+    if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        $this->Widget->footer();
+        $this->Pagination->build();
+    }
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-cash-stack fs-1 mb-3 d-block"></i>
+    <?php $this->_('AdminPaymentMethods.index.no_results');?>
+</div>
+<?php
+}
+$this->Widget->end();
+?>

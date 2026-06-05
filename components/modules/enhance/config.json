@@ -1,5 +1,5 @@
 {
-    "version": "1.0.1",
+    "version": "2.0.0",
     "name": "Enhance.name",
     "description": "Enhance.description",
     "authors": [
@@ -21,8 +21,22 @@
         "name_key": "domain"
     },
     "email_tags": {
-        "module": ["server_label", "hostname", "org_id", "api_token"],
-        "package": ["package"],
-        "service": ["domain", "username", "password", "website_id", "customer_email"]
-    }
+        "module": [
+            "server_label",
+            "hostname",
+            "org_id",
+            "api_token"
+        ],
+        "package": [
+            "package"
+        ],
+        "service": [
+            "domain",
+            "username",
+            "password",
+            "website_id",
+            "customer_email"
+        ]
+    },
+    "icon": "bi-server"
 }

@@ -1,6 +1,12 @@
 <?php
+
+namespace Blesta\Helpers\Widget;
+
 use Blesta\Core\Util\Input\Fields\InputField;
 use Blesta\Core\Util\Widgets\AbstractWidget;
+use Language;
+use Loader;
+
 /**
  * Simplifies the creation of widget interfaces
  *
@@ -16,18 +22,36 @@ class Widget extends AbstractWidget
      * @var string The URI to fetch when requesting the badge value for this widget
      */
     private $badge_uri = null;
+
     /**
      * @var string The badge value to display for this widget
      */
     private $badge_value = null;
+
+    /**
+     * @var bool Whether to wrap content in a card-body div
+     */
+    private $body_wrapper = true;
+
+    /**
+     * @var string|null The currently open section ('body', 'footer', or null)
+     */
+    private $open_section = null;
+
+    /**
+     * @var string The CSS class for nav tabs styling (e.g., nav-tabs-box, nav-tabs-custom).  For bootstrap classes see https://getbootstrap.com/docs/5.0/components/navs-tabs/
+     */
+    private $nav_style = 'nav-tabs-box';
+
     /**
      * @var array Mapping for widget button classes to their font awesome icons
      */
     private $widget_buttons_map = [
-        'filter-toggle' => ['default' => 'fas fa-filter', 'toggled' => 'fas fa-filter'],
-        'arrow' => ['default' => 'fas fa-caret-up', 'toggled' => 'fas fa-caret-down'],
-        'setting' => ['default' => 'fas fa-cog', 'toggled' => 'fas fa-cog'],
-        'full_screen' => ['default' => 'fas fa-expand-arrows-alt', 'toggled' => 'fas fa-compress-arrows-alt']
+        'widget-width' => ['default' => 'bi bi-arrows-angle-contract', 'toggled' => 'bi bi-arrows-angle-expand'],
+        'filter-toggle' => ['default' => 'bi bi-funnel', 'toggled' => 'bi bi-funnel-fill'],
+        'arrow' => ['default' => 'bi bi-arrows-collapse', 'toggled' => 'bi bi-arrows-expand'],
+        'setting' => ['default' => 'bi bi-gear-fill', 'toggled' => 'bi bi-gear-fill'],
+        'full-screen' => ['default' => 'bi bi-arrows-angle-contract', 'toggled' => 'bi bi-arrows-angle-expand']
     ];
 
     /**
@@ -57,6 +81,9 @@ class Widget extends AbstractWidget
         $this->filter_uri = '';
         $this->show_filters = null;
         $this->ajax_filtering = null;
+        $this->body_wrapper = true;
+        $this->open_section = null;
+        $this->nav_style = 'nav-tabs-box';
     }
 
     /**
@@ -95,6 +122,32 @@ class Widget extends AbstractWidget
     }
 
     /**
+     * Sets whether to wrap content in a card-body div
+     *
+     * When set to false, the widget content will not be wrapped in a card-body div,
+     * allowing tables to extend to the full width of the card without padding.
+     *
+     * @param bool $wrap Whether to wrap content in card-body (default true)
+     */
+    public function setBodyWrapper(bool $wrap)
+    {
+        $this->body_wrapper = $wrap;
+    }
+
+    /**
+     * Sets the CSS class for nav tabs styling
+     *
+     * Allows overriding the default nav-tabs-box style with an alternative
+     * such as nav-tabs-custom or other tab style variants.
+     *
+     * @param string $style The CSS class for nav tabs (default: nav-tabs-box)
+     */
+    public function setNavStyle(string $style)
+    {
+        $this->nav_style = $style;
+    }
+
+    /**
      * Creates the widget with the given title and attributes
      *
      * @param string $title The title to display for this widget
@@ -106,14 +159,14 @@ class Widget extends AbstractWidget
      *  - common_box_content The content only (full_content excluding the nav)
      * @return mixed An HTML string containing the widget, void if the string is output automatically
      */
-    public function create($title = null, array $attributes = null, $render = null)
+    public function create($title = null, ?array $attributes = null, $render = null)
     {
         // Don't output until this section is completely built
         $output = $this->setOutput(true);
 
         $this->render = ($render == null ? 'full' : $render);
 
-        $default_attributes = ['class' => 'common_box'];
+        $default_attributes = ['class' => 'card'];
 
         // Set the attributes, don't allow overwriting the default class, concat instead
         if (isset($attributes['class']) && isset($default_attributes['class'])) {
@@ -137,6 +190,11 @@ class Widget extends AbstractWidget
             $attributes['id'] = $this->id;
         }
 
+        // Set data-width attribute if provided
+        if (!isset($attributes['data-width'])) {
+            $attributes['data-width'] = 'full';
+        }
+
         // Control which sections are rendered
         $html = '';
         $html .= $this->buildStyleSheets();
@@ -144,23 +202,22 @@ class Widget extends AbstractWidget
             $html .= '
 				<section' . $this->buildAttributes($attributes) . '>
 					' . $badge_uri . '
-					<div class="common_box_header">
-				        <h2>'
-				            . (!empty($this->header_link) ? '<a class="common_box_header_link" href="' . $this->header_link . '">' : '')
-				                . '<span>' . $this->_($title, true) . '</span>'
-                                . $this->buildBadge() . $this->buildWidgetButtons()
-                            . (!empty($this->header_link) ? '</a>' : '')
-				        . '</h2>
-					</div>
-					<div class="common_box_inner">
-						<div class="content_section">';
+					<div class="card-header d-flex justify-content-between align-items-center">'
+                        . '<h5 class="mb-0">' . $this->_($title, true) . '</h5>'
+                        . $this->buildBadge()
+                        . '<div class="widget-controls">'
+                            . (!empty($this->header_link) ? '<a href="' . $this->header_link . '"><i class="bi bi-box-arrow-up-right"></i></a>' : '')
+                            . $this->buildWidgetButtons()
+                        . '</div>
+					</div>';
         }
 
-        // Only render nav and common_box_content container if set to do so
-        if ($this->render == 'full' || $this->render == 'content_section') {
-            $html .= $this->buildNav();
-            $html .= $this->buildFilters();
-            $html .= '<div class="common_box_content">';
+        $html .= '<div class="card-content">';
+        $html .= $this->buildNav();
+        $html .= $this->buildFilters();
+        if ($this->body_wrapper) {
+            $html .= '<div class="card-body">';
+            $this->open_section = 'body';
         }
 
         // Restore output setting
@@ -178,9 +235,9 @@ class Widget extends AbstractWidget
      */
     public function setRow($left = null, $right = null)
     {
-        $html = '<div class="line">
-			<div class="left_section">' . $left . '</div>
-			<div class="right_section">' . $right . '</div>
+        $html = '<div class="row">
+			<div class="col-lg-6">' . $left . '</div>
+			<div class="col-lg-6">' . $right . '</div>
 		</div>';
 
         return $this->output($html);
@@ -197,23 +254,96 @@ class Widget extends AbstractWidget
         $output = $this->setOutput(true);
 
         $html = '';
-
-        // Handle special case where links were used as nav
-        if ($this->render == 'full' && (!empty($this->nav) || !empty($this->link_buttons))) {
-            $html .= '</div>';
-        } // end div.inner or div.tabs_content
-
-        if ($this->render == 'full' || $this->render == 'content_section') {
-            $html .= '
-							</div>
-						</div>';
+        if ($this->open_section) {
+            $html .= '</div>'; // Closes open section (card-body or card-footer)
+            $this->open_section = null;
         }
+        $html .= '</div>'; // Closes .card-content
+
         if ($this->render == 'full') {
-            $html .= '
-					</div>
-					<div class="shadow"></div>
-				</section>';
+            $html .= '</section>';
         }
+
+        // Add AJAX link handler script
+        $widget_selector = isset($this->id) ? '#' . $this->id : '';
+        $html .= '
+            <script type="text/javascript">
+                (function() {
+                    var widgetSelector = "' . $widget_selector . '";
+                    var widgetRoot = widgetSelector ? document.querySelector(widgetSelector) : document;
+
+                    function handleAjaxLink(e) {
+                        var target = e.target.closest("a.ajax");
+                        if (!target) return;
+                        if (widgetSelector && !widgetRoot.contains(target)) return;
+
+                        e.preventDefault();
+                        var url = target.href;
+                        fetch(url, {
+                            method: "GET",
+                            headers: {"X-Requested-With": "XMLHttpRequest"}
+                        })
+                        .then(function(response) { return response.json(); })
+                        .then(function(data) {
+                            if (data.hasOwnProperty("replacer") && data.hasOwnProperty("content")) {
+                                var element = document.querySelector(data.replacer);
+                                if (element) {
+                                    element.innerHTML = data.content;
+                                    executeScripts(element);
+                                }
+                            }
+                        })
+                        .catch(function(error) {
+                            console.log("AJAX error:", error);
+                        });
+                    }
+
+                    function executeScripts(container) {
+                        var scripts = container.querySelectorAll("script");
+                        scripts.forEach(function(oldScript) {
+                            var newScript = document.createElement("script");
+                            Array.from(oldScript.attributes).forEach(function(attr) {
+                                newScript.setAttribute(attr.name, attr.value);
+                            });
+                            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                            oldScript.parentNode.replaceChild(newScript, oldScript);
+                        });
+                    }
+
+                    widgetRoot.addEventListener("click", handleAjaxLink);
+                })();
+            </script>';
+
+        // Restore output setting
+        $this->setOutput($output);
+
+        return $this->output($html);
+    }
+
+    /**
+     * Closes the card-body (if open) and opens the card-footer section
+     *
+     * Use this method to add a footer section to the widget for buttons,
+     * pagination, or other footer content. The card-body will be automatically
+     * closed if it was opened.
+     *
+     * @return mixed An HTML string containing the footer opening, void if output automatically
+     */
+    public function footer()
+    {
+        // Don't output until this section is completely built
+        $output = $this->setOutput(true);
+
+        $html = '';
+
+        // Close card-body if it's open
+        if ($this->open_section === 'body') {
+            $html .= '</div>'; // Closes .card-body
+        }
+
+        // Open card-footer
+        $html .= '<div class="card-footer">';
+        $this->open_section = 'footer';
 
         // Restore output setting
         $this->setOutput($output);
@@ -228,15 +358,10 @@ class Widget extends AbstractWidget
      */
     private function buildWidgetButtons()
     {
-        $num_widget_buttons = count($this->widget_buttons);
-
         $buttons = '';
+        $num_widget_buttons = count($this->widget_buttons);
         for ($i = 0; $i < $num_widget_buttons; $i++) {
-            if (is_array($this->widget_buttons[$i])) {
-                $attributes = $this->widget_buttons[$i];
-            } else {
-                $attributes = ['href' => '#', 'class' => $this->widget_buttons[$i]];
-            }
+            $attributes = is_array($this->widget_buttons[$i]) ? $this->widget_buttons[$i] : ['href' => '#', 'class' => $this->widget_buttons[$i]];
 
             // Create the icons
             $icons = '';
@@ -246,6 +371,7 @@ class Widget extends AbstractWidget
 
             $buttons .= '<a' . $this->buildAttributes($attributes) . '>' . $icons . '</a>';
         }
+
         return $buttons;
     }
 
@@ -261,7 +387,7 @@ class Widget extends AbstractWidget
         $class = trim($class);
 
         if (!empty($class)) {
-            $html = '<i class="' . $this->_($class, true) . ' fa-fw"></i>';
+            $html = '<i class="' . $this->_($class, true) . '"></i>';
         }
 
         return $html;
@@ -306,8 +432,11 @@ class Widget extends AbstractWidget
     {
         $html = '';
         if ($this->badge_value !== null) {
-            $html = '<strong class="badge badge-danger">' . $this->_($this->badge_value, true) . '</strong>';
+            $html = '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">'
+                . $this->_($this->badge_value, true)
+            . '</span>';
         }
+
         return $html;
     }
 
@@ -322,23 +451,12 @@ class Widget extends AbstractWidget
             return null;
         }
 
-        if ($this->nav_type == 'tabs' && !empty($this->nav)) {
-            $html = '
-				<div class="tabs_row">
-					<div class="tabs_nav"><a href="#" class="prev">&nbsp;</a><a href="#" class="next">&nbsp;</a></div>
-					<div class="tab_slider">
-						' . $this->buildNavElements() . '
-					</div>
-				</div>
-				<div class="tabs_content">' . $this->eol;
-        } elseif (!empty($this->nav) || !empty($this->link_buttons)) {
-            $html = '
-				<div class="inner">
-					<div class="links_row">
-						' . $this->buildNavElements() . '
-						' . $this->buildLinkButtons() . '
-					</div>' . $this->eol;
-        }
+        $html = '<div class="card-filter-bar border-top-0">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                ' . $this->buildNavElements() . '
+                ' . $this->buildLinkButtons() . '
+            </div>
+        </div>'  . $this->eol;
 
         return $html;
     }
@@ -350,47 +468,29 @@ class Widget extends AbstractWidget
      */
     private function buildNavElements()
     {
-        if (empty($this->nav)) {
-            return null;
-        }
-
-        $html = '<ul>' . $this->eol;
-        $i = 0;
+        $html = '<ul class="nav ' . htmlspecialchars($this->nav_style, ENT_QUOTES, 'UTF-8') . ' border-0 mb-0">' . $this->eol;
         if (is_array($this->nav)) {
             foreach ($this->nav as $element) {
                 // Set attributes on the anchor element
                 $a_attr = '';
+                $element['attributes']['class'] = $this->concat(
+                    ' ',
+                    ($element['attributes']['class'] ?? ''),
+                    'nav-link',
+                    (($element['current'] ?? null) ? 'active' : ''),
+                    (($element['highlight'] ?? null) ? 'text-danger' : '')
+                );
+
                 if (isset($element['attributes'])) {
                     $a_attr = $this->buildAttributes($element['attributes']);
                 }
 
-                // Set attributes on the list element
-                $li_attr = '';
-                if ($i == 0 || isset($element['current']) || isset($element['highlight'])) {
-                    $li_attr = $this->buildAttributes(
-                        [
-                            'class' => $this->concat(
-                                ' ',
-                                ($i == 0 ? 'first' : ''),
-                                ((isset($element['current']) ? $element['current'] : null) ? 'current' : ''),
-                                (
-                                    (isset($element['highlight']) ? $element['highlight'] : null) && !(isset($element['current']) ? $element['current'] : null)
-                                        ? 'highlight'
-                                        : ''
-                                )
-                            )
-                        ]
-                    );
-                }
-
-                $html .= '<li' . $li_attr . '><a' . $a_attr . '>'
-                    . (isset($element['name']) ? $element['name'] : null)
+                $html .= '<li class="nav-item"><a' . $a_attr . '>'
+                    . ($element['name'] ?? null)
                     . '</a></li>' . $this->eol;
-
-                $i++;
             }
-            $html .= '</ul>' . $this->eol;
         }
+        $html .= '</ul>' . $this->eol;
 
         return $html;
     }
@@ -404,23 +504,20 @@ class Widget extends AbstractWidget
     {
         Loader::loadHelpers($this, ['Form']);
         $this->Form->setOutput(true);
-        $html = '';
+        $show_filters = $this->show_filters
+            || (isset($_GET['show_filters']) && $_GET['show_filters'] === 'true')
+            || (isset($_POST['show_filters']) && $_POST['show_filters'] === 'true');
+        $html = '<div class="card-body border-top filter-section-body" style="' . ($show_filters ? '' : 'display: none;') . '">';
         if (isset($this->filters)) {
-            // Wrap filter form in an inner div to ensure proper styling
-            if ($this->nav_type == 'tabs') {
-                $html .= '<div class="inner">';
-            }
-
             $filter_fields = $this->filters->getFields();
 
             $html .= $this->Form->create(
                 $this->filter_uri,
-                [
-                    'style' => ($this->show_filters ? '' : 'display: none;'),
-                    'class' => 'widget_filter_form'
-               ]
+                ['class' => 'p-3 border rounded filter-section-form']
             );
-            $html .= '<div class="pad">';
+
+            // Add hidden field to preserve filter visibility state
+            $html .= '<input type="hidden" name="show_filters" value="' . ($show_filters ? 'true' : 'false') . '" />';
 
             // Set any hidden fields
             foreach ($filter_fields as $index => $field) {
@@ -435,66 +532,121 @@ class Widget extends AbstractWidget
 
             // Set the input field list
             $i = 1;
-            $html .= '<ul class="row">';
+            $html .= '<div class="row g-3 mb-3">';
             foreach ($filter_fields as $field) {
                 $html .= $this->buildFilter($field);
 
                 if ($i % 4 == 0) {
-                    $html .= '</ul><ul class="row">';
+                    $html .= '</div><div class="row g-3 mb-3">';
                 }
 
                 $i++;
             }
 
             // Set custom HTML inside the from
-            $html .= '</ul>' . $this->filter_html;
+            $html .= '</div>' . $this->filter_html;
 
-            // Add the submit button
+            // Add the clear and submit buttons
+            $html .= '<div class="row"><div class="col-12"><div class="d-flex gap-2 justify-content-end">';
+            // Strip any pagination from the URI and explicitly set page 1
+            $clear_uri = preg_replace('#/p(age)?:\d+/?#', '/', $this->filter_uri);
+            $clear_uri = preg_replace('#/\d+/?$#', '/', $clear_uri); // Also strip trailing /N/ page numbers
+            $clear_uri = preg_replace('#([?&])p(age)?=\d+&?#', '$1', $clear_uri);
+            $clear_uri = rtrim($clear_uri, '?&');
+            $clear_uri = rtrim($clear_uri, '/') . '/';
+            // Explicitly add page 1 to ensure we start at the first page
+            $clear_uri .= '1/';
+            $clear_uri .= (strpos($clear_uri, '?') !== false ? '&' : '?') . 'show_filters=true';
+            $html .= '<a href="' . $this->_($clear_uri, true) . '" class="btn btn-secondary filter-clear">'
+                . Language::_('Widget.clear', true)
+                . '</a>';
             $html .= $this->Form->fieldSubmit(
                 'submit',
                 Language::_('Widget.submit', true),
-                ['class' => 'btn btn-default pull-right']
+                ['class' => 'btn btn-primary']
             );
-            $html .= '</div>';
+            $html .= '</div></div></div>';
             $html .= $this->Form->end();
 
-            if ($this->nav_type == 'tabs') {
-                $html .= '</div>';
-            }
-
-            // Add html/js to submit form for all ajax links
+            // Add html/js to handle ajax links with filter form data
+            // Attaches immediately (not on DOMContentLoaded) to register before application.js
             $html .= '
                 <script type="text/javascript">
-                    $(document).ready(function () {
-                        $("' . (isset($this->id) ? '#'. $this->id : '') . '.common_box").on("click", "a.ajax", function(e) {
+                    (function() {
+                        var cardSelector = "' . (isset($this->id) ? '#' . $this->id : '') . '.card";
+
+                        // Intercept ajax link and nav-link clicks at document level before application.js
+                        // Uses capture phase and stopImmediatePropagation to prevent application.js handler
+                        // Nav-links (status tabs) are included so filter state persists across status changes
+                        document.addEventListener("click", function(e) {
+                            var link = e.target.closest("a.ajax, .nav-link");
+                            if (!link) return;
+
+                            // Only handle links inside our specific card
+                            var card = link.closest(cardSelector);
+                            if (!card) return;
+
+                            var form = card.querySelector("form.filter-section-form");
+                            if (!form) return;
+
+                            // Stop event from reaching application.js global handler
                             e.preventDefault();
-                            var form = $(this).parents(".common_box").find("form.widget_filter_form");
+                            e.stopImmediatePropagation();
 
-                            form.find("input").each(function() {
-                                var data_value = $(this).data("value");
-
-                                if (data_value != undefined && data_value !== "" && $(this).val == "") {
-                                    $(this).attr("value", data_value).val(data_value);
+                            // Sync input values from data-value attributes to ensure filter persistence
+                            form.querySelectorAll("input:not([type=hidden]):not([type=submit])").forEach(function(input) {
+                                var dataValue = input.dataset.value;
+                                if (dataValue !== undefined && dataValue !== "") {
+                                    input.value = dataValue;
                                 }
                             });
 
-                            form.find("select").each(function() {
-                                var data_value = $(this).data("value");
-
-                                if (data_value != undefined && data_value !== "" && $(this).val == "") {
-                                    $(this).val(data_value);
+                            form.querySelectorAll("select").forEach(function(select) {
+                                var dataValue = select.dataset.value;
+                                if (dataValue !== undefined && dataValue !== "") {
+                                    select.value = dataValue;
                                 }
                             });
 
-                            var action = $(form).attr("action");
-                            $(form).attr("action", $(this).attr("href"));
-                            $(form).submit();
-                            $(form).attr("action", action);
-                            return false;
-                        });
-                    });
+                            var originalAction = form.action;
+                            var targetUrl = link.href;
+
+                            // For nav-links (status tabs), reset pagination to page 1
+                            if (link.classList.contains("nav-link")) {
+                                // Parse URL to separate path from query string
+                                var urlParts = targetUrl.split("?");
+                                var path = urlParts[0];
+                                var query = urlParts[1] || "";
+
+                                // Remove any existing page number from path (e.g., /3/ or /page:3/)
+                                path = path.replace(/\/\d+\/?$/, "/");
+                                path = path.replace(/\/page:\d+\/?/g, "/");
+
+                                // Ensure path ends with / before adding page
+                                if (!path.endsWith("/")) {
+                                    path += "/";
+                                }
+
+                                // Add explicit page 1 to the URL path
+                                path += "1/";
+
+                                // Rebuild URL
+                                targetUrl = path + (query ? "?" + query : "");
+
+                                // Mark form to reset pagination in the submit handler
+                                form.dataset.resetPagination = "true";
+                            }
+
+                            form.action = targetUrl;
+                            form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                            form.action = originalAction;
+                            // Clean up the marker
+                            delete form.dataset.resetPagination;
+                        }, true);
+                    })();
                 </script>';
             $html .= $this->filters->getHtml();
+            $html .= '</div>';
         } else {
             $html = $this->filter_html;
         }
@@ -502,11 +654,54 @@ class Widget extends AbstractWidget
         // Add html/js to toggle filter form
         $html .= '
             <script type="text/javascript">
-                $(document).ready(function () {
-                    $("' . (isset($this->id) ? '#'. $this->id . ' ' : '') . '.filter-toggle").click(function () {
-                        $(this).parents(".common_box").find("form.widget_filter_form").toggle();
+                (function() {
+                    var cardSelector = "' . (isset($this->id) ? '#' . $this->id : '') . '.card";
+                    var card = document.querySelector(cardSelector);
+                    if (!card) return;
+
+                    // Function to update pagination and nav links with show_filters parameter
+                    function updatePaginationLinks(showFilters) {
+                        card.querySelectorAll(".pagination a, a.ajax, .nav-link").forEach(function(link) {
+                            if (!link.href || link.classList.contains("filter-toggle") || link.classList.contains("filter-clear")) return;
+                            var url = link.href.replace(/([?&])show_filters=true(&|$)/, "$1").replace(/[?&]$/, "");
+                            if (showFilters) {
+                                url += (url.indexOf("?") !== -1 ? "&" : "?") + "show_filters=true";
+                            }
+                            link.href = url;
+                        });
+                    }
+
+                    // Make updatePaginationLinks available globally for this card
+                    card.updatePaginationLinks = updatePaginationLinks;
+
+                    // Update links on page load based on current filter visibility
+                    var filterBody = card.querySelector(".filter-section-body");
+                    var isVisible = filterBody && window.getComputedStyle(filterBody).display !== "none";
+                    updatePaginationLinks(isVisible);
+
+                    // Use event delegation for filter toggle button (works after AJAX updates)
+                    card.addEventListener("click", function(e) {
+                        var btn = e.target.closest(".filter-toggle");
+                        if (!btn) return;
+
+                        e.preventDefault();
+                        var filterBody = card.querySelector(".filter-section-body");
+                        if (!filterBody) return;
+
+                        blestaSlideToggle(filterBody, 400, function(isNowVisible) {
+                            updatePaginationLinks(isNowVisible);
+
+                            // Update hidden show_filters field to match visibility state
+                            var form = card.querySelector("form.filter-section-form");
+                            if (form) {
+                                var showFiltersInput = form.querySelector("input[name=\"show_filters\"]");
+                                if (showFiltersInput) {
+                                    showFiltersInput.value = isNowVisible ? "true" : "false";
+                                }
+                            }
+                        });
                     });
-                });
+                })();
             </script>';
 
         // Add html/js for submitting filters via ajax
@@ -526,23 +721,53 @@ class Widget extends AbstractWidget
      */
     private function buildFilter(InputField $field)
     {
-        $html = '<li class="col-md-3">';
-        $tooltips = [];
+        // Count text/input fields to determine if we need a wider column
+        $text_field_count = 0;
         foreach ($field->fields as $input) {
-            // Collect all tooltips to be displayed for the field
-            if ($input->type == 'tooltip') {
-                $tooltips[] = $input;
+            if (in_array($input->type, ['fieldText', 'fieldPassword'])) {
+                $text_field_count++;
             }
         }
 
-        // Draw the primary label/field
-        $html .= call_user_func_array(
-            [$this->Form, $field->type],
-            array_merge(
-                (array)$field->params,
-                (!empty($tooltips) ? ['attributes' => ['class' => 'inline']] : [])
-            )
-        );
+        // Use wider column for fields with multiple text inputs (like date range, amount range)
+        $column_class = $text_field_count > 1 ? 'col-md-6 col-lg-4' : 'col-md-4 col-lg-3';
+        $html = '<div class="' . $column_class . '">';
+
+        // Fetch tooltips for this field
+        $tooltip = null;
+        foreach ($field->fields as $input) {
+            if ($input->type == 'tooltip') {
+                $tooltip = $input;
+            }
+        }
+
+        // Draw the primary label/field with form-label class for proper Bootstrap spacing
+        $label_params = (array) $field->params;
+        if ($field->type == 'label') {
+            // Ensure the label has the form-label class for Bootstrap 5 styling
+            if (!isset($label_params['attributes'])) {
+                $label_params['attributes'] = [];
+            }
+            $existing_class = $label_params['attributes']['class'] ?? '';
+            $label_params['attributes']['class'] = trim($existing_class . ' form-label');
+        }
+
+        if ($tooltip) {
+            if (!isset($label_params['attributes'])) {
+                $label_params['attributes'] = [];
+            }
+            $label_params['attributes']['data-bs-toggle'] = 'tooltip';
+            $label_params['attributes']['data-bs-placement'] = 'right';
+            $label_params['attributes']['data-bs-title'] = $this->_($tooltip->params['message'], true);
+        }
+
+        $html .= call_user_func_array([$this->Form, $field->type], $label_params);
+
+        // Wrap multiple text fields in a flex container for side-by-side display
+        $use_flex = $text_field_count > 1;
+        if ($use_flex) {
+            $html .= '<div class="d-flex gap-2">';
+        }
 
         // Draw each form field associated with this label
         foreach ($field->fields as $input) {
@@ -551,44 +776,29 @@ class Widget extends AbstractWidget
                 continue;
             }
 
-            // Display a tooltip after the label if there is a label or the field is not a checkbox/radio
+            // Radio/checkbox lists should break at a new line
             $params = [];
-            if (!empty($tooltips)
-                && (!empty($field->params['name']) || !in_array($input->type, ['fieldCheckbox', 'fieldRadio']))
-            ) {
-                $params = (!in_array($input->type, ['fieldCheckbox', 'fieldRadio'])
-                    ? ['attributes' => ['class' => 'block']]
-                    : []);
+            if (in_array($input->type, ['fieldCheckbox', 'fieldRadio'])) {
+                $html .= '<br />';
+            }
 
-                foreach ($tooltips as $tooltip) {
-                    $html .= '<span class="tooltip block">'
-                            . Language::_('AppController.tooltip.text', true)
-                            . '<div>' . $this->_($tooltip->params['message'], true) . '</div>'
-                        . '</span>';
-                }
-
-                // Radio/checkbox lists should break at a new line
-                if (in_array($input->type, ['fieldCheckbox', 'fieldRadio'])) {
-                    $html .= '<br />';
-                }
-
-                // Reset tooltips, they've already been displayed
-                $tooltips = [];
+            // Wrap text fields in flex-grow container when using flex layout
+            $is_text_field = in_array($input->type, ['fieldText', 'fieldPassword']);
+            if ($use_flex && $is_text_field) {
+                $html .= '<div class="flex-grow-1">';
             }
 
             // Display the form input field
-            if ($input->type == 'fieldSelect') {
-                $input->params['attributes']['data-value'] =
-                    isset($input->params['selected_value']) ? $input->params['selected_value'] : '';
-            } else {
-                $input->params['attributes']['data-value'] =
-                    isset($input->params['value']) ? $input->params['value'] : '';
-            }
+            $input->params['attributes']['data-value'] = $input->type == 'fieldSelect' ? $input->params['selected_value'] ?? '' : $input->params['value'] ?? '';
 
             $html .= call_user_func_array(
                 [$this->Form, $input->type],
                 array_merge((array)$input->params, $params)
             );
+
+            if ($use_flex && $is_text_field) {
+                $html .= '</div>';
+            }
 
             // Draw the form field's secondary label if checkbox or radio item
             if (($input->type == 'fieldCheckbox' || $input->type == 'fieldRadio') && isset($input->label)) {
@@ -606,14 +816,12 @@ class Widget extends AbstractWidget
             }
         }
 
-        // Display tooltips at the end of the field if any exist
-        foreach ($tooltips as $tooltip) {
-            $html .= '<span class="tooltip">'
-                    . Language::_('AppController.tooltip.text', true)
-                    . '<div>' . $this->_($tooltip->params['message'], true) . '</div>'
-                . '</span>';
+        if ($use_flex) {
+            $html .= '</div>';
         }
-        $html .= '</li>';
+
+        $html .= '</div>';
+
         return $html;
     }
 
@@ -626,23 +834,85 @@ class Widget extends AbstractWidget
     {
         return '
             <script type="text/javascript">
-                $(document).ready(function () {
-                    $("form.widget_filter_form").submit(function(event) {
-                        event.preventDefault();
-                        var that = this;
-                        if ($(this).blestaDisableFormSubmission($(this))) {
-                            $(this).blestaRequest("POST", $(this).attr("action"), $(this).serialize(),
-                                // On success
-                                function(data) {
-                                    if (data.hasOwnProperty("replacer") && data.hasOwnProperty("content")) {
-                                        $(that).parents(".common_box").find(data.replacer).html(data.content);
+                // Use event delegation for form submit to work after AJAX content replacement
+                document.addEventListener("submit", function(event) {
+                    var formElement = event.target.closest("form.filter-section-form");
+                    if (!formElement) return;
+
+                    // Check if already handled by another widget submit handler
+                    if (event.defaultPrevented) return;
+
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    var formData = new FormData(formElement);
+
+                    // If marked to reset pagination (e.g., status tab click), force page 1
+                    if (formElement.dataset.resetPagination === "true") {
+                        formData.delete("p");
+                        formData.delete("page");
+                        formData.set("p", "1");
+                    }
+
+                    var card = formElement.closest(".card");
+                    var submitBtn = formElement.querySelector("button[type=\"submit\"], input[type=\"submit\"]");
+
+                    // Remember filter section visibility state before AJAX
+                    var filterBodyBefore = card.querySelector(".filter-section-body");
+                    var wasVisible = filterBodyBefore && window.getComputedStyle(filterBodyBefore).display !== "none";
+
+                            if (submitBtn) {
+                                submitBtn.disabled = true;
+                            }
+
+                            fetch(formElement.action, {
+                                method: "POST",
+                                body: new URLSearchParams(formData),
+                                headers: {
+                                    "X-Requested-With": "XMLHttpRequest",
+                                    "Content-Type": "application/x-www-form-urlencoded"
+                                }
+                            })
+                            .then(function(response) { return response.json(); })
+                            .then(function(data) {
+                                if (data.replacer && data.content) {
+                                    var target = card.querySelector(data.replacer);
+                                    if (target) {
+                                        target.innerHTML = data.content;
+                                        if (typeof blestaBindDatePicker === "function") {
+                                            blestaBindDatePicker(card);
+                                        }
+                                        if (typeof blestaBindToolTips === "function") {
+                                            blestaBindToolTips(card);
+                                        }
+                                        if (typeof blestaModalConfirm === "function") {
+                                            card.querySelectorAll(".modal-confirm-delete").forEach(function(el) {
+                                                blestaModalConfirm(el, { submit: true });
+                                            });
+                                        }
+                                        // Dispatch event for page-specific re-initialization after AJAX
+                                        document.dispatchEvent(new CustomEvent("blestaAjaxComplete", { detail: { card: card } }));
+                                        // Update pagination links with show_filters after AJAX content replacement
+                                        if (typeof card.updatePaginationLinks === "function") {
+                                            var filterBody = card.querySelector(".filter-section-body");
+                                            var isVisible = filterBody && window.getComputedStyle(filterBody).display !== "none";
+                                            card.updatePaginationLinks(isVisible);
+                                        }
                                     }
-                                },
-                                null,
-                                {dataType: "json", complete: function() { $("form.widget_filter_form").blestaEnableFormSubmission($("form.widget_filter_form")); }}
-                            );
-                        }
-                    });
+                                }
+                                // Restore filter section visibility state after AJAX
+                                var filterBody = card.querySelector(".filter-section-body");
+                                if (filterBody) {
+                                    filterBody.style.display = wasVisible ? "" : "none";
+                                }
+                            })
+                            .catch(function(error) {
+                                console.error("Filter request failed:", error);
+                            })
+                            .finally(function() {
+                                if (submitBtn) {
+                                    submitBtn.disabled = false;
+                                }
+                            });
                 });
             </script>';
     }
@@ -654,31 +924,36 @@ class Widget extends AbstractWidget
      */
     private function buildLinkButtons()
     {
-        $default_attributes = ['class' => 'btn btn-default pull-right btn-sm'];
+        $default_attributes = ['class' => 'btn btn-outline-secondary btn-sm'];
 
-        $html = '';
+        $html = '<div class="d-flex gap-2">';
         if (is_array($this->link_buttons)) {
             foreach ($this->link_buttons as $element) {
+                if (str_contains($element['attributes']['href'], '/add/') || str_contains($element['icon'] ?? '', 'bi-plus-lg')) {
+                    $default_attributes = ['class' => 'btn btn btn-primary btn-sm'];
+                }
+
                 // Set the attributes, don't allow overwriting the default class, concat instead
-                if (isset($element['attributes']['class']) && isset($default_attributes['class'])) {
+                if (isset($element['attributes']['class'])) {
                     $element['attributes']['class'] .= ' ' . $default_attributes['class'];
                 }
+
                 $element['attributes'] = array_merge($default_attributes, (array)$element['attributes']);
                 $icon = (array_key_exists('icon', $element) ? $element['icon'] : '');
 
                 $html .= '<a' . $this->buildAttributes($element['attributes']) . '>'
                     . $this->buildIcon($icon)
-                    . ' <span>'
-                    . $this->_($element['name'], true)
-                    . '</span></a>' . $this->eol;
+                    . (!empty($element['name']) ? ('<span>' . $this->_($element['name'], true) . '</span>') : '')
+                . '</a>' . $this->eol;
             }
         }
+        $html .= '</div>' . $this->eol;
 
         return $html;
     }
 
     /**
-     * Builds the markup to link style sheets into the DOM using jQuery
+     * Builds the markup to link style sheets into the DOM
      *
      * @return string A string of HTML
      */
@@ -687,47 +962,41 @@ class Widget extends AbstractWidget
         $html = '';
         if (is_array($this->style_sheets) && !empty($this->style_sheets)) {
             $html .= '<script type="text/javascript">' . $this->eol;
+            $html .= '(function() {' . $this->eol;
             foreach ($this->style_sheets as $style) {
-                //$html .= "$('head').append('<link" . $this->buildAttributes($style) . " />');";
-                $attributes = '';
-                $i = 0;
+                $html .= '    var link = document.createElement("link");' . $this->eol;
                 foreach ($style as $key => $value) {
-                    $attributes .= ($i++ > 0 ? ',' . $this->eol : '') . $key . ': "' . $value . '"';
+                    $html .= '    link.' . $key . ' = "' . $value . '";' . $this->eol;
                 }
-                $html .= '$(document).blestaSetHeadTag("link", { ' . $attributes . ' });' . $this->eol;
+                $html .= '    document.head.appendChild(link);' . $this->eol;
             }
-            $html .= $this->eol . '</script>';
+            $html .= '})();' . $this->eol;
+            $html .= '</script>';
         }
 
         return $html;
     }
 
     /**
-     *  Add the filter form toggle button to the list of widget links
+     * Add the filter form toggle button to the card-filter-bar via link_buttons
      */
     protected function setFilterLink()
     {
-        // Set the filter form toggle button
         if (isset($this->filters) || $this->filter_html != '') {
-            if ($this->nav_type == 'tabs') {
-                $this->setWidgetButton([
+            if (!is_array($this->link_buttons)) {
+                $this->link_buttons = [];
+            }
+
+            // Prepend filter toggle to link_buttons so it appears first (renders in card-filter-bar)
+            array_unshift($this->link_buttons, [
+                'name' => '',
+                'icon' => 'bi bi-funnel',
+                'attributes' => [
+                    'href' => '#',
                     'class' => 'filter-toggle',
                     'title' => Language::_('Widget.toggle_filters', true)
-                ]);
-            } else {
-                if (!is_array($this->link_buttons)) {
-                    $this->link_buttons = [];
-                }
-
-                $this->link_buttons[] = [
-                    'icon' => 'fas fa-filter',
-                    'name' => '',
-                    'attributes' => [
-                        'class' => 'filter-toggle',
-                        'title' => Language::_('Widget.toggle_filters', true)
-                    ]
-                ];
-            }
+                ]
+            ]);
         }
     }
 }

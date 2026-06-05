@@ -1,14 +1,10 @@
     <div class="pad">
-        <h4><?php $this->_('Nominet.tab_client_whois.heading');?></h4>
+        <h4><?php $this->_('Nominet.tab_client_whois.heading'); ?></h4>
 
-        <?php
-        $this->Form->create();
-        ?>
+        <?php $this->Form->create(); ?>
         <div class="row panel-fix">
             <div class="col-md-12">
-                <?php
-                foreach ($whois_fields ?? [] as $name => $field) {
-                ?>
+                <?php foreach ($whois_fields ?? [] as $name => $field) { ?>
                     <div class="form-group">
                         <?php
                         $this->Form->label($field['label'], 'registrant_' . $name);
@@ -21,21 +17,26 @@
                                 $options = $field['options'] ?? [];
                             }
 
-                            $this->Form->fieldSelect('registrant[' . $name . ']', $options, ($vars->registrant[$name] ?? ''), ['id' => 'registrant_' . $name, 'class'=>'form-control']);
+                            $this->Form->fieldSelect(
+                                'registrant[' . $name . ']',
+                                $options,
+                                $vars->registrant[$name] ?? '',
+                                ['id' => 'registrant_' . $name, 'class' => 'form-control'],
+                            );
                         } else {
-                            $this->Form->fieldText('registrant[' . $name . ']', ($vars->registrant[$name] ?? ''), ['id' => 'registrant_' . $name, 'class'=>'form-control', 'placeholder' => $field['label']]);
+                            $this->Form->fieldText('registrant[' . $name . ']', $vars->registrant[$name] ?? '', [
+                                'id' => 'registrant_' . $name,
+                                'class' => 'form-control',
+                                'placeholder' => $field['label'],
+                            ]);
                         }
                         ?>
                     </div>
-                <?php
-                }
-                ?>
+                <?php } ?>
             </div>
         </div>
         <button class="btn btn-light float-right" type="submit">
-            <i class="fas fa-edit"></i> <?php $this->_('Nominet.tab_client_whois.field_submit');?>
+            <i class="fas fa-edit"></i> <?php $this->_('Nominet.tab_client_whois.field_submit'); ?>
         </button>
-        <?php
-        $this->Form->end();
-        ?>
+        <?php $this->Form->end(); ?>
     </div>

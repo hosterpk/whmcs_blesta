@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use stdClass;
+
 /**
  * Company Theme Settings
  *
@@ -148,18 +155,20 @@ class Themes extends AppModel
 
         // Update theme
         if ($this->Input->validates($vars)) {
-            $this->Record->duplicate('value', '=', $vars['id'])->
-                insert('company_settings', ['key' => 'theme_' . $type, 'company_id' => $company_id, 'value' => $id]);
-
-            // Update logo
             $theme = $this->get($id);
-            $this->Record->duplicate('value', '=', $theme->logo_url)->
-                insert('company_settings', [
-                    'key' => 'logo_' . $type,
-                    'company_id' => $company_id,
-                    'value' => $theme->logo_url
-                ]
-            );
+
+            $this->Record->duplicate('value', '=', $vars['id'])
+                ->insert('company_settings', ['key' => 'theme_' . $type, 'company_id' => $company_id, 'value' => $id]);
+
+            // Update logo (client themes only — admin logos are set via Customize)
+            if ($type !== 'admin' && !empty($theme->logo_url)) {
+                $this->Record->duplicate('value', '=', $theme->logo_url)->
+                    insert('company_settings', [
+                        'key' => 'logo_' . $type,
+                        'company_id' => $company_id,
+                        'value' => $theme->logo_url
+                    ]);
+            }
         }
     }
 
@@ -263,10 +272,14 @@ class Themes extends AppModel
             // Update the theme
             $fields = ['company_id', 'name', 'type', 'data'];
 
+            // Admin themes don't use colors or logos — Paradigm ignores color injection
+            // and logos are set via company settings (Customize)
+            $is_admin = ($vars['type'] ?? null) === 'admin';
+
             $theme_options = [
-                'colors' => $vars['colors'],
-                'logo_url' => (isset($vars['logo_url']) ? $vars['logo_url'] : ''),
-                'custom_css' => addslashes(isset($vars['custom_css']) ? $vars['custom_css'] : '')
+                'colors' => $is_admin ? [] : ($vars['colors'] ?? []),
+                'logo_url' => $is_admin ? '' : ($vars['logo_url'] ?? ''),
+                'custom_css' => addslashes($vars['custom_css'] ?? '')
             ];
 
             $vars['data'] = base64_encode(json_encode($theme_options));
@@ -342,10 +355,14 @@ class Themes extends AppModel
             // Update the theme
             $fields = ['name', 'type', 'data'];
 
+            // Admin themes don't use colors or logos — Paradigm ignores color injection
+            // and logos are set via company settings (Customize)
+            $is_admin = ($vars['type'] ?? null) === 'admin';
+
             $theme_options = [
-                'colors' => $vars['colors'],
-                'logo_url' => (isset($vars['logo_url']) ? $vars['logo_url'] : ''),
-                'custom_css' => addslashes(isset($vars['custom_css']) ? $vars['custom_css'] : '')
+                'colors' => $is_admin ? [] : ($vars['colors'] ?? []),
+                'logo_url' => $is_admin ? '' : ($vars['logo_url'] ?? ''),
+                'custom_css' => addslashes($vars['custom_css'] ?? '')
             ];
 
             $data = base64_encode(json_encode($theme_options));
@@ -362,8 +379,7 @@ class Themes extends AppModel
                         'key' => 'logo_' . $theme->type,
                         'company_id' => $theme->company_id,
                         'value' => $theme->logo_url
-                    ]
-                );
+                    ]);
             }
         }
     }
@@ -442,29 +458,25 @@ class Themes extends AppModel
      */
     public function getCurrent($company_id, $type = 'admin')
     {
-        // Company Settings
-        $sql1 = $this->Record->select(['key', 'value'])
-            ->from('company_settings')
-            ->where('company_id', '=', $company_id)
-            ->get();
-        $values = $this->Record->values;
-        $this->Record->reset();
-        $this->Record->values = $values;
-
-        // System settings, in some cases no company theme may be set so inherit the system theme
-        $sql2 = $this->Record->select(['key', 'value'])->from('settings')->get();
-        $values = $this->Record->values;
-        $this->Record->reset();
-        $this->Record->values = $values;
-
         // Set the type of theme to fetch
         $type_field = 'theme_admin';
         if ($type == 'client') {
             $type_field = 'theme_client';
         }
 
-        $theme_setting = $this->Record->select()->from(['((' . $sql1 . ') UNION (' . $sql2 . '))' => 'temp'])->
-            where('temp.key', '=', $type_field)->fetch();
+        // Prefer the company override, then fall back to the system default
+        $theme_setting = $this->Record->select(['value'])
+            ->from('company_settings')
+            ->where('company_id', '=', $company_id)
+            ->where('key', '=', $type_field)
+            ->fetch();
+
+        if (!$theme_setting) {
+            $theme_setting = $this->Record->select(['value'])
+                ->from('settings')
+                ->where('key', '=', $type_field)
+                ->fetch();
+        }
 
         if ($theme_setting) {
             return $this->get($theme_setting->value);
@@ -520,8 +532,8 @@ class Themes extends AppModel
     public function getTypes()
     {
         return [
-            'admin' => $this->_('Themes.type.admin'),
-            'client' => $this->_('Themes.type.client')
+            'client' => $this->_('Themes.type.client'),
+            'admin' => $this->_('Themes.type.admin')
         ];
     }
 
@@ -674,12 +686,12 @@ class Themes extends AppModel
         // Add data fields
         if ($theme) {
             // Set any theme data
-            $data = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($theme->data));
+            $data = safe_unserialize(base64_decode($theme->data));
 
             if ($data) {
                 $theme->colors = $data['colors'];
-                $theme->logo_url = (isset($data['logo_url']) ? $data['logo_url'] : '');
-                $theme->custom_css = stripslashes(isset($data['custom_css']) ? $data['custom_css'] : '');
+                $theme->logo_url = ($data['logo_url'] ?? '');
+                $theme->custom_css = stripslashes($data['custom_css'] ?? '');
             } else {
                 $theme->colors = [];
                 $theme->logo_url = null;
@@ -731,12 +743,17 @@ class Themes extends AppModel
             ],
             'colors' => [
                 'exist' => [
-                    'rule' => [[$this, 'validateColorsSet'], (isset($vars['type']) ? $vars['type'] : null)],
+                    'rule' => [[$this, 'validateColorsSet'], ($vars['type'] ?? null)],
                     'message' => $this->_('Themes.!error.colors.exist', true),
                     'pre_format' => [[$this, 'formatMissingColors']]
                 ]
             ]
         ];
+
+        // Skip color validation for admin themes — Paradigm ignores color injection
+        if (($vars['type'] ?? null) === 'admin') {
+            unset($rules['colors']);
+        }
 
         // Set edit-specific rules
         if ($edit) {
@@ -748,7 +765,7 @@ class Themes extends AppModel
             ];
 
             $rules['company_id']['set'] = [
-                'rule' => [[$this, 'validateCompanySet'], (isset($vars['id']) ? $vars['id'] : null), (isset($vars['type']) ? $vars['type'] : null)],
+                'rule' => [[$this, 'validateCompanySet'], ($vars['id'] ?? null), ($vars['type'] ?? null)],
                 'message' => $this->_('Themes.!error.company_id.set', true)
             ];
         }

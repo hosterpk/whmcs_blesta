@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Import Manager Importer
  *
@@ -72,7 +73,7 @@ class ImportManagerImporter extends ImportManagerModel
         $files = scandir($migrator_dir);
         foreach ($files as $file) {
             if (substr($file, 0, 1) != '.' && is_dir($migrator_dir . DS . $file)) {
-                $versions[$file] = isset($migrator->migrators->{$file}) ? $migrator->migrators->{$file} : $file;
+                $versions[$file] = $migrator->migrators->{$file} ?? $file;
             }
         }
 
@@ -108,7 +109,7 @@ class ImportManagerImporter extends ImportManagerModel
                 $this->Input->setErrors($errors);
                 return;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->Input->setErrors(['error' => [$e->getMessage()]]);
             return;
         }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Multicraft Server actions
  *
@@ -129,7 +130,8 @@ class MulticraftService
     {
         $ips = [];
 
-        if (!empty($this->module_row->meta->daemons) && !empty($this->module_row->meta->ips)
+        if (
+            !empty($this->module_row->meta->daemons) && !empty($this->module_row->meta->ips)
             && !empty($this->module_row->meta->ips_in_use)
         ) {
             foreach ($this->module_row->meta->daemons as $index => $daemon_id) {
@@ -214,11 +216,9 @@ class MulticraftService
         foreach ($meta_fields['all'] as $field) {
             if (!array_key_exists($this->service_prefix . $field, $vars)) {
                 // Default to package value
-                $fields[$field] = (isset($package->meta->{$field}) ? $package->meta->{$field} : '');
+                $fields[$field] = ($package->meta->{$field} ?? '');
             } else {
-                $fields[$field] = (isset($vars[$this->service_prefix . $field])
-                    ? $vars[$this->service_prefix . $field]
-                    : (isset($package->meta->{$field}) ? $package->meta->{$field} : '')
+                $fields[$field] = ($vars[$this->service_prefix . $field] ?? ($package->meta->{$field} ?? '')
                 );
             }
         }
@@ -247,7 +247,8 @@ class MulticraftService
         $daemon_ids = [];
         $daemons = $this->api->listConnections();
 
-        if (isset($daemons['success']) && $daemons['success'] == true
+        if (
+            isset($daemons['success']) && $daemons['success'] == true
             && isset($daemons['data']['Daemons']) && is_array($daemons['data']['Daemons'])
         ) {
             foreach ($daemons['data']['Daemons'] as $daemon_id => $name) {
@@ -367,7 +368,8 @@ class MulticraftService
 
                     // Default the IP/port to blank values so that they may be assigned
                     // automatically to that of the daemon
-                    if (empty($vars[$this->service_prefix . 'port'])
+                    if (
+                        empty($vars[$this->service_prefix . 'port'])
                         && empty($vars[$this->service_prefix . 'ip'])
                     ) {
                         $config_settings['port'] = '';
@@ -390,10 +392,11 @@ class MulticraftService
             }
 
             // User can set players in their account
-            if (array_key_exists('user_players', $vars['configoptions'])
+            if (
+                array_key_exists('user_players', $vars['configoptions'])
                 || ($service_fields && property_exists($service_fields, $this->service_prefix . 'user_players'))
             ) {
-                $value = (isset($vars['configoptions']['user_players']) ? $vars['configoptions']['user_players'] : '0');
+                $value = ($vars['configoptions']['user_players'] ?? '0');
                 $response = $this->api->updateServerConfig($server_id, 'user_players', $value);
                 if (isset($response['success']) && $response['success'] == 'true') {
                     $config_option_fields['user_players'] = $value;
@@ -401,10 +404,11 @@ class MulticraftService
             }
 
             // Server set to dedicated IP address
-            if (array_key_exists('dedicated_ip', $vars['configoptions'])
+            if (
+                array_key_exists('dedicated_ip', $vars['configoptions'])
                 || ($service_fields && property_exists($service_fields, $this->service_prefix . 'dedicated_ip'))
             ) {
-                $value = (isset($vars['configoptions']['dedicated_ip']) ? $vars['configoptions']['dedicated_ip'] : '0');
+                $value = ($vars['configoptions']['dedicated_ip'] ?? '0');
 
                 // Add dedicated IP if not already set
                 $dedicated_ips = $this->getModuleDedicatedIps();
@@ -463,7 +467,8 @@ class MulticraftService
                     }
 
                     // Mark the dedicated IP in use by updating the module row
-                    if ($dedicated_ip_in_use !== null && isset($dedicated_ips[$dedicated_ip_in_use])
+                    if (
+                        $dedicated_ip_in_use !== null && isset($dedicated_ips[$dedicated_ip_in_use])
                         && isset($this->module_row->id)
                     ) {
                         Loader::loadModels($this, ['ModuleManager']);
@@ -525,7 +530,7 @@ class MulticraftService
                 $user_id = $vars[$this->service_prefix . 'user_id'];
             } else {
                 $user = $this->createUser($package, $vars);
-                $user_id = (isset($user['id']) ? $user['id'] : null);
+                $user_id = ($user['id'] ?? null);
                 if ($this->Input->errors()) {
                     return;
                 }
@@ -550,7 +555,8 @@ class MulticraftService
             foreach ($field_mapping['server'] as $service_field => $api_field) {
                 if (array_key_exists($this->service_prefix . $service_field, (array)$vars)) {
                     // Skip daemon ID, IP, port, and memory updates if not set
-                    if (in_array($service_field, ['daemon_id', 'ip', 'port', 'memory'])
+                    if (
+                        in_array($service_field, ['daemon_id', 'ip', 'port', 'memory'])
                         && !isset($vars[$this->service_prefix . $service_field])
                     ) {
                         continue;
@@ -570,7 +576,8 @@ class MulticraftService
             }
 
             // Choose a daemon if one is not explicitly given
-            if (empty($server_fields[$field_mapping['server']['daemon_id']])
+            if (
+                empty($server_fields[$field_mapping['server']['daemon_id']])
                 && empty($vars[$this->service_prefix . 'daemon_id'])
             ) {
                 $server_fields[$field_mapping['server']['daemon_id']] = $this->getBestDaemon();
@@ -646,7 +653,7 @@ class MulticraftService
         foreach ($meta_fields['all'] as $field) {
             $service_fields[] = [
                 'key' => $this->service_prefix . $field,
-                'value' => (isset($params[$field]) ? $params[$field] : ''),
+                'value' => ($params[$field] ?? ''),
                 'encrypted' => 0
             ];
         }
@@ -657,10 +664,10 @@ class MulticraftService
             $value = '';
             switch ($field) {
                 case 'user_id':
-                    $value = (isset($user_id) ? $user_id : '');
+                    $value = ($user_id ?? '');
                     break;
                 case 'server_id':
-                    $value = (isset($server_id) ? $server_id : '');
+                    $value = ($server_id ?? '');
                     break;
             }
             $service_fields[] = [
@@ -744,20 +751,14 @@ class MulticraftService
                     $service_fields->{$this->service_prefix . $field} = $vars[$this->service_prefix . $field];
                 }
             } else {
-                $service_fields->{$this->service_prefix . $field} = (isset($vars[$this->service_prefix . $field])
-                    ? $vars[$this->service_prefix . $field]
-                    : ''
+                $service_fields->{$this->service_prefix . $field} = ($vars[$this->service_prefix . $field] ?? ''
                 );
             }
         }
 
-        $server_id = (isset($service_fields->{$this->service_prefix . 'server_id'})
-            ? $service_fields->{$this->service_prefix . 'server_id'}
-            : ''
+        $server_id = ($service_fields->{$this->service_prefix . 'server_id'} ?? ''
         );
-        $user_id = (isset($service_fields->{$this->service_prefix . 'user_id'})
-            ? $service_fields->{$this->service_prefix . 'user_id'}
-            : ''
+        $user_id = ($service_fields->{$this->service_prefix . 'user_id'} ?? ''
         );
 
         // Only provision the service changes if 'use_module' is true
@@ -772,7 +773,8 @@ class MulticraftService
             $server_fields = [];
             foreach ($field_mapping['server'] as $service_field => $api_field) {
                 // Skip certain fields if not set
-                if (in_array($service_field, ['daemon_id', 'ip', 'port'])
+                if (
+                    in_array($service_field, ['daemon_id', 'ip', 'port'])
                     && !isset($vars[$this->service_prefix . $service_field])
                 ) {
                     continue;
@@ -803,7 +805,8 @@ class MulticraftService
             }
 
             // Set an FTP account with read/write access for the user
-            if (!empty($server_id) && !empty($user_id)
+            if (
+                !empty($server_id) && !empty($user_id)
                 && isset($service_fields->{$this->service_prefix . 'create_ftp'})
                 && $service_fields->{$this->service_prefix . 'create_ftp'} == '1'
             ) {
@@ -881,7 +884,8 @@ class MulticraftService
             foreach ($vars as $key => $value) {
                 $temp_key = str_replace($this->service_prefix, '', $key);
 
-                if (in_array($temp_key, $package_meta_fields['all'])
+                if (
+                    in_array($temp_key, $package_meta_fields['all'])
                     && isset($package_meta_mapping['server'][$temp_key])
                 ) {
                     $this->Services->editField($service_id, ['key' => $key, 'value' => $value, 'encrypted' => 0]);
@@ -937,23 +941,18 @@ class MulticraftService
             Loader::loadModels($this, ['ModuleManager']);
             $dedicated_ips = $this->getModuleDedicatedIps();
             $module_meta = (isset($this->module_row->meta) ? (array)$this->module_row->meta : []);
-            $server_ip = (isset($service_fields->{$this->service_prefix . 'ip'})
-                ? $service_fields->{$this->service_prefix . 'ip'}
-                : null
+            $server_ip = ($service_fields->{$this->service_prefix . 'ip'} ?? null
             );
-            $port = (isset($service_fields->{$this->service_prefix . 'port'})
-                ? $service_fields->{$this->service_prefix . 'port'}
-                : null
+            $port = ($service_fields->{$this->service_prefix . 'port'} ?? null
             );
-            $daemon_id = (isset($service_fields->{$this->service_prefix . 'daemon_id'})
-                ? $service_fields->{$this->service_prefix . 'daemon_id'}
-                : null
+            $daemon_id = ($service_fields->{$this->service_prefix . 'daemon_id'} ?? null
             );
 
             // Find the dedicated IP that this service is using
             // Check if port is empty, which is default, to maintain backwards compatability
             foreach ($dedicated_ips as $dedicated_ip) {
-                if ($dedicated_ip['ip'] == $server_ip
+                if (
+                    $dedicated_ip['ip'] == $server_ip
                     && $dedicated_ip['daemon_id'] == $daemon_id
                     && ($dedicated_ip['port'] == $port || $dedicated_ip['port'] == '')
                 ) {
@@ -1078,9 +1077,7 @@ class MulticraftService
         $server_name->attach(
             $fields->fieldText(
                 $this->service_prefix . 'server_name',
-                (isset($vars->{$this->service_prefix . 'server_name'})
-                    ? $vars->{$this->service_prefix . 'server_name'}
-                    : (isset($package->meta->server_name) ? $package->meta->server_name : null)
+                ($vars->{$this->service_prefix . 'server_name'} ?? ($package->meta->server_name ?? null)
                 ),
                 ['id' => $this->service_prefix . 'server_name']
             )
@@ -1095,7 +1092,7 @@ class MulticraftService
         $server_id->attach(
             $fields->fieldText(
                 $this->service_prefix . 'server_id',
-                (isset($vars->{$this->service_prefix . 'server_id'}) ? $vars->{$this->service_prefix . 'server_id'} : null),
+                ($vars->{$this->service_prefix . 'server_id'} ?? null),
                 ['id' => $this->service_prefix . 'server_id']
             )
         );
@@ -1111,8 +1108,8 @@ class MulticraftService
         $user_id->attach(
             $fields->fieldText(
                 $this->service_prefix . 'user_id',
-                (isset($vars->{$this->service_prefix . 'user_id'}) ? $vars->{$this->service_prefix . 'user_id'} : null),
-                ['id'=>$this->service_prefix . 'user_id']
+                ($vars->{$this->service_prefix . 'user_id'} ?? null),
+                ['id' => $this->service_prefix . 'user_id']
             )
         );
         $tooltip = $fields->tooltip(Language::_('MulticraftService.service_fields.tooltip.user_id', true));
@@ -1127,7 +1124,7 @@ class MulticraftService
         $daemon_id->attach(
             $fields->fieldText(
                 $this->service_prefix . 'daemon_id',
-                (isset($vars->{$this->service_prefix . 'daemon_id'}) ? $vars->{$this->service_prefix . 'daemon_id'} : null),
+                ($vars->{$this->service_prefix . 'daemon_id'} ?? null),
                 ['id' => $this->service_prefix . 'daemon_id']
             )
         );
@@ -1140,7 +1137,7 @@ class MulticraftService
         $ip->attach(
             $fields->fieldText(
                 $this->service_prefix . 'ip',
-                (isset($vars->{$this->service_prefix . 'ip'}) ? $vars->{$this->service_prefix . 'ip'} : null),
+                ($vars->{$this->service_prefix . 'ip'} ?? null),
                 ['id' => $this->service_prefix . 'ip']
             )
         );
@@ -1156,9 +1153,7 @@ class MulticraftService
         $port->attach(
             $fields->fieldText(
                 $this->service_prefix . 'port',
-                (isset($vars->{$this->service_prefix . 'port'})
-                    ? $vars->{$this->service_prefix . 'port'}
-                    : ($package->meta->port ?? null)
+                ($vars->{$this->service_prefix . 'port'} ?? ($package->meta->port ?? null)
                 ),
                 ['id' => $this->service_prefix . 'port']
             )
@@ -1175,9 +1170,7 @@ class MulticraftService
         $players->attach(
             $fields->fieldText(
                 $this->service_prefix . 'players',
-                (isset($vars->{$this->service_prefix . 'players'})
-                    ? $vars->{$this->service_prefix . 'players'}
-                    : (isset($package->meta->players) ? $package->meta->players : null)
+                ($vars->{$this->service_prefix . 'players'} ?? ($package->meta->players ?? null)
                 ),
                 ['id' => $this->service_prefix . 'players']
             )
@@ -1192,9 +1185,7 @@ class MulticraftService
         $memory->attach(
             $fields->fieldText(
                 $this->service_prefix . 'memory',
-                (isset($vars->{$this->service_prefix . 'memory'})
-                    ? $vars->{$this->service_prefix . 'memory'}
-                    : (isset($package->meta->memory) ? $package->meta->memory : null)
+                ($vars->{$this->service_prefix . 'memory'} ?? ($package->meta->memory ?? null)
                 ),
                 ['id' => $this->service_prefix . 'memory']
             )
@@ -1212,9 +1203,7 @@ class MulticraftService
         $jar->attach(
             $fields->fieldText(
                 $this->service_prefix . 'jarfile',
-                (isset($vars->{$this->service_prefix . 'jarfile'})
-                    ? $vars->{$this->service_prefix . 'jarfile'}
-                    : (isset($package->meta->jarfile) ? $package->meta->jarfile : null)
+                ($vars->{$this->service_prefix . 'jarfile'} ?? ($package->meta->jarfile ?? null)
                 ),
                 ['id' => $this->service_prefix . 'jarfile']
             )
@@ -1233,9 +1222,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'jardir',
                 $this->getJarDirectories(),
-                (isset($vars->{$this->service_prefix . 'jardir'})
-                    ? $vars->{$this->service_prefix . 'jardir'}
-                    : (isset($package->meta->jardir) ? $package->meta->jardir : null)
+                ($vars->{$this->service_prefix . 'jardir'} ?? ($package->meta->jardir ?? null)
                 ),
                 ['id' => $this->service_prefix . 'jardir']
             )
@@ -1254,9 +1241,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'user_jar',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'user_jar'})
-                    ? $vars->{$this->service_prefix . 'user_jar'}
-                    : (isset($package->meta->user_jar) ? $package->meta->user_jar : null)
+                ($vars->{$this->service_prefix . 'user_jar'} ?? ($package->meta->user_jar ?? null)
                 ),
                 ['id' => $this->service_prefix . 'user_jar']
             )
@@ -1272,9 +1257,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'user_name',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'user_name'})
-                    ? $vars->{$this->service_prefix . 'user_name'}
-                    : (isset($package->meta->user_name) ? $package->meta->user_name : null)
+                ($vars->{$this->service_prefix . 'user_name'} ?? ($package->meta->user_name ?? null)
                 ),
                 ['id' => $this->service_prefix . 'user_name']
             )
@@ -1290,9 +1273,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'user_schedule',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'user_schedule'})
-                    ? $vars->{$this->service_prefix . 'user_schedule'}
-                    : (isset($package->meta->user_schedule) ? $package->meta->user_schedule : null)
+                ($vars->{$this->service_prefix . 'user_schedule'} ?? ($package->meta->user_schedule ?? null)
                 ),
                 ['id' => $this->service_prefix . 'user_schedule']
             )
@@ -1311,9 +1292,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'user_ftp',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'user_ftp'})
-                    ? $vars->{$this->service_prefix . 'user_ftp'}
-                    : (isset($package->meta->user_ftp) ? $package->meta->user_ftp : null)
+                ($vars->{$this->service_prefix . 'user_ftp'} ?? ($package->meta->user_ftp ?? null)
                 ),
                 ['id' => $this->service_prefix . 'user_ftp']
             )
@@ -1332,9 +1311,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'user_visibility',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'user_visibility'})
-                    ? $vars->{$this->service_prefix . 'user_visibility'}
-                    : (isset($package->meta->user_visibility) ? $package->meta->user_visibility : null)
+                ($vars->{$this->service_prefix . 'user_visibility'} ?? ($package->meta->user_visibility ?? null)
                 ),
                 ['id' => $this->service_prefix . 'user_visibility']
             )
@@ -1353,9 +1330,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'default_level',
                 $this->getDefaultRoles(),
-                (isset($vars->{$this->service_prefix . 'default_level'})
-                    ? $vars->{$this->service_prefix . 'default_level'}
-                    : (isset($package->meta->default_level) ? $package->meta->default_level : null)
+                ($vars->{$this->service_prefix . 'default_level'} ?? ($package->meta->default_level ?? null)
                 ),
                 ['id' => $this->service_prefix . 'default_level']
             )
@@ -1374,9 +1349,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'autostart',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'autostart'})
-                    ? $vars->{$this->service_prefix . 'autostart'}
-                    : (isset($package->meta->autostart) ? $package->meta->autostart : null)
+                ($vars->{$this->service_prefix . 'autostart'} ?? ($package->meta->autostart ?? null)
                 ),
                 ['id' => $this->service_prefix . 'autostart']
             )
@@ -1395,9 +1368,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'create_ftp',
                 $this->getBooleanFieldOptions(),
-                (isset($vars->{$this->service_prefix . 'create_ftp'})
-                    ? $vars->{$this->service_prefix . 'create_ftp'}
-                    : (isset($package->meta->create_ftp) ? $package->meta->create_ftp : null)
+                ($vars->{$this->service_prefix . 'create_ftp'} ?? ($package->meta->create_ftp ?? null)
                 ),
                 ['id' => $this->service_prefix . 'create_ftp']
             )
@@ -1416,9 +1387,7 @@ class MulticraftService
             $fields->fieldSelect(
                 $this->service_prefix . 'server_visibility',
                 $this->getServerVisibilityOptions(),
-                (isset($vars->{$this->service_prefix . 'server_visibility'})
-                    ? $vars->{$this->service_prefix . 'server_visibility'}
-                    : (isset($package->meta->server_visibility) ? $package->meta->server_visibility : null)
+                ($vars->{$this->service_prefix . 'server_visibility'} ?? ($package->meta->server_visibility ?? null)
                 ),
                 ['id' => $this->service_prefix . 'server_visibility']
             )
@@ -1454,9 +1423,7 @@ class MulticraftService
             $server_name->attach(
                 $fields->fieldText(
                     $this->service_prefix . 'server_name',
-                    (isset($vars->{$this->service_prefix . 'server_name'})
-                        ? $vars->{$this->service_prefix . 'server_name'}
-                        : (isset($package->meta->server_name) ? $package->meta->server_name : null)
+                    ($vars->{$this->service_prefix . 'server_name'} ?? ($package->meta->server_name ?? null)
                     ),
                     ['id' => $this->service_prefix . 'server_name']
                 )
@@ -1478,7 +1445,7 @@ class MulticraftService
     public function validate($package, array $vars = null, $edit = false)
     {
         $range = '(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])';
-        $ip_address_rule = '(?:' . $range . "\." . $range . "\." . $range . "\." . $range . ')';
+        $ip_address_rule = '(?:' . $range . '\.' . $range . '\.' . $range . '\.' . $range . ')';
 
         $rules = [
             // Service information
@@ -1543,7 +1510,7 @@ class MulticraftService
             'configoptions[daemon_id]' => [
                 'format' => [
                     'if_set' => true,
-                    'rule' => ['matches', "/^(([1-9][0-9]*)[\,]*)+$/"],
+                    'rule' => ['matches', '/^(([1-9][0-9]*)[\,]*)+$/'],
                     'message' => Language::_('MulticraftService.!error.configoptions[daemon_id].format', true)
                 ]
             ],
@@ -1561,12 +1528,11 @@ class MulticraftService
                     'pre_format' => function ($server_name) use ($package) {
                         // If the package is configured to not allow the owner to set
                         // the server name, we must set the server name automatically
-                        if ($server_name === null && isset($package->meta)
+                        if (
+                            $server_name === null && isset($package->meta)
                             && isset($package->meta->user_name) && $package->meta->user_name == '0'
                         ) {
-                            $server_name = (isset($package->meta->server_name)
-                                ? $package->meta->server_name
-                                : ''
+                            $server_name = ($package->meta->server_name ?? ''
                             );
                         }
 
@@ -1687,7 +1653,7 @@ class MulticraftService
     private function createUser($package, $vars)
     {
         Loader::loadModels($this, ['Clients']);
-        $client = $this->Clients->get((isset($vars['client_id']) ? $vars['client_id'] : 0), false);
+        $client = $this->Clients->get(($vars['client_id'] ?? 0), false);
 
         if ($client) {
             // Attempt to find and re-use an existing user
@@ -1760,9 +1726,7 @@ class MulticraftService
     private function createServer($package, $vars)
     {
         // Create server
-        $players = (isset($vars[$this->service_prefix . 'players'])
-            ? $vars[$this->service_prefix . 'players']
-            : (isset($package->meta->players) ? $package->meta->players : 1)
+        $players = ($vars[$this->service_prefix . 'players'] ?? ($package->meta->players ?? 1)
         );
         $data = ['name' => '', 'port' => '', 'base' => '', 'players' => $players];
         $response = $this->api->createServer($data['name'], $data['port'], $data['base'], $data['players']);
@@ -1775,7 +1739,7 @@ class MulticraftService
             );
         }
 
-        return (isset($response['data']['id']) ? $response['data']['id'] : null);
+        return ($response['data']['id'] ?? null);
     }
 
     /**
@@ -1859,8 +1823,8 @@ class MulticraftService
         $pool_size = strlen($pool);
         $length = (int)abs($min_chars == $max_chars ? $min_chars : mt_rand($min_chars, $max_chars));
 
-        for ($i=0; $i<$length; $i++) {
-            $password .= substr($pool, mt_rand(0, $pool_size-1), 1);
+        for ($i = 0; $i < $length; $i++) {
+            $password .= substr($pool, mt_rand(0, $pool_size - 1), 1);
         }
 
         return $password;

@@ -1,4 +1,11 @@
 <?php
+
+namespace Blesta\App\Models;
+
+use Configure;
+use Exception;
+use stdClass;
+
 /**
  * License Manager Library
  *
@@ -138,11 +145,7 @@ final class LicenseManager
     {
         $sigs = [];
         foreach ($files as $file) {
-            if ($this->signature_mode == 'md5') {
-                $sigs[$file] = md5_file($file);
-            } else {
-                $sigs[$file] = hash_file($this->signature_mode, $file);
-            }
+            $sigs[$file] = $this->signature_mode == 'md5' ? md5_file($file) : hash_file($this->signature_mode, $file);
         }
 
         return $sigs;
@@ -191,19 +194,22 @@ final class LicenseManager
             } elseif (isset($data['status']) && $data['status'] == 'suspended') {
                 // Verify license has not been suspended
                 $status = 'suspended';
-            } elseif (isset($data['domain'])
+            } elseif (
+                isset($data['domain'])
                 && !in_array($server_info['domain'], (array) $data['domain'])
                 && !in_array('*', (array) $data['domain'])
             ) {
                 // Verify license domain (if given)
                 $status = 'invalid_location';
-            } elseif (isset($data['ip'])
+            } elseif (
+                isset($data['ip'])
                 && !in_array($server_info['ip'], (array) $data['ip'])
                 && !in_array('*', (array) $data['ip'])
             ) {
                 // Verify license ip (if given)
                 $status = 'invalid_location';
-            } elseif (isset($data['path'])
+            } elseif (
+                isset($data['path'])
                 && !in_array($server_info['path'], (array) $data['path'])
                 && !in_array('*', (array) $data['path'])
             ) {
@@ -241,7 +247,7 @@ final class LicenseManager
      * @return string The encrypted license data
      * @see LicenseManager::validate()
      */
-    public function requestData(array $custom_data = null, $timeout = 10)
+    public function requestData(?array $custom_data = null, $timeout = 10)
     {
         // Encrypt the data we send
         $data = $this->encrypt(
@@ -269,7 +275,7 @@ final class LicenseManager
      *  the license server before closing the connection
      * @return string The requested public key (if supplied)
      */
-    public function requestKey(array $custom_data = null, $timeout = 10)
+    public function requestKey(?array $custom_data = null, $timeout = 10)
     {
         $data = base64_encode(serialize($this->getServerInfo() + (array) $custom_data));
 
@@ -363,7 +369,7 @@ final class LicenseManager
      * @param int $timeout The number of seconds to wait for a response from the $url before terminating the connection
      * @return string The resonse
      */
-    private function submitRequest($method, $url, array $params = null, $encrypted = true, $timeout = 10)
+    private function submitRequest($method, $url, ?array $params = null, $encrypted = true, $timeout = 10)
     {
         $ch = curl_init();
 
@@ -555,7 +561,7 @@ final class LicenseManager
      *
      * @param array $other_libs An array of other crypto libraries to load (e.g. RSA)
      */
-    private function loadCrypto(array $other_libs = null)
+    private function loadCrypto(?array $other_libs = null)
     {
 
         // Load the AES and Hash security libraries, if not already loaded

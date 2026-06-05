@@ -1,5 +1,5 @@
 {
-    "version": "2.7.0",
+    "version": "3.0.0",
     "name": "Cyberpanel.name",
     "description": "Cyberpanel.description",
     "authors": [
@@ -21,8 +21,18 @@
         "row_key": "server_name"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers"],
-        "package": ["package"],
-        "service": ["cyberpanel_domain", "cyberpanel_username", "cyberpanel_password"]
-    }
+        "module": [
+            "host_name",
+            "name_servers"
+        ],
+        "package": [
+            "package"
+        ],
+        "service": [
+            "cyberpanel_domain",
+            "cyberpanel_username",
+            "cyberpanel_password"
+        ]
+    },
+    "icon": "bi-server"
 }

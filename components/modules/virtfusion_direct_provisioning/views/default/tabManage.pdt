@@ -1,12 +1,10 @@
 
     <div id="tabManage">
-        <?php
-        $this->Form->create(
-//// $this->base_uri . 'clients/serviceTab/' . (isset($client_id) ? $client_id : null) . '/' . (isset($service_id) ? $service_id : null) . '/tabManage/',
-        '',
-        array('target' => '_blank')
-        );
-        ?>
+        <?php $this->Form->create(
+            //// $this->base_uri . 'clients/serviceTab/' . (isset($client_id) ? $client_id : null) . '/' . (isset($service_id) ? $service_id : null) . '/tabManage/',
+            '',
+            ['target' => '_blank'],
+        ); ?>
         <div class="col-md-12">
             <p>Manage your server via our dedicated control panel. You will be automatically authenticated and redirected to the control panel.</p>
 
@@ -17,7 +15,5 @@
                 </button>
             </div>
         </div>
-        <?php
-        $this->Form->end();
-        ?>
+        <?php $this->Form->end(); ?>
     </div>

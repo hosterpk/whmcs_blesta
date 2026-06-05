@@ -1,0 +1,493 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.edit.boxtitle_editclient', true));
+?>
+
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+    <!-- Contact Section -->
+    <h6 class="form-section-header"><?php $this->_('AdminClients.edit.heading_contact');?></h6>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_firstname', true), 'first_name', ['class' => 'form-label']);
+            $this->Form->fieldText('first_name', (isset($vars->first_name) ? $vars->first_name : null), ['id' => 'first_name', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_lastname', true), 'last_name', ['class' => 'form-label']);
+            $this->Form->fieldText('last_name', (isset($vars->last_name) ? $vars->last_name : null), ['id' => 'last_name', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_company', true), 'company', ['class' => 'form-label']);
+            $this->Form->fieldText('company', (isset($vars->company) ? $vars->company : null), ['id' => 'company', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_title', true), 'title', ['class' => 'form-label']);
+            $this->Form->fieldText('title', (isset($vars->title) ? $vars->title : null), ['id' => 'title', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-12">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_address1', true), 'address1', ['class' => 'form-label']);
+            $this->Form->fieldText('address1', (isset($vars->address1) ? $vars->address1 : null), ['id' => 'address1', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-12">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_address2', true), 'address2', ['class' => 'form-label']);
+            $this->Form->fieldText('address2', (isset($vars->address2) ? $vars->address2 : null), ['id' => 'address2', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_city', true), 'city', ['class' => 'form-label']);
+            $this->Form->fieldText('city', (isset($vars->city) ? $vars->city : null), ['id' => 'city', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_country', true), 'country', ['class' => 'form-label']);
+            $this->Form->fieldSelect('country', (isset($countries) ? $countries : null), (isset($vars->country) ? $vars->country : null), ['id' => 'country', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_state', true), 'state', ['class' => 'form-label']);
+            $this->Form->fieldSelect('state', (isset($states) ? $states : null), (isset($vars->state) ? $vars->state : null), ['id' => 'state', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_zip', true), 'zip', ['class' => 'form-label']);
+            $this->Form->fieldText('zip', (isset($vars->zip) ? $vars->zip : null), ['id' => 'zip', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_email', true), 'email', ['class' => 'form-label']);
+            $this->Form->fieldText('email', (isset($vars->email) ? $vars->email : null), ['id' => 'email', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+
+    <?php
+    // Set phones section
+    echo (isset($partial_phones) ? $partial_phones : null);
+    ?>
+
+    <!-- Billing Section -->
+    <h6 class="form-section-header"><?php $this->_('AdminClients.edit.heading_billing');?></h6>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('settings[tax_exempt]', 'true', (isset($vars->settings['tax_exempt']) && $vars->settings['tax_exempt'] == 'true'), ['id' => 'tax_exempt', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminClients.edit.field_taxexempt', true), 'tax_exempt', ['class' => 'form-check-label']);
+                ?>
+                <span class="tax-exempt-tooltip d-none">
+                    <i class="bi bi-info-circle"></i>
+                    <span class="tooltip-content"><?php $this->_('AdminClients.!tooltip.taxexempt');?></span>
+                </span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_taxid', true), 'tax_id', ['class' => 'form-label']);
+            $this->Form->fieldText('settings[tax_id]', (isset($vars->settings['tax_id']) ? $vars->settings['tax_id'] : null), ['id' => 'tax_id', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_preferredcurrency', true), 'default_currency', ['class' => 'form-label']);
+            $this->Form->fieldSelect('settings[default_currency]', (isset($currencies) ? $currencies : null), (isset($vars->settings['default_currency']) ? $vars->settings['default_currency'] : null), ['id' => 'default_currency', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_invoiceaddress', true), 'inv_address_to', ['class' => 'form-label']);
+            $this->Form->fieldSelect('settings[inv_address_to]', (isset($contacts) ? $contacts : null), (isset($vars->settings['inv_address_to']) ? $vars->settings['inv_address_to'] : null), ['id' => 'inv_address_to', 'class' => 'form-select']);
+            ?>
+        </div>
+    </div>
+
+    <!-- Authentication Section -->
+    <h6 class="form-section-header"><?php $this->_('AdminClients.edit.heading_authentication');?></h6>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div id="username-note-alert" class="alert alert-warning d-none" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <?php $this->_('AdminClients.!notice.force_email_usernames');?>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="btn-group" role="group" aria-label="Username type">
+                <input type="radio" class="btn-check" name="vars[settings][username_type]" id="username_type_email" value="email" <?php echo ((isset($vars->settings['username_type']) ? $vars->settings['username_type'] : 'email') == 'email') ? 'checked' : '';?>>
+                <label class="btn btn-outline-primary" for="username_type_email">
+                    <?php $this->_('AdminClients.edit.field_username_type_email');?>
+                </label>
+
+                <input type="radio" class="btn-check" name="vars[settings][username_type]" id="username_type_username" value="username" <?php echo ((isset($vars->settings['username_type']) ? $vars->settings['username_type'] : null) == 'username') ? 'checked' : '';?>>
+                <label class="btn btn-outline-primary" for="username_type_username">
+                    <?php $this->_('AdminClients.edit.field_username_type_username');?>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-6 username-field-wrapper">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_username', true), 'username', ['class' => 'form-label']);
+            $this->Form->fieldText('username', (isset($vars->username) ? $vars->username : null), ['id' => 'username', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_newpassword', true), 'new_password', ['class' => 'form-label']);
+            ?>
+            <div class="input-group">
+                <?php
+                $this->Form->fieldPassword('new_password', ['id' => 'new_password', 'class' => 'form-control new_password']);
+                ?>
+                <button type="button" class="btn btn-secondary generate-password" data-options="<?php (print (isset($password_options) ? $this->Html->safe($password_options) : null));?>" data-length="10" data-base-url="<?php (print (isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null));?>" data-for-class="new_password" aria-label="<?php $this->_('AdminClients.add.text_generate_password');?>" title="<?php $this->_('AdminClients.add.text_generate_password');?>"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_recovery_email', true), 'recovery_email', ['class' => 'form-label']);
+            $this->Form->fieldText('recovery_email', (isset($vars->recovery_email) ? $vars->recovery_email : null), ['id' => 'recovery_email', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="col-12">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_two_factor_mode', true), null, ['class' => 'form-label']);
+
+            if ((isset($vars->two_factor_mode) ? $vars->two_factor_mode : null) == 'none') {
+                ?>
+                <span class="badge bg-secondary"><?php $this->_('AdminClients.edit.field_two_factor_mode_off');?></span>
+                <?php
+            } else {
+                ?>
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox('two_factor_mode', 'none', false, ['id' => 'two_factor_mode', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.edit.field_two_factor_mode_on', true), 'two_factor_mode', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <?php
+            }
+            ?>
+        </div>
+    </div>
+
+    <!-- Settings Section -->
+    <h6 class="form-section-header"><?php $this->_('AdminClients.edit.heading_settings');?></h6>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_language', true), 'language', ['class' => 'form-label']);
+            $this->Form->fieldSelect('settings[language]', (isset($languages) ? $languages : null), (isset($vars->settings['language']) ? $vars->settings['language'] : null), ['id' => 'language', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <?php
+            $this->Form->label($this->_('AdminClients.edit.field_clientgroup', true), 'client_group_id', ['class' => 'form-label']);
+            $this->Form->fieldSelect('client_group_id', (isset($client_groups) ? $client_groups : null), (isset($vars->client_group_id) ? $vars->client_group_id : null), ['id' => 'client_group_id', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-12">
+            <div class="form-check">
+                <?php $this->Form->fieldCheckbox('receive_email_marketing', 'true', (isset($vars->settings['receive_email_marketing']) ? $vars->settings['receive_email_marketing'] : 'false') == 'true', ['id' => 'receive_email_marketing', 'class' => 'form-check-input']); ?>
+                <?php $this->Form->label($this->_('AdminClients.edit.field_receive_email_marketing', true), 'receive_email_marketing', ['class' => 'form-check-label']);?>
+            </div>
+        </div>
+        <div class="col-12" id="custom-fields">
+            <?php
+            // Display custom fields partial
+            echo (isset($custom_fields) ? $custom_fields : null);
+            ?>
+        </div>
+    </div>
+
+    <!-- Gateway Restrictions Section -->
+    <h6 class="form-section-header"><?php $this->_('AdminClients.edit.heading_gateway_restrictions');?></h6>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="form-check">
+                <?php $this->Form->fieldCheckBox('inherit_gateway_restrictions', 'true', ((isset($vars->settings['inherit_gateway_restrictions']) ? $vars->settings['inherit_gateway_restrictions'] : 'true') == 'true'), ['id' => 'inherit_gateway_restrictions', 'class' => 'form-check-input']);?>
+                <?php $this->Form->label($this->_('AdminClients.edit.field_inherit_gateway_restrictions', true), 'inherit_gateway_restrictions', ['class' => 'form-check-label']);?>
+            </div>
+        </div>
+        <div class="col-12" id="gateway-restrictions-form" style="display: none;">
+            <?php echo (isset($partial_gateway_restrictions_form) ? $partial_gateway_restrictions_form : null);?>
+        </div>
+    </div>
+
+    <!-- Credit Handling Section -->
+    <h6 class="form-section-header"><?php $this->_('AdminClients.edit.heading_credit_handling');?></h6>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="form-check">
+                <?php $this->Form->fieldCheckBox('inherit_credit_handling', 'true', ((isset($vars->settings['inherit_credit_handling']) ? $vars->settings['inherit_credit_handling'] : 'true') == 'true'), ['id' => 'inherit_credit_handling', 'class' => 'form-check-input']);?>
+                <?php $this->Form->label($this->_('AdminClients.edit.field_inherit_credit_handling', true), 'inherit_credit_handling', ['class' => 'form-check-label']);?>
+            </div>
+        </div>
+        <div class="col-12" id="credit-handling-form" style="display: none;">
+            <?php echo (isset($partial_credit_handling_form) ? $partial_credit_handling_form : null);?>
+        </div>
+        <div class="col-12" id="low-balance-notifications-section" style="display: none;">
+            <h6 class="mb-2"><?php $this->_('AdminClients.edit.heading_low_balance_notifications');?></h6>
+            <p class="text-muted mb-3"><?php $this->_('AdminClients.edit.text_low_balance_notifications');?></p>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th><?php $this->_('AdminClients.edit.field.currency');?></th>
+                            <th>
+                                <?php $this->_('AdminClients.edit.field.notification_threshold');?>
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.edit.!tooltip.notification_threshold');?>"></i>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        foreach ($currencies ?? [] as $currency) {
+                            $threshold_value = null;
+                            if (isset($credit_thresholds[$currency]) && is_numeric($credit_thresholds[$currency])) {
+                                $threshold_value = $this->CurrencyFormat->format($credit_thresholds[$currency], $currency, ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false]);
+                            }
+                            ?>
+                            <tr>
+                                <td><strong><?php echo $this->Html->safe($currency);?></strong></td>
+                                <td>
+                                    <?php $this->Form->fieldText('credit_thresholds[' . $this->Html->safe($currency) . ']', $threshold_value, ['class' => 'form-control form-control-sm', 'style' => 'width: 150px;', 'placeholder' => $this->CurrencyFormat->format(0, $currency, ['prefix' => false, 'suffix' => false, 'code' => false])]);?>
+                                </td>
+                            </tr>
+                            <?php
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/view/' . (isset($client->id) ? $client->id : '') . '/';?>" class="btn btn-outline-secondary">
+        <?php $this->_('AdminClients.edit.field_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.edit.field_clientsubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+    <?php
+    $this->Form->end();
+    ?>
+
+<?php
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var clientId = <?php echo json_encode((isset($client->id) ? $client->id : null));?>;
+    var taxCountries = <?php echo json_encode(($tax_countries ?? []));?>;
+    var taxExemptionEnabled = <?php echo (($tax_exemption_enabled ?? false) ? 'true' : 'false');?>;
+    var clientGroupCreditEnabled = <?php echo json_encode(($client_group_settings['payment_credit_enabled'] ?? '0') == '1');?>;
+
+    var countryCode = document.getElementById('country');
+    var stateSelect = document.getElementById('state');
+    var clientGroupId = document.getElementById('client_group_id');
+    var usernameTypeEmail = document.getElementById('username_type_email');
+    var usernameTypeUsername = document.getElementById('username_type_username');
+    var usernameFieldWrapper = document.querySelector('.username-field-wrapper');
+    var usernameNoteAlert = document.getElementById('username-note-alert');
+    var inheritGatewayRestrictions = document.getElementById('inherit_gateway_restrictions');
+    var gatewayRestrictionsForm = document.getElementById('gateway-restrictions-form');
+    var inheritCreditHandling = document.getElementById('inherit_credit_handling');
+    var creditHandlingForm = document.getElementById('credit-handling-form');
+    var lowBalanceNotificationsSection = document.getElementById('low-balance-notifications-section');
+    var customFieldsContainer = document.getElementById('custom-fields');
+    var taxExempt = document.getElementById('tax_exempt');
+    var taxId = document.getElementById('tax_id');
+    var taxExemptTooltip = document.querySelector('.tax-exempt-tooltip');
+
+    // Initialize
+    updateCustomFields({group_id: clientGroupId ? clientGroupId.value : '', client_id: clientId});
+    if (taxExemptionEnabled) {
+        updateTaxExempt();
+    }
+
+    // Show/hide username field based on selection
+    if (usernameTypeEmail && usernameTypeEmail.checked) {
+        if (usernameFieldWrapper) usernameFieldWrapper.style.display = 'none';
+    }
+
+    if (usernameTypeEmail) {
+        usernameTypeEmail.addEventListener('change', function() {
+            if (this.checked && usernameFieldWrapper) {
+                usernameFieldWrapper.style.display = 'none';
+            }
+        });
+    }
+
+    if (usernameTypeUsername) {
+        usernameTypeUsername.addEventListener('change', function() {
+            if (this.checked && usernameFieldWrapper) {
+                usernameFieldWrapper.style.display = 'block';
+            }
+        });
+    }
+
+    // Country change - fetch states
+    if (countryCode) {
+        countryCode.addEventListener('change', function() {
+            var country = this.value;
+            fetch(baseUri + 'clients/getstates/' + country, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (stateSelect && data) {
+                    stateSelect.innerHTML = '';
+                    Object.keys(data).sort().forEach(function(key) {
+                        var option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = data[key];
+                        stateSelect.appendChild(option);
+                    });
+                }
+                if (taxExemptionEnabled) {
+                    updateTaxExempt();
+                }
+            })
+            .catch(error => console.error('Error fetching states:', error));
+        });
+    }
+
+    // Client group change - update custom fields
+    if (clientGroupId) {
+        clientGroupId.addEventListener('change', function() {
+            updateCustomFields({group_id: this.value, client_id: clientId});
+        });
+    }
+
+    // Gateway restrictions toggle
+    if (inheritGatewayRestrictions && gatewayRestrictionsForm) {
+        inheritGatewayRestrictions.addEventListener('change', function() {
+            if (this.checked) {
+                gatewayRestrictionsForm.style.display = 'none';
+            } else {
+                gatewayRestrictionsForm.style.display = 'block';
+            }
+        });
+
+        // Initial state
+        if (inheritGatewayRestrictions.checked) {
+            gatewayRestrictionsForm.style.display = 'none';
+        } else {
+            gatewayRestrictionsForm.style.display = 'block';
+        }
+    }
+
+    // Credit handling toggle
+    if (inheritCreditHandling && creditHandlingForm && lowBalanceNotificationsSection) {
+        inheritCreditHandling.addEventListener('change', function() {
+            updateCreditHandlingVisibility();
+        });
+
+        // Initial state
+        updateCreditHandlingVisibility();
+
+        // Listen for payment_credit_enabled changes
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'payment_credit_enabled') {
+                updateCreditHandlingVisibility();
+            }
+        });
+    }
+
+    function updateCreditHandlingVisibility() {
+        if (!inheritCreditHandling || !creditHandlingForm || !lowBalanceNotificationsSection) return;
+
+        var creditEnabled = false;
+        if (inheritCreditHandling.checked) {
+            creditHandlingForm.style.display = 'none';
+            creditEnabled = clientGroupCreditEnabled;
+        } else {
+            creditHandlingForm.style.display = 'block';
+            var paymentCreditEnabled = document.getElementById('payment_credit_enabled');
+            creditEnabled = paymentCreditEnabled ? paymentCreditEnabled.checked : false;
+        }
+
+        lowBalanceNotificationsSection.style.display = creditEnabled ? 'block' : 'none';
+
+        // Update credit limits visibility
+        var creditLimitsSection = document.getElementById('credit_limits_section');
+        if (creditLimitsSection) {
+            creditLimitsSection.style.display = inheritCreditHandling.checked ? 'none' : 'block';
+        }
+    }
+
+    function updateCustomFields(params) {
+        var queryString = new URLSearchParams(params).toString();
+        fetch(baseUri + 'clients/getcustomfields/?' + queryString, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data && customFieldsContainer) {
+                if (data.custom_fields) {
+                    customFieldsContainer.innerHTML = data.custom_fields;
+                }
+
+                if (usernameFieldWrapper && usernameNoteAlert) {
+                    if (data.force_email_usernames === 'true') {
+                        usernameFieldWrapper.style.display = 'none';
+                        usernameNoteAlert.classList.remove('d-none');
+                    } else {
+                        usernameFieldWrapper.style.display = (usernameTypeEmail && usernameTypeEmail.checked) ? 'none' : 'block';
+                        usernameNoteAlert.classList.add('d-none');
+                    }
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching custom fields:', error));
+    }
+
+    function updateTaxExempt() {
+        if (!taxExempt || !countryCode || !taxId) return;
+
+        var country = countryCode.value;
+        var taxIdValue = taxId.value;
+
+        if (taxCountries.includes(country) && taxIdValue !== '') {
+            taxExempt.disabled = true;
+            if (taxExemptTooltip) taxExemptTooltip.classList.remove('d-none');
+        } else {
+            taxExempt.disabled = false;
+            if (taxExemptTooltip) taxExemptTooltip.classList.add('d-none');
+        }
+    }
+
+    // Listen for tax_id changes
+    if (taxId && taxExemptionEnabled) {
+        taxId.addEventListener('change', updateTaxExempt);
+    }
+});
+</script>

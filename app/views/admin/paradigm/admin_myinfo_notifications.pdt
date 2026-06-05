@@ -1,0 +1,90 @@
+<?php
+echo (isset($message) ? $message : null);
+
+$current_tab = 'notifications';
+?>
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminMyinfo.index.boxtitle_myinfo');?></h5>
+    </div>
+    <div class="card-filter-bar">
+        <ul class="nav nav-tabs-box border-0 mb-0" role="tablist">
+            <?php
+            foreach ((isset($link_tabs) ? $link_tabs : []) as $tab) {
+                $is_current = ((isset($tab['uri']) ? $tab['uri'] : 'index') == $current_tab);
+            ?>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link<?php echo $is_current ? ' active' : '';?>"
+                   href="<?php echo $this->base_uri . 'myinfo/' . $tab['uri'] . '/';?>">
+                    <?php echo (isset($tab['name']) ? $this->Html->safe($tab['name']) : '');?>
+                </a>
+            </li>
+            <?php
+            }
+            ?>
+        </ul>
+    </div>
+    <?php
+    $this->Form->create(null, ['id' => 'notificationsForm', 'class' => 'disable-on-submit']);
+    $this->Form->fieldHidden('empty', '0');
+    ?>
+    <div class="card-body">
+        <!-- Notifications -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.notifications.heading_notifications');?></h6>
+
+        <?php if (!empty($notifications)) { ?>
+        <div class="row">
+            <?php
+            $notifications_count = count($notifications);
+            $per_column = ceil($notifications_count / 3);
+            $columns = array_chunk($notifications, $per_column);
+
+            foreach ($columns as $column) {
+            ?>
+            <div class="col-md-4">
+                <?php foreach ($column as $notification) { ?>
+                <div class="mb-2 form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'notifications[]',
+                        (isset($notification->action) ? $this->Html->safe($notification->action) : null),
+                        in_array((isset($notification->action) ? $this->Html->safe($notification->action) : null), (array)(isset($vars->notifications) ? $vars->notifications : null)),
+                        ['id' => 'notification_' . (isset($notification->id) ? $this->Html->safe($notification->id) : null), 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="notification_<?php echo (isset($notification->id) ? $this->Html->safe($notification->id) : null);?>">
+                        <?php echo (isset($notification->lang) ? $this->Html->safe($notification->lang) : '');?>
+                        <?php if (!empty($notification->lang_description)) { ?>
+                        <i class="bi bi-info-circle ms-1 text-secondary"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($notification->lang_description);?>"></i>
+                        <?php } ?>
+                    </label>
+                </div>
+                <?php } ?>
+            </div>
+            <?php } ?>
+        </div>
+        <?php } else { ?>
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-0"><?php $this->_('AdminMyinfo.notifications.no_results');?></p>
+        </div>
+        <?php } ?>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end">
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminMyinfo.notifications.field_notificationsubmit', true), ['class' => 'btn btn-primary']);?>
+        </div>
+    </div>
+    <?php $this->Form->end();?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

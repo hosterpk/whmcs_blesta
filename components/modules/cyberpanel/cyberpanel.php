@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * CyberPanel Module.
  *
@@ -101,7 +103,7 @@ class Cyberpanel extends Module
         $package->attach(
             $fields->fieldText(
                 'meta[package]',
-                (isset($vars->meta['package']) ? $vars->meta['package'] : null),
+                ($vars->meta['package'] ?? null),
                 ['id' => 'cyberpanel_package']
             )
         );
@@ -229,6 +231,14 @@ class Cyberpanel extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -261,6 +271,14 @@ class Cyberpanel extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -407,7 +425,7 @@ class Cyberpanel extends Module
         $domain->attach(
             $fields->fieldText(
                 'cyberpanel_domain',
-                (isset($vars->cyberpanel_domain) ? $vars->cyberpanel_domain : null),
+                ($vars->cyberpanel_domain ?? null),
                 ['id' => 'cyberpanel_domain']
             )
         );
@@ -420,7 +438,7 @@ class Cyberpanel extends Module
         $username->attach(
             $fields->fieldText(
                 'cyberpanel_username',
-                (isset($vars->cyberpanel_username) ? $vars->cyberpanel_username : null),
+                ($vars->cyberpanel_username ?? null),
                 ['id' => 'cyberpanel_username']
             )
         );
@@ -436,7 +454,7 @@ class Cyberpanel extends Module
         $password->attach(
             $fields->fieldPassword(
                 'cyberpanel_password',
-                ['id' => 'cyberpanel_password', 'value' => (isset($vars->cyberpanel_password) ? $vars->cyberpanel_password : null)]
+                ['id' => 'cyberpanel_password', 'value' => ($vars->cyberpanel_password ?? null)]
             )
         );
         // Add tooltip
@@ -468,7 +486,7 @@ class Cyberpanel extends Module
         $domain->attach(
             $fields->fieldText(
                 'cyberpanel_domain',
-                (isset($vars->cyberpanel_domain) ? $vars->cyberpanel_domain : ($vars->domain ?? null)),
+                ($vars->cyberpanel_domain ?? ($vars->domain ?? null)),
                 ['id' => 'cyberpanel_domain']
             )
         );
@@ -498,7 +516,7 @@ class Cyberpanel extends Module
         $domain->attach(
             $fields->fieldText(
                 'cyberpanel_domain',
-                (isset($vars->cyberpanel_domain) ? $vars->cyberpanel_domain : null),
+                ($vars->cyberpanel_domain ?? null),
                 ['id' => 'cyberpanel_domain']
             )
         );
@@ -511,7 +529,7 @@ class Cyberpanel extends Module
         $username->attach(
             $fields->fieldText(
                 'cyberpanel_username',
-                (isset($vars->cyberpanel_username) ? $vars->cyberpanel_username : null),
+                ($vars->cyberpanel_username ?? null),
                 ['id' => 'cyberpanel_username']
             )
         );
@@ -524,7 +542,7 @@ class Cyberpanel extends Module
         $password->attach(
             $fields->fieldPassword(
                 'cyberpanel_password',
-                ['id' => 'cyberpanel_password', 'value' => (isset($vars->cyberpanel_password) ? $vars->cyberpanel_password : null)]
+                ['id' => 'cyberpanel_password', 'value' => ($vars->cyberpanel_password ?? null)]
             )
         );
         // Set the label as a field
@@ -1082,7 +1100,7 @@ class Cyberpanel extends Module
             if ($post['cyberpanel_password'] == $post['cyberpanel_confirm_password']) {
                 Loader::loadModels($this, ['Services']);
                 $data = [
-                    'cyberpanel_password' => (isset($post['cyberpanel_password']) ? $post['cyberpanel_password'] : null)
+                    'cyberpanel_password' => ($post['cyberpanel_password'] ?? null)
                 ];
                 $this->Services->edit($service->id, $data);
 
@@ -1096,7 +1114,7 @@ class Cyberpanel extends Module
 
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'cyberpanel' . DS);
 
@@ -1163,13 +1181,18 @@ class Cyberpanel extends Module
     {
         try {
             $api = $this->getApi($hostname, $admin_username, $admin_password, $use_ssl);
+
+            $this->log($hostname . '|verifyConn', serialize(['adminUser' => $admin_username]), 'input', true);
             $response = $api->apiRequest('verifyConn');
 
-            if (!empty($response)) {
+            $success = !empty($response);
+            $this->log($hostname, serialize($response), 'output', $success);
+
+            if ($success) {
                 return true;
             }
-        } catch (Exception $e) {
-            // Trap any errors encountered, could not validate connection
+        } catch (\Throwable $e) {
+            $this->log($hostname . '|verifyConn', serialize($e->getMessage()), 'output', false);
         }
 
         return false;
@@ -1252,10 +1275,10 @@ class Cyberpanel extends Module
     private function getFieldsFromInput(array $vars, $package)
     {
         $fields = [
-            'username' => isset($vars['cyberpanel_username']) ? $vars['cyberpanel_username'] : null,
-            'password' => isset($vars['cyberpanel_password']) ? $vars['cyberpanel_password'] : null,
-            'email' => isset($vars['cyberpanel_email']) ? $vars['cyberpanel_email'] : null,
-            'domain' => isset($vars['cyberpanel_domain']) ? $vars['cyberpanel_domain'] : null,
+            'username' => $vars['cyberpanel_username'] ?? null,
+            'password' => $vars['cyberpanel_password'] ?? null,
+            'email' => $vars['cyberpanel_email'] ?? null,
+            'domain' => $vars['cyberpanel_domain'] ?? null,
             'package' => $package->meta->package
         ];
 

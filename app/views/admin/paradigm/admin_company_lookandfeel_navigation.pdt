@@ -1,0 +1,832 @@
+<?php /** @var View $this **/ ?>
+
+        <?php
+        if (!(isset($is_ajax) ? $is_ajax : false)) {
+        ?>
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+        <?php
+        }
+        ?>
+                <?php
+                $tabs = [
+                    [
+                        'name' => $this->_('AdminCompanyLookandfeel.navigation.category_nav_staff', true),
+                        'current' => ((isset($location) ? $location : null) == 'nav_staff'),
+                        'attributes' => [
+                            'href' => $this->Html->safe($this->base_uri . 'settings/company/lookandfeel/navigation/nav_staff/')
+                        ]
+                    ],
+                    [
+                        'name' => $this->_('AdminCompanyLookandfeel.navigation.category_nav_client', true),
+                        'current' => ((isset($location) ? $location : null) == 'nav_client'),
+                        'attributes' => [
+                            'href' => $this->Html->safe($this->base_uri . 'settings/company/lookandfeel/navigation/nav_client/')
+                        ]
+                    ],
+                    [
+                        'name' => $this->_('AdminCompanyLookandfeel.navigation.category_nav_public', true),
+                        'current' => ((isset($location) ? $location : null) == 'nav_public'),
+                        'attributes' => [
+                            'href' => $this->Html->safe($this->base_uri . 'settings/company/lookandfeel/navigation/nav_public/')
+                        ]
+                    ]
+                ];
+                $this->Widget->clear();
+                $this->Widget->setTabs($tabs);
+                $this->Widget->setBodyWrapper(false);
+                $this->Widget->create($this->_('AdminCompanyLookandfeel.navigation.boxtitle_navigation', true), ['id' => 'admin_company_lookandfeel_navigation']);
+
+                $this->Form->create(null, ['id' => 'navigation_form', 'class' => 'disable-on-submit']);?>
+
+                    <div class="card-borderless">
+                        <div class="nav-editor-container">
+                            <!-- Left Column: Available Items -->
+                            <div class="nav-editor-available">
+                                <div class="nav-editor-section-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0"><?php $this->_('AdminCompanyLookandfeel.navigation.heading_available_items');?></h6>
+                                            <small class="text-secondary"><?php $this->_('AdminCompanyLookandfeel.navigation.text_add_items');?></small>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-primary flex-shrink-0" data-bs-toggle="modal" data-bs-target="#createItemModal">
+                                            <i class="bi bi-plus-circle me-1"></i><?php $this->_('AdminCompanyLookandfeel.navigation.create_item');?>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="nav-available-list" id="availableList">
+                                    <?php
+                                    if ((isset($actions) ? $actions : false) && count($actions) > 0) {
+                                        foreach ($actions as $action) {
+                                            $name = !empty($action->name) ? $this->Html->safe($action->name) : $this->_('AdminCompanyLookandfeel.navigation.text_link', true);
+                                            $url = isset($action->url) ? $this->Html->safe($action->url) : '';
+                                            $raw_icon = isset($action->icon) && !empty($action->icon) ? $action->icon : '';
+                                            if (str_starts_with($raw_icon, 'bi ')) {
+                                                $raw_icon = substr($raw_icon, 3);
+                                            }
+                                            $icon = $raw_icon !== '' ? $this->Html->safe($raw_icon) : '';
+                                            $is_editable = (isset($action->editable) && $action->editable == '1' && empty($action->plugin_id));
+                                    ?>
+                                    <div class="nav-available-item"
+                                         data-action-id="<?php echo (isset($action->id) ? $action->id : null);?>"
+                                         data-name="<?php echo $name;?>"
+                                         data-url="<?php echo $url;?>"
+                                         data-icon="<?php echo $icon;?>"
+                                         data-editable="<?php echo $is_editable ? '1' : '0';?>">
+                                        <div class="nav-available-info">
+                                            <div class="nav-available-name">
+                                                <?php if ($icon) { ?><i class="bi <?php echo $icon;?> nav-item-icon"></i><?php } ?>
+                                                <?php echo $name;?>
+                                                <?php if ($url) { ?>
+                                                <small class="d-block text-secondary"><?php echo $url;?></small>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="nav-available-actions">
+                                            <button type="button" class="btn btn-sm btn-icon edit-icon-btn" title="<?php $this->_('AdminCompanyLookandfeel.navigation.edit_icon');?>">
+                                                <i class="bi bi-palette"></i>
+                                            </button>
+                                            <?php if ($is_editable) { ?>
+                                            <button type="button" class="btn btn-sm btn-icon edit-action-btn" title="<?php $this->_('AdminCompanyLookandfeel.navigation.modal_edit_title');?>">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-icon delete-action-btn"
+                                                data-confirm-message="<?php $this->_('AdminCompanyLookandfeel.navigation.confirm_delete');?>"
+                                                data-delete-action-id="<?php echo (isset($action->id) ? $action->id : null);?>">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <?php } ?>
+                                            <button type="button" class="btn btn-sm btn-secondary add-nav-item">
+                                                <i class="bi bi-plus-lg"></i> <?php $this->_('AdminCompanyLookandfeel.actions.option_add');?>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <?php
+                                        }
+                                    }
+                                    ?>
+                                </div>
+                                <?php
+                                if (!(isset($actions) ? $actions : false) || count($actions) == 0) {
+                                ?>
+                                <div class="text-center text-muted py-5" id="noActionsMessage">
+                                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                                    <p class="mt-3 mb-0"><?php $this->_('AdminCompanyLookandfeel.navigation.no_results_actions');?></p>
+                                </div>
+                                <?php
+                                }
+                                ?>
+                            </div>
+
+                            <!-- Right Column: Navigation Menu -->
+                            <div class="nav-editor-menu">
+                                <div class="nav-editor-section-header">
+                                    <h6 class="mb-0"><?php $this->_('AdminCompanyLookandfeel.navigation.heading_navigation');?></h6>
+                                    <small class="text-secondary"><?php $this->_('AdminCompanyLookandfeel.navigation.text_drag_reorder');?></small>
+                                </div>
+
+                                <div class="nav-menu-list" id="navMenu">
+                                    <!-- Hidden template for new nav items -->
+                                    <div class="nav-menu-item" id="navTemplate" style="display: none;">
+                                        <div class="nav-menu-item-header">
+                                            <div class="nav-menu-handle">
+                                                <i class="bi bi-grip-vertical"></i>
+                                            </div>
+                                            <div class="nav-menu-name"></div>
+                                            <div class="nav-menu-actions">
+                                                <button type="button" class="btn btn-sm btn-icon toggle-subnav" title="<?php $this->_('AdminCompanyLookandfeel.navigation.text_toggle_submenu', true);?>">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-icon remove-nav-item" title="<?php $this->_('AdminCompanyLookandfeel.actions.option_remove', true);?>">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <?php
+                                        $this->Form->fieldHidden('navigation[action_id][]', '0', ['disabled' => 'disabled', 'class' => 'action-id']);
+                                        $this->Form->fieldHidden('navigation[subitem][]', '0', ['disabled' => 'disabled', 'class' => 'subitem']);
+                                        ?>
+                                        <div class="nav-menu-subnav" style="display: none;"></div>
+                                    </div>
+
+                                    <?php
+                                    foreach ((isset($navigation_items) ? $navigation_items : []) as $navigation_item) {
+                                        $item_name = !empty($navigation_item['name']) ? $this->Html->safe($navigation_item['name']) : $this->_('AdminCompanyLookandfeel.navigation.text_link', true);
+                                        $item_url = isset($navigation_item['url']) ? $this->Html->safe($navigation_item['url']) : '';
+                                        $has_subnav = !empty($navigation_item['sub']);
+                                    ?>
+                                    <div class="nav-menu-item<?php echo $has_subnav ? ' has-subnav' : '';?>" data-action-id="<?php echo (isset($navigation_item['action_id']) ? $navigation_item['action_id'] : null);?>">
+                                        <div class="nav-menu-item-header">
+                                            <div class="nav-menu-handle">
+                                                <i class="bi bi-grip-vertical"></i>
+                                            </div>
+                                            <div class="nav-menu-name">
+                                                <?php echo $item_name;?>
+                                                <?php if ($item_url) { ?>
+                                                <small class="d-block text-secondary"><?php echo $item_url;?></small>
+                                                <?php } ?>
+                                            </div>
+                                            <div class="nav-menu-actions">
+                                                <button type="button" class="btn btn-sm btn-icon toggle-subnav<?php echo $has_subnav ? ' active' : '';?>" title="<?php $this->_('AdminCompanyLookandfeel.navigation.text_toggle_submenu', true);?>">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-icon remove-nav-item" title="<?php $this->_('AdminCompanyLookandfeel.actions.option_remove', true);?>">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <?php
+                                        $this->Form->fieldHidden('navigation[action_id][]', (isset($navigation_item['action_id']) ? $navigation_item['action_id'] : null), ['class' => 'action-id']);
+                                        $this->Form->fieldHidden('navigation[subitem][]', (isset($navigation_item['parent_id']) ? $navigation_item['parent_id'] : null) !== null ? '1' : '0', ['class' => 'subitem']);
+                                        ?>
+                                        <div class="nav-menu-subnav"<?php echo $has_subnav ? '' : ' style="display: none;"';?>>
+                                            <?php
+                                            foreach ((isset($navigation_item['sub']) ? $navigation_item['sub'] : []) as $subitem) {
+                                                $sub_name = !empty($subitem['name']) ? $this->Html->safe($subitem['name']) : $this->_('AdminCompanyLookandfeel.navigation.text_link', true);
+                                                $sub_url = isset($subitem['url']) ? $this->Html->safe($subitem['url']) : '';
+                                            ?>
+                                            <div class="nav-menu-subitem" data-action-id="<?php echo (isset($subitem['action_id']) ? $subitem['action_id'] : null);?>">
+                                                <div class="nav-menu-subitem-header">
+                                                    <div class="nav-menu-handle">
+                                                        <i class="bi bi-grip-vertical"></i>
+                                                    </div>
+                                                    <div class="nav-menu-name">
+                                                        <?php echo $sub_name;?>
+                                                        <?php if ($sub_url) { ?>
+                                                        <small class="d-block text-secondary"><?php echo $sub_url;?></small>
+                                                        <?php } ?>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-icon remove-nav-item" title="<?php $this->_('AdminCompanyLookandfeel.actions.option_remove', true);?>">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </div>
+                                                <?php
+                                                $this->Form->fieldHidden('navigation[action_id][]', (isset($subitem['action_id']) ? $subitem['action_id'] : null), ['class' => 'action-id']);
+                                                $this->Form->fieldHidden('navigation[subitem][]', '1', ['class' => 'subitem']);
+                                                ?>
+                                            </div>
+                                            <?php
+                                            }
+                                            ?>
+                                        </div>
+                                    </div>
+                                    <?php
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php $this->Widget->footer(); ?>
+                    <div class="d-flex justify-content-end gap-2">
+                        <?php
+                        $this->Form->fieldSubmit('submit', $this->_('AdminCompanyLookandfeel.navigation.text_submit', true), ['class' => 'btn btn-primary']);
+                        ?>
+                    </div>
+
+                    <?php $this->Form->end();?>
+                <?php $this->Widget->end();?>
+        <?php
+        $this->Form->create($this->base_uri . 'settings/company/lookandfeel/deleteaction/', ['id' => 'deleteActionForm', 'style' => 'display:none;']);
+        $this->Form->fieldHidden('id', '', ['id' => 'deleteActionId']);
+        $this->Form->end();
+        ?>
+        <?php
+        if (!(isset($is_ajax) ? $is_ajax : false)) {
+        ?>
+        </div>
+        <?php
+        }
+        ?>
+
+<?php
+// Include modal partials
+$partial = clone $this;
+$params = [
+    'nav_locations' => $nav_locations ?? [],
+    'location' => $location ?? null
+];
+$partial->set($params);
+echo $partial->fetch('modals/admin_company_lookandfeel_navigation_modal_create');
+echo $partial->fetch('modals/admin_company_lookandfeel_navigation_modal_edit_icon');
+echo $partial->fetch('modals/admin_company_lookandfeel_navigation_modal_edit_item');
+?>
+
+<script>
+// Navigation editor with SortableJS
+document.addEventListener('DOMContentLoaded', function() {
+    const navMenu = document.getElementById('navMenu');
+    const availableList = document.getElementById('availableList');
+    const template = document.getElementById('navTemplate');
+    const csrfToken = document.querySelector('#navigation_form input[name="_csrf_token"]');
+
+    if (!navMenu || !template) return;
+
+    // Initialize Sortable for main navigation
+    const mainSortable = Sortable.create(navMenu, {
+        animation: 150,
+        handle: '.nav-menu-handle',
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        filter: '#navTemplate',
+        onEnd: function() {
+            updateNavigation();
+        }
+    });
+
+    // Initialize Sortable for each subnav
+    function initSubnavSortables() {
+        document.querySelectorAll('.nav-menu-subnav').forEach(function(subnav) {
+            if (!subnav.sortable) {
+                Sortable.create(subnav, {
+                    group: 'subnav',
+                    animation: 150,
+                    handle: '.nav-menu-handle',
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    onAdd: function(evt) {
+                        const item = evt.item;
+                        // Convert to subitem
+                        convertToSubitem(item);
+                        updateNavigation();
+                    },
+                    onRemove: function(evt) {
+                        const item = evt.item;
+                        // Convert to main item
+                        convertToMainItem(item);
+                        updateNavigation();
+                    },
+                    onEnd: function() {
+                        updateNavigation();
+                    }
+                });
+                subnav.sortable = true;
+            }
+        });
+    }
+
+    initSubnavSortables();
+
+    // Add navigation item from available list
+    if (availableList) {
+        availableList.addEventListener('click', function(e) {
+            const addBtn = e.target.closest('.add-nav-item');
+            if (addBtn) {
+                const availableItem = addBtn.closest('.nav-available-item');
+                const actionId = availableItem.dataset.actionId;
+                const name = availableItem.dataset.name;
+                const url = availableItem.dataset.url || '';
+
+                addItemToNavMenu(actionId, name, url);
+                return;
+            }
+
+            // Edit action button (pencil)
+            const editActionBtn = e.target.closest('.edit-action-btn');
+            if (editActionBtn) {
+                const availableItem = editActionBtn.closest('.nav-available-item');
+                const actionId = availableItem.dataset.actionId;
+                const name = availableItem.dataset.name;
+                const url = availableItem.dataset.url || '';
+                const icon = availableItem.dataset.icon || '';
+
+                document.getElementById('editItemName').value = name;
+                document.getElementById('editItemUrl').value = url;
+                document.getElementById('editItemIcon').value = icon;
+                document.getElementById('editItemActionId').value = actionId;
+                document.getElementById('editItemErrors').classList.add('d-none');
+
+                updateIconPreview('editItemIcon', 'editItemIconPreview');
+
+                const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+                modal.show();
+                return;
+            }
+
+            // Edit icon button
+            const editIconBtn = e.target.closest('.edit-icon-btn');
+            if (editIconBtn) {
+                const availableItem = editIconBtn.closest('.nav-available-item');
+                const actionId = availableItem.dataset.actionId;
+                const name = availableItem.dataset.name;
+                const icon = availableItem.dataset.icon || '';
+
+                document.getElementById('editIconItemName').value = name;
+                document.getElementById('editIconInput').value = icon;
+                document.getElementById('editIconActionId').value = actionId;
+                document.getElementById('editIconErrors').classList.add('d-none');
+
+                // Update preview
+                updateIconPreview('editIconInput', 'editIconPreview');
+
+                const modal = new bootstrap.Modal(document.getElementById('editIconModal'));
+                modal.show();
+            }
+        });
+    }
+
+    function addItemToNavMenu(actionId, name, url) {
+        // Clone template
+        const newItem = template.cloneNode(true);
+        newItem.removeAttribute('id');
+        newItem.style.display = '';
+
+        // Set name
+        const nameEl = newItem.querySelector('.nav-menu-name');
+        nameEl.textContent = name;
+        if (url) {
+            const urlEl = document.createElement('small');
+            urlEl.className = 'd-block text-secondary';
+            urlEl.textContent = url;
+            nameEl.appendChild(urlEl);
+        }
+
+        // Set action ID
+        newItem.dataset.actionId = actionId;
+        const actionIdInput = newItem.querySelector('.action-id');
+        actionIdInput.value = actionId;
+        actionIdInput.removeAttribute('disabled');
+
+        // Enable subitem field
+        const subitemInput = newItem.querySelector('.subitem');
+        subitemInput.removeAttribute('disabled');
+
+        // Add to menu
+        navMenu.appendChild(newItem);
+
+        initSubnavSortables();
+    }
+
+    // Toggle subnav visibility
+    navMenu.addEventListener('click', function(e) {
+        const toggleBtn = e.target.closest('.toggle-subnav');
+        if (toggleBtn) {
+            const item = toggleBtn.closest('.nav-menu-item');
+            const subnav = item.querySelector('.nav-menu-subnav');
+            const icon = toggleBtn.querySelector('i');
+
+            if (subnav.style.display === 'none') {
+                subnav.style.display = 'block';
+                toggleBtn.classList.add('active');
+                item.classList.add('has-subnav');
+            } else {
+                subnav.style.display = 'none';
+                toggleBtn.classList.remove('active');
+                item.classList.remove('has-subnav');
+            }
+            return;
+        }
+
+        // Remove navigation item
+        const removeBtn = e.target.closest('.remove-nav-item');
+        if (removeBtn) {
+            const item = removeBtn.closest('.nav-menu-item, .nav-menu-subitem');
+            item.remove();
+            updateNavigation();
+        }
+    });
+
+    function convertToSubitem(item) {
+        // Change main item to subitem
+        const header = item.querySelector('.nav-menu-item-header');
+        if (header) {
+            header.className = 'nav-menu-subitem-header';
+            // Remove toggle button
+            const toggleBtn = header.querySelector('.toggle-subnav');
+            if (toggleBtn) toggleBtn.remove();
+        }
+        item.className = 'nav-menu-subitem';
+
+        // Update subitem field
+        const subitemInput = item.querySelector('.subitem');
+        if (subitemInput) subitemInput.value = '1';
+
+        // Remove subnav container
+        const subnav = item.querySelector('.nav-menu-subnav');
+        if (subnav) {
+            // Move any nested items to main menu
+            const nestedItems = subnav.querySelectorAll('.nav-menu-subitem');
+            nestedItems.forEach(function(nested) {
+                convertToMainItem(nested);
+                navMenu.appendChild(nested);
+            });
+            subnav.remove();
+        }
+    }
+
+    function convertToMainItem(item) {
+        // Change subitem to main item
+        const header = item.querySelector('.nav-menu-subitem-header');
+        if (header) {
+            header.className = 'nav-menu-item-header';
+            // Add toggle button
+            const actions = header.querySelector('.nav-menu-actions');
+            if (actions && !actions.querySelector('.toggle-subnav')) {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'btn btn-sm btn-icon toggle-subnav';
+                toggleBtn.title = 'Toggle submenu';
+                toggleBtn.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                actions.insertBefore(toggleBtn, actions.firstChild);
+            }
+        }
+        item.className = 'nav-menu-item';
+
+        // Update subitem field
+        const subitemInput = item.querySelector('.subitem');
+        if (subitemInput) subitemInput.value = '0';
+
+        // Add subnav container if not exists
+        if (!item.querySelector('.nav-menu-subnav')) {
+            const subnav = document.createElement('div');
+            subnav.className = 'nav-menu-subnav';
+            subnav.style.display = 'none';
+            item.appendChild(subnav);
+            initSubnavSortables();
+        }
+    }
+
+    function updateNavigation() {
+        // This function is called after drag/drop to update any necessary state
+    }
+
+    // Icon preview updater
+    function updateIconPreview(inputId, previewId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        if (!input || !preview) return;
+
+        const iconClass = input.value.trim();
+        if (iconClass) {
+            preview.innerHTML = '<i class="bi ' + iconClass.replace(/[^a-zA-Z0-9-]/g, '') + '"></i>';
+        } else {
+            preview.innerHTML = '<i class="bi bi-question-circle"></i>';
+        }
+    }
+
+    // Live icon preview for Create Item modal
+    const createIconInput = document.getElementById('createItemIcon');
+    if (createIconInput) {
+        createIconInput.addEventListener('input', function() {
+            updateIconPreview('createItemIcon', 'createIconPreview');
+        });
+    }
+
+    // Live icon preview for Edit Icon modal
+    const editIconInput = document.getElementById('editIconInput');
+    if (editIconInput) {
+        editIconInput.addEventListener('input', function() {
+            updateIconPreview('editIconInput', 'editIconPreview');
+        });
+    }
+
+    // Live icon preview for Edit Item modal
+    const editItemIconInput = document.getElementById('editItemIcon');
+    if (editItemIconInput) {
+        editItemIconInput.addEventListener('input', function() {
+            updateIconPreview('editItemIcon', 'editItemIconPreview');
+        });
+    }
+
+    // Ensure preview renders after modal animation completes
+    var editIconModalEl = document.getElementById('editIconModal');
+    if (editIconModalEl) {
+        editIconModalEl.addEventListener('shown.bs.modal', function() {
+            updateIconPreview('editIconInput', 'editIconPreview');
+        });
+    }
+
+    var editItemModalEl = document.getElementById('editItemModal');
+    if (editItemModalEl) {
+        editItemModalEl.addEventListener('shown.bs.modal', function() {
+            updateIconPreview('editItemIcon', 'editItemIconPreview');
+        });
+    }
+
+    // Create Item modal submission
+    const createItemSubmit = document.getElementById('createItemSubmit');
+    if (createItemSubmit) {
+        createItemSubmit.addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+
+            const locationRadio = document.querySelector('input[name="create_location"]:checked');
+            const name = document.getElementById('createItemName').value.trim();
+            const url = document.getElementById('createItemUrl').value.trim();
+            const icon = document.getElementById('createItemIcon').value.trim();
+            const errorsEl = document.getElementById('createItemErrors');
+
+            errorsEl.classList.add('d-none');
+
+            const formData = new FormData();
+            formData.append('location', locationRadio ? locationRadio.value : '');
+            formData.append('name', name);
+            formData.append('url', url);
+            if (icon) formData.append('icon', icon);
+            if (csrfToken) formData.append('_csrf_token', csrfToken.value);
+
+            fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/company/lookandfeel/addaction/');?>', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                if (data.success && data.action) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createItemModal'));
+                    if (modal) modal.hide();
+
+                    // Reset form
+                    document.getElementById('createItemName').value = '';
+                    document.getElementById('createItemUrl').value = '';
+                    document.getElementById('createItemIcon').value = '';
+                    updateIconPreview('createItemIcon', 'createIconPreview');
+
+                    // Only add to available list if the action's location matches the current tab
+                    var currentLocation = <?php echo json_encode(isset($location) ? $location : 'nav_staff');?>;
+                    if (data.action.location === currentLocation) {
+                        addActionToAvailableList(data.action);
+                    }
+
+                    // Remove "no actions" message if present
+                    var noMsg = document.getElementById('noActionsMessage');
+                    if (noMsg) noMsg.remove();
+                } else if (data.error && data.messages) {
+                    var errorHtml = '';
+                    for (var field in data.messages) {
+                        for (var rule in data.messages[field]) {
+                            errorHtml += '<div>' + data.messages[field][rule] + '</div>';
+                        }
+                    }
+                    errorsEl.innerHTML = errorHtml;
+                    errorsEl.classList.remove('d-none');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+            });
+        });
+    }
+
+    // Edit Icon modal submission
+    const editIconSubmit = document.getElementById('editIconSubmit');
+    if (editIconSubmit) {
+        editIconSubmit.addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+
+            const actionId = document.getElementById('editIconActionId').value;
+            const icon = document.getElementById('editIconInput').value.trim();
+            const errorsEl = document.getElementById('editIconErrors');
+
+            errorsEl.classList.add('d-none');
+
+            const formData = new FormData();
+            formData.append('icon', icon);
+            if (csrfToken) formData.append('_csrf_token', csrfToken.value);
+
+            fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/company/lookandfeel/editaction/');?>' + actionId, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                if (data.success && data.action) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editIconModal'));
+                    if (modal) modal.hide();
+
+                    // Update icon in available list
+                    var item = document.querySelector('.nav-available-item[data-action-id="' + actionId + '"]');
+                    if (item) {
+                        item.dataset.icon = icon;
+                        var nameEl = item.querySelector('.nav-available-name');
+                        var existingIcon = nameEl.querySelector('.nav-item-icon');
+                        if (existingIcon) existingIcon.remove();
+                        if (icon) {
+                            var iconEl = document.createElement('i');
+                            iconEl.className = 'bi ' + icon.replace(/[^a-zA-Z0-9-]/g, '') + ' nav-item-icon';
+                            nameEl.insertBefore(iconEl, nameEl.firstChild);
+                        }
+                    }
+                } else if (data.error && data.messages) {
+                    var errorHtml = '';
+                    for (var field in data.messages) {
+                        for (var rule in data.messages[field]) {
+                            errorHtml += '<div>' + data.messages[field][rule] + '</div>';
+                        }
+                    }
+                    errorsEl.innerHTML = errorHtml;
+                    errorsEl.classList.remove('d-none');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+            });
+        });
+    }
+
+    // Edit Item modal submission
+    const editItemSubmit = document.getElementById('editItemSubmit');
+    if (editItemSubmit) {
+        editItemSubmit.addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+
+            const actionId = document.getElementById('editItemActionId').value;
+            const name = document.getElementById('editItemName').value.trim();
+            const url = document.getElementById('editItemUrl').value.trim();
+            const icon = document.getElementById('editItemIcon').value.trim();
+            const errorsEl = document.getElementById('editItemErrors');
+
+            errorsEl.classList.add('d-none');
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('url', url);
+            formData.append('icon', icon);
+            if (csrfToken) formData.append('_csrf_token', csrfToken.value);
+
+            fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/company/lookandfeel/editaction/');?>' + actionId, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                if (data.success && data.action) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editItemModal'));
+                    if (modal) modal.hide();
+
+                    // Update the available item in the DOM
+                    var item = document.querySelector('.nav-available-item[data-action-id="' + actionId + '"]');
+                    if (item) {
+                        var updatedName = data.action.name || 'link';
+                        var updatedUrl = data.action.url || '';
+                        var updatedIcon = data.action.icon || '';
+
+                        item.dataset.name = updatedName;
+                        item.dataset.url = updatedUrl;
+                        item.dataset.icon = updatedIcon;
+
+                        var nameEl = item.querySelector('.nav-available-name');
+                        // Rebuild name contents
+                        nameEl.innerHTML = '';
+                        if (updatedIcon) {
+                            var iconEl = document.createElement('i');
+                            iconEl.className = 'bi ' + updatedIcon.replace(/[^a-zA-Z0-9-]/g, '') + ' nav-item-icon';
+                            nameEl.appendChild(iconEl);
+                        }
+                        nameEl.appendChild(document.createTextNode(updatedName));
+                        if (updatedUrl) {
+                            var urlSmall = document.createElement('small');
+                            urlSmall.className = 'd-block text-secondary';
+                            urlSmall.textContent = updatedUrl;
+                            nameEl.appendChild(urlSmall);
+                        }
+                    }
+                } else if (data.error && data.messages) {
+                    var errorHtml = '';
+                    for (var field in data.messages) {
+                        for (var rule in data.messages[field]) {
+                            errorHtml += '<div>' + data.messages[field][rule] + '</div>';
+                        }
+                    }
+                    errorsEl.innerHTML = errorHtml;
+                    errorsEl.classList.remove('d-none');
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+            });
+        });
+    }
+
+    // Helper: add a new action to the available list
+    function addActionToAvailableList(action) {
+        var list = document.getElementById('availableList');
+        if (!list) return;
+
+        var name = action.name || 'link';
+        var url = action.url || '';
+        var icon = action.icon || '';
+        var isEditable = (action.editable == '1' && !action.plugin_id);
+
+        var div = document.createElement('div');
+        div.className = 'nav-available-item';
+        div.dataset.actionId = action.id;
+        div.dataset.name = name;
+        div.dataset.url = url;
+        div.dataset.icon = icon;
+        div.dataset.editable = isEditable ? '1' : '0';
+
+        var infoHtml = '<div class="nav-available-info"><div class="nav-available-name">';
+        if (icon) {
+            infoHtml += '<i class="bi ' + icon.replace(/[^a-zA-Z0-9-]/g, '') + ' nav-item-icon"></i>';
+        }
+        infoHtml += escapeHtml(name);
+        if (url) {
+            infoHtml += '<small class="d-block text-secondary">' + escapeHtml(url) + '</small>';
+        }
+        infoHtml += '</div></div>';
+
+        var actionsHtml = '<div class="nav-available-actions">';
+        actionsHtml += '<button type="button" class="btn btn-sm btn-icon edit-icon-btn" title="<?php $this->_('AdminCompanyLookandfeel.navigation.edit_icon');?>">';
+        actionsHtml += '<i class="bi bi-palette"></i></button>';
+        if (isEditable) {
+            actionsHtml += '<button type="button" class="btn btn-sm btn-icon edit-action-btn" title="<?php $this->_('AdminCompanyLookandfeel.navigation.modal_edit_title');?>">';
+            actionsHtml += '<i class="bi bi-pencil"></i></button>';
+            actionsHtml += '<button type="button" class="btn btn-sm btn-icon delete-action-btn"';
+            actionsHtml += ' data-confirm-message="<?php $this->_('AdminCompanyLookandfeel.navigation.confirm_delete');?>"';
+            actionsHtml += ' data-delete-action-id="' + escapeHtml(String(action.id)) + '">';
+            actionsHtml += '<i class="bi bi-trash"></i></button>';
+        }
+        actionsHtml += '<button type="button" class="btn btn-sm btn-secondary add-nav-item">';
+        actionsHtml += '<i class="bi bi-plus-lg"></i> <?php $this->_('AdminCompanyLookandfeel.actions.option_add');?></button>';
+        actionsHtml += '</div>';
+
+        div.innerHTML = infoHtml + actionsHtml;
+        list.appendChild(div);
+
+        // Bind delete confirm on newly added delete button
+        if (isEditable) {
+            bindDeleteButtons(div);
+        }
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    // Bind delete buttons with blestaModalConfirm, passing the correct form
+    function bindDeleteButtons(container) {
+        if (typeof blestaModalConfirm !== 'function') return;
+        var deleteForm = document.getElementById('deleteActionForm');
+        (container || document).querySelectorAll('.delete-action-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.getElementById('deleteActionId').value = btn.dataset.deleteActionId;
+            }, true);
+            blestaModalConfirm(btn, {
+                title: 'Confirm Delete',
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
+                submit: true,
+                form: deleteForm
+            });
+        });
+    }
+    bindDeleteButtons();
+});
+</script>

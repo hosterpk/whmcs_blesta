@@ -15,8 +15,8 @@ class CentoswebpanelResponse
      */
     public function __construct($apiResponse)
     {
-        $this->raw = isset($apiResponse['content']) ? $apiResponse['content'] : '';
-        $this->headers = isset($apiResponse['headers']) ? $apiResponse['headers'] : '';
+        $this->raw = $apiResponse['content'] ?? '';
+        $this->headers = $apiResponse['headers'] ?? '';
         $response = json_decode($this->raw);
         $this->status = 200;
         $this->response = $response;

@@ -1,9 +1,11 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
+
 use Blesta\Core\Util\Filters\Common\Filter;
 use Blesta\Core\Util\Input\Fields\InputFields;
-use \Loader;
-use \Language;
+use Loader;
+use Language;
 
 /**
  * Service Filters
@@ -78,7 +80,7 @@ class ServiceFilters extends Filter
                 $fields->fieldSelect(
                     'filters[module_id]',
                     ['' => Language::_('Util.filters.service_filters.any', true)] + $modules,
-                    isset($vars['module_id']) ? $vars['module_id'] : null,
+                    $vars['module_id'] ?? null,
                     ['id' => 'module_id', 'class' => 'form-control']
                 )
             );
@@ -93,7 +95,7 @@ class ServiceFilters extends Filter
         $package_name->attach(
             $fields->fieldText(
                 'filters[package_name]',
-                isset($vars['package_name']) ? $vars['package_name'] : null,
+                $vars['package_name'] ?? null,
                 [
                     'id' => 'package_name',
                     'class' => 'form-control stretch',
@@ -111,7 +113,7 @@ class ServiceFilters extends Filter
         $service_meta->attach(
             $fields->fieldText(
                 'filters[service_meta]',
-                isset($vars['service_meta']) ? $vars['service_meta'] : null,
+                $vars['service_meta'] ?? null,
                 [
                     'id' => 'service_meta',
                     'class' => 'form-control stretch',

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Type;
 
 /**
@@ -12,5 +13,4 @@ namespace Blesta\Core\Pricing\Presenter\Type;
  */
 class ServicePresenter extends AbstractPresenter
 {
-
 }

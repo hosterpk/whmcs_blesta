@@ -28,7 +28,7 @@ $lang['AdminSystemStaff.manage.categorylink_addstaff'] = 'Add Staff';
 
 $lang['AdminSystemStaff.manage.heading_name']  = 'Name';
 $lang['AdminSystemStaff.manage.heading_email']  = 'E-mail';
-$lang['AdminSystemStaff.manage.heading_options']  = 'Options';
+$lang['AdminSystemStaff.manage.heading_options']  = 'Actions';
 
 $lang['AdminSystemStaff.manage.no_results'] = 'There are no staff members with this status.';
 $lang['AdminSystemStaff.manage.confirm_deactivate'] = 'Really deactivate this staff member?';
@@ -91,7 +91,7 @@ $lang['AdminSystemStaff.edit.field_twofactorpin'] = 'Two Factor Pin';
 $lang['AdminSystemStaff.edit.text_membergroups'] = 'Member Groups';
 $lang['AdminSystemStaff.edit.text_availablegroups'] = 'Available Groups';
 
-$lang['AdminSystemStaff.edit.field_editsubmit'] = 'Edit Staff';
+$lang['AdminSystemStaff.edit.field_editsubmit'] = 'Update Staff';
 
 
 // Staff Groups
@@ -103,7 +103,7 @@ $lang['AdminSystemStaff.groups.categorylink_addgroup'] = 'Create Group';
 $lang['AdminSystemStaff.groups.heading_name'] = 'Name';
 $lang['AdminSystemStaff.groups.heading_company_name'] = 'Company Name';
 $lang['AdminSystemStaff.groups.heading_staff'] = 'Number of Staff';
-$lang['AdminSystemStaff.groups.heading_options'] = 'Options';
+$lang['AdminSystemStaff.groups.heading_options'] = 'Actions';
 
 $lang['AdminSystemStaff.groups.no_results'] = 'There are no staff groups.';
 
@@ -129,6 +129,7 @@ $lang['AdminSystemStaff.addgroup.heading_general'] = 'General';
 $lang['AdminSystemStaff.addgroup.heading_permissions'] = 'Access Control List';
 $lang['AdminSystemStaff.addgroup.heading_email_notices'] = 'Email BCC Notices';
 $lang['AdminSystemStaff.addgroup.heading_subscription_email_notices'] = 'Email Subscription Notices';
+$lang['AdminSystemStaff.addgroup.heading_notifications'] = 'Notifications';
 
 $lang['AdminSystemStaff.addgroup.text_check_all'] = 'Check All';
 $lang['AdminSystemStaff.addgroup.text_uncheck_all'] = 'Uncheck All';
@@ -141,9 +142,10 @@ $lang['AdminSystemStaff.editgroup.boxtitle_editgroup'] = 'Edit Group';
 $lang['AdminSystemStaff.editgroup.field_name'] = 'Name';
 $lang['AdminSystemStaff.editgroup.field_company'] = 'Company';
 $lang['AdminSystemStaff.editgroup.field_session_lock'] = 'Log Out On IP Address Change';
-$lang['AdminSystemStaff.editgroup.field_groupsubmit'] = 'Edit Group';
+$lang['AdminSystemStaff.editgroup.field_groupsubmit'] = 'Update Group';
 $lang['AdminSystemStaff.editgroup.heading_general'] = 'General';
 $lang['AdminSystemStaff.editgroup.heading_permissions'] = 'Access Control List';
 $lang['AdminSystemStaff.editgroup.heading_email_notices'] = 'Email BCC Notices';
 $lang['AdminSystemStaff.editgroup.heading_subscription_email_notices'] = 'Email Subscription Notices';
+$lang['AdminSystemStaff.editgroup.heading_notifications'] = 'Notifications';
 $lang['AdminSystemStaff.editgroup.dialog_confirm_edit_assigned'] = 'You are currently assigned to this staff group. Any changes you make will take effect immediately and you may be unable to access this area again. Are you sure you want to make these changes?';

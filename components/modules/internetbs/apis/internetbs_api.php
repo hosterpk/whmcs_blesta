@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'internetbs_response.php';
@@ -54,6 +55,11 @@ class InternetbsApi
     private $last_request = [];
 
     /**
+     * @var mixed The logger instance
+     */
+    private $logger;
+
+    /**
      * Initializes the request parameter
      *
      * @param string $api_key The API key provided by Internet.bs
@@ -78,7 +84,7 @@ class InternetbsApi
      * @param string $method Data transfer method (POST, GET, PUT, DELETE)
      * @return InternetbsResponse The API response
      */
-    public function apiRequest(string $route, array $args = [], string $method = 'GET') : InternetbsResponse
+    public function apiRequest(string $route, array $args = [], string $method = 'GET'): InternetbsResponse
     {
         $url = ($this->sandbox ? $this->sandbox_api_url : $this->api_url) . '/' . ltrim($route, '/');
         $curl = curl_init();
@@ -140,8 +146,7 @@ class InternetbsApi
         // Return request response
         return new InternetbsResponse([
             'content' => $data[count($data) - 1],
-            'headers' => array_splice($data, 0, count($data) - 1)]
-        );
+            'headers' => array_splice($data, 0, count($data) - 1)]);
     }
 
     /**
@@ -151,7 +156,7 @@ class InternetbsApi
      *  - url The URL of the last request
      *  - args The parameters passed to the URL
      */
-    public function lastRequest() : array
+    public function lastRequest(): array
     {
         return $this->last_request;
     }

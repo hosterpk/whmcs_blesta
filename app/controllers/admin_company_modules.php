@@ -1,5 +1,7 @@
 <?php
 
+use Blesta\Core\Util\Filters\ExtensionFilters;
+
 /**
  * Admin Company Module Settings
  *
@@ -18,13 +20,7 @@ class AdminCompanyModules extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['ModuleManager', 'Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
+        $this->uses(['ModuleManager']);
     }
 
     /**
@@ -40,6 +36,14 @@ class AdminCompanyModules extends AdminController
      */
     public function installed()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyModules.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('modules', $this->ModuleManager->getAll($this->company_id));
@@ -51,6 +55,14 @@ class AdminCompanyModules extends AdminController
      */
     public function available()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyModules.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('modules', $this->ModuleManager->getAvailable($this->company_id));

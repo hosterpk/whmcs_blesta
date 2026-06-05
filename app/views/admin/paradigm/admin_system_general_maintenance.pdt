@@ -1,0 +1,71 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemGeneral.maintenance.boxtitle_maintenance', true), ['id' => 'admin_system_general_maintenance']);
+    ?>
+
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+    <!-- Maintenance Mode Checkbox -->
+    <div class="mb-3">
+        <div class="form-check">
+            <?php
+            $this->Form->fieldCheckbox(
+                'maintenance_mode',
+                'true',
+                ((isset($vars['maintenance_mode']) ? $vars['maintenance_mode'] : null) == 'true'),
+                ['id' => 'maintenance_mode', 'class' => 'form-check-input']
+            );
+            ?>
+            <label for="maintenance_mode" class="form-check-label">
+                <?php $this->_('AdminSystemGeneral.maintenance.field.maintenance_mode');?>
+                <i class="bi bi-info-circle ms-1"
+                   data-bs-toggle="tooltip"
+                   data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.!tooltip.maintenance_mode', true));?>"></i>
+            </label>
+        </div>
+    </div>
+
+    <!-- Maintenance Reason Textarea -->
+    <div class="mb-3">
+        <label for="maintenance_reason" class="form-label">
+            <?php $this->_('AdminSystemGeneral.maintenance.field.maintenance_reason');?>
+            <i class="bi bi-info-circle ms-1"
+               data-bs-toggle="tooltip"
+               data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.!tooltip.maintenance_reason', true));?>"></i>
+        </label>
+        <?php
+        $this->Form->fieldTextarea(
+            'maintenance_reason',
+            (isset($vars['maintenance_reason']) ? $vars['maintenance_reason'] : null),
+            ['id' => 'maintenance_reason', 'class' => 'form-control', 'data-markdown-editor' => '']
+        );
+        ?>
+    </div>
+
+    <!-- Submit Button -->
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminSystemGeneral.maintenance.field.maintenancesubmit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+
+    <?php $this->Form->end(); ?>
+
+    <?php $this->Widget->end();?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

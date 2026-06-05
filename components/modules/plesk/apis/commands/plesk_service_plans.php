@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk Service Plan management
  *
@@ -93,7 +94,7 @@ class PleskServicePlans extends PleskPacket
         $this->setContainer($this->base_container . '/get');
 
         // Build service plan XML container
-        $filter = (isset($vars['filter']) ? $vars['filter'] : []);
+        $filter = ($vars['filter'] ?? []);
         $this->buildFilter($filter, $this->getContainer());
 
         // Set any plans

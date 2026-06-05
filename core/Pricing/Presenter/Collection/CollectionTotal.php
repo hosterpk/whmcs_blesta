@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Collection;
 
 use Blesta\Pricing\Collection\ItemPriceCollection;

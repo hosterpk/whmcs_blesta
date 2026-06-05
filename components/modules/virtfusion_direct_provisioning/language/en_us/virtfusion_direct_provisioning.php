@@ -9,6 +9,7 @@ $lang['VirtfusionDirectProvisioning.module_row'] = 'Server';
 $lang['VirtfusionDirectProvisioning.module_row_plural'] = 'Servers';
 $lang['VirtfusionDirectProvisioning.module_group'] = 'Server Group';
 
+$lang['Virtfusion.back_to_manage'] = 'Back';
 
 // Module management
 $lang['VirtfusionDirectProvisioning.add_module_row'] = 'Add Server';

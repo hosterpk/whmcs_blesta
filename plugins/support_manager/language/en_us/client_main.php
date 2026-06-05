@@ -17,7 +17,7 @@ $lang['ClientMain.index.heading_department_name'] = 'Department';
 $lang['ClientMain.index.heading_summary'] = 'Summary';
 $lang['ClientMain.index.heading_last_reply_date'] = 'Last Reply';
 $lang['ClientMain.index.heading_status'] = 'Status';
-$lang['ClientMain.index.heading_options'] = 'Options';
+$lang['ClientMain.index.heading_options'] = 'Actions';
 $lang['ClientMain.index.option_close'] = 'Close';
 $lang['ClientMain.index.option_reply'] = 'Reply';
 

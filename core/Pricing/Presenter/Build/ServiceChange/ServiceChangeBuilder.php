@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Build\ServiceChange;
 
 use Blesta\Core\Pricing\Presenter\Build\BuilderFactory;
@@ -163,7 +164,7 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
      * @param Blesta\Items\Collection\ItemCollection|null $newMeta The new meta data, or null
      * @return float The new price
      */
-    private function combinePrice($oldPrice, $newPrice, ItemCollection $oldMeta = null, ItemCollection $newMeta = null)
+    private function combinePrice($oldPrice, $newPrice, ?ItemCollection $oldMeta = null, ?ItemCollection $newMeta = null)
     {
         return $newPrice - $oldPrice;
     }
@@ -175,7 +176,7 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
      * @param Blesta\Items\Collection\ItemCollection|null $newMeta The new meta data, or null
      * @return string The combined description
      */
-    private function combineDescription(ItemCollection $oldMeta = null, ItemCollection $newMeta = null)
+    private function combineDescription(?ItemCollection $oldMeta = null, ?ItemCollection $newMeta = null)
     {
         $description = '';
 
@@ -324,7 +325,8 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
                 // i.e. a new value has a setup fee while the old one doesn't
                 // Expect the key to be of the form (...-option-#-setup) where '-setup' is the only difference
                 // from the parent option
-                if ($type == 'setup' && !empty($meta['_data']['item_type'])
+                if (
+                    $type == 'setup' && !empty($meta['_data']['item_type'])
                     && $meta['_data']['item_type'] == 'option'
                     && array_key_exists(str_replace('-setup', '', $item->key()), $keys)
                     && $keys[str_replace('-setup', '', $item->key())] != 'added'
@@ -439,7 +441,8 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
             $meta = $this->getMeta($item);
 
             // Create a hash of what service uses what package (there should only be 1)
-            if (isset($meta['package']) && is_object($meta['package']) && isset($meta['package']->id)
+            if (
+                isset($meta['package']) && is_object($meta['package']) && isset($meta['package']->id)
                 && isset($meta['service']) && is_object($meta['service']) && isset($meta['service']->id)
                 && !array_key_exists($meta['service']->id, $servicePackages)
             ) {
@@ -450,7 +453,8 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
             }
 
             // Create a hash of what option uses what service (there should only be 1 for each option)
-            if (isset($meta['option']) && is_object($meta['option']) && isset($meta['option']->id)
+            if (
+                isset($meta['option']) && is_object($meta['option']) && isset($meta['option']->id)
                 && isset($meta['option']->service_id)
             ) {
                 if (!isset($serviceOptions[$meta['option']->service_id])) {
@@ -468,7 +472,7 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
             // Set the new combined item key
             if ($item instanceof MetaItemInterface) {
                 $newKey = $this->getCombinedKey($item, $servicePackages, $serviceOptions);
-                $item->setKey(($newKey !== null ? $newKey : $item->key()));
+                $item->setKey(($newKey ?? $item->key()));
             }
         }
 
@@ -530,7 +534,8 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
             // otherwise the items cannot be combined into a single item because the discounts
             // would be applied to arrive at an incorrect price! The exception is setup fees since
             // we want to combine them so they can later be properly removed.
-            if ($isOptionSetupFee
+            if (
+                $isOptionSetupFee
                 || ($this->metaItemsMatch($optionIds[$optionId]['discounts'], $item->discounts())
                     && !$this->discountsContainType($item->discounts())
                     && !$this->discountsContainType($optionIds[$optionId]['discounts'])
@@ -571,7 +576,8 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
             // would be applied to arrive at an incorrect price! The exception is when dealing
             // with the setup fee.  Since the package has not been updated then the two items
             // should be combined so the setup fee is not reapplied.
-            if ($isPackageSetupFee
+            if (
+                $isPackageSetupFee
                 || ($this->metaItemsMatch($data['discounts'], $item->discounts())
                     && !$this->discountsContainType($data['discounts'])
                     && !$this->discountsContainType($item->discounts())
@@ -648,7 +654,7 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
         $serviceBuilder = $factory->service();
         $serviceBuilder->settings($this->settings);
         $serviceBuilder->taxes($this->taxes);
-        $serviceBuilder->discounts(isset($this->discounts['old']) ? $this->discounts['old'] : []);
+        $serviceBuilder->discounts($this->discounts['old'] ?? []);
         $serviceBuilder->options(array_merge(['recur' => true], $this->options));
 
         return $serviceBuilder;
@@ -674,7 +680,7 @@ class ServiceChangeBuilder extends AbstractServiceChangeBuilder
         $serviceDataBuilder = $factory->serviceData();
         $serviceDataBuilder->settings($this->settings);
         $serviceDataBuilder->taxes($this->taxes);
-        $serviceDataBuilder->discounts(isset($this->discounts['new']) ? $this->discounts['new'] : []);
+        $serviceDataBuilder->discounts($this->discounts['new'] ?? []);
         $serviceDataBuilder->options($options);
 
         return $serviceDataBuilder;

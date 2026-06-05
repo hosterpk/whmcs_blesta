@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Namecheap Module
  *
@@ -70,11 +71,11 @@ class Namecheap extends RegistrarModule
         if (version_compare($current_version, '2.13.0', '<')) {
             $this->replaceDomainServiceField();
         }
-        
+
         // Upgrade to 2.13.2
         if (version_compare($current_version, '2.13.2', '<')) {
             $this->replaceDomainServiceField();
-            
+
             $this->Record->query(
                 'UPDATE package_emails
                     INNER JOIN packages ON packages.id = package_emails.package_id
@@ -316,7 +317,7 @@ class Namecheap extends RegistrarModule
             ['SLD' => $sld, 'TLD' => ltrim($tld, '.'), 'Nameservers' => implode(',', $vars)]
         );
         $this->processResponse($api, $response);
-        
+
         return ($response->status() == 'OK');
     }
 
@@ -906,6 +907,14 @@ class Namecheap extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -937,6 +946,14 @@ class Namecheap extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -1033,7 +1050,7 @@ class Namecheap extends RegistrarModule
             $fields->fieldSelect(
                 'meta[type]',
                 $types,
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null),
+                ($vars->meta['type'] ?? null),
                 ['id' => 'namecheap_type']
             )
         );
@@ -1059,12 +1076,12 @@ class Namecheap extends RegistrarModule
         $fields->setField($tld_options);
 
         // Set nameservers
-        for ($i=1; $i<=5; $i++) {
+        for ($i = 1; $i <= 5; $i++) {
             $type = $fields->label(Language::_('Namecheap.package_fields.ns' . $i, true), 'namecheap_ns' . $i);
             $type->attach(
                 $fields->fieldText(
                     'meta[ns][]',
-                    (isset($vars->meta['ns'][$i-1]) ? $vars->meta['ns'][$i-1] : null),
+                    ($vars->meta['ns'][$i - 1] ?? null),
                     ['id' => 'namecheap_ns' . $i]
                 )
             );
@@ -1114,7 +1131,7 @@ class Namecheap extends RegistrarModule
         if ($package->meta->type == 'domain') {
             // Set default name servers
             if (!isset($vars->ns1) && isset($package->meta->ns)) {
-                $i=1;
+                $i = 1;
                 foreach ($package->meta->ns as $ns) {
                     $vars->{'ns' . $i++} = $ns;
                 }
@@ -1146,7 +1163,7 @@ class Namecheap extends RegistrarModule
             }
         }
 
-        return (isset($module_fields) ? $module_fields : new ModuleFields());
+        return ($module_fields ?? new ModuleFields());
     }
 
     /**
@@ -1167,7 +1184,7 @@ class Namecheap extends RegistrarModule
         if ($package->meta->type == 'domain') {
             // Set default name servers
             if (!isset($vars->ns) && isset($package->meta->ns)) {
-                $i=1;
+                $i = 1;
                 foreach ($package->meta->ns as $ns) {
                     $vars->{'ns' . $i++} = $ns;
                 }
@@ -1204,7 +1221,7 @@ class Namecheap extends RegistrarModule
         }
 
         // Determine whether this is an AJAX request
-        return (isset($module_fields) ? $module_fields : new ModuleFields());
+        return ($module_fields ?? new ModuleFields());
     }
 
     /**
@@ -1222,19 +1239,15 @@ class Namecheap extends RegistrarModule
             $extension_fields = (array) Configure::get('Namecheap.domain_fields' . $tld);
             if ($extension_fields) {
                 // Set the fields
-                if ($client) {
-                    $fields = array_merge(
-                        Configure::get('Namecheap.nameserver_fields'),
-                        Configure::get('Namecheap.domain_fields'),
-                        $extension_fields
-                    );
-                } else {
-                    $fields = array_merge(
-                        Configure::get('Namecheap.domain_fields'),
-                        Configure::get('Namecheap.nameserver_fields'),
-                        $extension_fields
-                    );
-                }
+                $fields = $client ? array_merge(
+                    Configure::get('Namecheap.nameserver_fields'),
+                    Configure::get('Namecheap.domain_fields'),
+                    $extension_fields
+                ) : array_merge(
+                    Configure::get('Namecheap.domain_fields'),
+                    Configure::get('Namecheap.nameserver_fields'),
+                    $extension_fields
+                );
 
                 if ($client) {
                     // We should already have the domain name don't make editable
@@ -1246,32 +1259,32 @@ class Namecheap extends RegistrarModule
                 $module_fields = new ModuleFields();
 
                 // Allow AJAX requests
-                $ajax = $module_fields->fieldHidden('allow_ajax', 'true', ['id'=>'namecheap_allow_ajax']);
+                $ajax = $module_fields->fieldHidden('allow_ajax', 'true', ['id' => 'namecheap_allow_ajax']);
                 $module_fields->setField($ajax);
                 $please_select = ['' => Language::_('AppController.select.please', true)];
 
                 foreach ($fields as $key => $field) {
                     // Build the field
-                    $label = $module_fields->label((isset($field['label']) ? $field['label'] : ''), $key);
+                    $label = $module_fields->label(($field['label'] ?? ''), $key);
 
                     $type = null;
                     if ($field['type'] == 'text') {
                         $type = $module_fields->fieldText(
                             $key,
-                            (isset($vars->{$key}) ? $vars->{$key} : ''),
+                            ($vars->{$key} ?? ''),
                             ['id' => $key]
                         );
                     } elseif ($field['type'] == 'select') {
                         $type = $module_fields->fieldSelect(
                             $key,
                             (isset($field['options']) ? $please_select + $field['options'] : $please_select),
-                            (isset($vars->{$key}) ? $vars->{$key} : ''),
+                            ($vars->{$key} ?? ''),
                             ['id' => $key]
                         );
                     } elseif ($field['type'] == 'hidden') {
                         $type = $module_fields->fieldHidden(
                             $key,
-                            (isset($vars->{$key}) ? $vars->{$key} : ''),
+                            ($vars->{$key} ?? ''),
                             ['id' => $key]
                         );
                     }
@@ -1289,7 +1302,7 @@ class Namecheap extends RegistrarModule
             }
         }
 
-        return (isset($module_fields) ? $module_fields : false);
+        return ($module_fields ?? false);
     }
 
     /**
@@ -1302,11 +1315,7 @@ class Namecheap extends RegistrarModule
      */
     public function getAdminEditFields($package, $vars = null)
     {
-        if ($package->meta->type == 'domain') {
-            return new ModuleFields();
-        } else {
-            return new ModuleFields();
-        }
+        return $package->meta->type == 'domain' ? new ModuleFields() : new ModuleFields();
     }
 
     /**
@@ -1517,7 +1526,7 @@ class Namecheap extends RegistrarModule
                         if (!is_scalar($value)) {
                             $value = '';
                         }
-                        $vars->{$section.$name} = $value;
+                        $vars->{$section . $name} = $value;
                     }
                 }
             }
@@ -1801,7 +1810,7 @@ class Namecheap extends RegistrarModule
                         }
                     }
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 return Configure::get('Namecheap.tlds');
             }
         }
@@ -1884,7 +1893,7 @@ class Namecheap extends RegistrarModule
                     $price_attributes = $price->{'@attributes'} ?? $price;
                     $currency = $price_attributes->Currency ?? 'USD';
                     $duration = $price_attributes->Duration;
-                    if ($price_attributes->DurationType != 'YEAR' || $currency != "USD") {
+                    if ($price_attributes->DurationType != 'YEAR' || $currency != 'USD') {
                         continue;
                     }
 
@@ -1951,7 +1960,7 @@ class Namecheap extends RegistrarModule
         );
 
         if ($cache) {
-            $response = unserialize(base64_decode($cache));
+            $response = safe_unserialize(base64_decode($cache));
         }
 
         if (!isset($response)) {
@@ -1979,7 +1988,7 @@ class Namecheap extends RegistrarModule
                         strtotime(Configure::get('Blesta.cache_length')) - time(),
                         Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'namecheap' . DS
                     );
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Write to cache failed, so disable caching
                     Configure::set('Caching.on', false);
                 }
@@ -2008,7 +2017,7 @@ class Namecheap extends RegistrarModule
                 // Update TLD data
                 $this->getRawTldData($module_row->id);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
     }
@@ -2040,7 +2049,7 @@ class Namecheap extends RegistrarModule
                     'rule' => [
                         [$this, 'validateConnection'],
                         $vars['user'],
-                        isset($vars['sandbox']) ? $vars['sandbox'] : 'false'
+                        $vars['sandbox'] ?? 'false'
                     ],
                     'message' => Language::_('Namecheap.!error.key.valid_connection', true)
                 ]
@@ -2091,7 +2100,7 @@ class Namecheap extends RegistrarModule
 
         // Set errors, if any
         if ($response->status() != 'OK') {
-            $errors = isset($response->errors()->Error) ? $response->errors()->Error : [];
+            $errors = $response->errors()->Error ?? [];
             $this->Input->setErrors(['errors' => (array)$errors]);
         }
     }

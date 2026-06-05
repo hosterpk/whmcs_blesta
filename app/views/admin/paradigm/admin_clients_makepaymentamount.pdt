@@ -1,0 +1,121 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.makepayment.boxtitle_makepaymentamount', true), ['id' => 'admin_clients_makepaymentamount'], (isset($render_section) ? $render_section : null));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+$this->Form->fieldHidden('vars', base64_encode(json_encode($vars)));
+$this->Form->fieldHidden('step', (isset($step) ? $step : null));
+?>
+
+    <?php
+    // Show currency only when we do not have a single invoice
+    if (!(isset($invoice) ? $invoice : false)) {
+    ?>
+    <div class="mb-3">
+        <?php
+        $this->Form->label($this->_('AdminClients.makepaymentamount.field_currency', true), 'currency', ['class' => 'form-label']);
+        $this->Form->fieldSelect('currency', (isset($currencies) ? $currencies : null), (isset($vars->currency) ? $vars->currency : null), ['id' => 'currency', 'class' => 'form-select']);
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+
+    <div id="invoices_to_pay" class="mb-3">
+        <?php
+        echo (isset($invoice_info) ? $invoice_info : null);
+        ?>
+    </div>
+
+    <?php
+    if (($payment_credit_enabled ?? '1') == '1') {
+    ?>
+    <div class="mb-3">
+        <?php
+        $this->Form->label($this->_('AdminClients.makepaymentamount.field_credit', true), 'credit', ['class' => 'form-label']);
+        $this->Form->fieldText('credit', (isset($vars->credit) ? $vars->credit : null), ['id' => 'credit', 'class' => 'form-control']);
+
+        if ($has_credit_limits ?? false) {
+            if ($credit_min && $credit_max) {
+        ?>
+        <small class="form-text text-muted"><?php $this->_('AdminClients.makepaymentamount.text_credit_limits', false, $this->Html->safe($credit_min), $this->Html->safe($credit_max));?></small>
+        <?php
+            } elseif ($credit_min) {
+        ?>
+        <small class="form-text text-muted"><?php $this->_('AdminClients.makepaymentamount.text_credit_min_only', false, $this->Html->safe($credit_min));?></small>
+        <?php
+            } elseif ($credit_max) {
+        ?>
+        <small class="form-text text-muted"><?php $this->_('AdminClients.makepaymentamount.text_credit_max_only', false, $this->Html->safe($credit_max));?></small>
+        <?php
+            }
+        }
+        ?>
+    </div>
+    <?php
+    }
+    ?>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <?php
+            $this->Form->fieldCheckbox('email_receipt', 'true', (isset($vars->email_receipt) ? $vars->email_receipt : null), ['id' => 'email_receipt', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.makepaymentamount.field_receipt', true), 'email_receipt', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.makepaymentamount.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle "select all" checkboxes
+    var invoiceCheckboxes = document.querySelectorAll("input[name='invoice_id[]']");
+    invoiceCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('click', function() {
+            if (this.value === 'all') {
+                invoiceCheckboxes.forEach(function(cb) {
+                    cb.checked = this.checked;
+                }, this);
+            }
+        });
+    });
+
+    // Swap invoices to be paid based on currency selected
+    var currencySelect = document.getElementById('currency');
+    if (currencySelect) {
+        currencySelect.addEventListener('change', function() {
+            var form = this.closest('form');
+            var formData = new FormData(form);
+
+            fetch('<?php echo $this->base_uri;?>clients/makepaymentinvoices/<?php echo $client->id;?>/', {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(function(data) {
+                var invoicesToPay = document.getElementById('invoices_to_pay');
+                if (invoicesToPay && data.content) {
+                    invoicesToPay.innerHTML = data.content;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    }
+});
+</script>

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Staff Settings
  *
@@ -36,7 +37,7 @@ class OrderStaffSettings extends OrderModel
     public function setSetting($staff_id, $company_id, $key, $value)
     {
         $fields = ['staff_id' => $staff_id, 'company_id' => $company_id,
-            'key'=>$key, 'value'=>$value];
+            'key' => $key, 'value' => $value];
 
         $this->Record->duplicate('value', '=', $fields['value'])->
             insert('order_staff_settings', $fields);

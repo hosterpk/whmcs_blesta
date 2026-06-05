@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'enom_response.php';
@@ -33,6 +34,10 @@ class EnomApi
      * @var bool Whether or not to process in sandbox mode (for testing)
      */
     private $sandbox;
+    /**
+     * @var mixed The logger instance
+     */
+    private $logger;
     /**
      * @var array An array representing the last request made
      */

@@ -1,5 +1,16 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Blesta\Core\Cache\CacheFactory;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use Record;
+use stdClass;
+
 /**
  * Client management
  *
@@ -11,6 +22,40 @@
  */
 class Clients extends AppModel
 {
+    /**
+     * @var array In-memory cache of client settings keyed by "client_id.key"
+     */
+    private static $settingsCache = [];
+
+    /**
+     * @var array In-memory cache of bulk client settings keyed by client_id
+     */
+    private static $allSettingsCache = [];
+
+    /**
+     * @var array In-memory cache of client objects keyed by "client_id.get_settings"
+     */
+    private static $clientCache = [];
+
+    /**
+     * Clears in-memory and Redis caches for client settings
+     */
+    public static function clearSettingsCache()
+    {
+        self::$settingsCache = [];
+        self::$allSettingsCache = [];
+
+        CacheFactory::get()->deleteGroup('settings:client');
+    }
+
+    /**
+     * Clears the in-memory client object cache
+     */
+    public static function clearClientCache()
+    {
+        self::$clientCache = [];
+    }
+
     /**
      * Initialize Clients
      */
@@ -65,7 +110,12 @@ class Clients extends AppModel
     public function create(array $vars)
     {
         // Trigger the Clients.createBefore event
-        extract($this->executeAndParseEvent('Clients.createBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Clients.createBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         Loader::loadModels($this, ['Users', 'Contacts', 'Companies', 'ClientGroups']);
         Loader::loadHelpers($this, ['Form']);
@@ -115,7 +165,7 @@ class Clients extends AppModel
                         $client_id,
                         isset($vars['custom']) && array_key_exists($field->id, $vars['custom'])
                         ? $vars['custom'][$field->id]
-                        : (isset($field->default) ? $field->default : null)
+                        : ($field->default ?? null)
                     );
 
                     if (($custom_field_errors = $this->errors())) {
@@ -191,7 +241,7 @@ class Clients extends AppModel
                     $company = $this->Companies->get($client->company_id);
 
                     // Get the company hostname
-                    $hostname = isset($company->hostname) ? $company->hostname : '';
+                    $hostname = $company->hostname ?? '';
 
                     $tags = [
                         'contact' => $this->Contacts->get($contact_id),
@@ -222,7 +272,7 @@ class Clients extends AppModel
 
                 // Build tags array
                 $company = $this->Companies->get($client->company_id);
-                $hostname = isset($company->hostname) ? $company->hostname : '';
+                $hostname = $company->hostname ?? '';
                 $tags = [
                     'contact' => $this->Contacts->get($contact_id),
                     'company' => $company,
@@ -264,7 +314,12 @@ class Clients extends AppModel
     public function add(array $vars)
     {
         // Trigger the Clients.addBefore event
-        extract($this->executeAndParseEvent('Clients.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Clients.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Note, you can't add a primary_account_id or primary_account_type when
         // adding a client because to create an account you must first create a contact
@@ -347,13 +402,19 @@ class Clients extends AppModel
     public function edit($client_id, array $vars)
     {
         // Trigger the Clients.editBefore event
-        extract($this->executeAndParseEvent('Clients.editBefore', ['client_id' => $client_id, 'vars' => $vars]));
+        $event = $this->executeAndParseEvent('Clients.editBefore', ['client_id' => $client_id, 'vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Validate client_id
         $vars['client_id'] = $client_id;
         if ($this->validateClient($vars, true, true)) {
-            // Get the client state prior to update
+            // Get the client state prior to update, then invalidate cache
             $client = $this->get($client_id, false);
+            self::clearClientCache();
 
             // Update a client
             $fields = ['user_id', 'client_group_id', 'status'];
@@ -392,7 +453,12 @@ class Clients extends AppModel
     public function delete($client_id)
     {
         // Trigger the Clients.deleteBefore event
-        extract($this->executeAndParseEvent('Clients.deleteBefore', ['client_id' => $client_id]));
+        $event = $this->executeAndParseEvent('Clients.deleteBefore', ['client_id' => $client_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $rules = [
             'client_id' => [
@@ -412,7 +478,11 @@ class Clients extends AppModel
 
         if ($this->Input->validates($vars)) {
             $client = $this->get($client_id, false);
+            self::clearClientCache();
             $this->Record->from('clients')->where('id', '=', $client_id)->delete();
+
+            // Invalidate cached settings for the deleted client
+            self::clearSettingsCache();
 
             #
             # TODO: Add this log to a new Logger event triggered on Clients.delete
@@ -544,7 +614,7 @@ class Clients extends AppModel
      *  - read_only (1 to show only fields set to read-only, 0 to return only fields not set to read-only)
      * @return array An array of stdClass custom field objects
      */
-    public function getCustomFields($company_id, $client_group_id = null, array $options = null)
+    public function getCustomFields($company_id, $client_group_id = null, ?array $options = null)
     {
         $fields = ['client_fields.id', 'client_fields.client_group_id', 'client_fields.name', 'client_fields.link',
             'client_fields.is_lang', 'client_fields.type', 'client_fields.values', 'client_fields.default',
@@ -593,7 +663,7 @@ class Clients extends AppModel
 
                 // Unserialize values
                 if ($field->values != null) {
-                    $field->values = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($field->values);
+                    $field->values = safe_unserialize($field->values);
                 }
             }
         }
@@ -648,7 +718,7 @@ class Clients extends AppModel
 
             // Unserialize values
             if ($custom_field->values != null) {
-                $custom_field->values = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($custom_field->values);
+                $custom_field->values = safe_unserialize($custom_field->values);
             }
         }
 
@@ -750,7 +820,7 @@ class Clients extends AppModel
 
                 // Unserialize values
                 if ($field->values != null) {
-                    $field->values = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($field->values);
+                    $field->values = safe_unserialize($field->values);
                 }
             }
         }
@@ -849,10 +919,15 @@ class Clients extends AppModel
     public function addNote($client_id, $staff_id, array $vars)
     {
         // Trigger the Clients.addNoteBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'Clients.addNoteBefore',
             ['client_id' => $client_id, 'staff_id' => $staff_id, 'vars' => $vars]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $vars['client_id'] = $client_id;
 
@@ -892,10 +967,15 @@ class Clients extends AppModel
     public function editNote($note_id, array $vars)
     {
         // Trigger the Clients.editNoteBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'Clients.editNoteBefore',
             ['note_id' => $note_id, 'vars' => $vars]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $vars['date_updated'] = date('Y-m-d H:i:s');
 
@@ -948,7 +1028,12 @@ class Clients extends AppModel
     public function deleteNote($note_id)
     {
         // Trigger the Clients.deleteNoteBefore event
-        extract($this->executeAndParseEvent('Clients.deleteNoteBefore', ['note_id' => $note_id]));
+        $event = $this->executeAndParseEvent('Clients.deleteNoteBefore', ['note_id' => $note_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Get the note state prior to update
         $note = $this->getNote($note_id);
@@ -1162,7 +1247,8 @@ class Clients extends AppModel
         }
 
         // If type or account ID then only process failure increment if they match the stored account
-        if (($type !== null || $account_id !== null)
+        if (
+            ($type !== null || $account_id !== null)
             && $client_account->type != $type
             && $client_account->account_id != $account_id
         ) {
@@ -1180,11 +1266,7 @@ class Clients extends AppModel
 
             $account_types = $this->Accounts->getTypes();
 
-            if ($client_account->type == 'cc') {
-                $account = $this->Accounts->getCc($client_account->account_id);
-            } else {
-                $account = $this->Accounts->getAch($client_account->account_id);
-            }
+            $account = $client_account->type == 'cc' ? $this->Accounts->getCc($client_account->account_id) : $this->Accounts->getAch($client_account->account_id);
 
             $this->addNote(
                 $client_id,
@@ -1194,8 +1276,8 @@ class Clients extends AppModel
                     'description' => Language::_(
                         'Clients.setDebitAccountFailure.note_body',
                         true,
-                        isset($account_types[$client_account->type]) ? $account_types[$client_account->type] : null,
-                        isset($account->last4) ? $account->last4 : null
+                        $account_types[$client_account->type] ?? null,
+                        $account->last4 ?? null
                     )
                 ]
             );
@@ -1217,7 +1299,8 @@ class Clients extends AppModel
         $client_account = $this->getDebitAccount($client_id);
 
         // If type or account ID then only process failure increment if they match the stored account
-        if ($client_account
+        if (
+            $client_account
             && ($type !== null || $account_id !== null)
             && $client_account->type != $type
             && $client_account->account_id != $account_id
@@ -1247,7 +1330,7 @@ class Clients extends AppModel
         Loader::loadModels($this, ['invoices']);
         $delivery_methods = $this->Invoices->getDeliveryMethods(
             $client_id,
-            isset($client->group_id) ? $client->group_id : null
+            $client->group_id ?? null
         );
         $invoice_delivery_methods = [];
         // Set the key of the invoice method
@@ -1337,7 +1420,7 @@ class Clients extends AppModel
      * @param array $vars A single dimensional array of key/value pairs of settings
      * @param array $value_keys An array of key values to accept as valid fields
      */
-    public function setSettings($client_id, array $vars, array $value_keys = null)
+    public function setSettings($client_id, array $vars, ?array $value_keys = null)
     {
         Loader::loadModels($this, ['Companies', 'TaxProviders']);
         Loader::loadComponents($this, ['SettingsCollection']);
@@ -1413,6 +1496,8 @@ class Clients extends AppModel
      */
     public function unsetSettings($client_id)
     {
+        self::clearClientCache();
+
         // Delete all of the client settings here
         #
         # TODO: logging all settings that were deleted may be useful, so a call to Clients::saveSettings
@@ -1420,6 +1505,14 @@ class Clients extends AppModel
         # and set their value to null, similar to Clients::unsetSetting
         #
         $this->Record->from('client_settings')->where('client_id', '=', $client_id)->delete();
+
+        // Invalidate cached settings for this client
+        unset(self::$allSettingsCache[$client_id]);
+        foreach (array_keys(self::$settingsCache) as $cacheKey) {
+            if (strpos($cacheKey, $client_id . '.') === 0) {
+                unset(self::$settingsCache[$cacheKey]);
+            }
+        }
     }
 
     /**
@@ -1437,6 +1530,10 @@ class Clients extends AppModel
      */
     private function saveSettings($client_id, array $settings)
     {
+        // Invalidate caches since settings are embedded in the cached objects
+        self::clearClientCache();
+        self::clearSettingsCache();
+
         // Set loggable setting fields
         $changes = [];
         $fields = ['key', 'client_id', 'value', 'encrypted'];
@@ -1476,8 +1573,9 @@ class Clients extends AppModel
 
             // Set loggable changes -- i.e. only settings that are not encrypted
             // and those that have changed
-            $old_value = (isset($setting['old_setting']->value) ? $setting['old_setting']->value : null);
-            if ($setting['encrypted'] === 0
+            $old_value = ($setting['old_setting']->value ?? null);
+            if (
+                $setting['encrypted'] === 0
                 && (!$setting['old_setting'] || (int)$setting['old_setting']->encrypted === 0)
                 && $old_value != $setting['value']
             ) {
@@ -1500,6 +1598,13 @@ class Clients extends AppModel
             'ip_address' => $requestor->ip_address,
             'fields' => $changes
         ]);
+
+        // Invalidate cached settings for this client
+        foreach (array_keys(self::$settingsCache) as $cacheKey) {
+            if (strpos($cacheKey, $client_id . '.') === 0) {
+                unset(self::$settingsCache[$cacheKey]);
+            }
+        }
     }
 
     /**
@@ -1513,6 +1618,23 @@ class Clients extends AppModel
      */
     public function getSettings($client_id)
     {
+        // Tier 1: in-memory cache
+        if (array_key_exists($client_id, self::$allSettingsCache)) {
+            return self::$allSettingsCache[$client_id];
+        }
+
+        // Tier 2: Redis cache
+        $cache = CacheFactory::get();
+        $cached = $cache->read((string) $client_id, 'settings:client');
+        if ($cached !== false) {
+            self::$allSettingsCache[$client_id] = $cached;
+            foreach ($cached as $setting) {
+                self::$settingsCache[$client_id . '.' . $setting->key] = $setting;
+            }
+
+            return $cached;
+        }
+
         $max_records = Configure::get('Blesta.max_records');
         if (empty($max_records)) {
             // Default to 2^31 - 1
@@ -1590,6 +1712,16 @@ class Clients extends AppModel
                 $settings[$i]->value = $this->systemDecrypt($settings[$i]->value);
             }
         }
+
+        // Cache bulk results and populate per-key cache
+        self::$allSettingsCache[$client_id] = $settings;
+        foreach ($settings as $setting) {
+            self::$settingsCache[$client_id . '.' . $setting->key] = $setting;
+        }
+
+        // Store in Redis
+        $cache->write((string) $client_id, $settings, 0, 'settings:client');
+
         return $settings;
     }
 
@@ -1605,6 +1737,12 @@ class Clients extends AppModel
      */
     public function getSetting($client_id, $key)
     {
+        $cacheKey = $client_id . '.' . $key;
+
+        if (array_key_exists($cacheKey, self::$settingsCache)) {
+            return self::$settingsCache[$cacheKey];
+        }
+
         $max_records = Configure::get('Blesta.max_records');
         if (empty($max_records)) {
             // Default to 2^31 - 1
@@ -1684,6 +1822,9 @@ class Clients extends AppModel
         if ($setting && $setting->encrypted) {
             $setting->value = $this->systemDecrypt($setting->value);
         }
+
+        self::$settingsCache[$cacheKey] = $setting;
+
         return $setting;
     }
 
@@ -1697,6 +1838,12 @@ class Clients extends AppModel
      */
     public function get($client_id, $get_settings = true)
     {
+        // Return cached result if available (avoids duplicate fetches within the same request)
+        $cacheKey = $client_id . '.' . ($get_settings ? '1' : '0');
+        if (array_key_exists($cacheKey, self::$clientCache)) {
+            return self::$clientCache[$cacheKey];
+        }
+
         // Load format helper for settings
         $this->ArrayHelper = $this->DataStructure->create('Array');
 
@@ -1735,10 +1882,22 @@ class Clients extends AppModel
             $client->settings = $this->ArrayHelper->numericToKey($this->getSettings($client->id), 'key', 'value');
         }
 
+        // Set client notifications
+        if ($client) {
+            $client->notifications = $this->getNotifications($client_id);
+        }
+
         // Trigger the Clients.get event
-        extract($this->executeAndParseEvent('Clients.get', [
+        $event = $this->executeAndParseEvent('Clients.get', [
             'client' => $client
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
+
+        self::$clientCache[$cacheKey] = $client;
 
         return $client;
     }
@@ -1796,6 +1955,11 @@ class Clients extends AppModel
             $client->settings = $this->ArrayHelper->numericToKey($this->getSettings($client->id), 'key', 'value');
         }
 
+        // Set client notifications
+        if ($client) {
+            $client->notifications = $this->getNotifications($client->id);
+        }
+
         return $client;
     }
 
@@ -1814,7 +1978,7 @@ class Clients extends AppModel
             'users.two_factor_mode', 'users.two_factor_key', 'users.two_factor_pin', 'users.date_added'];
 
         return $this->Record->select($fields)
-            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('clients')
             ->innerJoin('client_groups', 'clients.client_group_id', '=', 'client_groups.id', false)
             ->innerJoin('contacts', 'contacts.client_id', '=', 'clients.id', false)
@@ -2004,7 +2168,7 @@ class Clients extends AppModel
             'client_groups.name' => 'group_name', 'client_groups.company_id'];
 
         $this->Record->select($fields)
-            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['clients']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('clients')
             ->innerJoin('client_groups', 'clients.client_group_id', '=', 'client_groups.id', false)
             ->innerJoin('contacts', 'contacts.client_id', '=', 'clients.id', false)
@@ -2281,7 +2445,7 @@ class Clients extends AppModel
                 'unique' => [
                     'rule' => [[$this, 'validateExists'], 'user_id', 'clients'],
                     'negate' => true,
-                    'message' => $this->_('Clients.!error.user_id.unique', (isset($vars['user_id']) ? $vars['user_id'] : null))
+                    'message' => $this->_('Clients.!error.user_id.unique', ($vars['user_id'] ?? null))
                 ]
             ],
             'client_group_id' => [
@@ -2322,7 +2486,7 @@ class Clients extends AppModel
             unset($rules['id_format'], $rules['id_value']);
 
             // Allow client to be edited with identical unique user_id
-            $rules['user_id']['unique']['rule'] = [[$this, 'validateUserId'], (isset($vars['client_id']) ? $vars['client_id'] : null)];
+            $rules['user_id']['unique']['rule'] = [[$this, 'validateUserId'], ($vars['client_id'] ?? null)];
             $rules['user_id']['unique']['negate'] = false;
 
             $edit_rules = [
@@ -2391,7 +2555,7 @@ class Clients extends AppModel
             'values' => [
                 'format' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateValues'], (isset($vars['type']) ? $vars['type'] : null)],
+                    'rule' => [[$this, 'validateValues'], ($vars['type'] ?? null)],
                     'message' => $this->_('Clients.!error.values.format'),
                     'post_format' => 'json_encode',
                 ]
@@ -2540,7 +2704,7 @@ class Clients extends AppModel
         // Attempt to evaluate the regular expression
         try {
             $match = preg_match($regex, '');
-        } catch (Exception $exc) {
+        } catch (\Throwable $exc) {
             return false;
         }
         return true;
@@ -2652,7 +2816,7 @@ class Clients extends AppModel
             $client = $this->get($client_id);
 
             if ($client) {
-                if ((isset($client->settings[$key]) ? $client->settings[$key] : null) == 'true') {
+                if (($client->settings[$key] ?? null) == 'true') {
                     return true;
                 }
             }
@@ -2762,7 +2926,7 @@ class Clients extends AppModel
     {
         // Set the company ID as the client's company, or default to the current company instead
         $client = $this->get($client_id, false);
-        $company_id = (isset($client->company_id) ? $client->company_id : Configure::get('Blesta.company_id'));
+        $company_id = ($client->company_id ?? Configure::get('Blesta.company_id'));
 
         $count = $this->Record->select('client_groups.company_id')->from('client_fields')->
             innerJoin('client_groups', 'client_fields.client_group_id', '=', 'client_groups.id', false)->
@@ -2927,10 +3091,10 @@ class Clients extends AppModel
         // Add client custom fields
         $custom_fields = $this->getCustomFields(Configure::get('Blesta.company_id'), $vars['client_group_id']);
 
-        foreach ((isset($custom_fields) ? $custom_fields : []) as $field) {
+        foreach (($custom_fields ?? []) as $field) {
             $value = isset($vars['custom']) && array_key_exists($field->id, $vars['custom'])
                 ? $vars['custom'][$field->id]
-                : (isset($field->default) ? $field->default : null);
+                : ($field->default ?? null);
 
             if (!$this->validateCustomField($field->id, $value, $client_id)) {
                 return false;
@@ -3089,4 +3253,213 @@ class Clients extends AppModel
         return $this->SettingsProcessor->processCurrencyBasedSettings($credit_limits);
     }
 
+    /**
+     * Adds a client notification
+     *
+     * @param array $vars An array of client notification information including:
+     *
+     *  - client_group_id The ID of the client group this notification will be added to
+     *  - client_id The ID of the client
+     *  - action The notification action
+     */
+    public function addNotification(array $vars)
+    {
+        $this->Input->setRules($this->getNotificationRules($vars));
+
+        if ($this->Input->validates($vars)) {
+            self::clearClientCache();
+            // Add a new notification, but allow duplicates to be added without error
+            $this->Record->duplicate('action', '=', $vars['action'])
+                ->insert('client_notifications', $vars, ['client_group_id', 'client_id', 'action']);
+        }
+    }
+
+    /**
+     * Adds multiple client notifications
+     *
+     * @param int $client_id The ID of the client
+     * @param int $client_group_id The ID of the client group these notifications will be added to
+     * @param array $actions A list of client notifications, each containing:
+     *
+     *  - action The notification action
+     */
+    public function addNotifications($client_id, $client_group_id, array $actions)
+    {
+        // Set input
+        $vars = [
+            'client_id' => $client_id,
+            'client_group_id' => $client_group_id,
+            'actions' => $actions
+        ];
+
+        // Get rules
+        $rules = $this->getNotificationRules($vars);
+        unset($rules['action']);
+
+        // Validate each action
+        $rules['actions[]'] = [
+            'exists' => [
+                'if_set' => true,
+                'rule' => [[$this, 'validateNotificationActionExists'], $client_group_id],
+                'message' => $this->_('Clients.!error.action[].exists')
+            ]
+        ];
+
+        $this->Input->setRules($rules);
+
+        if ($this->Input->validates($vars)) {
+            // Delete all current client notifications
+            $this->deleteNotification($client_id, $client_group_id);
+
+            // Add a new notification, but allow duplicates to be added without error
+            foreach ($vars['actions'] as $action) {
+                $notification = ['client_id' => $client_id, 'client_group_id' => $client_group_id, 'action' => $action];
+                $this->Record->duplicate('action', '=', $action)->
+                    insert('client_notifications', $notification, ['client_group_id', 'client_id', 'action']);
+            }
+        }
+    }
+
+    /**
+     * Deletes the given client group notification
+     *
+     * @param int $client_id The ID of the client
+     * @param int $client_group_id The ID of the client group the notification belongs to
+     * @param string $action The notification action to remove (optional, default null to delete all notifications)
+     */
+    public function deleteNotification($client_id, $client_group_id, $action = null)
+    {
+        self::clearClientCache();
+        $this->deleteClientNotifications($client_id, $client_group_id, $action);
+    }
+
+    /**
+     * Deletes the client notifications
+     *
+     * @param int $client_id The ID of the client
+     * @param int $client_group_id The ID of the client group
+     * @param string $action The notification action (optional)
+     */
+    private function deleteClientNotifications($client_id, $client_group_id, $action = null)
+    {
+        // Delete the notification from the client
+        $this->Record->from('client_notifications')->
+            where('client_id', '=', $client_id)->
+            where('client_group_id', '=', $client_group_id);
+
+        if ($action) {
+            $this->Record->where('action', '=', $action);
+        }
+
+        $this->Record->delete();
+    }
+
+    /**
+     * Fetches all client group notifications
+     *
+     * @param int $client_id The ID of the client
+     * @param int $client_group_id The ID of the client group (optional, default null for all)
+     * @param bool $group_by_action True to group by the action, false otherwise (optional, default true)
+     * @return array A list of all client group notifications
+     */
+    public function getNotifications($client_id, $client_group_id = null, $group_by_action = true)
+    {
+        $this->Record->select()->from('client_notifications')->
+            where('client_id', '=', $client_id);
+
+        if ($client_group_id) {
+            $this->Record->where('client_group_id', '=', $client_group_id);
+        }
+
+        if ($group_by_action) {
+            $this->Record->group('action');
+        }
+
+        return $this->Record->fetchAll();
+    }
+
+    /**
+     * Fetches the rules for adding/editing a client notification
+     *
+     * @param array $vars A list of input vars
+     * @return array The client notification rules
+     */
+    private function getNotificationRules(array $vars)
+    {
+        $rules = [
+            'client_group_id' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateExists'], 'id', 'client_groups'],
+                    'message' => $this->_('Clients.!error.client_group_id.exists')
+                ]
+            ],
+            'client_id' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateExists'], 'id', 'clients'],
+                    'message' => $this->_('Clients.!error.client_id.exists')
+                ]
+            ],
+            'action' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateNotificationActionExists'], ($vars['client_group_id'] ?? null)],
+                    'message' => $this->_('Clients.!error.action.exists', ($vars['action'] ?? null))
+                ]
+            ]
+        ];
+
+        return $rules;
+    }
+
+    /**
+     * Fetches all clients that can be sent the notification corresponding to the given notification action
+     *
+     * @param string $action The notification action name
+     * @param int $company_id The ID of the company whose clients to fetch from
+     * @param string $status The status of the client ("active",
+     *  "inactive", "fraud", or null for all; optional, default null)
+     * @return array A list of stdClass objects, each representing a client
+     */
+    public function getAllByNotificationAction($action, $company_id, $status = null)
+    {
+        $this->Record->select('client_group_notifications.client_id')->from('client_group_notifications')->
+            innerJoin('notification_actions', 'notification_actions.action', '=', 'client_group_notifications.action', false)->
+            innerJoin('client_groups', 'client_groups.id', '=', 'client_group_notifications.client_group_id', false)->
+            where('notification_actions.target', '=', 'client');
+
+        $client_id_sql = $this->Record->where('client_groups.company_id', '=', $company_id)->
+            where('notification_actions.action', '=', $action)->
+            where('notification_actions.company_id', '=', $company_id)->
+            group('client_group_notifications.client_id')->
+            get();
+        $client_id_values = $this->Record->values;
+        $this->Record->reset();
+
+        $this->Record->values = $client_id_values;
+        $this->Record->select(['clients.*'])->from('clients')->
+            innerJoin([$client_id_sql => 'temp'], 'temp.client_id', '=', 'clients.id', false);
+
+        // Filter on client status
+        if ($status) {
+            $this->Record->where('clients.status', '=', $status);
+        }
+
+        return $this->Record->fetchAll();
+    }
+
+    /**
+     * Validates that the given action is available for this client group
+     *
+     * @param string $action The notification group action
+     * @param int $client_group_id The ID of the client group to check
+     * @return bool True if the client group has the action available, false otherwise
+     */
+    public function validateNotificationActionExists($action, $client_group_id)
+    {
+        $count = $this->Record->select()->from('client_group_notifications')->
+            where('client_group_id', '=', $client_group_id)->
+            where('action', '=', $action)->
+            numResults();
+
+        return ($count > 0);
+    }
 }

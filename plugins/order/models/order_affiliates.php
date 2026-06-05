@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Affiliate Management
  *
@@ -347,7 +348,7 @@ class OrderAffiliates extends OrderModel
             $statuses = $this->OrderAffiliateReferrals->getStatuses();
 
             foreach ($referrals as $key => $referral) {
-                $referrals[$key]->status_formatted = isset($statuses[$referral->status]) ? $statuses[$referral->status] : '';
+                $referrals[$key]->status_formatted = $statuses[$referral->status] ?? '';
             }
 
             // Get date format
@@ -359,7 +360,7 @@ class OrderAffiliates extends OrderModel
                 'affiliate' => $affiliate,
                 'signups' => $signups,
                 'referrals' => $referrals,
-                'date_format' => isset($date_format->value) ? $date_format->value : 'M d, Y'
+                'date_format' => $date_format->value ?? 'M d, Y'
             ];
 
             // Send client notification email

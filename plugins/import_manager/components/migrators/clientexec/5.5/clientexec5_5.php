@@ -118,7 +118,7 @@ class Clientexec5_5 extends ClientexecMigrator
         try {
             $this->remote = new Record($db_info);
             $this->remote->query("SET sql_mode='TRADITIONAL'");
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->Input->setErrors([[$e->getMessage()]]);
             $this->logException($e);
 
@@ -171,32 +171,32 @@ class Clientexec5_5 extends ClientexecMigrator
     {
         return [
             [
-                'label' => Language::_("Clientexec5_5.settings.host", true),
+                'label' => Language::_('Clientexec5_5.settings.host', true),
                 'field' => 'host',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Clientexec5_5.settings.database", true),
+                'label' => Language::_('Clientexec5_5.settings.database', true),
                 'field' => 'database',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Clientexec5_5.settings.user", true),
+                'label' => Language::_('Clientexec5_5.settings.user', true),
                 'field' => 'user',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Clientexec5_5.settings.pass", true),
+                'label' => Language::_('Clientexec5_5.settings.pass', true),
                 'field' => 'pass',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Clientexec5_5.settings.passphrase", true),
+                'label' => Language::_('Clientexec5_5.settings.passphrase', true),
                 'field' => 'key',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Clientexec5_5.settings.enable_debug", true),
+                'label' => Language::_('Clientexec5_5.settings.enable_debug', true),
                 'field' => 'enable_debug',
                 'type' => 'bool'
             ],

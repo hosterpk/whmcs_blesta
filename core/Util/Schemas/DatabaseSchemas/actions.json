@@ -1,0 +1,160 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "location",
+            "type": "enum('nav_public','nav_client','nav_staff','widget_client_home','widget_staff_home','widget_staff_client','widget_staff_billing','action_staff_client')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "nav_staff",
+            "extra": null,
+            "max_length": 20
+        },
+        {
+            "name": "icon",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": "bi bi-gear",
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "url",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "name",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "options",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "plugin_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "editable",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": "MUL",
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "enabled",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": "MUL",
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "company_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "company_id"
+            ]
+        },
+        {
+            "name": "editable",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "editable"
+            ]
+        },
+        {
+            "name": "enabled",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "enabled"
+            ]
+        },
+        {
+            "name": "location",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "location"
+            ]
+        },
+        {
+            "name": "plugin_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "plugin_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "url",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "url",
+                "location",
+                "company_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

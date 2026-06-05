@@ -5,6 +5,9 @@
 
 // Errors
 $lang['DirectAdmin.!error.server_name.empty'] = 'You must enter a Server Label.';
+
+$lang['DirectAdmin.back_to_manage'] = 'Back';
+
 $lang['DirectAdmin.!error.host_name.format'] = 'The Host Name appears to be invalid.';
 $lang['DirectAdmin.!error.port.format'] = 'The port must be a number.';
 $lang['DirectAdmin.!error.user_name.empty'] = 'You must enter a User Name.';
@@ -85,6 +88,8 @@ $lang['DirectAdmin.add_module_row'] = 'Add Server';
 $lang['DirectAdmin.add_module_group'] = 'Add Server Group';
 $lang['DirectAdmin.manage.module_rows_title'] = 'Servers';
 $lang['DirectAdmin.manage.module_groups_title'] = 'Server Groups';
+$lang['DirectAdmin.manage.tab_rows'] = 'Servers';
+$lang['DirectAdmin.manage.tab_groups'] = 'Server Groups';
 $lang['DirectAdmin.manage.module_rows_heading.name'] = 'Server Label';
 $lang['DirectAdmin.manage.module_rows_heading.host_name'] = 'Host Name';
 $lang['DirectAdmin.manage.module_rows_heading.accounts'] = 'Accounts';

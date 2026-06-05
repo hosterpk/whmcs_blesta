@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Items\Service;
 
 use Blesta\Items\Item\ItemInterface;
@@ -39,11 +40,11 @@ class ServiceDataItems extends AbstractServiceItems
         $this->setServiceOptions($service->getFields()->options ?? null);
 
         $packageFields = $package->getFields();
-        $packageId = (isset($packageFields->id) ? $packageFields->id : null);
+        $packageId = ($packageFields->id ?? null);
 
         $pricingFields = $pricing->getFields();
-        $term = (isset($pricingFields->term) ? $pricingFields->term : null);
-        $period = (isset($pricingFields->period) ? $pricingFields->period : null);
+        $term = ($pricingFields->term ?? null);
+        $period = ($pricingFields->period ?? null);
 
         $serviceItems = $this->setDiscounts($serviceItems, [$packageId => [$period => [$term]]]);
 
@@ -79,7 +80,8 @@ class ServiceDataItems extends AbstractServiceItems
         $currency = (empty($pricingFields->currency) ? '' : $pricingFields->currency);
 
         // Set the renewal price
-        if ((isset($settings->recur)
+        if (
+            (isset($settings->recur)
             && $settings->recur
             && isset($pricingFields->price_renews)
             && ($packageFields->upgrades_use_renewal || (isset($settings->upgrade) && !$settings->upgrade)))
@@ -89,7 +91,8 @@ class ServiceDataItems extends AbstractServiceItems
         }
 
         // Set the transfer price
-        if (isset($settings->transfer)
+        if (
+            isset($settings->transfer)
             && $settings->transfer
             && isset($pricingFields->price_transfer)
         ) {
@@ -328,7 +331,8 @@ class ServiceDataItems extends AbstractServiceItems
 
         foreach ($option->options as $optionValue) {
             // The value and pricing must exist
-            if (!property_exists($optionValue, 'value')
+            if (
+                !property_exists($optionValue, 'value')
                 || empty($optionValue->pricing)
                 || empty($optionValue->pricing[0])
             ) {
@@ -364,8 +368,8 @@ class ServiceDataItems extends AbstractServiceItems
         $option->cancel_fee = (empty($pricing->cancel_fee) ? 0 : $pricing->cancel_fee);
         $option->currency = (empty($pricing->currency) ? '' : $pricing->currency);
         $option->price = (empty($pricing->price) ? 0 : $pricing->price);
-        $option->price_renews = (isset($pricing->price_renews) ? $pricing->price_renews : null);
-        $option->price_transfer = (isset($pricing->price_transfer) ? $pricing->price_transfer : null);
+        $option->price_renews = ($pricing->price_renews ?? null);
+        $option->price_transfer = ($pricing->price_transfer ?? null);
 
         return $option;
     }

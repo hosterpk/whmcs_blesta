@@ -1,0 +1,289 @@
+
+<?php echo (isset($left_nav) ? $left_nav : null);?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php $this->Form->create(null, ['id' => 'addgroup', 'class' => 'disable-on-submit']);?>
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemStaff.addgroup.boxtitle_addgroup', true), ['id' => 'admin_system_staff_addgroup']);
+    ?>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.addgroup.heading_general');?></h6>
+
+            <div class="mb-3">
+                <label for="name" class="form-label">
+                    <?php $this->_('AdminSystemStaff.addgroup.field_name');?>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'name',
+                    (isset($vars->name) ? $vars->name : null),
+                    ['id' => 'name', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <label for="company_id" class="form-label">
+                    <?php $this->_('AdminSystemStaff.addgroup.field_company');?>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'company_id',
+                    (isset($companies) ? $companies : null),
+                    (isset($vars->company_id) ? $vars->company_id : null),
+                    ['id' => 'company_id', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'session_lock',
+                        '1',
+                        (isset($vars->session_lock) ? $vars->session_lock : '1') == '1',
+                        ['id' => 'session_lock', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="session_lock" class="form-check-label">
+                        <?php $this->_('AdminSystemStaff.addgroup.field_session_lock');?>
+                    </label>
+                </div>
+            </div>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.addgroup.heading_permissions');?></h6>
+
+            <?php
+            foreach ((isset($permissions) ? $permissions : []) as $group) {
+            ?>
+            <div class="acl-group mb-4">
+                <div class="form-check mb-2">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'permission_group[]',
+                        (isset($group->id) ? $this->Html->safe($group->id) : null),
+                        in_array((isset($group->id) ? $this->Html->safe($group->id) : null), (array)(isset($vars->permission_group) ? $vars->permission_group : null)),
+                        ['id' => 'permission_group_' . (isset($group->id) ? $this->Html->safe($group->id) : null), 'class' => 'form-check-input acl-parent', 'data-group' => (isset($group->id) ? $this->Html->safe($group->id) : null)]
+                    );
+                    ?>
+                    <label for="permission_group_<?php echo (isset($group->id) ? $this->Html->safe($group->id) : null);?>" class="form-check-label fw-semibold">
+                        <?php echo (isset($group->name_trans) ? $group->name_trans : '');?> (<?php $this->_('AdminSystemStaff.addgroup.text_check_all');?> / <?php $this->_('AdminSystemStaff.addgroup.text_uncheck_all');?>)
+                    </label>
+                </div>
+                <div class="row">
+                    <?php foreach ($group->permissions as $permission) { ?>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldCheckbox(
+                                'permission[]',
+                                (isset($permission->id) ? $this->Html->safe($permission->id) : null),
+                                in_array($permission->id, (array)(isset($vars->permission) ? $vars->permission : null)),
+                                ['id' => 'permission_' . (isset($permission->id) ? $this->Html->safe($permission->id) : null), 'class' => 'form-check-input acl-child', 'data-parent' => (isset($group->id) ? $this->Html->safe($group->id) : null)]
+                            );
+                            ?>
+                            <label for="permission_<?php echo (isset($permission->id) ? $this->Html->safe($permission->id) : null);?>" class="form-check-label">
+                                <?php echo (isset($permission->name_trans) ? $permission->name_trans : '');?>
+                            </label>
+                        </div>
+                    </div>
+                    <?php } ?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.addgroup.heading_email_notices');?></h6>
+
+            <div class="acl-group mb-4">
+                <div class="form-check mb-2">
+                    <input type="checkbox" id="bcc_notices_all" class="form-check-input acl-parent" data-group="bcc">
+                    <label for="bcc_notices_all" class="form-check-label fw-semibold">
+                        <?php $this->_('AdminSystemStaff.addgroup.heading_email_notices');?> (<?php $this->_('AdminSystemStaff.addgroup.text_check_all');?> / <?php $this->_('AdminSystemStaff.addgroup.text_uncheck_all');?>)
+                    </label>
+                </div>
+                <div class="row">
+                    <?php foreach ((isset($bcc_notices) ? $bcc_notices : []) as $email_group) { ?>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldCheckbox(
+                                'notices[]',
+                                (isset($email_group->action) ? $this->Html->safe($email_group->action) : null),
+                                in_array((isset($email_group->action) ? $this->Html->safe($email_group->action) : null), (array)(isset($vars->notices) ? $vars->notices : null)),
+                                ['id' => 'notice_' . (isset($email_group->id) ? $this->Html->safe($email_group->id) : null), 'class' => 'form-check-input acl-child', 'data-parent' => 'bcc']
+                            );
+                            ?>
+                            <label for="notice_<?php echo (isset($email_group->id) ? $this->Html->safe($email_group->id) : null);?>" class="form-check-label">
+                                <?php echo (isset($email_group->lang) ? $email_group->lang : '');?>
+                                <?php if (!empty($email_group->lang_description)) { ?>
+                                <i class="bi bi-info-circle ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="<?php echo $this->Html->safe($email_group->lang_description);?>"></i>
+                                <?php } ?>
+                            </label>
+                        </div>
+                    </div>
+                    <?php
+                    }
+                    unset($email_group);
+                    ?>
+                </div>
+            </div>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.addgroup.heading_subscription_email_notices');?></h6>
+
+            <div class="acl-group mb-4">
+                <div class="form-check mb-2">
+                    <input type="checkbox" id="subscription_notices_all" class="form-check-input acl-parent" data-group="subscription">
+                    <label for="subscription_notices_all" class="form-check-label fw-semibold">
+                        <?php $this->_('AdminSystemStaff.addgroup.heading_subscription_email_notices');?> (<?php $this->_('AdminSystemStaff.addgroup.text_check_all');?> / <?php $this->_('AdminSystemStaff.addgroup.text_uncheck_all');?>)
+                    </label>
+                </div>
+                <div class="row">
+                    <?php foreach ((isset($subscription_notices) ? $subscription_notices : []) as $email_group) { ?>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <?php
+                            $this->Form->fieldCheckbox(
+                                'notices[]',
+                                (isset($email_group->action) ? $this->Html->safe($email_group->action) : null),
+                                in_array((isset($email_group->action) ? $this->Html->safe($email_group->action) : null), (array)(isset($vars->notices) ? $vars->notices : null)),
+                                ['id' => 'notice_' . (isset($email_group->id) ? $this->Html->safe($email_group->id) : null), 'class' => 'form-check-input acl-child', 'data-parent' => 'subscription']
+                            );
+                            ?>
+                            <label for="notice_<?php echo (isset($email_group->id) ? $this->Html->safe($email_group->id) : null);?>" class="form-check-label">
+                                <?php echo (isset($email_group->lang) ? $email_group->lang : '');?>
+                                <?php if (!empty($email_group->lang_description)) { ?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($email_group->lang_description);?>"></i>
+                            <?php } ?>
+                        </label>
+                    </div>
+                </div>
+                    <?php
+                    }
+                    unset($email_group);
+                    ?>
+                </div>
+            </div>
+
+            <h6 class="form-section-header"><?php $this->_('AdminSystemStaff.addgroup.heading_notifications');?></h6>
+
+            <div class="row">
+                <?php foreach (($notifications ?? []) as $notification) { ?>
+                <div class="col-md-6">
+                    <div class="form-check mb-2">
+                        <?php
+                        $this->Form->fieldCheckbox(
+                            'notifications[]',
+                            $this->Html->safe($notification->action ?? ''),
+                            in_array($this->Html->safe($notification->action ?? ''), (array)($vars->notifications ?? [])),
+                            ['id' => 'notification_' . $this->Html->safe($notification->id ?? ''), 'class' => 'form-check-input']
+                        );
+                        ?>
+                        <label for="notification_<?php echo $this->Html->safe($notification->id ?? '');?>" class="form-check-label">
+                            <?php echo (isset($notification->lang) ? $notification->lang : '');?>
+                            <?php if (!empty($notification->lang_description)) { ?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($notification->lang_description);?>"></i>
+                            <?php } ?>
+                        </label>
+                    </div>
+                </div>
+                <?php
+                }
+                unset($notification);
+                ?>
+            </div>
+
+    <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit(
+                'save',
+                $this->_('AdminSystemStaff.addgroup.field_groupsubmit', true),
+                ['class' => 'btn btn-primary']
+            );
+            ?>
+        </div>
+    <?php
+    $this->Widget->end();
+    $this->Form->end();
+    ?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // ACL parent checkbox - check/uncheck all children
+    document.querySelectorAll('.acl-parent').forEach(parentCheckbox => {
+        parentCheckbox.addEventListener('change', function() {
+            const groupId = this.getAttribute('data-group');
+            const aclGroup = this.closest('.acl-group');
+            const childCheckboxes = aclGroup.querySelectorAll('.acl-child[data-parent="' + groupId + '"]');
+
+            childCheckboxes.forEach(child => {
+                child.checked = this.checked;
+            });
+        });
+    });
+
+    // ACL child checkbox - update parent state
+    document.querySelectorAll('.acl-child').forEach(childCheckbox => {
+        childCheckbox.addEventListener('change', function() {
+            const parentId = this.getAttribute('data-parent');
+            const aclGroup = this.closest('.acl-group');
+            const parentCheckbox = aclGroup.querySelector('.acl-parent[data-group="' + parentId + '"]');
+            const allChildren = aclGroup.querySelectorAll('.acl-child[data-parent="' + parentId + '"]');
+
+            // Check if all children are checked
+            const allChecked = Array.from(allChildren).every(child => child.checked);
+            const someChecked = Array.from(allChildren).some(child => child.checked);
+
+            if (allChecked) {
+                parentCheckbox.checked = true;
+                parentCheckbox.indeterminate = false;
+            } else if (someChecked) {
+                parentCheckbox.indeterminate = true;
+            } else {
+                parentCheckbox.checked = false;
+                parentCheckbox.indeterminate = false;
+            }
+        });
+    });
+
+    // Initialize parent checkbox states on page load
+    document.querySelectorAll('.acl-parent').forEach(parentCheckbox => {
+        const groupId = parentCheckbox.getAttribute('data-group');
+        const aclGroup = parentCheckbox.closest('.acl-group');
+        const allChildren = aclGroup.querySelectorAll('.acl-child[data-parent="' + groupId + '"]');
+
+        const allChecked = Array.from(allChildren).every(child => child.checked);
+        const someChecked = Array.from(allChildren).some(child => child.checked);
+
+        if (allChecked) {
+            parentCheckbox.checked = true;
+            parentCheckbox.indeterminate = false;
+        } else if (someChecked) {
+            parentCheckbox.indeterminate = true;
+        } else {
+            parentCheckbox.checked = false;
+            parentCheckbox.indeterminate = false;
+        }
+    });
+
+});
+</script>

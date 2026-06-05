@@ -1,5 +1,5 @@
 {
-    "version": "2.6.0",
+    "version": "3.0.0",
     "name": "Centoswebpanel.name",
     "description": "Centoswebpanel.description",
     "authors": [
@@ -21,8 +21,18 @@
         "group": "Centoswebpanel.module_group"
     },
     "email_tags": {
-        "module": ["host_name", "name_servers"],
-        "package": ["package"],
-        "service": ["centoswebpanel_domain", "centoswebpanel_username", "centoswebpanel_password"]
-    }
+        "module": [
+            "host_name",
+            "name_servers"
+        ],
+        "package": [
+            "package"
+        ],
+        "service": [
+            "centoswebpanel_domain",
+            "centoswebpanel_username",
+            "centoswebpanel_password"
+        ]
+    },
+    "icon": "bi-server"
 }

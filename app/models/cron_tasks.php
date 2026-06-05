@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Cron Task management
  *
@@ -33,7 +41,7 @@ class CronTasks extends AppModel
     private function setTaskFields(stdClass $task, $set_plugin_fields = false)
     {
         // Select the plugin/module based on the task's company, if we have one
-        $company_id = (isset($task->company_id) ? $task->company_id : null);
+        $company_id = ($task->company_id ?? null);
 
         // Set plugin or module fields
         switch ($task->task_type) {
@@ -162,7 +170,7 @@ class CronTasks extends AppModel
             unset($vars['plugin_dir']);
         } else {
             // Set the default task type
-            $vars['task_type'] = (isset($vars['task_type']) ? $vars['task_type'] : 'system');
+            $vars['task_type'] = ($vars['task_type'] ?? 'system');
         }
 
         $this->Input->setRules($this->getRules($vars));
@@ -250,11 +258,7 @@ class CronTasks extends AppModel
             $fields = ['task_id', 'company_id', 'enabled', 'date_enabled'];
 
             // Allow interval to be set if the rule is set, otherwise time, but not both
-            if (isset($rules['interval'])) {
-                $fields[] = 'interval';
-            } else {
-                $fields[] = 'time';
-            }
+            $fields[] = isset($rules['interval']) ? 'interval' : 'time';
 
             $this->Record->insert('cron_task_runs', $vars, $fields);
 
@@ -285,11 +289,7 @@ class CronTasks extends AppModel
             $fields = ['enabled', 'date_enabled'];
 
             // Allow interval to be set if the rule is set, otherwise time, but not both
-            if (isset($rules['interval'])) {
-                $fields[] = 'interval';
-            } else {
-                $fields[] = 'time';
-            }
+            $fields[] = isset($rules['interval']) ? 'interval' : 'time';
 
             // Get the current task and change the date_enabled
             if (isset($vars['enabled']) && ($task_run = $this->getTaskRun($task_run_id))) {

@@ -1,44 +1,45 @@
-		<?php
-		$this->Widget->clear();
-		$this->Widget->create($this->_("BlestaLicense.add_row.box_title", true));
-		?>
-		<div class="inner">
-			<?php
-			$this->Form->create();
-			?>
-			<div class="title_row first">
-				<h3><?php $this->_("BlestaLicense.add_row.basic_title");?></h3>
-			</div>
-			<div class="pad">
-				<ul>
-					<li>
-						<?php
-						$this->Form->label($this->_("BlestaLicense.row_meta.username", true), "username");
-						$this->Form->fieldText("username", ($vars->username ?? ''), array('id' => "username"));
-						?>
-                        <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("BlestaLicense.!tooltip.username");?></div></span>
-					</li>
-                    <li>
-						<?php
-						$this->Form->label($this->_("BlestaLicense.row_meta.password", true), "password");
-						$this->Form->fieldPassword("password", array('id' => "password"));
-						?>
-                        <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("BlestaLicense.!tooltip.password");?></div></span>
-					</li>
-                    <li>
-						<?php
-						$this->Form->fieldCheckbox("test_mode", "true", ($vars->test_mode ?? 'false') == "true", array('id' => "test_mode"));
-                        $this->Form->label($this->_("BlestaLicense.row_meta.test_mode", true), "test_mode", array('class' => "inline"));
-						?>
-					</li>
-				</ul>
-			</div>
+<?php /** @var View $this **/ ?>
 
-			<div class="button_row"><a class="btn btn-primary pull-right submit" href="#"><?php $this->_("BlestaLicense.add_row.add_btn");?></a></div>
-			<?php
-			$this->Form->end();
-			?>
-		</div>
-		<?php
-		$this->Widget->end();
-		?>
+<?php
+$this->Widget->clear();
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+$this->Widget->create($this->_('BlestaLicense.add_row.box_title', true), ['id' => 'add_row_blesta_license'], ($render_section ?? null));
+?>
+<h6 class="form-section-header"><?php $this->_('BlestaLicense.add_row.basic_title'); ?></h6>
+
+<div class="mb-3">
+    <label for="username" class="form-label">
+        <?php $this->_('BlestaLicense.row_meta.username'); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="<?php $this->_('BlestaLicense.!tooltip.username', true); ?>"></i>
+    </label>
+    <?php $this->Form->fieldText('username', ($vars->username ?? ''), ['id' => 'username', 'class' => 'form-control']); ?>
+</div>
+
+<div class="mb-3">
+    <label for="password" class="form-label">
+        <?php $this->_('BlestaLicense.row_meta.password'); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="<?php $this->_('BlestaLicense.!tooltip.password', true); ?>"></i>
+    </label>
+    <?php $this->Form->fieldPassword('password', ['id' => 'password', 'class' => 'form-control']); ?>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <?php $this->Form->fieldCheckbox('test_mode', 'true', ($vars->test_mode ?? 'false') == 'true', ['id' => 'test_mode', 'class' => 'form-check-input']); ?>
+        <?php $this->Form->label($this->_('BlestaLicense.row_meta.test_mode', true), 'test_mode', ['class' => 'form-check-label']); ?>
+    </div>
+</div>
+
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php $this->Form->fieldSubmit('save', $this->_('BlestaLicense.add_row.add_btn', true), ['class' => 'btn btn-primary']); ?>
+</div>
+<?php $this->Widget->end(); ?>
+<?php $this->Form->end(); ?>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            new bootstrap.Tooltip(el);
+        });
+    });
+</script>

@@ -21,7 +21,7 @@ $lang['AdminCompanyThemes.index.field_themessubmit'] = 'Select Theme';
 $lang['AdminCompanyThemes.index.heading_id'] = 'ID';
 $lang['AdminCompanyThemes.index.heading_color'] = 'Color Scheme';
 $lang['AdminCompanyThemes.index.heading_name'] = 'Name';
-$lang['AdminCompanyThemes.index.heading_options'] = 'Options';
+$lang['AdminCompanyThemes.index.heading_options'] = 'Actions';
 
 $lang['AdminCompanyThemes.index.option_edit'] = 'Edit';
 $lang['AdminCompanyThemes.index.option_delete'] = 'Delete';

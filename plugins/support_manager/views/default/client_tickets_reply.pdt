@@ -77,7 +77,8 @@
                 ?>
                 <div class="form-group">
                     <label for="details"><?php $this->_('ClientTickets.reply.heading_reply');?></label>
-                    <textarea class="form-control" rows="5" name="details" id="details" data-markdown-editor="" placeholder="<?php $this->_('ClientTickets.reply.placeholder_reply');?>"></textarea>
+                    <textarea class="form-control" rows="5" name="details" id="details" data-markdown-editor=""<?php if ($logged_in ?? false) { ?> data-image-upload-url="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/client_tickets/uploadimage/');?>"<?php } ?> placeholder="<?php $this->_('ClientTickets.reply.placeholder_reply');?>"></textarea>
+                    <?php $this->Form->fieldHidden('inline_image_temp_ids', '', ['id' => 'inline_image_temp_ids']);?>
                 </div>
                 <div class="form-group">
                     <?php
@@ -178,7 +179,11 @@
                 <hr />
                 <?php
                 foreach ((isset($ticket->replies) ? $ticket->replies : []) as $reply) {
-                    if ((isset($reply->staff_id) ? $reply->staff_id : null) != '') {
+                    if (isset($reply->staff_id) && $reply->staff_id == 0) {
+                        // AI Assistant reply - use configurable name
+                        $first_name = (!empty($ai_assistant_name) ? $ai_assistant_name : $this->_('ClientTickets.reply.system', true));
+                        $last_name = null;
+                    } elseif ((isset($reply->staff_id) ? $reply->staff_id : null) != '') {
                         $first_name = (isset($reply->first_name) ? $reply->first_name : $this->_('ClientTickets.reply.system', true));
                         $last_name = (isset($reply->last_name) ? $reply->last_name : null);
                     } else {
@@ -232,7 +237,15 @@
                         <?php
                         }
 
-                        echo $this->TextParser->encode('markdown', (isset($reply->details) ? $reply->details : null));
+                        $reply_details = (isset($reply->details) ? $reply->details : null);
+                        if ($reply_details && strpos($reply_details, 'blesta-attachment://') !== false) {
+                            $reply_details = preg_replace(
+                                '/blesta-attachment:\/\/(\d+)/',
+                                $this->Html->safe($this->base_uri . 'plugin/support_manager/client_tickets/getattachment/') . '$1/',
+                                $reply_details
+                            );
+                        }
+                        echo $this->TextParser->encode('markdown', $reply_details);
 
                         if ((isset($reply->images) ? $reply->images : null)) {
                         ?>
@@ -412,3 +425,6 @@
                         $('.modal-content').data('index', n);
                     }
                 ");
+                ?>
+                <script src="<?php echo $this->view_dir;?>js/support-manager.js"></script>
+                <?php

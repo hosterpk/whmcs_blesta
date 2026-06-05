@@ -1,0 +1,31 @@
+<?php /** @var View $this **/ ?>
+
+
+                    <?php
+                    if ((isset($access_logs) ? $access_logs : false)) {
+                    ?>
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th><?php $this->_('AdminTools.accountaccess.name');?></th>
+                                <th><?php $this->_('AdminTools.accountaccess.type');?></th>
+                                <th><?php $this->_('AdminTools.accountaccess.last4');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><a href="<?php echo $this->base_uri . 'clients/' . ($access_logs->type == 'ach' ? 'editachaccount' : 'editccaccount') . '/' . (isset($access_logs->client_id) ? $this->Html->safe($access_logs->client_id) : null) . '/' . (isset($access_logs->account_id) ? $this->Html->safe($access_logs->account_id) : null);?>/"><?php (print (isset($access_logs->first_name) ? $this->Html->safe($access_logs->first_name) : null));?> <?php (print (isset($access_logs->last_name) ? $this->Html->safe($access_logs->last_name) : null));?></a></td>
+                                <td><?php $this->_('AdminTools.accountaccess.type_' . $access_logs->type, false, $account_types[$access_logs->type], (isset($ach_types[$access_logs->account_type]) ? $ach_types[$access_logs->account_type] : (isset($cc_types[$access_logs->account_type]) ? $cc_types[$access_logs->account_type] : null)));?></td>
+                                <td><code><?php (print (isset($access_logs->last4) ? $this->Html->safe($access_logs->last4) : null));?></code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <?php
+                    } else {
+                    ?>
+                    <div class="text-center text-muted py-3">
+                        <?php $this->_('AdminTools.accountaccess.no_results');?>
+                    </div>
+                    <?php
+                    }
+                    ?>

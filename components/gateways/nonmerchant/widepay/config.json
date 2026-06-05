@@ -1,13 +1,15 @@
 {
-	"version": "1.2.0",
-	"name": "Widepay.name",
-	"description": "",
-	"authors": [
-		{
-			"name": "Phillips Data, Inc.",
-			"url": "http://www.blesta.com"
-		}
-	],
-	"currencies": ["BRL"],
-	"signup_url": "https://www.widepay.com/criar"
+    "version": "2.0.0",
+    "name": "Widepay.name",
+    "description": "",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://www.blesta.com"
+        }
+    ],
+    "currencies": [
+        "BRL"
+    ],
+    "signup_url": "https://www.widepay.com/criar"
 }

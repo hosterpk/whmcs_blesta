@@ -141,6 +141,216 @@ class AdminMain extends SupportManagerController
     }
 
     /**
+     * AI settings page
+     */
+    public function ai()
+    {
+        $this->helpers(['Form']);
+        $this->uses(['Settings', 'SupportManager.SupportManagerDepartments']);
+        $this->components(['SettingsCollection']);
+
+        // Get all system settings
+        $system_settings = $this->SettingsCollection->fetchSystemSettings($this->Settings);
+
+        // Check if system AI is configured
+        $ai_configured = !empty($system_settings['ai_enabled'])
+            && $system_settings['ai_enabled'] == 'true'
+            && !empty($system_settings['ai_api_key']);
+
+        // Get current settings
+        $settings = $this->Form->collapseObjectArray(
+            $this->SupportManagerSettings->getSettings($this->company_id),
+            'value',
+            'key'
+        );
+
+        $vars = (object) $settings;
+
+        // Handle form submission
+        if (!empty($this->post)) {
+            // Only allow known AI setting keys
+            $allowed_keys = [
+                'sm_ai_enabled',
+                'sm_ai_override_model',
+                'sm_ai_model',
+                'sm_ai_override_max_tokens',
+                'sm_ai_max_tokens',
+                'sm_ai_override_temperature',
+                'sm_ai_temperature',
+                'sm_ai_system_prompt',
+                'sm_ai_auto_reply_enabled',
+                'sm_ai_require_human_review',
+                'sm_ai_show_disclaimer',
+                'sm_ai_custom_disclaimer',
+                'sm_ai_confidence_threshold',
+                'sm_ai_auto_reply_departments',
+                'sm_ai_tools_enabled',
+                'sm_ai_tool_change_priority',
+                'sm_ai_tool_close_ticket',
+                'sm_ai_tool_assign_staff',
+                'sm_ai_tool_instructions',
+                'sm_ai_assistant_name',
+                'sm_ai_analyze_trigger',
+                'sm_ai_max_queue_age_hours'
+            ];
+
+            $settings_to_save = array_intersect_key(
+                $this->post,
+                array_flip($allowed_keys)
+            );
+
+            // Set default values for checkboxes (unchecked checkboxes aren't submitted)
+            $checkbox_fields = [
+                'sm_ai_enabled',
+                'sm_ai_override_model',
+                'sm_ai_override_max_tokens',
+                'sm_ai_override_temperature',
+                'sm_ai_auto_reply_enabled',
+                'sm_ai_require_human_review',
+                'sm_ai_show_disclaimer',
+                'sm_ai_tools_enabled',
+                'sm_ai_tool_change_priority',
+                'sm_ai_tool_close_ticket',
+                'sm_ai_tool_assign_staff'
+            ];
+
+            foreach ($checkbox_fields as $field) {
+                if (!isset($settings_to_save[$field])) {
+                    $settings_to_save[$field] = 'false';
+                }
+            }
+
+            // Handle auto-reply departments array - convert to JSON
+            if (isset($settings_to_save['sm_ai_auto_reply_departments'])) {
+                if (is_array($settings_to_save['sm_ai_auto_reply_departments'])) {
+                    $settings_to_save['sm_ai_auto_reply_departments'] = json_encode($settings_to_save['sm_ai_auto_reply_departments']);
+                }
+            } else {
+                // If not set, save empty array
+                $settings_to_save['sm_ai_auto_reply_departments'] = '[]';
+            }
+
+            $this->SupportManagerSettings->setSettings($settings_to_save, $this->company_id);
+
+            if (($errors = $this->SupportManagerSettings->errors())) {
+                // Error, reset vars
+                $vars = (object) $this->post;
+                $this->setMessage('error', $errors, false, null, false);
+            } else {
+                // Success
+                $this->flashMessage(
+                    'message',
+                    Language::_('AdminMain.!success.ai_settings_updated', true),
+                    null,
+                    false
+                );
+                $this->redirect(
+                    $this->base_uri . 'plugin/support_manager/admin_main/ai/'
+                );
+            }
+        }
+
+        // Fetch models from BlestaAI if configured
+        $models = [];
+        if ($ai_configured) {
+            try {
+                $this->components(['BlestaAi']);
+                $ai = new BlestaAi($system_settings['ai_api_key']);
+                $models = $ai->getModels();
+            } catch (Exception $e) {
+                // Failed to fetch models - will use empty array
+            }
+        }
+
+        // Set system defaults from global AI settings
+        $system_defaults = [
+            'model' => $system_settings['ai_default_model'] ?? 'claude-3-5-sonnet-20241022',
+            'max_tokens' => $system_settings['ai_max_tokens'] ?? '4000',
+            'temperature' => $system_settings['ai_temperature'] ?? '1.0'
+        ];
+
+        // Set default values if not set
+        if (!isset($vars->sm_ai_enabled)) {
+            $vars->sm_ai_enabled = 'false';
+        }
+        if (!isset($vars->sm_ai_override_model)) {
+            $vars->sm_ai_override_model = 'false';
+        }
+        if (!isset($vars->sm_ai_model)) {
+            $vars->sm_ai_model = $system_defaults['model'];
+        }
+        if (!isset($vars->sm_ai_override_max_tokens)) {
+            $vars->sm_ai_override_max_tokens = 'false';
+        }
+        if (!isset($vars->sm_ai_max_tokens)) {
+            $vars->sm_ai_max_tokens = $system_defaults['max_tokens'];
+        }
+        if (!isset($vars->sm_ai_override_temperature)) {
+            $vars->sm_ai_override_temperature = 'false';
+        }
+        if (!isset($vars->sm_ai_temperature)) {
+            $vars->sm_ai_temperature = $system_defaults['temperature'];
+        }
+        if (!isset($vars->sm_ai_auto_reply_enabled)) {
+            $vars->sm_ai_auto_reply_enabled = 'false';
+        }
+        if (!isset($vars->sm_ai_confidence_threshold)) {
+            $vars->sm_ai_confidence_threshold = '70';
+        }
+        if (!isset($vars->sm_ai_require_human_review)) {
+            $vars->sm_ai_require_human_review = 'true';
+        }
+        if (!isset($vars->sm_ai_show_disclaimer)) {
+            $vars->sm_ai_show_disclaimer = 'true';
+        }
+        if (!isset($vars->sm_ai_tools_enabled)) {
+            $vars->sm_ai_tools_enabled = 'false';
+        }
+        if (!isset($vars->sm_ai_tool_change_priority)) {
+            $vars->sm_ai_tool_change_priority = 'false';
+        }
+        if (!isset($vars->sm_ai_tool_close_ticket)) {
+            $vars->sm_ai_tool_close_ticket = 'false';
+        }
+        if (!isset($vars->sm_ai_tool_assign_staff)) {
+            $vars->sm_ai_tool_assign_staff = 'false';
+        }
+
+        // Format model options for dropdown (same format as system AI settings)
+        $model_options = [];
+        foreach ($models as $model) {
+            $model_id = $model->id;
+            $model_name = $model->name;
+            $label = ($model_name !== $model_id) ? $model_name : $model_id;
+
+            if ($model->promptPrice !== null && $model->completionPrice !== null) {
+                $label .= ' (' . number_format($model->promptPrice, 6) . ' / ' . number_format($model->completionPrice, 6) . ')';
+            }
+
+            $model_options[$model_id] = $label;
+        }
+
+        // If no models fetched but we have a current model set, add it to the list
+        if (empty($model_options) && !empty($vars->sm_ai_model)) {
+            $model_options[$vars->sm_ai_model] = $vars->sm_ai_model;
+        }
+
+        // Fetch departments for auto-reply restrictions
+        $departments = $this->SupportManagerDepartments->getAll($this->company_id);
+
+        $this->set('vars', $vars);
+        $this->set('settings', $settings);
+        $this->set('ai_configured', $ai_configured);
+        $this->set('system_defaults', $system_defaults);
+        $this->set('model_options', $model_options);
+        $this->set('departments', $departments);
+
+        return $this->renderAjaxWidgetIfAsync(
+            isset($this->get[0]) || isset($this->post)
+        );
+    }
+
+    /**
      * Creates a unique filename for uploaded avatar files
      *
      * @param string $name The original filename
@@ -151,7 +361,7 @@ class AdminMain extends SupportManagerController
     {
         $file_info = pathinfo($name);
         $extension = isset($file_info['extension']) ? '.' . $file_info['extension'] : '';
-        
+
         return 'default_avatar_' . time() . $extension;
     }
 }

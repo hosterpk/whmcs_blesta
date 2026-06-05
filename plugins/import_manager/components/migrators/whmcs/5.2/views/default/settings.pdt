@@ -1,57 +1,60 @@
+<?php /** @var View $this */ ?>
 
-    <ul>
-        <?php
-        if (!extension_loaded("gmp")) {
-        ?>
-        <li>
-            <h4><?php $this->_("Whmcs5_2.!notice.gmp");?></h4>
-        </li>
-        <?php
-        }
-        ?>
-        <li>
-            <?php
-            $this->Form->fieldHidden("step", "settings");
-            $this->Form->label($this->_("Whmcs5_2.settings.host", true), "host");
-            $this->Form->fieldText("host", (isset($vars->host) ? $vars->host : null), array('id' => "host"));
-            ?>
-        </li>
-        <li>
-            <?php
-            $this->Form->label($this->_("Whmcs5_2.settings.database", true), "database");
-            $this->Form->fieldText("database", (isset($vars->database) ? $vars->database : null), array('id' => "database"));
-            ?>
-        </li>
-        <li>
-            <?php
-            $this->Form->label($this->_("Whmcs5_2.settings.user", true), "user");
-            $this->Form->fieldText("user", (isset($vars->user) ? $vars->user : null), array('id' => "user"));
-            ?>
-        </li>
-        <li>
-            <?php
-            $this->Form->label($this->_("Whmcs5_2.settings.pass", true), "pass");
-            $this->Form->fieldPassword("pass", array('id' => "pass", 'value' => (isset($vars->pass) ? $vars->pass : null)));
-            ?>
-        </li>
-        <li>
-            <?php
-            $this->Form->label($this->_("Whmcs5_2.settings.key", true), "key");
-            $this->Form->fieldText("key", (isset($vars->key) ? $vars->key : null), array('id' => "key"));
-            ?>
-            <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("Whmcs5_2.settings.key.info");?></div></span>
-        </li>
-        <li>
-            <?php
-            $this->Form->fieldCheckbox("balance_credit", "true", (isset($vars->balance_credit) ? $vars->balance_credit : "true") == "true", array('id' => "balance_credit"));
-            $this->Form->label($this->_("Whmcs5_2.settings.balance_credit", true), "balance_credit", array('class' => "inline"));
-            ?>
-            <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("Whmcs5_2.settings.balance_credit.info");?></div></span>
-        </li>
-        <li>
-            <?php
-            $this->Form->fieldCheckbox("enable_debug", "true", (isset($vars->enable_debug) ? $vars->enable_debug : null) == "true", array('id' => "enable_debug"));
-            $this->Form->label($this->_("Whmcs5_2.settings.enable_debug", true), "enable_debug", array('class' => "inline"));
-            ?>
-        </li>
-    </ul>
+<?php
+$this->Form->fieldHidden('step', 'settings');
+
+if (!extension_loaded('gmp')) {
+    ?>
+<div class="alert alert-warning mb-3">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    <?php $this->_('Whmcs5_2.!notice.gmp');?>
+</div>
+    <?php
+}
+?>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Whmcs5_2.settings.host', true), 'host', ['class' => 'form-label']);
+    $this->Form->fieldText('host', ($vars->host ?? null), ['id' => 'host', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Whmcs5_2.settings.database', true), 'database', ['class' => 'form-label']);
+    $this->Form->fieldText('database', ($vars->database ?? null), ['id' => 'database', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Whmcs5_2.settings.user', true), 'user', ['class' => 'form-label']);
+    $this->Form->fieldText('user', ($vars->user ?? null), ['id' => 'user', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Whmcs5_2.settings.pass', true), 'pass', ['class' => 'form-label']);
+    $this->Form->fieldPassword('pass', ['id' => 'pass', 'class' => 'form-control', 'value' => ($vars->pass ?? null)]);
+    ?>
+</div>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('Whmcs5_2.settings.key', true), 'key', ['class' => 'form-label']);
+    ?>
+    <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php $this->_('Whmcs5_2.settings.key.info');?>"></i>
+    <?php
+    $this->Form->fieldText('key', ($vars->key ?? null), ['id' => 'key', 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3 form-check">
+    <?php
+    $this->Form->fieldCheckbox('balance_credit', 'true', ($vars->balance_credit ?? 'true') == 'true', ['id' => 'balance_credit', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('Whmcs5_2.settings.balance_credit', true), 'balance_credit', ['class' => 'form-check-label']);
+    ?>
+    <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php $this->_('Whmcs5_2.settings.balance_credit.info');?>"></i>
+</div>
+<div class="mb-3 form-check">
+    <?php
+    $this->Form->fieldCheckbox('enable_debug', 'true', ($vars->enable_debug ?? null) == 'true', ['id' => 'enable_debug', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('Whmcs5_2.settings.enable_debug', true), 'enable_debug', ['class' => 'form-check-label']);
+    ?>
+</div>

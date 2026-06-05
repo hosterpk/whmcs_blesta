@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('netearthone.map', [
     'module' => 'logicboxes',
     'module_row_key' => 'username',

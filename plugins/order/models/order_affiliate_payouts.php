@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Affiliate Payout Management
  *
@@ -119,6 +120,7 @@ class OrderAffiliatePayouts extends OrderModel
             $this->sendPayoutEmail($vars);
 
             // Update total withdrawn, only if the payout has been approved
+            $total_withdrawn = null;
             if (($vars['status'] ?? 'pending') == 'approved') {
                 Loader::loadComponents($this, ['Order.OrderAffiliateSettings']);
                 Loader::loadHelpers($this, ['Form']);
@@ -142,9 +144,9 @@ class OrderAffiliatePayouts extends OrderModel
 
             // Trigger the Order.addPayoutAfter event
             extract($this->triggerEvent(
-                    'addPayoutAfter',
-                    ['payout_id' => $payout_id, 'total_withdrawn' => $total_withdrawn, 'vars' => $vars]
-                ));
+                'addPayoutAfter',
+                ['payout_id' => $payout_id, 'total_withdrawn' => $total_withdrawn, 'vars' => $vars]
+            ));
 
             return $payout_id;
         }
@@ -198,8 +200,8 @@ class OrderAffiliatePayouts extends OrderModel
                 Configure::get('Blesta.company_id')
             );
             $new_requested_amount = $this->Currencies->convert(
-                isset($vars['requested_amount']) ? $vars['requested_amount'] : $payout->requested_amount,
-                isset($vars['requested_currency']) ? $vars['requested_currency'] : $payout->requested_currency,
+                $vars['requested_amount'] ?? $payout->requested_amount,
+                $vars['requested_currency'] ?? $payout->requested_currency,
                 $settings['withdrawal_currency'],
                 Configure::get('Blesta.company_id')
             );
@@ -229,9 +231,9 @@ class OrderAffiliatePayouts extends OrderModel
 
             // Trigger the Order.editPayoutBefore event
             extract($this->triggerEvent(
-                    'editPayoutAfter',
-                    ['payout_id' => $payout_id, 'total_withdrawn' => $total_withdrawn, 'vars' => $vars]
-                ));
+                'editPayoutAfter',
+                ['payout_id' => $payout_id, 'total_withdrawn' => $total_withdrawn, 'vars' => $vars]
+            ));
 
             return $payout_id;
         }
@@ -370,8 +372,8 @@ class OrderAffiliatePayouts extends OrderModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateAmount'],
-                        (isset($vars['requested_currency']) ? $vars['requested_currency'] : null),
-                        (isset($vars['affiliate_id']) ? $vars['affiliate_id'] : null)
+                        ($vars['requested_currency'] ?? null),
+                        ($vars['affiliate_id'] ?? null)
                     ],
                     'message' => $this->_('OrderAffiliatePayouts.!error.requested_amount.valid')
                 ],
@@ -437,7 +439,7 @@ class OrderAffiliatePayouts extends OrderModel
         $amount = $this->Currencies->convert(
             $amount,
             $currency,
-            (isset($affiliate_settings['withdrawal_currency']) ? $affiliate_settings['withdrawal_currency'] : 'USD'),
+            ($affiliate_settings['withdrawal_currency'] ?? 'USD'),
             Configure::get('Blesta.company_id')
         );
 
@@ -460,7 +462,7 @@ class OrderAffiliatePayouts extends OrderModel
      */
     private function sendPayoutEmail($payout)
     {
-        Loader::loadModels($this, ['Order.OrderAffiliates', 'Order.OrderStaffSettings', 'Clients', 'Emails']);
+        Loader::loadModels($this, ['Order.OrderAffiliates', 'Order.OrderStaffSettings', 'Clients', 'Currencies', 'Emails']);
 
         // Fetch the client
         $affiliate = $this->OrderAffiliates->get($payout['affiliate_id']);
@@ -503,6 +505,50 @@ class OrderAffiliatePayouts extends OrderModel
                 $staff->email,
                 $tags
             );
+        }
+
+        // Send bell notifications to staff with payout notices
+        Loader::loadModels($this, ['Notifications']);
+
+        $bell_action = $this->Notifications->getAction(
+            'Order.staff_payout_requested',
+            'staff',
+            'plugin',
+            'order'
+        );
+
+        if ($bell_action) {
+            $client_name = trim(($client->first_name ?? '') . ' ' . ($client->last_name ?? ''));
+            $amount_display = $this->Currencies->toCurrency(
+                $payout['requested_amount'],
+                $payout['requested_currency'],
+                Configure::get('Blesta.company_id')
+            );
+
+            $bell_title = Language::_(
+                'OrderAffiliatePayouts.bell.payout_requested.title',
+                true
+            );
+            $bell_message = Language::_(
+                'OrderAffiliatePayouts.bell.payout_requested.message',
+                true,
+                $client_name,
+                $amount_display
+            );
+            $bell_url = AppController::baseUrl() . AppController::adminUri()
+                . 'clients/view/' . $client->id . '/';
+
+            foreach ($staff_email as $staff) {
+                $this->Notifications->add([
+                    'action_id' => $bell_action->id,
+                    'user_id' => $staff->user_id,
+                    'title' => $bell_title,
+                    'message' => $bell_message,
+                    'url' => $bell_url,
+                    'icon' => 'bi-cash-stack',
+                    'type' => 'info'
+                ]);
+            }
         }
     }
 }

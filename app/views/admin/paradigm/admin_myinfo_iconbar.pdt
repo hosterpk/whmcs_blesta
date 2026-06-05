@@ -1,0 +1,180 @@
+<?php
+echo (isset($message) ? $message : null);
+?>
+
+<div class="alert alert-info d-flex align-items-start mb-3" role="alert">
+    <i class="bi bi-info-circle me-3" style="font-size: 1.5rem;"></i>
+    <div>
+        <strong><?php $this->_('AdminMyinfo.iconbar.heading_iconbar');?></strong>
+        <p class="mb-0 mt-2"><?php $this->_('AdminMyinfo.iconbar.text_info');?></p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminMyinfo.iconbar.heading_iconbar');?></h5>
+    </div>
+    <div class="card-filter-bar">
+        <div class="d-flex justify-content-end align-items-center flex-wrap gap-3">
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomIconModal">
+                <i class="bi bi-plus-circle me-1"></i><?php $this->_('AdminMyinfo.iconbar.btn_create_custom');?>
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="p-4">
+            <div class="iconbar-items-list" id="iconbarItemsList">
+                <?php
+                foreach ($items ?? [] as $item) {
+                    $is_custom = !empty($item['custom']);
+                    $icon_class = $item['icon'] ?? 'bi bi-gear';
+                    // Ensure icon has bi prefix for display
+                    $display_icon = str_starts_with($icon_class, 'bi ') ? $icon_class : 'bi ' . $icon_class;
+                    // Store just the bi-* part for data attribute
+                    $icon_value = str_starts_with($icon_class, 'bi ') ? substr($icon_class, 3) : $icon_class;
+                    $enabled = !empty($item['enabled']);
+                    $item_name = $item['name'] ?? '';
+                ?>
+                <div class="iconbar-editor-item<?php echo !$enabled ? ' disabled' : '';?>"
+                     data-icon-id="<?php echo $this->Html->safe($item['id']);?>"
+                     data-icon="<?php echo $this->Html->safe($icon_value);?>"
+                     <?php if ($is_custom) { ?>data-custom="true" data-url="<?php echo $this->Html->safe($item['url'] ?? '#');?>"<?php } ?>>
+                    <div class="iconbar-item-checkbox">
+                        <input type="checkbox" class="form-check-input"<?php echo $enabled ? ' checked' : '';?>>
+                    </div>
+                    <div class="iconbar-item-handle">
+                        <i class="bi bi-grip-vertical"></i>
+                    </div>
+                    <div class="iconbar-item-icon">
+                        <i class="<?php echo $this->Html->safe($display_icon);?>"></i>
+                    </div>
+                    <div class="iconbar-item-name"><?php echo $this->Html->safe($item_name);?></div>
+                    <div class="iconbar-item-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-icon edit-icon-btn" title="<?php $this->_('AdminMyinfo.iconbar.modal_edit_title');?>">
+                            <i class="bi bi-palette"></i>
+                        </button>
+                        <?php if ($is_custom) { ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-icon delete-custom-icon-btn"
+                            title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php } ?>
+                    </div>
+                </div>
+                <?php } ?>
+            </div>
+        </div>
+
+        <?php
+        $this->Form->create(null, ['id' => 'iconbarForm', 'class' => 'disable-on-submit']);
+        $this->Form->fieldHidden('icon_bar_items', '', ['id' => 'iconBarItemsInput']);
+        ?>
+        <div class="px-4 py-3 border-top">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="showAiChatbot"
+                       name="show_ai_chatbot" value="1"<?php echo ($show_ai_chatbot ?? true) ? ' checked' : '';?>>
+                <label class="form-check-label" for="showAiChatbot">
+                    <?php $this->_('AdminMyinfo.iconbar.field_show_ai_chatbot');?>
+                </label>
+                <small class="text-muted d-block">
+                    <?php $this->_('AdminMyinfo.iconbar.text_show_ai_chatbot');?>
+                </small>
+            </div>
+        </div>
+        <?php
+        $this->Form->end();
+
+        $this->Form->create(null, ['id' => 'iconbarResetForm', 'class' => 'disable-on-submit']);
+        $this->Form->fieldHidden('reset', '1');
+        $this->Form->end();
+        ?>
+        <div class="card-footer d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary modal-confirm-warning"
+                data-confirm-message="<?php echo $this->Html->safe($this->_('AdminMyinfo.iconbar.confirm_reset', true));?>"
+                data-form="iconbarResetForm">
+                <i class="bi bi-arrow-counterclockwise me-1"></i><?php $this->_('AdminMyinfo.iconbar.btn_reset');?>
+            </button>
+            <button type="button" class="btn btn-primary" id="saveIconBar">
+                <i class="bi bi-check-lg me-1"></i><?php $this->_('AdminMyinfo.iconbar.btn_save');?>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Custom Icon Modal -->
+<div class="modal fade" id="createCustomIconModal" tabindex="-1" aria-labelledby="createCustomIconModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCustomIconModalLabel"><?php $this->_('AdminMyinfo.iconbar.modal_create_title');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="customIconName" class="form-label"><?php $this->_('AdminMyinfo.iconbar.field_name');?> <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="customIconName" placeholder="My Custom Link" required>
+                    <div class="form-text"><?php $this->_('AdminMyinfo.iconbar.text_name_description');?></div>
+                </div>
+                <div class="mb-3">
+                    <label for="customIconUrl" class="form-label"><?php $this->_('AdminMyinfo.iconbar.field_url');?> <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="customIconUrl" placeholder="/admin/custom/page" required>
+                    <div class="form-text"><?php $this->_('AdminMyinfo.iconbar.text_url_description');?></div>
+                </div>
+                <div class="mb-3">
+                    <label for="customIconClass" class="form-label"><?php $this->_('AdminMyinfo.iconbar.field_icon_class');?> <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text" id="customIconPreview">
+                            <i class="bi bi-question"></i>
+                        </span>
+                        <input type="text" class="form-control" id="customIconClass" placeholder="bi-grid" aria-describedby="customIconPreview" required>
+                    </div>
+                    <div class="form-text">
+                        <?php $this->_('AdminMyinfo.iconbar.text_icon_description');?>
+                        <a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener"><?php $this->_('AdminMyinfo.iconbar.text_browse_icons');?></a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminMyinfo.iconbar.btn_modal_cancel');?></button>
+                <button type="button" class="btn btn-primary" id="createCustomIcon"><?php $this->_('AdminMyinfo.iconbar.btn_modal_create');?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Icon Modal -->
+<div class="modal fade" id="editIconModal" tabindex="-1" aria-labelledby="editIconModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editIconModalLabel"><?php $this->_('AdminMyinfo.iconbar.modal_edit_title');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="editIconItemName" class="form-label"><?php $this->_('AdminMyinfo.iconbar.field_item_name');?></label>
+                    <input type="text" class="form-control" id="editIconItemName" disabled>
+                </div>
+                <div class="mb-3">
+                    <label for="editIconInput" class="form-label"><?php $this->_('AdminMyinfo.iconbar.field_icon_class');?></label>
+                    <div class="input-group">
+                        <span class="input-group-text" id="editIconPreview">
+                            <i class="bi bi-question"></i>
+                        </span>
+                        <input type="text" class="form-control" id="editIconInput" placeholder="bi-grid" aria-describedby="editIconPreview">
+                    </div>
+                    <div class="form-text">
+                        <?php $this->_('AdminMyinfo.iconbar.text_icon_description');?>
+                        <a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener"><?php $this->_('AdminMyinfo.iconbar.text_browse_icons');?></a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminMyinfo.iconbar.btn_modal_cancel');?></button>
+                <button type="button" class="btn btn-primary" id="saveIconChange"><?php $this->_('AdminMyinfo.iconbar.btn_modal_apply');?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="<?php echo $this->view_dir;?>javascript/iconbar-editor.min.js"></script>

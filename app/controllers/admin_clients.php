@@ -64,13 +64,11 @@ class AdminClients extends AppController
                     $this->structure->set('page_title', Language::_('AdminClients.index.page_title', true));
                 }
 
-                $this->Javascript->setFile('date.min.js');
-                $this->Javascript->setFile('jquery.datePicker.min.js');
-                $this->Javascript->setInline(
-                    'Date.firstDayOfWeek=' . ($client->settings['calendar_begins'] == 'sunday' ? 0 : 1) . ';'
-                );
             }
         }
+
+        // Set client to all views
+        $this->set('client', isset($this->get[0]) ? $this->Clients->get((int)$this->get[0]) : null);
     }
 
     /**
@@ -78,7 +76,41 @@ class AdminClients extends AppController
      */
     public function index()
     {
-        $this->uses(['ClientGroups', 'SettingsCollection']);
+        $this->uses(['ClientGroups', 'Invoices', 'SettingsCollection']);
+
+        // Handle bulk actions
+        if (!empty($this->post) && isset($this->post['client_ids'])) {
+            if (($errors = $this->updateClients($this->post))) {
+                $this->set('vars', (object) $this->post);
+                $this->setMessage('error', $errors);
+            } else {
+                $term = null;
+                switch ($this->post['action'] ?? null) {
+                    case 'change_status':
+                        $term = 'AdminClients.!success.clients_status_updated';
+                        break;
+                    case 'change_client_group':
+                        $term = 'AdminClients.!success.clients_client_group_updated';
+                        break;
+                    case 'change_inv_method':
+                        $term = 'AdminClients.!success.clients_inv_method_updated';
+                        break;
+                    case 'change_autodebit':
+                        $term = 'AdminClients.!success.clients_autodebit_updated';
+                        break;
+                    case 'change_payment_notices':
+                        $term = 'AdminClients.!success.clients_payment_notices_updated';
+                        break;
+                    case 'change_autosuspend':
+                        $term = 'AdminClients.!success.clients_autosuspend_updated';
+                        break;
+                }
+
+                if ($term) {
+                    $this->setMessage('message', Language::_($term, true));
+                }
+            }
+        }
 
         // Set filters from post input
         $post_filters = [];
@@ -140,11 +172,31 @@ class AdminClients extends AppController
         $this->set('order', $order);
         $this->set('negate_order', ($order == 'asc' ? 'desc' : 'asc'));
 
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
-        $this->Javascript->setInline(
-            'Date.firstDayOfWeek=' . ($company_settings['calendar_begins'] == 'sunday' ? 0 : 1) . ';'
-        );
+        // Set bulk action data
+        $bulk_actions = [
+            'change_status' => Language::_('AdminClients.index.action.change_status', true),
+            'change_client_group' => Language::_('AdminClients.index.action.change_client_group', true),
+            'change_inv_method' => Language::_('AdminClients.index.action.change_inv_method', true),
+            'change_autodebit' => Language::_('AdminClients.index.action.change_autodebit', true),
+            'change_payment_notices' => Language::_('AdminClients.index.action.change_payment_notices', true),
+            'change_autosuspend' => Language::_('AdminClients.index.action.change_autosuspend', true),
+        ];
+        $this->set('bulk_actions', $bulk_actions);
+        $this->set('status_types', $this->Clients->getStatusTypes());
+
+        // Build client groups list for dropdown
+        $all_client_groups = $this->ClientGroups->getAll($this->company_id);
+        $client_groups_list = [];
+        foreach ($all_client_groups as $group) {
+            $client_groups_list[$group->id] = $group->name;
+        }
+        $this->set('client_groups_list', $client_groups_list);
+
+        $this->set('delivery_methods', $this->Invoices->getDeliveryMethods(null, null, false));
+        $this->set('toggle_options', [
+            'true' => Language::_('AdminClients.index.action.field_toggle_enable', true),
+            'false' => Language::_('AdminClients.index.action.field_toggle_disable', true),
+        ]);
 
         // Set pagination parameters, set group if available
         $params = ['sort' => $sort,'order' => $order];
@@ -206,53 +258,13 @@ class AdminClients extends AppController
             $number->international = $this->Contacts->intlNumber($number->number, $client->country, ' ');
         }
 
-        // Set any client sticky notes
-        if ($content == null) {
-            $sticky_note_list_vars = [
-                'notes' => $this->Clients->getAllStickyNotes($client->id, Configure::get('Blesta.sticky_notes_max')),
-                'number_notes_to_show' => Configure::get('Blesta.sticky_notes_to_show')
-            ];
-
-            $sticky_note_vars = [
-                'sticky_notes' => $this->partial('admin_clients_stickynote_list', $sticky_note_list_vars)
-            ];
-
-            $this->set('sticky_notes', $this->partial('admin_clients_stickynotes', $sticky_note_vars));
-        }
-
-        // Set the last time this client was logged in successfully
-        if (($user_log = $this->Logs->getUserLog($client->user_id, 'success'))) {
-            $this->components(['SettingsCollection']);
-
-            // Set last activity time language (in minutes) if within the last 30 minutes
-            $user_activity_timestamp = $this->Date->toTime($user_log->date_updated);
-            $last_activity = ($this->Date->toTime($this->Logs->dateToUtc(date('c'))) - $user_activity_timestamp) / 60;
-            $thirty_minutes = 30;
-
-            if ($last_activity < 1) {
-                $user_log->last_activity = Language::_('AdminClients.view.tooltip_last_activity_now', true);
-            } elseif ($last_activity == 1) {
-                $user_log->last_activity = Language::_('AdminClients.view.tooltip_last_activity_minute', true);
-            } elseif ($last_activity <= $thirty_minutes) {
-                $user_log->last_activity = Language::_(
-                    'AdminClients.view.tooltip_last_activity_minutes',
-                    true,
-                    ceil($last_activity)
-                );
-            }
-
-            $system_settings = $this->SettingsCollection->fetchSystemSettings();
-            if ($system_settings['geoip_enabled'] == 'true') {
-                // Load GeoIP database
-                $this->components(['Net']);
-                if (!isset($this->NetGeoIp)) {
-                    $this->NetGeoIp = $this->Net->create('NetGeoIp');
-                }
-
-                // Set GeoIp data
-                $user_log->geo_ip = ['location' => $this->NetGeoIp->getLocation($user_log->ip_address)];
-            }
-        }
+        // Set any client sticky notes for the top-bar pinned notes icon
+        // This runs for all client pages (view, services, notes, invoices, etc.)
+        $sticky_notes_data = $this->Clients->getAllStickyNotes(
+            $client->id,
+            Configure::get('Blesta.sticky_notes_max')
+        );
+        $this->structure->set('sticky_notes_data', $sticky_notes_data);
 
         // Set all contact types besides 'primary' and 'other'
         $contact_types = $this->Contacts->getContactTypes();
@@ -264,7 +276,6 @@ class AdminClients extends AppController
         unset($contact_types['primary'], $contact_types['other']);
 
         $this->set('contact_types', $contact_types + $contact_type_ids);
-        $this->set('user_log', $user_log);
         $this->set('client', $client);
         $this->set('content', $content);
         $this->set('number_types', $this->Contacts->getNumberTypes());
@@ -281,6 +292,29 @@ class AdminClients extends AppController
             )
         );
         $this->set('client_account', $this->Clients->getDebitAccount($client->id));
+
+        // Scope all cached partials on this page to a per-client subdirectory so that
+        // clearing one client's cache doesn't affect others. Both the structure (outer
+        // sidebar wrapper, notifications) and the view (inner sidebar) must be scoped,
+        // because the outer cache embeds the inner sidebar's rendered HTML.
+        $this->set('_cache_scope', 'client_' . $client->id);
+        $this->set('_cache_key_params', [
+            'client', 'status', 'delivery_methods', 'number_locations',
+            'number_types', 'plugin_actions', 'currency_amounts',
+        ]);
+        $this->structure->set('_cache_scope', 'client_' . $client->id);
+        $this->structure->set('_cache_key_params', [
+            'system_companies', 'system_company', 'nav',
+        ]);
+
+        // Quick Jump should only appear on the main client profile dashboard (view/{id}/),
+        // not on sub-pages that render a single management widget.
+        $this->structure->set('quick_jump_enabled', $content === null);
+        $this->structure->set('quick_jump_widget_selector', '.column section.card[id]');
+        $this->structure->set('quick_jump_header_selector', '.card-header h5');
+
+        $this->structure->set('side_bar', ['partials/admin_clients_sidebar', $this->view, 'side-content-mobile-visible']);
+
         $this->render('admin_clients_view');
     }
 
@@ -314,8 +348,8 @@ class AdminClients extends AppController
             $filters['type'] = 'services';
         }
 
-        // Process service actions
-        if (!empty($this->post)) {
+        // Process service actions (only when bulk action form is submitted, not filter form)
+        if (!empty($this->post['service_ids']) && !empty($this->post['action'])) {
             if (($errors = $this->updateServices($client, $this->post))) {
                 $this->set('vars', (object)$this->post);
                 $this->setMessage('error', $errors);
@@ -1170,7 +1204,7 @@ class AdminClients extends AppController
         $electronic_formats = [];
 
         if ($enabled_formats_setting && !empty($enabled_formats_setting->value)) {
-            $format_keys = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($enabled_formats_setting->value);
+            $format_keys = safe_unserialize($enabled_formats_setting->value);
             if (is_array($format_keys)) {
                 foreach ($format_keys as $format_key) {
                     try {
@@ -1891,6 +1925,62 @@ class AdminClients extends AppController
     }
 
     /**
+     * List contacts
+     */
+    public function contacts()
+    {
+        $this->uses(['Contacts']);
+
+        // Redirect if invalid client ID
+        if (!isset($this->get[0]) || !($client = $this->Clients->get((int)$this->get[0]))) {
+            $this->redirect($this->base_uri . 'clients');
+        }
+
+        // Get page and sort order
+        $page = (isset($this->get[1]) ? (int)$this->get[1] : 1);
+        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'last_name');
+        $order = (isset($this->get['order']) ? $this->get['order'] : 'asc');
+
+        // Set all contact types besides 'primary'
+        $contact_types = $this->Contacts->getContactTypes();
+        $contact_type_ids = $this->Form->collapseObjectArray(
+            $this->Contacts->getTypes($this->company_id),
+            'real_name',
+            'id'
+        );
+        unset($contact_types['primary']);
+
+        // Exclude the primary contact (which is the client itself)
+        $exclude_types = ['primary'];
+
+        $this->set('client', $client);
+        $this->set('contacts', $this->Contacts->getList($client->id, $page, [$sort => $order], $exclude_types));
+        $this->set('contact_types', $contact_types + $contact_type_ids);
+        $this->set('sort', $sort);
+        $this->set('order', $order);
+        $this->set('negate_order', ($order == 'asc' ? 'desc' : 'asc'));
+
+        // Overwrite default pagination settings
+        $settings = array_merge(
+            Configure::get('Blesta.pagination'),
+            [
+                'total_results' => $this->Contacts->getListCount($client->id, $exclude_types),
+                'uri' => $this->base_uri . 'clients/contacts/' . $client->id . '/[p]/',
+                'params' => ['sort' => $sort, 'order' => $order],
+            ]
+        );
+        $this->setPagination($this->get, $settings);
+
+        // Render the request if ajax
+        if ($this->isAjax()) {
+            return $this->renderAjaxWidgetIfAsync(
+                isset($this->get['whole_widget']) ? null : (isset($this->get[1]) || isset($this->get['sort']))
+            );
+        }
+        return $this->renderClientView($this->controller . '_' . $this->action);
+    }
+
+    /**
      * Add note
      */
     public function addNote()
@@ -2166,7 +2256,11 @@ class AdminClients extends AppController
             // Force email usernames
             if ($force_email_usernames == 'true') {
                 $vars['settings']['username_type'] = 'email';
-                $vars['settings']['username'] = '';
+            }
+
+            // Set username to email if username_type is email
+            if (($vars['settings']['username_type'] ?? '') === 'email') {
+                $vars['username'] = $vars['email'] ?? '';
             }
 
             // Attempt to validate info before the actual creation attempt
@@ -2197,6 +2291,11 @@ class AdminClients extends AppController
 
         // Set the current client group ID selected for displaying custom fields
         $client_group_id = (isset($vars->client_group_id) ? $vars->client_group_id : null);
+
+        // Default to the first client group if not set
+        if ($client_group_id === null && !empty($client_groups)) {
+            $client_group_id = array_key_first($client_groups);
+        }
 
         // Set partial for custom fields only if there are some to display
         if ($client_group_id != null) {
@@ -2477,6 +2576,9 @@ class AdminClients extends AppController
                     );
                 }
 
+                // Clear the client's scoped view cache
+                Cache::emptyCache($this->company_id . DS . 'views' . DS . 'client_' . $client->id . DS);
+
                 $this->flashMessage('message', Language::_('AdminClients.!success.client_updated', true));
                 $this->redirect($this->base_uri . 'clients/edit/' . $client->id . '/');
             }
@@ -2493,7 +2595,7 @@ class AdminClients extends AppController
             // Set allowed gateways
             $vars->enable_gateway_restrictions = $vars->settings['enable_gateway_restrictions'] ?? 'false';
             $vars->allowed_gateways = (isset($vars->settings['allowed_gateways'])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($vars->settings['allowed_gateways']))
+                ? safe_unserialize(base64_decode($vars->settings['allowed_gateways']))
                 : []
             );
 
@@ -2993,6 +3095,9 @@ class AdminClients extends AppController
                 break;
         }
 
+        // Clear the client's scoped view cache
+        Cache::emptyCache($this->company_id . DS . 'views' . DS . 'client_' . $client->id . DS);
+
         // If not an AJAX request, reload the client profile page
         if (!$this->isAjax()) {
             $this->redirect($this->base_uri . 'clients/view/' . $client->id);
@@ -3026,6 +3131,10 @@ class AdminClients extends AppController
                     $this->Clients->dateToUtc($this->post['autosuspend_date'], 'c')
                 );
             }
+
+            // Clear the client's scoped view cache
+            Cache::emptyCache($this->company_id . DS . 'views' . DS . 'client_' . $client->id . DS);
+
             $this->flashMessage('message', Language::_('AdminClients.!success.suspend_date_updated', true));
             $this->redirect($this->base_uri . 'clients/view/' . $client->id);
         }
@@ -3504,7 +3613,21 @@ class AdminClients extends AppController
                         unset($vars['confirm_password']);
                     }
 
-                    $this->Users->edit($contact->user_id, $vars);
+                    // Whitelist user fields to prevent mass assignment
+                    $user_vars = array_intersect_key(
+                        $vars,
+                        array_flip(
+                            [
+                                'new_password',
+                                'confirm_password',
+                                'username',
+                                'verify',
+                                'recovery_email',
+                                'two_factor_mode'
+                            ]
+                        )
+                    );
+                    $this->Users->edit($contact->user_id, $user_vars);
                 } else {
                     $vars['user_id'] = $this->Users->add($vars);
                 }
@@ -3618,7 +3741,7 @@ class AdminClients extends AppController
             );
         }
 
-        $this->redirect($this->base_uri . 'clients/view/' . $client->id . '/');
+        $this->redirect($this->base_uri . 'clients/contacts/' . $client->id . '/');
     }
 
     /**
@@ -4002,6 +4125,9 @@ class AdminClients extends AppController
             $vars->expiration_year = substr($vars->expiration, 0, 4);
         }
 
+        // A locally-stored card has an encrypted card number; off-site/tokenized cards do not.
+        $vars->is_local_storage = !empty($account->number);
+
         // Set the contact info partial to the view
         $this->setContactView($vars, $client, true);
         // Set the CC info partial to the view
@@ -4092,6 +4218,9 @@ class AdminClients extends AppController
         if (empty($vars)) {
             $vars = $account;
         }
+
+        // A locally-stored account has encrypted routing/account numbers; off-site/tokenized do not.
+        $vars->is_local_storage = !empty($account->account);
 
         // Set the contact info partial to the view
         $this->setContactView($vars, $client, true);
@@ -4439,7 +4568,7 @@ class AdminClients extends AppController
         $vars->country = (!empty($client->settings['country']) ? $client->settings['country'] : '');
 
         if (isset($this->post['vars'])) {
-            $vars = (object)array_merge((array)\Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($this->post['vars'])), (array)$vars);
+            $vars = (object)array_merge((array)safe_unserialize(base64_decode($this->post['vars'])), (array)$vars);
             unset($this->post['vars']);
         }
 
@@ -4821,6 +4950,11 @@ class AdminClients extends AppController
                     }
                 }
                 $this->set('payment_accounts', $payment_accounts);
+                $this->set('cc_accounts', $cc ?? []);
+                $this->set('ach_accounts', $ach ?? []);
+                $this->set('cc_types', $cc_types);
+                $this->set('ach_types', $ach_types);
+                $this->set('autodebit', $autodebit);
                 $this->set('require_passphrase', !empty($client->settings['private_key_passphrase']));
 
                 // Set currency
@@ -5214,7 +5348,7 @@ class AdminClients extends AppController
         $vars = new stdClass();
 
         if (isset($this->post['vars'])) {
-            $vars = (object)array_merge((array)\Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($this->post['vars'])), (array)$vars);
+            $vars = (object)array_merge((array)safe_unserialize(base64_decode($this->post['vars'])), (array)$vars);
             unset($this->post['vars']);
         }
 
@@ -5658,15 +5792,20 @@ class AdminClients extends AppController
         $this->uses(['Payments', 'GatewayManager']);
         $this->components(['Gateways']);
 
-        // Fetch the ach form to be used with this company and currency
-        $gateway_form = $this->Payments->getBuildAchForm(
-            $vars->currency ?? $client->settings['default_currency'],
-            (array) $vars,
-            null,
-            null,
-            $this->Session->read('blesta_staff_id'),
-            $vars->gateway_id ?? null
-        );
+        // Fetch the ach form to be used with this company and currency.
+        // When editing a locally-stored account, skip the gateway form so the standard
+        // fields and "Show Account" link are rendered.
+        $is_local_storage = (bool) ($vars->is_local_storage ?? false);
+        $gateway_form = ($edit && $is_local_storage)
+            ? ''
+            : $this->Payments->getBuildAchForm(
+                $vars->currency ?? $client->settings['default_currency'],
+                (array) $vars,
+                null,
+                null,
+                $this->Session->read('blesta_staff_id'),
+                $vars->gateway_id ?? null
+            );
 
         // Check if the account must be verified
         $gateway = $this->GatewayManager->getInstalledMerchant($this->company_id, $client->settings['default_currency']);
@@ -5700,7 +5839,8 @@ class AdminClients extends AppController
             'client' => $client,
             'gateway_form' => $gateway_form,
             'save_account' => $save_account,
-            'message' => $message ?? ''
+            'message' => $message ?? '',
+            'is_local_storage' => $is_local_storage
         ];
         $this->set('ach_info', $this->partial('admin_clients_account_achinfo', $ach_info));
     }
@@ -5718,14 +5858,19 @@ class AdminClients extends AppController
     {
         $this->uses(['Payments']);
 
-        // Fetch the cc form to be used with this company and currency
-        $gateway_form = $this->Payments->getBuildCcForm(
-            $vars->currency ?? $client->settings['default_currency'],
-            null,
-            null,
-            $this->Session->read('blesta_staff_id'),
-            $vars->gateway_id ?? null
-        );
+        // Fetch the cc form to be used with this company and currency.
+        // When editing a locally-stored card, skip the gateway form so the standard
+        // fields and "Show Card" link are rendered.
+        $is_local_storage = (bool) ($vars->is_local_storage ?? false);
+        $gateway_form = ($edit && $is_local_storage)
+            ? ''
+            : $this->Payments->getBuildCcForm(
+                $vars->currency ?? $client->settings['default_currency'],
+                null,
+                null,
+                $this->Session->read('blesta_staff_id'),
+                $vars->gateway_id ?? null
+            );
 
         // Set available credit card expiration dates
         $years = $this->Date->getYears(date('Y'), date('Y') + 10, 'Y', 'Y');
@@ -5758,7 +5903,8 @@ class AdminClients extends AppController
             'edit' => $edit,
             'client' => $client,
             'gateway_form' => $gateway_form,
-            'save_account' => $save_account
+            'save_account' => $save_account,
+            'is_local_storage' => $is_local_storage
         ];
         $this->set('cc_info', $this->partial('admin_clients_account_ccinfo', $cc_info));
     }
@@ -5776,42 +5922,105 @@ class AdminClients extends AppController
 
         $this->uses(['Currencies', 'Invoices', 'Transactions']);
 
-        $currency_code = $client->settings['default_currency'];
-        if (isset($this->get[1]) && ($currency = $this->Currencies->get($this->get[1], $this->company_id))) {
-            $currency_code = $currency->code;
-        }
+        // Get all currencies the client has used
+        $currencies = array_unique(
+            array_merge($this->Clients->usedCurrencies($client->id), [$client->settings['default_currency']])
+        );
 
-        // Fetch the amounts
-        $amounts = [
-            'total_credit' => [
-                'lang' => Language::_('AdminClients.getcurrencyamounts.text_total_credits', true),
-                'amount' => $this->CurrencyFormat->format(
+        // Fetch amounts for all currencies
+        $all_amounts = [];
+        foreach ($currencies as $currency_code) {
+            $all_amounts[$currency_code] = [
+                'total_credit' => $this->CurrencyFormat->format(
                     $this->Transactions->getTotalCredit($client->id, $currency_code),
                     $currency_code
-                )
-            ],
-            'total_due' => [
-                'lang' => Language::_('AdminClients.getcurrencyamounts.text_total_due', true),
-                'amount' => $this->CurrencyFormat->format(
+                ),
+                'total_due' => $this->CurrencyFormat->format(
                     $this->Invoices->amountDue($client->id, $currency_code),
                     $currency_code
                 )
-            ]
-        ];
+            ];
+        }
 
-        // Build the vars
+        // Determine selected currency (for backward compatibility with default theme)
+        $selected_currency = $client->settings['default_currency'];
+        if (isset($this->get[1]) && isset($all_amounts[$this->get[1]])) {
+            $selected_currency = $this->get[1];
+        }
+
+        // Build the vars (includes both old and new formats for theme compatibility)
         $vars = [
-            'selected_currency' => $currency_code,
-            'currencies' => array_unique(
-                array_merge($this->Clients->usedCurrencies($client->id), [$client->settings['default_currency']])
-            ),
-            'amounts' => $amounts
+            'all_amounts' => $all_amounts,
+            'selected_currency' => $selected_currency,
+            'currencies' => $currencies,
+            'amounts' => [
+                'total_credit' => [
+                    'lang' => Language::_('AdminClients.getcurrencyamounts.text_total_credits', true),
+                    'amount' => $all_amounts[$selected_currency]['total_credit']
+                ],
+                'total_due' => [
+                    'lang' => Language::_('AdminClients.getcurrencyamounts.text_total_due', true),
+                    'amount' => $all_amounts[$selected_currency]['total_due']
+                ]
+            ]
         ];
 
         // Set the partial for currency amounts
         $response = $this->partial('admin_clients_getcurrencyamounts', $vars);
 
         // JSON encode the AJAX response
+        $this->outputAsJson($response);
+        return false;
+    }
+
+    /**
+     * AJAX Fetches the last seen data for the client profile sidebar
+     */
+    public function getLastSeen()
+    {
+        // Ensure a valid client was given
+        if (!$this->isAjax() || !isset($this->get[0]) || !($client = $this->Clients->get($this->get[0]))) {
+            header($this->server_protocol . ' 401 Unauthorized');
+            exit();
+        }
+
+        $this->uses(['Logs']);
+
+        $user_log = null;
+        if (($user_log = $this->Logs->getUserLog($client->user_id, 'success'))) {
+            // Set last activity time language (in minutes) if within the last 30 minutes
+            $user_activity_timestamp = $this->Date->toTime($user_log->date_updated);
+            $last_activity = ($this->Date->toTime($this->Logs->dateToUtc(date('c'))) - $user_activity_timestamp) / 60;
+            $thirty_minutes = 30;
+
+            if ($last_activity < 1) {
+                $user_log->last_activity = Language::_('AdminClients.view.tooltip_last_activity_now', true);
+            } elseif ($last_activity == 1) {
+                $user_log->last_activity = Language::_('AdminClients.view.tooltip_last_activity_minute', true);
+            } elseif ($last_activity <= $thirty_minutes) {
+                $user_log->last_activity = Language::_(
+                    'AdminClients.view.tooltip_last_activity_minutes',
+                    true,
+                    ceil($last_activity)
+                );
+            }
+
+            $this->components(['SettingsCollection']);
+            $system_settings = $this->SettingsCollection->fetchSystemSettings();
+            if ($system_settings['geoip_enabled'] == 'true') {
+                // Load GeoIP database
+                $this->components(['Net']);
+                if (!isset($this->NetGeoIp)) {
+                    $this->NetGeoIp = $this->Net->create('NetGeoIp');
+                }
+
+                // Set GeoIp data
+                $user_log->geo_ip = ['location' => $this->NetGeoIp->getLocation($user_log->ip_address)];
+            }
+        }
+
+        $response = $this->partial('admin_clients_getlastseen', ['user_log' => $user_log]);
+
         $this->outputAsJson($response);
         return false;
     }
@@ -5937,7 +6146,7 @@ class AdminClients extends AppController
                 if ($cloning_invoice->meta) {
                     foreach ($cloning_invoice->meta as $i => $meta) {
                         if ($meta->key == 'recur') {
-                            $meta->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($meta->value));
+                            $meta->value = safe_unserialize(base64_decode($meta->value));
 
                             foreach ($meta->value as $key => $value) {
                                 $cloning_invoice->$key = $value;
@@ -6204,7 +6413,7 @@ class AdminClients extends AppController
             if ($invoice->meta) {
                 foreach ($invoice->meta as $i => $meta) {
                     if ($meta->key == 'recur') {
-                        $meta->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($meta->value));
+                        $meta->value = safe_unserialize(base64_decode($meta->value));
 
                         foreach ($meta->value as $key => $value) {
                             $invoice->$key = $value;
@@ -7253,7 +7462,7 @@ class AdminClients extends AppController
             $package_group = $this->PackageGroups->get((int)$this->get[1]);
 
             $order_info = isset($this->post['order_info'])
-                ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($this->post['order_info']))
+                ? safe_unserialize(base64_decode($this->post['order_info']))
                 : null;
             unset($order_info['set_coupon']);
             $this->post = array_merge((array)$order_info, $this->post);
@@ -8262,8 +8471,10 @@ class AdminClients extends AppController
         $this->set('package_attributes', $package_attributes);
 
         if ($this->isAjax()) {
-            return $this->renderAjaxWidgetIfAsync(null);
+            return $this->renderAjaxWidgetIfAsync(isset($this->get['whole_widget']) ? null : false);
         }
+
+        $this->view($this->view->fetch('admin_clients_editserviceaddons'));
     }
 
     /**
@@ -8292,12 +8503,15 @@ class AdminClients extends AppController
 
         // If the service is not an add-on, it could potentially have add-ons and should see the add-on tab
         if ($service->parent_service_id === null) {
+            $addon_count = $this->Services->getAllChildrenCount($service->id);
+            $addon_tab_name = Language::_('AdminClients.editservice.tab_addon_label', true);
+            if ($addon_count > 0) {
+                $addon_tab_name .= ' <span class="badge bg-primary ms-2">'
+                    . (int) $addon_count . '</span>';
+            }
+
             $tabs[] = [
-                'name' => Language::_(
-                    'AdminClients.editservice.tab_addon',
-                    true,
-                    $this->Services->getAllChildrenCount($service->id)
-                ),
+                'name' => $addon_tab_name,
                 'attributes' => [
                     'href' => $this->base_uri . 'clients/editserviceaddons/'
                         . $service->client_id . '/' . $service->id . '/',
@@ -8718,7 +8932,7 @@ class AdminClients extends AppController
      * @param array|bool|null $errors An array of error messages (optional)
      * @param array $messages An array of any other messages keyed by type (optional)
      */
-    private function setServiceTabMessages($errors = null, array $messages = null)
+    private function setServiceTabMessages($errors = null, ?array $messages = null)
     {
         // Prioritize error messages over any other messages
         if (!empty($errors)) {
@@ -8944,6 +9158,12 @@ class AdminClients extends AppController
         $refresh_fields = isset($this->post['refresh_fields']) && $this->post['refresh_fields'] == 'true';
 
         $pricing = $this->Services->getPackagePricing($this->post['pricing_id'] ?? null);
+
+        // Ensure valid pricing was found
+        if (!$pricing) {
+            $this->setMessage('error', Language::_('AdminClients.!error.invalid_pricing_id', true));
+            return 'basic';
+        }
 
         switch ($step) {
             case 'edit':
@@ -9945,5 +10165,145 @@ class AdminClients extends AppController
                 'include' => [(object)['chars' => [['A', 'Z'], ['a', 'z'], ['0', '9']]]]
             ])
         );
+    }
+
+    /**
+     * Processes bulk actions for clients from the client listing page
+     *
+     * @param array $data An array of POST data including:
+     *
+     *  - client_ids An array of client IDs
+     *  - action The bulk action to perform
+     *  - action_value The value for the selected action
+     * @return mixed An array of errors, or false on success
+     */
+    private function updateClients(array $data)
+    {
+        // Require authorization to edit clients
+        if (!$this->authorized('admin_clients', 'edit')) {
+            $this->flashMessage('error', Language::_('AppController.!error.unauthorized_access', true));
+            $this->redirect($this->base_uri . 'clients/');
+        }
+
+        // Only include numeric client IDs
+        $client_ids = [];
+        if (isset($data['client_ids'])) {
+            foreach ((array) $data['client_ids'] as $client_id) {
+                if (is_numeric($client_id)) {
+                    $client_ids[] = (int) $client_id;
+                }
+            }
+        }
+
+        if (empty($client_ids)) {
+            return false;
+        }
+
+        $action = $data['action'] ?? null;
+        $value = $data['action_value'] ?? null;
+        $errors = false;
+
+        switch ($action) {
+            case 'change_status':
+                $valid_statuses = array_keys($this->Clients->getStatusTypes());
+                if (!in_array($value, $valid_statuses)) {
+                    break;
+                }
+                foreach ($client_ids as $client_id) {
+                    $this->Clients->edit($client_id, ['status' => $value]);
+                    if (($errors = $this->Clients->errors())) {
+                        break;
+                    }
+                }
+                break;
+
+            case 'change_client_group':
+                if (!isset($this->ClientGroups)) {
+                    $this->uses(['ClientGroups']);
+                }
+                $group = $this->ClientGroups->get((int) $value);
+                if (!$group || $group->company_id != $this->company_id) {
+                    break;
+                }
+                foreach ($client_ids as $client_id) {
+                    $this->Clients->edit($client_id, ['client_group_id' => $value]);
+                    if (($errors = $this->Clients->errors())) {
+                        break;
+                    }
+                }
+                break;
+
+            case 'change_inv_method':
+                if (!isset($this->Invoices)) {
+                    $this->uses(['Invoices']);
+                }
+                $all_methods = array_keys($this->Invoices->getDeliveryMethods(null, null, false));
+                if (!in_array($value, $all_methods)) {
+                    break;
+                }
+                // Validate all clients before applying
+                $invalid_clients = [];
+                foreach ($client_ids as $client_id) {
+                    $valid_methods = array_keys(
+                        $this->Invoices->getDeliveryMethods($client_id, null, true)
+                    );
+                    if (!in_array($value, $valid_methods)) {
+                        $client = $this->Clients->get($client_id);
+                        $invalid_clients[] = $client
+                            ? $client->first_name . ' ' . $client->last_name . ' (#' . $client->id_code . ')'
+                            : '#' . $client_id;
+                    }
+                }
+                if (!empty($invalid_clients)) {
+                    $errors = ['inv_method' => [
+                        Language::_(
+                            'AdminClients.!error.bulk_inv_method.invalid_for_group',
+                            true,
+                            implode(', ', $invalid_clients)
+                        )
+                    ]];
+                } else {
+                    foreach ($client_ids as $client_id) {
+                        $this->Clients->setSetting($client_id, 'inv_method', $value);
+                    }
+                }
+                break;
+
+            case 'change_autodebit':
+                if (!in_array($value, ['true', 'false'])) {
+                    break;
+                }
+                foreach ($client_ids as $client_id) {
+                    $this->Clients->setSetting($client_id, 'autodebit', $value);
+                }
+                break;
+
+            case 'change_payment_notices':
+                if (!in_array($value, ['true', 'false'])) {
+                    break;
+                }
+                foreach ($client_ids as $client_id) {
+                    $this->Clients->setSetting($client_id, 'send_payment_notices', $value);
+                }
+                break;
+
+            case 'change_autosuspend':
+                if (!in_array($value, ['true', 'false'])) {
+                    break;
+                }
+                foreach ($client_ids as $client_id) {
+                    $this->Clients->setSetting($client_id, 'autosuspend', $value);
+                }
+                break;
+        }
+
+        // Clear scoped view caches for each affected client
+        if (!$errors) {
+            foreach ($client_ids as $client_id) {
+                Cache::emptyCache($this->company_id . DS . 'views' . DS . 'client_' . $client_id . DS);
+            }
+        }
+
+        return $errors;
     }
 }

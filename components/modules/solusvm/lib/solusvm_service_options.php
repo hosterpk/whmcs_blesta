@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SolusVM Service Options
  *
@@ -60,8 +61,10 @@ class SolusvmServiceOptions
                 $options[$key] = $vars[$key];
 
                 // Update the input vars to add the input value onto the plan value
-                if (array_key_exists($key, $plan_fields) && $plan &&
-                    is_object($plan) && property_exists($plan, $plan_fields[$key])) {
+                if (
+                    array_key_exists($key, $plan_fields) && $plan &&
+                    is_object($plan) && property_exists($plan, $plan_fields[$key])
+                ) {
                     $options[$field] = $this->addPlanValue($key, $vars[$key], $plan->{$plan_fields[$key]});
                 }
             }
@@ -132,7 +135,7 @@ class SolusvmServiceOptions
             case 'extra_memory':
             case 'extra_swap':
                 // Convert the given value from B to MB/GB
-                $multiplier *= ($step*$step);
+                $multiplier *= ($step * $step);
                 $result = (int)$value + (int)($plan_value / $multiplier);
                 break;
             case 'extra_cpus':

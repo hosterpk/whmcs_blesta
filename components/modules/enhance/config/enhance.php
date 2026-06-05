@@ -1,4 +1,5 @@
 <?php
+
 // Modules may define default content for package welcome emails here.  Define both a text version and html
 // version for each language you wish to include.  For information on writing email templates see the docs
 // at https://docs.blesta.com/display/user/Customizing+Emails
@@ -49,4 +50,3 @@ Password: <strong>{service.password}</strong></p>
 <p>Thank you for your business!</p>'
     ]
 ]);
-

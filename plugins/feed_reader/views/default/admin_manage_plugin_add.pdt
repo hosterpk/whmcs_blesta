@@ -5,22 +5,16 @@
 
         $this->Form->create();
         ?>
-        <div class="inner">
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php $this->Form->label($this->_('FeedReaderPlugin.add.field_url', true));?>
-                        <?php $this->Form->fieldText('url');?>
-                    </li>
-                </ul>
-            </div>
+        <div class="mb-3">
+            <?php $this->Form->label($this->_('FeedReaderPlugin.add.field_url', true), 'url', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('url', '', ['class' => 'form-control', 'id' => 'url', 'placeholder' => $this->_('FeedReaderPlugin.add.field_url', true)]);?>
+        </div>
 
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('FeedReaderPlugin.add.submit_add', true), ['class' => 'btn btn-primary pull-right']);
-                ?>
-                <a class="btn btn-default pull-right" href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null));?>/"><?php $this->_('FeedReaderPlugin.add.submit_cancel');?></a>
-            </div>
+        <div class="d-flex justify-content-end gap-2">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('FeedReaderPlugin.add.submit_add', true), ['class' => 'btn btn-primary']);
+            ?>
+            <a class="btn btn-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/plugins/manage/' . (isset($plugin_id) ? $plugin_id : null));?>/"><?php $this->_('FeedReaderPlugin.add.submit_cancel');?></a>
         </div>
         <?php
         $this->Form->end();

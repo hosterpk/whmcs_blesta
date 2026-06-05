@@ -1,5 +1,13 @@
 <?php
+
+namespace Blesta\Components\SettingsCollection;
+
+use Blesta\App\Models\Clients;
+use Blesta\App\Models\ClientGroups;
+use Blesta\App\Models\Companies;
+use Blesta\App\Models\Settings;
 use Blesta\Core\Util\Components\Component;
+use Loader;
 
 /**
  * A collection manager of company settings
@@ -33,7 +41,7 @@ class SettingsCollection extends Component
      *  settings (default false)
      * @return array A key=>value array of company settings
      */
-    public function fetchSettings(Companies $companies = null, $company_id = null, $ignore_inheritence = false)
+    public function fetchSettings(?Companies $companies = null, $company_id = null, $ignore_inheritence = false)
     {
         $companies = $this->loadIfNotSet($companies, 'Companies');
         return $this->ArrayHelper->numericToKey(
@@ -54,7 +62,7 @@ class SettingsCollection extends Component
      * @param string $key The key name of the setting to fetch (optional)
      * @return array containing the key and value for this setting
      */
-    public function fetchSetting(Companies $companies = null, $company_id = null, $key = null)
+    public function fetchSetting(?Companies $companies = null, $company_id = null, $key = null)
     {
         $companies = $this->loadIfNotSet($companies, 'Companies');
         return (array)$companies->getSetting($company_id, $key);
@@ -66,7 +74,7 @@ class SettingsCollection extends Component
      * @param Settings $settings A reference to the Settings model object
      * @return array A key=>value array of system settings
      */
-    public function fetchSystemSettings(Settings $settings = null)
+    public function fetchSystemSettings(?Settings $settings = null)
     {
         $settings = $this->loadIfNotSet($settings, 'Settings');
         return $this->ArrayHelper->numericToKey($settings->getSettings(), 'key', 'value');
@@ -79,7 +87,7 @@ class SettingsCollection extends Component
      * @param string $key The key name of the setting to fetch
      * @return array containing the key and value for this setting
      */
-    public function fetchSystemSetting(Settings $settings = null, $key = null)
+    public function fetchSystemSetting(?Settings $settings = null, $key = null)
     {
         $settings = $this->loadIfNotSet($settings, 'Settings');
         return (array)$settings->getSetting($key);
@@ -96,7 +104,7 @@ class SettingsCollection extends Component
      */
     public function fetchClientGroupSettings(
         $client_group_id,
-        ClientGroups $settings = null,
+        ?ClientGroups $settings = null,
         $ignore_inheritence = false
     ) {
         $settings = $this->loadIfNotSet($settings, 'ClientGroups');
@@ -115,7 +123,7 @@ class SettingsCollection extends Component
      * @param string $key The key name of the setting to fetch
      * @return array containing the key and value for this setting
      */
-    public function fetchClientGroupSetting($client_group_id, ClientGroups $settings = null, $key = null)
+    public function fetchClientGroupSetting($client_group_id, ?ClientGroups $settings = null, $key = null)
     {
         $settings = $this->loadIfNotSet($settings, 'ClientGroups');
         return (array)$settings->getSetting($client_group_id, $key);
@@ -128,7 +136,7 @@ class SettingsCollection extends Component
      * @param Clients $settings A reference to the Clients model object
      * @return array A key=>value array of client group settings
      */
-    public function fetchClientSettings($client_id, Clients $settings = null)
+    public function fetchClientSettings($client_id, ?Clients $settings = null)
     {
         $settings = $this->loadIfNotSet($settings, 'Clients');
         return $this->ArrayHelper->numericToKey($settings->getSettings($client_id), 'key', 'value');
@@ -142,7 +150,7 @@ class SettingsCollection extends Component
      * @param string $key The key name of the setting to fetch
      * @return array containing the key and value for this setting
      */
-    public function fetchClientSetting($client_id, Clients $settings = null, $key = null)
+    public function fetchClientSetting($client_id, ?Clients $settings = null, $key = null)
     {
         $settings = $this->loadIfNotSet($settings, 'Clients');
         return (array)$settings->getSetting($client_id, $key);

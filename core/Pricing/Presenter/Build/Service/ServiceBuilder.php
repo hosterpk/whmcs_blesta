@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Build\Service;
 
 use stdClass;
@@ -118,7 +119,8 @@ class ServiceBuilder extends AbstractServiceBuilder
         // of the set pricing which will be used when there is no override
         $fields = ['price', 'price_renews', 'price_transfer', 'currency'];
         foreach ($fields as $field) {
-            if (property_exists($service, 'package_pricing') && is_object($service->package_pricing)
+            if (
+                property_exists($service, 'package_pricing') && is_object($service->package_pricing)
                 && property_exists($service->package_pricing, $field)
             ) {
                 $service->{$field} = $service->package_pricing->{$field};

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Validate;
 
 use Configure;
@@ -99,7 +100,7 @@ class Server
         // Get trusted hostname from Configure if not provided
         if ($trustedHostname === null) {
             $company = Configure::get('Blesta.company');
-            $trustedHostname = isset($company->hostname) ? $company->hostname : null;
+            $trustedHostname = $company->hostname ?? null;
         }
 
         if ($trustedHostname === null) {

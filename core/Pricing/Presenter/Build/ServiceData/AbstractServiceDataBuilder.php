@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Build\ServiceData;
 
 use Blesta\Core\Pricing\Presenter\Build\Options\AbstractOptions;

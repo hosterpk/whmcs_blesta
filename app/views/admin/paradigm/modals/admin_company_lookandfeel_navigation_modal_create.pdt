@@ -1,0 +1,59 @@
+<?php /** @var View $this **/ ?>
+
+<!-- Create Item Modal -->
+<div class="modal fade" id="createItemModal" tabindex="-1" aria-labelledby="createItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createItemModalLabel"><?php $this->_('AdminCompanyLookandfeel.navigation.modal_create_title');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_location');?></label>
+                    <div class="btn-group w-100" role="group">
+                        <?php
+                        $first = true;
+                        foreach ((isset($nav_locations) ? $nav_locations : []) as $loc_key => $loc_name) {
+                            $loc_label_key = 'AdminCompanyLookandfeel.navigation.location_' . $loc_key;
+                            $checked = ($first || (isset($location) && $location == $loc_key));
+                            if ($checked) $first = false;
+                        ?>
+                        <input type="radio" class="btn-check" name="create_location" id="create_loc_<?php echo $this->Html->safe($loc_key);?>" value="<?php echo $this->Html->safe($loc_key);?>"<?php echo ((isset($location) && $location == $loc_key) ? ' checked' : '');?>>
+                        <label class="btn btn-outline-primary" for="create_loc_<?php echo $this->Html->safe($loc_key);?>">
+                            <?php $this->_($loc_label_key);?>
+                        </label>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="createItemName" class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_name');?></label>
+                    <input type="text" class="form-control" id="createItemName" placeholder="<?php $this->_('AdminCompanyLookandfeel.navigation.placeholder_name');?>">
+                    <div class="form-text"><?php $this->_('AdminCompanyLookandfeel.navigation.text_name_help');?></div>
+                </div>
+                <div class="mb-3">
+                    <label for="createItemUrl" class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_url');?></label>
+                    <input type="text" class="form-control" id="createItemUrl" placeholder="<?php $this->_('AdminCompanyLookandfeel.navigation.placeholder_url');?>">
+                    <div class="form-text"><?php $this->_('AdminCompanyLookandfeel.navigation.text_url_help');?></div>
+                </div>
+                <div class="mb-3">
+                    <label for="createItemIcon" class="form-label fw-semibold"><?php $this->_('AdminCompanyLookandfeel.navigation.field_icon');?></label>
+                    <div class="input-group">
+                        <span class="input-group-text" id="createIconPreview"><i class="bi bi-question-circle"></i></span>
+                        <input type="text" class="form-control" id="createItemIcon" placeholder="<?php $this->_('AdminCompanyLookandfeel.navigation.placeholder_icon');?>">
+                    </div>
+                    <div class="form-text"><?php $this->_('AdminCompanyLookandfeel.navigation.text_icon_help');?></div>
+                </div>
+                <div id="createItemErrors" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="createItemSubmit">
+                    <i class="bi bi-plus-circle me-1"></i><?php $this->_('AdminCompanyLookandfeel.navigation.create_item');?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

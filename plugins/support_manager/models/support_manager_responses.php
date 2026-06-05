@@ -126,6 +126,89 @@ class SupportManagerResponses extends SupportManagerModel
             ->fetchAll();
     }
 
+    /**
+     * Searches predefined responses by name and details across all categories
+     *
+     * @param int $company_id The ID of the company
+     * @param string $query The search query (minimum 2 characters recommended)
+     * @param int $limit Maximum number of results to return (default 20)
+     * @return array A list of stdClass objects representing matching responses with category paths
+     */
+    public function search($company_id, $query, $limit = 20)
+    {
+        $search_term = '%' . $query . '%';
+
+        $results = $this->Record->select([
+                'support_responses.*',
+                'support_response_categories.company_id',
+                'support_response_categories.parent_id',
+                'support_response_categories.name' => 'category_name'
+            ])
+            ->from('support_responses')
+            ->innerJoin(
+                'support_response_categories',
+                'support_response_categories.id',
+                '=',
+                'support_responses.category_id',
+                false
+            )
+            ->where('support_response_categories.company_id', '=', $company_id)
+            ->open()
+                ->where('support_responses.name', 'LIKE', $search_term)
+                ->orWhere('support_responses.details', 'LIKE', $search_term)
+            ->close()
+            ->order(['support_responses.name' => 'ASC'])
+            ->limit($limit)
+            ->fetchAll();
+
+        // Build category path for each result
+        foreach ($results as &$response) {
+            $response->category_path = $this->getCategoryPath($response->category_id);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Builds the full category path (breadcrumb) for a given category
+     *
+     * @param int $category_id The ID of the category
+     * @param array $cache Optional cache array to avoid repeated lookups
+     * @return string The category path (e.g., "Sales > Pricing > Discounts")
+     */
+    public function getCategoryPath($category_id, &$cache = [])
+    {
+        if (empty($category_id)) {
+            return '';
+        }
+
+        // Check cache first
+        if (isset($cache[$category_id])) {
+            return $cache[$category_id];
+        }
+
+        $path_parts = [];
+        $current_id = $category_id;
+        $max_depth = 10; // Prevent infinite loops
+        $depth = 0;
+
+        while ($current_id && $depth < $max_depth) {
+            $category = $this->getCategory($current_id);
+            if (!$category) {
+                break;
+            }
+
+            array_unshift($path_parts, $category->name);
+            $current_id = $category->parent_id;
+            $depth++;
+        }
+
+        $path = implode(' > ', $path_parts);
+        $cache[$category_id] = $path;
+
+        return $path;
+    }
+
 
     /**
      * Adds a new category

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Captcha\Captchas;
 
 use Blesta\Core\Util\Captcha\Common\AbstractCaptcha;
@@ -67,8 +68,8 @@ class HCaptcha extends AbstractCaptcha
      */
     public function buildHtml()
     {
-        $key = $this->Html->safe((isset($this->options['site_key']) ? $this->options['site_key'] : null));
-        $lang = $this->Html->safe((isset($this->options['lang']) ? $this->options['lang'] : null));
+        $key = $this->Html->safe(($this->options['site_key'] ?? null));
+        $lang = $this->Html->safe(($this->options['lang'] ?? null));
         $api = $this->Html->safe($this->js_api . (!empty($lang) ? '?hl=' . $lang : ''));
 
         $html = <<< HTML
@@ -108,10 +109,8 @@ HTML;
 
         // Attempt to verify the captcha was accepted
         $data = [
-            'secret' => (isset($this->options['secret_key']) ? $this->options['secret_key'] : null),
-            'response' => (isset($data['response'])
-                ? $data['response']
-                : (isset($data['h-captcha-response']) ? $data['h-captcha-response'] : null)
+            'secret' => ($this->options['secret_key'] ?? null),
+            'response' => ($data['response'] ?? ($data['h-captcha-response'] ?? null)
             )
         ];
 
@@ -149,7 +148,7 @@ HTML;
         $site_key->attach(
             $fields->fieldText(
                 'hcaptcha_site_key',
-                isset($vars['hcaptcha_site_key']) ? $vars['hcaptcha_site_key'] : null,
+                $vars['hcaptcha_site_key'] ?? null,
                 [
                     'id' => 'hcaptcha_site_key',
                     'class' => 'form-control'
@@ -166,7 +165,7 @@ HTML;
         $secret_key->attach(
             $fields->fieldText(
                 'hcaptcha_secret_key',
-                isset($vars['hcaptcha_secret_key']) ? $vars['hcaptcha_secret_key'] : null,
+                $vars['hcaptcha_secret_key'] ?? null,
                 [
                     'id' => 'hcaptcha_secret_key',
                     'class' => 'form-control'

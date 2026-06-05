@@ -228,7 +228,7 @@ class UnitedKingdomTax extends AbstractTax
      */
     public function validateTaxId($tax_id, $client = null)
     {
-        $country = isset($client['country']) ? $client['country'] : null;
+        $country = $client['country'] ?? null;
 
         // Check if Intra-EU mode is enabled or not
         $tax_intra_eu = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'tax_intra_eu_uk_vat');
@@ -415,15 +415,11 @@ class UnitedKingdomTax extends AbstractTax
             && $client->settings['enable_uk_vat'] == 'true'
             && !empty($client->settings['tax_id']);
 
-        if ($client->settings['tax_intra_eu_uk_vat'] == 'true' && (new EuropeTax())->isEnabled()) {
-            $applies = $applies
+        $applies = $client->settings['tax_intra_eu_uk_vat'] == 'true' && (new EuropeTax())->isEnabled() ? $applies
                 && (
                     in_array($client->country, (new EuropeTax())->getCountries())
                         || in_array($client->country, $this->getCountries())
-                );
-        } else {
-            $applies = $applies && in_array($client->country, $this->getCountries());
-        }
+                ) : $applies && in_array($client->country, $this->getCountries());
 
         return $applies;
     }

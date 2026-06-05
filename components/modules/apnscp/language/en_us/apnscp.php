@@ -12,11 +12,15 @@ $lang['Apnscp.tab_stats'] = 'Statistics';
 $lang['Apnscp.tab_client_stats'] = 'Statistics';
 $lang['Apnscp.tab_client_actions'] = 'Actions';
 
+$lang['Apnscp.back_to_manage'] = 'Back';
+
 // Module management
 $lang['Apnscp.add_module_row'] = 'Add Server';
 $lang['Apnscp.add_module_group'] = 'Add Server Group';
 $lang['Apnscp.manage.module_rows_title'] = 'Servers';
 $lang['Apnscp.manage.module_groups_title'] = 'Server Groups';
+$lang['Apnscp.manage.tab_rows'] = 'Servers';
+$lang['Apnscp.manage.tab_groups'] = 'Server Groups';
 $lang['Apnscp.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Apnscp.manage.module_rows_heading.hostname'] = 'Hostname';
 $lang['Apnscp.manage.module_rows_heading.accounts'] = 'Accounts';

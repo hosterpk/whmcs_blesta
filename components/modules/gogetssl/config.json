@@ -1,5 +1,5 @@
 {
-    "version": "2.9.1",
+    "version": "3.0.0",
     "name": "GoGetSSL.name",
     "description": "GoGetSSL.description",
     "authors": [
@@ -25,7 +25,9 @@
     },
     "email_tags": {
         "module": [],
-        "package": ["gogetssl_product"],
+        "package": [
+            "gogetssl_product"
+        ],
         "service": [
             "gogetssl_approver_email",
             "gogetssl_fqdn",
@@ -47,5 +49,6 @@
             "gogetssl_organization",
             "gogetssl_organization_unit"
         ]
-    }
+    },
+    "icon": "bi-shield-lock"
 }

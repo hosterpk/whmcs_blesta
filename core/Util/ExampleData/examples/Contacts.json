@@ -1,0 +1,19 @@
+{
+    "id": 106,
+    "client_id": 73,
+    "user_id": null,
+    "contact_type": "primary",
+    "contact_type_id": null,
+    "first_name": "Alice",
+    "last_name": "Anderson",
+    "title": null,
+    "company": "Anderson Corp",
+    "email": "alice.anderson@example.com",
+    "address1": "100 Main Street",
+    "address2": null,
+    "city": "Denver",
+    "state": "CO",
+    "zip": "80201",
+    "country": "US",
+    "date_added": "2026-02-20 14:59:57"
+}

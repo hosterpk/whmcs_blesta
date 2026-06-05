@@ -1,6 +1,15 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Proration\Proration;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use Record;
+use stdClass;
 
 /**
  * Package management
@@ -73,7 +82,12 @@ class Packages extends AppModel
     public function add(array $vars)
     {
         // Trigger the Packages.addBefore event
-        extract($this->executeAndParseEvent('Packages.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Packages.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (($vars['module_group_client'] ?? '0') == '1') {
             $vars['module_group'] = null;
@@ -282,7 +296,12 @@ class Packages extends AppModel
     public function edit($package_id, array $vars)
     {
         // Trigger the Packages.editBefore event
-        extract($this->executeAndParseEvent('Packages.editBefore', ['package_id' => $package_id, 'vars' => $vars]));
+        $event = $this->executeAndParseEvent('Packages.editBefore', ['package_id' => $package_id, 'vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if (($vars['module_group_client'] ?? '0') == '1') {
             $vars['module_group'] = null;
@@ -341,12 +360,12 @@ class Packages extends AppModel
                     $this->Record->duplicate(
                         'html',
                         '=',
-                        isset($vars['email_content'][$i]['html']) ? $vars['email_content'][$i]['html'] : null
+                        $vars['email_content'][$i]['html'] ?? null
                     )
                     ->duplicate(
                         'text',
                         '=',
-                        isset($vars['email_content'][$i]['text']) ? $vars['email_content'][$i]['text'] : null
+                        $vars['email_content'][$i]['text'] ?? null
                     )
                     ->insert('package_emails', $vars['email_content'][$i], $fields);
                 }
@@ -428,10 +447,15 @@ class Packages extends AppModel
     public function delete($package_id, $remove_services = false)
     {
         // Trigger the Packages.deleteBefore event
-        extract($this->executeAndParseEvent(
+        $event = $this->executeAndParseEvent(
             'Packages.deleteBefore',
             ['package_id' => $package_id, 'remove_services' => $remove_services]
-        ));
+        );
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         Loader::loadModels($this, ['Services']);
 
@@ -513,8 +537,8 @@ class Packages extends AppModel
 
             foreach ($descriptions as $description) {
                 $description['package_id'] = $package_id;
-                $this->Record->duplicate('html', '=', (isset($description['html']) ? $description['html'] : null))
-                    ->duplicate('text', '=', (isset($description['text']) ? $description['text'] : null))
+                $this->Record->duplicate('html', '=', ($description['html'] ?? null))
+                    ->duplicate('text', '=', ($description['text'] ?? null))
                     ->insert('package_descriptions', $description, $fields);
             }
         }
@@ -537,7 +561,7 @@ class Packages extends AppModel
 
             foreach ($names as $name) {
                 $name['package_id'] = $package_id;
-                $this->Record->duplicate('name', '=', (isset($name['name']) ? $name['name'] : null))
+                $this->Record->duplicate('name', '=', ($name['name'] ?? null))
                     ->insert('package_names', $name, $fields);
             }
         }
@@ -567,7 +591,7 @@ class Packages extends AppModel
     public function get($package_id)
     {
         $package = $this->Record->select($this->getSelectFieldList())->
-            appendValues([$this->replacement_keys['packages']['ID_VALUE_TAG']])->
+            appendValues([$this->replacement_keys['packages']['ID_VALUE_TAG'] ?? '{num}'])->
             from('packages')->
             on('package_names.lang', '=', Configure::get('Blesta.language'))->
             leftJoin('package_names', 'package_names.package_id', '=', 'packages.id', false)->
@@ -578,9 +602,14 @@ class Packages extends AppModel
         }
 
         // Trigger the Packages.get event
-        extract($this->executeAndParseEvent('Packages.get', [
+        $event = $this->executeAndParseEvent('Packages.get', [
             'package' => $package
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $package;
     }
@@ -626,7 +655,7 @@ class Packages extends AppModel
     public function getByPricingId($package_pricing_id)
     {
         $package = $this->Record->select($this->getSelectFieldList())->
-            appendValues([$this->replacement_keys['packages']['ID_VALUE_TAG']])->
+            appendValues([$this->replacement_keys['packages']['ID_VALUE_TAG'] ?? '{num}'])->
             from('packages')->
             on('package_names.lang', '=', Configure::get('Blesta.language'))->
             leftJoin('package_names', 'package_names.package_id', '=', 'packages.id', false)->
@@ -980,7 +1009,7 @@ class Packages extends AppModel
             $Proration = new Proration($start_date, $pro_rata_day, null, $period);
             $Proration->setTimezone(Configure::get('Blesta.company_timezone'));
             $date = $Proration->prorateDate();
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
 
@@ -1031,7 +1060,7 @@ class Packages extends AppModel
             $Proration->setTimezone(Configure::get('Blesta.company_timezone'));
             $prorate_date = $Proration->prorateDate();
             $prorate_days = $Proration->prorateDays();
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
 
@@ -1063,7 +1092,8 @@ class Packages extends AppModel
         $prorate_date = null
     ) {
         // Return the given amount if invalid proration values were given
-        if ((!is_numeric($pro_rata_day) && empty($prorate_date))
+        if (
+            (!is_numeric($pro_rata_day) && empty($prorate_date))
             || $period == 'onetime'
             || (!$allow_all_recurring_periods && !in_array($period, ['month', 'year']))
         ) {
@@ -1093,7 +1123,7 @@ class Packages extends AppModel
             }
 
             $price = $Proration->proratePrice($amount);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $price = 0.0;
         }
 
@@ -1131,7 +1161,8 @@ class Packages extends AppModel
                     $package->prorata_day
                 );
 
-                if ($prorate_days !== false
+                if (
+                    $prorate_days !== false
                     && $package->prorata_day != null
                     && $package->prorata_cutoff != null
                     && $this->isDateAfterProrataCutoff(
@@ -1294,7 +1325,9 @@ class Packages extends AppModel
 
         usort(
             $package_groups,
-            function ($groupA, $groupB) { return strcmp($groupA->name, $groupB->name); }
+            function ($groupA, $groupB) {
+                return strcmp($groupA->name, $groupB->name);
+            }
         );
 
 
@@ -1750,7 +1783,7 @@ class Packages extends AppModel
         $fields = array_merge($this->getSelectFieldList(), ['modules.name' => 'module_name']);
 
         $this->Record->select($fields)
-            ->appendValues([$this->replacement_keys['packages']['ID_VALUE_TAG']])
+            ->appendValues([$this->replacement_keys['packages']['ID_VALUE_TAG'] ?? '{num}'])
             ->from('packages')
             ->on('package_names.lang', '=', Configure::get('Blesta.language'))
             ->leftJoin('package_names', 'package_names.package_id', '=', 'packages.id', false)
@@ -1987,7 +2020,7 @@ class Packages extends AppModel
             $serialize = !is_scalar($vars[$i]['value']);
             $vars[$i]['package_id'] = $package_id;
             $vars[$i]['serialized'] = (int) $serialize;
-            $vars[$i]['value'] = $serialize ? json_encode($vars[$i]['value']) : $vars[$i]['value'];
+            $vars[$i]['value'] = $serialize ? serialize($vars[$i]['value']) : $vars[$i]['value'];
 
             if (isset($vars[$i]['encrypted']) && $vars[$i]['encrypted'] == '1') {
                 $vars[$i]['value'] = $this->systemEncrypt($vars[$i]['value']);
@@ -2014,7 +2047,7 @@ class Packages extends AppModel
             }
 
             if ($data->serialized > 0) {
-                $data->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($data->value);
+                $data->value = safe_unserialize($data->value);
             }
 
             $meta->{$data->key} = $data->value;
@@ -2150,7 +2183,7 @@ class Packages extends AppModel
      */
     public function validateGroup($group_id, $company_id)
     {
-        return (boolean) $this->Record->select(['id'])->
+        return (bool) $this->Record->select(['id'])->
             from('package_groups')->where('company_id', '=', $company_id)->fetch();
     }
 
@@ -2208,8 +2241,8 @@ class Packages extends AppModel
         if (is_array($email_content)) {
             // Check each email template language's HTML/Text contents
             foreach ($email_content as $email) {
-                $html = (isset($email['html']) ? $email['html'] : '');
-                $text = (isset($email['text']) ? $email['text'] : '');
+                $html = ($email['html'] ?? '');
+                $text = ($email['text'] ?? '');
 
                 try {
                     H2o::parseString($html, $parser_options_text)->render();
@@ -2217,7 +2250,7 @@ class Packages extends AppModel
                 } catch (H2o_Error $e) {
                     $this->parseError = $e->getMessage();
                     return false;
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Don't care about any other exception
                 }
             }
@@ -2235,7 +2268,8 @@ class Packages extends AppModel
     public function validateModuleChange($module_id, $package_id)
     {
         // The module cannot be changed for this package if the package has services
-        if (($package = $this->get($package_id))
+        if (
+            ($package = $this->get($package_id))
             && $package->module_id != $module_id
             && $this->validateServiceExists($package_id)
         ) {
@@ -2310,7 +2344,7 @@ class Packages extends AppModel
      */
     private function getRules($vars, $edit = false, $package_id = null)
     {
-        $company_id = (isset($vars['company_id']) ? $vars['company_id'] : null);
+        $company_id = ($vars['company_id'] ?? null);
 
         $rules = [
             // Package rules
@@ -2385,7 +2419,8 @@ class Packages extends AppModel
 
                         // The 'lang' key must exist, and the 'text' and 'html' keys must be scalar if provided
                         foreach ($descriptions as $description) {
-                            if (!array_key_exists('lang', $description)
+                            if (
+                                !array_key_exists('lang', $description)
                                 || (array_key_exists('html', $description) && !is_scalar($description['html']))
                                 || (array_key_exists('text', $description) && !is_scalar($description['text']))
                             ) {
@@ -2637,7 +2672,7 @@ class Packages extends AppModel
                 'valid' => [
                     'if_set' => true,
                     'rule' => [
-                        function($price, $period) {
+                        function ($price, $period) {
                             // The renewal price may not be set for the onetime period
                             return ($period != 'onetime' || $price === null);
                         },
@@ -2678,7 +2713,7 @@ class Packages extends AppModel
                 ],
                 'valid' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateGroup'], isset($vars['company_id']) ? $vars['company_id'] : null],
+                    'rule' => [[$this, 'validateGroup'], $vars['company_id'] ?? null],
                     'message' => $this->_('Packages.!error.groups[].valid')
                 ]
             ]
@@ -2701,7 +2736,8 @@ class Packages extends AppModel
                     // Build new pricings list
                     $new_pricings = [];
                     foreach ($vars['pricing'] as $pricing) {
-                        if (isset($pricing['id'])
+                        if (
+                            isset($pricing['id'])
                             && (!empty($pricing['term']) || $pricing['period'] === 'onetime')
                             && is_numeric($pricing['id'])
                         ) {

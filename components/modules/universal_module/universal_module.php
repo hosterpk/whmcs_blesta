@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Universal Module
  *
@@ -76,7 +77,7 @@ class UniversalModule extends Module
         // Find and set the service value label (if any), otherwise default to the service value itself
         if ($key) {
             // Fetch module row meta data for finding the service value label
-            $module_row_id = (isset($service->module_row_id) ? $service->module_row_id : null);
+            $module_row_id = ($service->module_row_id ?? null);
             $row = $this->getModuleRow($module_row_id);
 
             if ($row && isset($row->meta)) {
@@ -116,7 +117,7 @@ class UniversalModule extends Module
         // Format the service name by changing the value to its label if necessary (e.g. drop-down options)
         if ($key) {
             // Fetch module row meta data for finding the service value label
-            $module_row_id = (isset($package->module_row) ? $package->module_row : null);
+            $module_row_id = ($package->module_row ?? null);
             $row = $this->getModuleRow($module_row_id);
 
             if ($row && isset($row->meta) && $key) {
@@ -215,13 +216,15 @@ class UniversalModule extends Module
      */
     public function cancelService($package, $service, $parent_package = null, $parent_service = null)
     {
-        if (!$this->sendNotification(
-            'service_notice_cancel',
-            array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
-            $package->module_row,
-            null,
-            $package
-        )) {
+        if (
+            !$this->sendNotification(
+                'service_notice_cancel',
+                array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
+                $package->module_row,
+                null,
+                $package
+            )
+        ) {
             $this->Input->setErrors(
                 [
                     'service_notice_cancel' => [
@@ -255,13 +258,15 @@ class UniversalModule extends Module
      */
     public function suspendService($package, $service, $parent_package = null, $parent_service = null)
     {
-        if (!$this->sendNotification(
-            'service_notice_suspend',
-            array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
-            $package->module_row,
-            null,
-            $package
-        )) {
+        if (
+            !$this->sendNotification(
+                'service_notice_suspend',
+                array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
+                $package->module_row,
+                null,
+                $package
+            )
+        ) {
             $this->Input->setErrors(
                 [
                     'service_notice_suspend' => [
@@ -295,13 +300,15 @@ class UniversalModule extends Module
      */
     public function unsuspendService($package, $service, $parent_package = null, $parent_service = null)
     {
-        if (!$this->sendNotification(
-            'service_notice_unsuspend',
-            array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
-            $package->module_row,
-            null,
-            $package
-        )) {
+        if (
+            !$this->sendNotification(
+                'service_notice_unsuspend',
+                array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
+                $package->module_row,
+                null,
+                $package
+            )
+        ) {
             $this->Input->setErrors(
                 [
                     'service_notice_unsuspend' => [
@@ -335,13 +342,15 @@ class UniversalModule extends Module
      */
     public function renewService($package, $service, $parent_package = null, $parent_service = null)
     {
-        if (!$this->sendNotification(
-            'service_notice_renew',
-            array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
-            $package->module_row,
-            null,
-            $package
-        )) {
+        if (
+            !$this->sendNotification(
+                'service_notice_renew',
+                array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
+                $package->module_row,
+                null,
+                $package
+            )
+        ) {
             $this->Input->setErrors(
                 [
                     'service_notice_renew' => [
@@ -381,13 +390,15 @@ class UniversalModule extends Module
         $parent_package = null,
         $parent_service = null
     ) {
-        if (!$this->sendNotification(
-            'service_notice_package_change',
-            array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
-            $package_to->module_row,
-            null,
-            $package_to
-        )) {
+        if (
+            !$this->sendNotification(
+                'service_notice_package_change',
+                array_merge($service->fields, [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]]),
+                $package_to->module_row,
+                null,
+                $package_to
+            )
+        ) {
             $this->Input->setErrors(
                 [
                     'service_notice_package_change' => [
@@ -509,6 +520,14 @@ class UniversalModule extends Module
         $this->view->set('field_types', $this->getFieldTypes());
         $this->view->set('package_notices', $this->getPackageNotices());
         $this->view->set('service_notices', $this->getServiceNotices());
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
 
         return $this->view->fetch();
@@ -553,6 +572,14 @@ class UniversalModule extends Module
         $this->view->set('field_types', $this->getFieldTypes());
         $this->view->set('package_notices', $this->getPackageNotices());
         $this->view->set('service_notices', $this->getServiceNotices());
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -832,8 +859,9 @@ class UniversalModule extends Module
         $parser_options_html['autoescape'] = false;
         // Parse content using template parser
         $service_info = $parser->parseString(
-                $row->meta->{'service_' . $type . '_info'} ?? '', $parser_options_text
-            )->render($tags);
+            $row->meta->{'service_' . $type . '_info'} ?? '',
+            $parser_options_text
+        )->render($tags);
 
         $this->view->set('service_info', $service_info);
         return $this->view->fetch();
@@ -864,11 +892,7 @@ class UniversalModule extends Module
             $vars['meta'] = $vars;
         }
 
-        if ($package) {
-            $module_row_id = $package->module_row;
-        } else {
-            $module_row_id = isset($vars['module_row']) ? $vars['module_row'] : null;
-        }
+        $module_row_id = $package ? $package->module_row : $vars['module_row'] ?? null;
 
         $this->Input->setRules($this->getServiceRules($module_row_id, $vars));
 
@@ -1018,19 +1042,21 @@ class UniversalModule extends Module
 
                 $meta[] = [
                     'key' => $value,
-                    'value' => isset($vars['meta'][$value]) ? $vars['meta'][$value] : '',
+                    'value' => $vars['meta'][$value] ?? '',
                     'encrypted' => $fields['package_fields']['encrypt'][$i] == 'true' ? 1 : 0
                 ];
             }
         }
 
-        if (!$this->sendNotification(
-            'package_notice_' . $type,
-            $meta,
-            $module_row_id,
-            $vars,
-            $package ? (object)$package : null
-        )) {
+        if (
+            !$this->sendNotification(
+                'package_notice_' . $type,
+                $meta,
+                $module_row_id,
+                $vars,
+                $package ? (object)$package : null
+            )
+        ) {
             $this->Input->setErrors(
                 [
                     'package_notice_' . $type => [
@@ -1058,11 +1084,7 @@ class UniversalModule extends Module
      */
     private function processService($type, array $vars, $package = null, $service = null)
     {
-        if ($package) {
-            $module_row_id = $package->module_row;
-        } else {
-            $module_row_id = isset($vars['module_row']) ? $vars['module_row'] : null;
-        }
+        $module_row_id = $package ? $package->module_row : $vars['module_row'] ?? null;
 
         if ($type == 'edit') {
             $this->validateServiceEdit($service, $vars);
@@ -1091,7 +1113,7 @@ class UniversalModule extends Module
 
                     $meta[] = [
                         'key' => $value,
-                        'value' => isset($vars['meta'][$value]) ? $vars['meta'][$value] : $vars[$value],
+                        'value' => $vars['meta'][$value] ?? $vars[$value],
                         'encrypted' => $fields['service_fields']['encrypt'][$i] == 'true' ? 1 : 0
                     ];
                 }
@@ -1099,16 +1121,18 @@ class UniversalModule extends Module
         }
 
         if (isset($vars['use_module']) && $vars['use_module'] == 'true') {
-            if (!$this->sendNotification(
-                'service_notice_' . $type,
-                array_merge(
-                    $meta,
-                    $service ? [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]] : []
-                ),
-                $module_row_id,
-                $vars,
-                $package
-            )) {
+            if (
+                !$this->sendNotification(
+                    'service_notice_' . $type,
+                    array_merge(
+                        $meta,
+                        $service ? [['key' => '_service', 'value' => (object)$service, 'encrypted' => false]] : []
+                    ),
+                    $module_row_id,
+                    $vars,
+                    $package
+                )
+            ) {
                 $this->Input->setErrors(
                     [
                         'service_notice_' . $type => [
@@ -1143,14 +1167,12 @@ class UniversalModule extends Module
 
             $field_type = 'field' . ucfirst($field['type']);
             $field_name = 'meta[' . $field['name'] . ']';
-            $field_value = (isset($vars->meta[$field['name']])
-                ? $vars->meta[$field['name']]
-                : (isset($vars->{$field['name']}) ? $vars->{$field['name']} : $field['values'])
+            $field_value = ($vars->meta[$field['name']] ?? ($vars->{$field['name']} ?? $field['values'])
             );
 
             if (in_array($field['name'], self::$reserved_fields)) {
                 $field_name = $field['name'];
-                $field_value = (isset($vars->{$field['name']}) ? $vars->{$field['name']} : null);
+                $field_value = ($vars->{$field['name']} ?? null);
             }
 
             switch ($field['type']) {
@@ -1158,20 +1180,29 @@ class UniversalModule extends Module
                 case 'hidden':
                 case 'textarea':
                     $label = $fields->label($field['label'], 'uni_' . $field['name']);
-                    $label->attach($fields->{$field_type}($field_name,
-                        $field_value, ['id'=>'uni_' . $field['name']]));
+                    $label->attach($fields->{$field_type}(
+                        $field_name,
+                        $field_value,
+                        ['id' => 'uni_' . $field['name']]
+                    ));
                     $fields->setField($label);
                     break;
                 case 'password':
                     $label = $fields->label($field['label'], 'uni_' . $field['name']);
-                    $label->attach($fields->{$field_type}($field_name,
-                        ['id'=>'uni_' . $field['name'], 'value' => $field_value]));
+                    $label->attach($fields->{$field_type}(
+                        $field_name,
+                        ['id' => 'uni_' . $field['name'], 'value' => $field_value]
+                    ));
                     $fields->setField($label);
                     break;
                 case 'select':
                     $label = $fields->label($field['label'], 'uni_' . $field['name']);
-                    $label->attach($fields->{$field_type}($field_name, $options,
-                        $field_value, ['id'=>'uni_' . $field['name']]));
+                    $label->attach($fields->{$field_type}(
+                        $field_name,
+                        $options,
+                        $field_value,
+                        ['id' => 'uni_' . $field['name']]
+                    ));
                     $fields->setField($label);
                     break;
                 case 'radio':
@@ -1182,8 +1213,13 @@ class UniversalModule extends Module
 
                         $checked = in_array($key, (array)$field_value);
 
-                        $label->attach($fields->{$field_type}($field_name . ($field['type'] == 'checkbox' ? '[]' : ''),
-                            $key, $checked, ['id'=>'uni_' . $field['name'] . '_' . $key], $field_label));
+                        $label->attach($fields->{$field_type}(
+                            $field_name . ($field['type'] == 'checkbox' ? '[]' : ''),
+                            $key,
+                            $checked,
+                            ['id' => 'uni_' . $field['name'] . '_' . $key],
+                            $field_label
+                        ));
                     }
                     $fields->setField($label);
                     break;
@@ -1446,13 +1482,14 @@ class UniversalModule extends Module
         foreach ($vars as $key => $value) {
             if (in_array($key, $meta_fields)) {
                 $meta[] = [
-                    'key'=>$key,
-                    'value'=>$value
+                    'key' => $key,
+                    'value' => $value
                 ];
             }
         }
 
-        if (isset($vars['package_fields'])
+        if (
+            isset($vars['package_fields'])
             && isset($vars['package_fields']['label'])
             && is_array($vars['package_fields']['label'])
         ) {
@@ -1490,7 +1527,8 @@ class UniversalModule extends Module
             }
         }
 
-        if (isset($vars['service_fields'])
+        if (
+            isset($vars['service_fields'])
             && isset($vars['service_fields']['label'])
             && is_array($vars['service_fields']['label'])
         ) {
@@ -1773,6 +1811,6 @@ class UniversalModule extends Module
      */
     private function isUrl($str)
     {
-        return preg_match("#^\S+://\S+\.\S+.+$#", $str);
+        return preg_match('#^\S+://\S+\.\S+.+$#', $str);
     }
 }

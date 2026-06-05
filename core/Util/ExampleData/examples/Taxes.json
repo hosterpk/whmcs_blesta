@@ -1,0 +1,11 @@
+{
+    "id": 27,
+    "company_id": 1,
+    "level": 1,
+    "name": "Seed Tax",
+    "amount": 8.5,
+    "type": "exclusive",
+    "country": "US",
+    "state": "CO",
+    "status": "active"
+}

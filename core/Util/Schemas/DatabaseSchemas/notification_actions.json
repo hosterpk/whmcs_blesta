@@ -1,0 +1,81 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "dir",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "type",
+            "type": "enum('system','plugin','module')",
+            "nullable": false,
+            "key": null,
+            "default": "system",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "target",
+            "type": "enum('staff','client')",
+            "nullable": false,
+            "key": null,
+            "default": "staff",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "action",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        }
+    ],
+    "indexes": [
+        {
+            "name": "company_id",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "company_id",
+                "action",
+                "target"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

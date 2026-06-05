@@ -111,6 +111,6 @@ $lang['AdminCompanyCurrencies.edit.field_precision'] = 'Precision';
 $lang['AdminCompanyCurrencies.edit.field_prefix'] = 'Prefix Symbol';
 $lang['AdminCompanyCurrencies.edit.field_suffix'] = 'Suffix Symbol';
 $lang['AdminCompanyCurrencies.edit.field_exchange_rate'] = 'Exchange Rate';
-$lang['AdminCompanyCurrencies.edit.field_editsubmit'] = 'Edit Currency';
+$lang['AdminCompanyCurrencies.edit.field_editsubmit'] = 'Update Currency';
 
 $lang['AdminCompanyCurrencies.edit.confirm_edit'] = "Are you sure you want to update this currency? This currency's exchange rate will be overwritten when exchange rates are automatically updated in the system. You may disable automatic updates under [Settings] > [Company] > [Currencies] > [Currency Setup].";

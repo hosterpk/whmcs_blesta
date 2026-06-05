@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Realtime Register Module
  *
@@ -132,6 +133,14 @@ class RealtimeRegister extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -168,6 +177,14 @@ class RealtimeRegister extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -334,7 +351,7 @@ class RealtimeRegister extends RegistrarModule
             if ($success) {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
         }
 
@@ -364,7 +381,7 @@ class RealtimeRegister extends RegistrarModule
         // Build meta data to return
         $meta = [];
         if ($this->Input->validates($vars)) {
-            if (!isset($vars['meta'] )) {
+            if (!isset($vars['meta'])) {
                 return [];
             }
 
@@ -405,7 +422,7 @@ class RealtimeRegister extends RegistrarModule
         // Build meta data to return
         $meta = [];
         if ($this->Input->validates($vars)) {
-            if (!isset($vars['meta'] )) {
+            if (!isset($vars['meta'])) {
                 return [];
             }
 
@@ -960,7 +977,7 @@ class RealtimeRegister extends RegistrarModule
 
         // Set default name servers
         if (!isset($vars->ns1) && isset($package->meta->ns)) {
-            $i=1;
+            $i = 1;
             foreach ($package->meta->ns as $ns) {
                 $vars->{'ns' . $i++} = $ns;
             }
@@ -1035,7 +1052,7 @@ class RealtimeRegister extends RegistrarModule
 
         // Set default name servers
         if (!isset($vars->ns1) && isset($package->meta->ns)) {
-            $i=1;
+            $i = 1;
             foreach ($package->meta->ns as $ns) {
                 $vars->{'ns' . $i++} = $ns;
             }
@@ -1194,9 +1211,9 @@ class RealtimeRegister extends RegistrarModule
         ];
 
         // Check if DNS Management is enabled
-        if (!$this->featureServiceEnabled('dns_management', $service)) {
-            unset($tabs['tabDnssec'], $tabs['tabDns']);
-        }
+        // if (!$this->featureServiceEnabled('dns_management', $service)) {
+        //     unset($tabs['tabDnssec'], $tabs['tabDns']);
+        // }
 
         return $tabs;
     }
@@ -2053,18 +2070,14 @@ class RealtimeRegister extends RegistrarModule
             }
 
             if ($post['action'] == 'enable_dns') {
-                if ($post['enable_dns'] == 'true') {
-                    $params = [
+                $params = $post['enable_dns'] == 'true' ? [
                         'ns' => [],
                         'zone' => [
                             'service' => 'BASIC'
                         ]
-                    ];
-                } else {
-                    $params = [
+                    ] : [
                         'ns' => []
                     ];
-                }
 
                 $action = $api->updateDomain($service_fields->domain, $params);
             }
@@ -2166,18 +2179,14 @@ class RealtimeRegister extends RegistrarModule
             }
 
             if ($post['action'] == 'enable_dns') {
-                if ($post['enable_dns'] == 'true') {
-                    $params = [
+                $params = $post['enable_dns'] == 'true' ? [
                         'ns' => [],
                         'zone' => [
                             'service' => 'BASIC'
                         ]
-                    ];
-                } else {
-                    $params = [
+                    ] : [
                         'ns' => []
                     ];
-                }
 
                 $action = $api->updateDomain($service_fields->domain, $params);
             }
@@ -2348,7 +2357,7 @@ class RealtimeRegister extends RegistrarModule
 
         $tlds = [];
         if ($cache) {
-            $tlds = unserialize(base64_decode($cache));
+            $tlds = safe_unserialize(base64_decode($cache));
         }
 
         if (empty($tlds)) {
@@ -2428,12 +2437,12 @@ class RealtimeRegister extends RegistrarModule
                             strtotime(Configure::get('Blesta.cache_length')) - time(),
                             Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'realtime_register' . DS
                         );
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         // Write to cache failed, so disable caching
                         Configure::set('Caching.on', false);
                     }
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Do nothing
             }
         }
@@ -2458,7 +2467,6 @@ class RealtimeRegister extends RegistrarModule
                     }
                 }
             }
-
         }
 
         return $tlds;
@@ -2759,11 +2767,7 @@ class RealtimeRegister extends RegistrarModule
     {
         $pricing = $this->getTldPricing($module_row_id);
 
-        if (!empty($pricing)) {
-            return array_keys($pricing);
-        } else {
-            return Configure::get('RealtimeRegister.tlds');
-        }
+        return !empty($pricing) ? array_keys($pricing) : Configure::get('RealtimeRegister.tlds');
     }
 
     /**

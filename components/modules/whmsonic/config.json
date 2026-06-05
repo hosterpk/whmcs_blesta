@@ -1,5 +1,5 @@
 {
-    "version": "1.8.0",
+    "version": "2.0.0",
     "name": "Whmsonic.name",
     "description": "Whmsonic.description",
     "authors": [
@@ -21,8 +21,17 @@
         "group": "Whmsonic.module_group"
     },
     "email_tags": {
-        "module": ["ip_address"],
-        "package": ["client_type", "bitrate", "hspace", "bandwidth", "listeners", "autodj"],
+        "module": [
+            "ip_address"
+        ],
+        "package": [
+            "client_type",
+            "bitrate",
+            "hspace",
+            "bandwidth",
+            "listeners",
+            "autodj"
+        ],
         "service": [
             "whmsonic_username",
             "whmsonic_password",
@@ -31,5 +40,6 @@
             "whmsonic_radio_ip",
             "whmsonic_radio_password"
         ]
-    }
+    },
+    "icon": "bi-broadcast"
 }

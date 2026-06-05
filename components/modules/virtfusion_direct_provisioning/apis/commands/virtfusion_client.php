@@ -18,5 +18,4 @@ class VirtfusionClient
     {
         return $this->api->submit('users', 'POST', $vars);
     }
-
 }

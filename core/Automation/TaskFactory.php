@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation;
 
 use Blesta\Core\Automation\Type\Cron\Task as CronTask;

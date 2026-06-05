@@ -1,0 +1,95 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "username",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": "UNI",
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "password",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "recovery_email",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "two_factor_mode",
+            "type": "enum('none','motp','totp')",
+            "nullable": false,
+            "key": null,
+            "default": "none",
+            "extra": null,
+            "max_length": 4
+        },
+        {
+            "name": "two_factor_key",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "two_factor_pin",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "username",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "username"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

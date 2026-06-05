@@ -124,8 +124,8 @@ class Apnscp extends Module
         $package->attach(
             $fields->fieldSelect(
                 'meta[package]',
-                $packages,
-                (isset($vars->meta['package']) ? $vars->meta['package'] : null),
+                $packages ?: ['a' => 'a'],
+                ($vars->meta['package'] ?? null),
                 ['id' => 'apnscp_package']
             )
         );
@@ -252,6 +252,14 @@ class Apnscp extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -284,6 +292,14 @@ class Apnscp extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -394,7 +410,7 @@ class Apnscp extends Module
         $domain->attach(
             $fields->fieldText(
                 'apnscp_domain',
-                (isset($vars->apnscp_domain) ? $vars->apnscp_domain : null),
+                ($vars->apnscp_domain ?? null),
                 ['id' => 'apnscp_domain']
             )
         );
@@ -407,7 +423,7 @@ class Apnscp extends Module
         $username->attach(
             $fields->fieldText(
                 'apnscp_username',
-                (isset($vars->apnscp_username) ? $vars->apnscp_username : null),
+                ($vars->apnscp_username ?? null),
                 ['id' => 'apnscp_username']
             )
         );
@@ -423,7 +439,7 @@ class Apnscp extends Module
         $password->attach(
             $fields->fieldPassword(
                 'apnscp_password',
-                ['id' => 'apnscp_password', 'value' => (isset($vars->apnscp_password) ? $vars->apnscp_password : null)]
+                ['id' => 'apnscp_password', 'value' => ($vars->apnscp_password ?? null)]
             )
         );
         // Add tooltip
@@ -455,7 +471,7 @@ class Apnscp extends Module
         $domain->attach(
             $fields->fieldText(
                 'apnscp_domain',
-                (isset($vars->apnscp_domain) ? $vars->apnscp_domain : ($vars->domain ?? null)),
+                ($vars->apnscp_domain ?? ($vars->domain ?? null)),
                 ['id' => 'apnscp_domain']
             )
         );
@@ -485,7 +501,7 @@ class Apnscp extends Module
         $domain->attach(
             $fields->fieldText(
                 'apnscp_domain',
-                (isset($vars->apnscp_domain) ? $vars->apnscp_domain : null),
+                ($vars->apnscp_domain ?? null),
                 ['id' => 'apnscp_domain']
             )
         );
@@ -498,7 +514,7 @@ class Apnscp extends Module
         $username->attach(
             $fields->fieldText(
                 'apnscp_username',
-                (isset($vars->apnscp_username) ? $vars->apnscp_username : null),
+                ($vars->apnscp_username ?? null),
                 ['id' => 'apnscp_username']
             )
         );
@@ -514,7 +530,7 @@ class Apnscp extends Module
         $password->attach(
             $fields->fieldPassword(
                 'apnscp_password',
-                ['id' => 'apnscp_password', 'value' => (isset($vars->apnscp_password) ? $vars->apnscp_password : null)]
+                ['id' => 'apnscp_password', 'value' => ($vars->apnscp_password ?? null)]
             )
         );
         // Add tooltip
@@ -1029,15 +1045,15 @@ class Apnscp extends Module
         $service_fields = $this->serviceFieldsToObject($service->fields);
         $session = $this->getUserSession(
             $row,
-            (isset($service_fields->apnscp_domain) ? $service_fields->apnscp_domain : null),
-            (isset($service_fields->apnscp_username) ? $service_fields->apnscp_username : null)
+            ($service_fields->apnscp_domain ?? null),
+            ($service_fields->apnscp_username ?? null)
         );
 
         $this->view->set('module_row', $row);
         $this->view->set('package', $package);
         $this->view->set('service', $service);
         $this->view->set('service_fields', $this->serviceFieldsToObject($service->fields));
-        $this->view->set('login_url', (isset($session) ? $session : ''));
+        $this->view->set('login_url', ($session ?? ''));
 
         return $this->view->fetch();
     }
@@ -1066,15 +1082,15 @@ class Apnscp extends Module
         $service_fields = $this->serviceFieldsToObject($service->fields);
         $session = $this->getUserSession(
             $row,
-            (isset($service_fields->apnscp_domain) ? $service_fields->apnscp_domain : null),
-            (isset($service_fields->apnscp_username) ? $service_fields->apnscp_username : null)
+            ($service_fields->apnscp_domain ?? null),
+            ($service_fields->apnscp_username ?? null)
         );
 
         $this->view->set('module_row', $row);
         $this->view->set('package', $package);
         $this->view->set('service', $service);
         $this->view->set('service_fields', $this->serviceFieldsToObject($service->fields));
-        $this->view->set('login_url', (isset($session) ? $session : ''));
+        $this->view->set('login_url', ($session ?? ''));
 
         return $this->view->fetch();
     }
@@ -1195,7 +1211,7 @@ class Apnscp extends Module
         if (!empty($post)) {
             Loader::loadModels($this, ['Services']);
             $data = array_merge((array) $service_fields, [
-                'apnscp_password' => (isset($post['apnscp_password']) ? $post['apnscp_password'] : null)
+                'apnscp_password' => ($post['apnscp_password'] ?? null)
             ]);
 
             $this->Services->edit($service->id, $data);
@@ -1209,7 +1225,7 @@ class Apnscp extends Module
 
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'apnscp' . DS);
 
@@ -1263,7 +1279,7 @@ class Apnscp extends Module
             if (is_array($output)) {
                 $accounts = count($output);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -1321,7 +1337,7 @@ class Apnscp extends Module
 
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
         }
 
@@ -1414,10 +1430,10 @@ class Apnscp extends Module
     private function getFieldsFromInput(array $vars, $package)
     {
         $fields = [
-            'domain' => isset($vars['apnscp_domain']) ? $vars['apnscp_domain'] : null,
-            'username' => isset($vars['apnscp_username']) ? $vars['apnscp_username'] : null,
-            'password' => isset($vars['apnscp_password']) ? $vars['apnscp_password'] : null,
-            'email' => isset($vars['apnscp_email']) ? $vars['apnscp_email'] : null,
+            'domain' => $vars['apnscp_domain'] ?? null,
+            'username' => $vars['apnscp_username'] ?? null,
+            'password' => $vars['apnscp_password'] ?? null,
+            'email' => $vars['apnscp_email'] ?? null,
             'plan' => $package->meta->package
         ];
 
@@ -1508,7 +1524,7 @@ class Apnscp extends Module
             }
 
             $this->log($module_row->meta->host_name, serialize($packages), 'output', $success);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
         }
 

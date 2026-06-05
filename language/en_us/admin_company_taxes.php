@@ -101,4 +101,4 @@ $lang['AdminCompanyTaxes.edit.field.amount'] = 'Amount';
 $lang['AdminCompanyTaxes.edit.field.country'] = 'Country';
 $lang['AdminCompanyTaxes.edit.field.state'] = 'State/Province';
 
-$lang['AdminCompanyTaxes.edit.field.editsubmit'] = 'Edit Rule';
+$lang['AdminCompanyTaxes.edit.field.editsubmit'] = 'Update Rule';

@@ -1,0 +1,99 @@
+<?php /** @var View $this **/ ?>
+
+<aside class="sidebar">
+    <!-- Company Selector -->
+    <div class="sidebar-header">
+        <div class="d-flex align-items-center justify-content-between w-100">
+            <?php
+            $num_companies = count(($system_companies ?? []));
+            if ($num_companies > 1) {
+                ?>
+                <?php
+                $companies = $this->Form->collapseObjectArray($system_companies, 'name', 'id');
+                $this->Form->fieldSelect('company', $companies, $system_company->id, ['class' => 'form-select form-select-sm', 'id' => 'company-selector']);
+                ?>
+                <?php
+            } else {
+                ?>
+                <div class="form-control form-control-sm">
+                    <?php echo $this->Html->safe($system_company->name ?? 'Blesta');?>
+                </div>
+                <?php
+            }
+            ?>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+        <ul class="nav flex-column">
+            <?php
+            foreach (($nav ?? []) as $link => $value) {
+                $has_submenu = !empty($value['sub'])
+                    && is_array($value['sub'])
+                    && (count($value['sub']) > 1 || !array_key_exists($link, $value['sub']));
+                $submenu_id = 'submenu-' . str_slug($link);
+                ?>
+            <li class="nav-item">
+                <?php
+                if ($has_submenu) {
+                    $submenu_active = array_reduce($value['sub'], fn($carry, $item) => $carry || $item['active'], false);
+                    ?>
+                    <a class="nav-link<?php echo $value['active'] ? ' active' : '';?>" href="#<?php echo $this->Html->safe($submenu_id);?>" data-bs-toggle="collapse" aria-expanded="<?php echo $submenu_active ? 'true' : 'false';?>">
+                        <i class="<?php echo $this->Html->safe($value['icon'] ?? 'bi bi-gear');?>"></i>
+                        <span><?php echo $this->Html->safe($value['name']);?></span>
+                        <i class="bi bi-chevron-right ms-auto"></i>
+                    </a>
+                    <ul class="collapse submenu<?php echo $submenu_active ? ' show' : '';?>" id="<?php echo $this->Html->safe($submenu_id);?>">
+                        <?php
+                        foreach ($value['sub'] as $sub_link => $sub_value) {
+                            ?>
+                        <li>
+                            <a class="nav-link<?php echo $sub_value['active'] ? ' active' : '';?>" href="<?php echo $this->Html->safe($sub_link);?>">
+                                <?php echo $this->Html->safe($sub_value['name']);?>
+                            </a>
+                        </li>
+                            <?php
+                        }
+                        ?>
+                    </ul>
+                    <?php
+                } else {
+                    ?>
+                    <a class="nav-link<?php echo $value['active'] ? ' active' : '';?>" href="<?php echo $this->Html->safe($link);?>">
+                        <i class="<?php echo $this->Html->safe($value['icon'] ?? 'bi bi-gear');?>"></i>
+                        <span><?php echo $this->Html->safe($value['name']);?></span>
+                    </a>
+                    <?php
+                }
+                ?>
+            </li>
+                <?php
+            }
+            ?>
+        </ul>
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <small class="d-block text-truncate"><?php $this->_('AppController.structure.text_version', false, BLESTA_VERSION);?> &middot; <?php echo $this->Html->safe($system_company->name ?? '');?></small>
+        <small class="d-block">Blesta &copy; 2007-<?php echo $this->Date->format('Y');?>, Phillips Data, Inc.</small>
+    </div>
+</aside>
+
+<!-- Mobile Sidebar Handle -->
+<button class="sidebar-handle">
+    <i class="bi bi-chevron-right"></i>
+</button>
+
+<?php
+if (!empty($side_bar)) {
+    $extra_class = is_array($side_bar) && isset($side_bar[2]) ? $side_bar[2] : '';
+    $sidebar_view = is_array($side_bar) && isset($side_bar[1]) ? $side_bar[1] : $this;
+?>
+    <aside class="side-content <?php echo $this->Html->safe($extra_class);?>" id="sideContent">
+        <?php is_string($side_bar) ? view($side_bar, $this) : view($side_bar[0], $sidebar_view);?>
+    </aside>
+<?php
+}
+?>

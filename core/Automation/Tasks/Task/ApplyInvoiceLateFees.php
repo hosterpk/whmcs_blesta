@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -107,7 +108,7 @@ class ApplyInvoiceLateFees extends AbstractTask
         foreach ($invoices as $invoice) {
             // Fetch the client group settings
             $settings = $this->SettingsCollection->fetchClientGroupSettings($invoice->client_group_id);
-            $settings['late_fees'] = (array) \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings['late_fees']));
+            $settings['late_fees'] = (array) safe_unserialize(base64_decode($settings['late_fees']));
 
             // Get the client
             if (!isset($clients[$invoice->client_id])) {

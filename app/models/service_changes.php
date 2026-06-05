@@ -1,6 +1,15 @@
 <?php
+
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
- * Service upgrades/downgrades
+ * Service upgrades/downgrades (Kept for backwards compatibility, Use ServiceInvoices instead)
  *
  * @package blesta
  * @subpackage app.models
@@ -17,7 +26,7 @@ class ServiceChanges extends AppModel
     {
         parent::__construct();
 
-        Loader::loadModels($this, ['Services', 'Invoices', 'Clients']);
+        Loader::loadModels($this, ['Services', 'Invoices', 'Clients', 'ServiceInvoices']);
 
         Language::loadLang(['service_changes']);
     }
@@ -25,8 +34,8 @@ class ServiceChanges extends AppModel
     /**
      * Queues a pending service change entry
      *
-     * @param $service_id The service ID
-     * @param $invoice_id The ID of the invoice
+     * @param int $service_id The service ID
+     * @param int $invoice_id The ID of the invoice
      * @param array $vars An array of information including:
      *
      *  - data An array of input data used later to process the service change
@@ -37,25 +46,17 @@ class ServiceChanges extends AppModel
         $data = [
             'service_id' => $service_id,
             'invoice_id' => $invoice_id,
+            'type' => 'change',
             'data' => (isset($vars['data']) ? (array) $vars['data'] : []),
-            'status' => 'pending',
-            'date_added' => date('c'),
-            'date_status' => date('c')
+            'date_next_attempt' => date('c')
         ];
 
-        $this->Input->setRules($this->getRules($data));
+        $service_invoice_id = $this->ServiceInvoices->add($data);
 
-        if ($this->Input->validates($data)) {
-            $fields = ['service_id', 'invoice_id', 'status', 'data', 'date_added', 'date_status'];
-            $this->Record->insert('service_changes', $data, $fields);
+        // Log that the service change was created
+        $this->logger->info('Created Service Change', array_merge($data, ['id' => $service_invoice_id]));
 
-            $change_id = $this->Record->lastInsertId();
-
-            // Log that the service change was created
-            $this->logger->info('Created Service Change', array_merge($data, ['id' => $change_id]));
-
-            return $change_id;
-        }
+        return $service_invoice_id;
     }
 
     /**
@@ -68,31 +69,48 @@ class ServiceChanges extends AppModel
      */
     public function edit($service_change_id, array $vars)
     {
-        $vars['date_status'] = $this->dateToUtc(date('c'));
-        $vars['id'] = $service_change_id;
+        $service_change = $this->Record->select()
+            ->from('service_invoices')
+            ->where('id', '=', $service_change_id)
+            ->fetch();
 
-        $rules = $this->getRules($vars);
-        $rules = [
-            'id' => [
-                'exists' => [
-                    'rule' => [[$this, 'validateExists'], 'id', 'service_changes'],
-                    'message' => $this->_('ServiceChanges.!error.id.exists', true)
-                ]
-            ],
-            'status' => $rules['status']
-        ];
-        $this->Input->setRules($rules);
-
-        if ($this->Input->validates($vars)) {
-            $fields = ['status', 'date_status'];
-
-            $this->Record->where('id', '=', $service_change_id)->
-                update('service_changes', $vars, $fields);
-
-            // Log that the service change was updated
-            $log_vars = array_intersect_key($vars, array_flip($fields));
-            $this->logger->info('Updated Service Change', array_merge($log_vars, ['id' => $service_change_id]));
+        if (!$service_change) {
+            return;
         }
+
+        // Remove service change if has been completed or canceled
+        if (in_array($vars['status'] ?? null, ['completed', 'canceled'])) {
+            $this->ServiceInvoices->delete(
+                $service_change->service_id,
+                $service_change->invoice_id,
+                'change'
+            );
+        }
+
+        // Reset attempts if status is set to pending
+        if (($vars['status'] ?? null) == 'pending') {
+            $this->ServiceInvoices->update(
+                $service_change->service_id,
+                $service_change->invoice_id,
+                'change',
+                ['failed_attempts' => 0]
+            );
+        }
+
+        // Increment attempts if status is set to error
+        if (($vars['status'] ?? null) == 'error') {
+            $this->ServiceInvoices->update(
+                $service_change->service_id,
+                $service_change->invoice_id,
+                'change',
+                ['failed_attempts' => $service_change->failed_attempts + 1]
+            );
+        }
+
+        // Log that the service change was updated
+        $fields = ['status'];
+        $log_vars = array_intersect_key($vars, array_flip($fields));
+        $this->logger->info('Updated Service Change', array_merge($log_vars, ['id' => $service_change_id]));
     }
 
     /**
@@ -103,14 +121,8 @@ class ServiceChanges extends AppModel
      */
     public function cancel($service_change_id, $void_invoice = false)
     {
-        if ($void_invoice) {
-            $service_change = $this->get($service_change_id);
-            $this->Invoices->edit($service_change->invoice_id, ['status' => 'void']);
-        }
-
-        if (is_numeric($service_change_id)) {
-            $this->edit($service_change_id, ['status' => 'canceled']);
-        }
+        // Same as delete
+        $this->delete($service_change_id, $void_invoice);
     }
 
     /**
@@ -121,16 +133,38 @@ class ServiceChanges extends AppModel
      */
     public function delete($service_change_id, $void_invoice = false)
     {
-        if ($void_invoice) {
-            $service_change = $this->get($service_change_id);
-            $this->Invoices->edit($service_change->invoice_id, ['status' => 'void']);
+        $service_change = $this->Record->select()
+            ->from('service_invoices')
+            ->where('id', '=', $service_change_id)
+            ->fetch();
+
+        if (!$service_change) {
+            return;
         }
 
-        if (is_numeric($service_change_id)) {
-            $this->Record->from('service_changes')
-                ->where('id', '=', $service_change_id)
-                ->delete();
+        if ($void_invoice) {
+            $invoice = $this->Invoices->get($service_change->invoice_id);
+
+            if ($invoice && $invoice->date_closed !== null) {
+                // Paid invoices cannot be voided; surface the reason instead of silently skipping
+                $this->Input->setErrors([
+                    'void_invoice' => ['paid' => $this->_('ServiceChanges.!error.void_invoice.paid', true)]
+                ]);
+                return;
+            } elseif ($invoice) {
+                $this->Invoices->edit($service_change->invoice_id, ['status' => 'void']);
+
+                if (($invoice_errors = $this->Invoices->errors())) {
+                    $this->Input->setErrors($invoice_errors);
+                }
+            }
         }
+
+        $this->ServiceInvoices->delete(
+            $service_change->service_id,
+            $service_change->invoice_id,
+            'change'
+        );
     }
 
     /**
@@ -140,11 +174,7 @@ class ServiceChanges extends AppModel
      */
     public function deleteByService($service_id)
     {
-        if (is_numeric($service_id)) {
-            $this->Record->from('service_changes')
-                ->where('service_id', '=', $service_id)
-                ->delete();
-        }
+        $this->ServiceInvoices->delete($service_id, null, 'change');
     }
 
     /**
@@ -155,13 +185,27 @@ class ServiceChanges extends AppModel
      */
     public function get($service_change_id)
     {
-        $change = $this->Record->select()->from('service_changes')->
-            where('id', '=', $service_change_id)->fetch();
+        $service_change = $this->Record->select()
+            ->from('service_invoices')
+            ->where('id', '=', $service_change_id)
+            ->where('type', '=', 'change')
+            ->fetch();
 
-        if ($change) {
-            $change->data = json_decode($change->data);
+        if (!$service_change) {
+            return false;
         }
-        return $change;
+
+        if (!empty($service_change->data)) {
+            $service_change->data = json_decode($service_change->data);
+        }
+
+        $service_change->status = ($service_change->failed_attempts >= $service_change->maximum_attempts)
+            ? 'error'
+            : 'pending';
+        $service_change->date_added = $service_change->date_next_attempt;
+        $service_change->date_status = $service_change->date_next_attempt;
+
+        return $service_change;
     }
 
     /**
@@ -173,28 +217,33 @@ class ServiceChanges extends AppModel
      */
     public function getAll($status = null, $service_id = null)
     {
-        $this->Record->select()->from('service_changes');
-
-        // Filter on status
-        if ($status) {
-            $this->Record->where('status', '=', $status);
+        // Set filters
+        $filters = [];
+        if (!empty($status)) {
+            $status_filter = $this->buildStatusFilter($status);
+            if ($status_filter === false) {
+                return [];
+            }
+            if ($status_filter !== null) {
+                $filters[] = $status_filter;
+            }
         }
-        // Filter on service ID
-        if ($service_id) {
-            $this->Record->where('service_id', '=', $service_id);
-        }
 
-        $entries = $this->Record->fetchAll();
-
-        // Decode JSON data
-        foreach ($entries as &$entry) {
-            $entry->data = json_decode($entry->data);
+        // Format data
+        $service_changes = $this->ServiceInvoices->getAll($service_id, null, 'change', $filters);
+        foreach ($service_changes as &$entry) {
             $entry->service = $this->Services->get($entry->service_id ?? null);
             $entry->invoice = $this->Invoices->get($entry->invoice_id ?? null);
             $entry->client = $this->Clients->get($entry->service->client_id ?? null);
+
+            $entry->status = ($entry->failed_attempts >= $entry->maximum_attempts)
+                ? 'error'
+                : 'pending';
+            $entry->date_added = $entry->date_next_attempt;
+            $entry->date_status = $entry->date_next_attempt;
         }
 
-        return $entries;
+        return $service_changes;
     }
 
     /**
@@ -213,68 +262,40 @@ class ServiceChanges extends AppModel
      */
     public function getListCount($status = null, $service_id = null, array $filters = [])
     {
-        $this->Record->select()->from('service_changes');
-
-        // Filter on status
-        if ($status) {
-            $this->Record->where('service_changes.status', '=', $status);
-        }
-
-        if (!empty($service_id)) {
-            $filters['service_id'] = $service_id;
-        }
-
-        // Filter on service ID
-        if (isset($filters['service_id'])) {
-            $this->Record->where('service_changes.service_id', '=', $filters['service_id']);
-        }
-
-        // Filter on invoice ID
-        if (isset($filters['invoice_id'])) {
-            $this->Record->where('service_changes.invoice_id', '=', $filters['invoice_id']);
-        }
-
-        // Filter on invoice
-        if (isset($filters['invoice'])) {
-            $this->Record->innerJoin('invoices', 'invoices.id', '=', 'service_changes.invoice_id', false)
-                ->where('invoices.id_value', 'LIKE', '%' . $filters['invoice'] . '%');
-        }
-
         // Filter on date added
-        if (isset($filters['date_added'])) {
-            $this->Record->where(
-                'service_changes.date_added',
-                '>=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_added'] . ' 00:00:00', 'Y-m-d')
+        if (isset($filters['date_added']) || isset($filters['date_status'])) {
+            $date = $filters['date_status'] ?? $filters['date_added'] ?? null;
+            $filters[] = [
+                'column' => 'date_next_attempt',
+                'operator' => '>=',
+                'value' => $this->dateToUtc(
+                    $this->Date->cast($date . ' 00:00:00', 'Y-m-d')
                 )
-            )->where(
-                'service_changes.date_added',
-                '<=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_added'] . ' 23:59:59', 'Y-m-d')
+            ];
+            $filters[] = [
+                'column' => 'date_next_attempt',
+                'operator' => '<=',
+                'value' => $this->dateToUtc(
+                    $this->Date->cast($date . ' 23:59:59', 'Y-m-d')
                 )
-            );
+            ];
+
+            unset($filters['date_added']);
+            unset($filters['date_status']);
         }
 
-        // Filter on verified date status
-        if (isset($filters['date_status'])) {
-            $this->Record->where(
-                'service_changes.date_status',
-                '>=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_status'] . ' 00:00:00', 'Y-m-d')
-                )
-            )->where(
-                'service_changes.date_status',
-                '<=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_status'] . ' 23:59:59', 'Y-m-d')
-                )
-            );
+        // Set status filter
+        if (!empty($status)) {
+            $status_filter = $this->buildStatusFilter($status);
+            if ($status_filter === false) {
+                return 0;
+            }
+            if ($status_filter !== null) {
+                $filters[] = $status_filter;
+            }
         }
 
-        return $this->Record->numResults();
+        return $this->ServiceInvoices->getListCount($service_id, null, 'change', $filters);
     }
 
     /**
@@ -293,86 +314,70 @@ class ServiceChanges extends AppModel
      * - date_status The date the service change was updated (optional)
      * @return array A list of service change entries
      */
-    public function getList($page = 1, $order_by = ['date_added' => 'DESC'], $status = null, $service_id = null, array $filters = [])
+    public function getList($page = 1, $order_by = ['date_next_attempt' => 'DESC'], $status = null, $service_id = null, array $filters = [])
     {
-        $this->Record->select()->from('service_changes');
-
-        // Filter on status
-        if ($status) {
-            if (is_array($status)) {
-                $this->Record->where('service_changes.status', 'in', $status);
-            } else {
-                $this->Record->where('service_changes.status', '=', $status);
-            }
+        // Translate legacy order columns to the real service_invoices columns
+        $column_aliases = ['date_added' => 'date_next_attempt', 'date_status' => 'date_next_attempt'];
+        $translated_order = [];
+        foreach ($order_by as $column => $direction) {
+            $translated_order[$column_aliases[$column] ?? $column] = $direction;
         }
+        $order_by = $translated_order;
 
-        if (!empty($service_id)) {
-            $filters['service_id'] = $service_id;
-        }
-
-        // Filter on service ID
-        if (isset($filters['service_id'])) {
-            $this->Record->where('service_changes.service_id', '=', $filters['service_id']);
-        }
-
-        // Filter on invoice ID
-        if (isset($filters['invoice_id'])) {
-            $this->Record->where('service_changes.invoice_id', '=', $filters['invoice_id']);
-        }
-
-        // Filter on invoice
+        // Translate legacy filter keys to the real service_invoices columns
         if (isset($filters['invoice'])) {
-            $this->Record->innerJoin('invoices', 'invoices.id', '=', 'service_changes.invoice_id', false)
-                ->where('invoices.id_value', 'LIKE', '%' . $filters['invoice'] . '%');
+            $filters['invoice_id'] = $filters['invoice'];
+            unset($filters['invoice']);
         }
 
         // Filter on date added
-        if (isset($filters['date_added'])) {
-            $this->Record->where(
-                'service_changes.date_added',
-                '>=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_added'] . ' 00:00:00', 'Y-m-d')
+        if (isset($filters['date_added']) || isset($filters['date_status'])) {
+            $date = $filters['date_status'] ?? $filters['date_added'] ?? null;
+            $filters[] = [
+                'column' => 'date_next_attempt',
+                'operator' => '>=',
+                'value' => $this->dateToUtc(
+                    $this->Date->cast($date . ' 00:00:00', 'Y-m-d')
                 )
-            )->where(
-                'service_changes.date_added',
-                '<=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_added'] . ' 23:59:59', 'Y-m-d')
+            ];
+            $filters[] = [
+                'column' => 'date_next_attempt',
+                'operator' => '<=',
+                'value' => $this->dateToUtc(
+                    $this->Date->cast($date . ' 23:59:59', 'Y-m-d')
                 )
-            );
+            ];
+
+            unset($filters['date_added']);
+            unset($filters['date_status']);
         }
 
-        // Filter on verified date status
-        if (isset($filters['date_status'])) {
-            $this->Record->where(
-                'service_changes.date_status',
-                '>=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_status'] . ' 00:00:00', 'Y-m-d')
-                )
-            )->where(
-                'service_changes.date_status',
-                '<=',
-                $this->dateToUtc(
-                    $this->Date->cast($filters['date_status'] . ' 23:59:59', 'Y-m-d')
-                )
-            );
+        // Set status filter
+        if (!empty($status)) {
+            $status_filter = $this->buildStatusFilter($status);
+            if ($status_filter === false) {
+                return [];
+            }
+            if ($status_filter !== null) {
+                $filters[] = $status_filter;
+            }
         }
 
-        $entries = $this->Record->order($order_by)->
-            limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->
-            fetchAll();
-
-        // Decode JSON data
-        foreach ($entries as &$entry) {
-            $entry->data = json_decode($entry->data);
+        // Format data
+        $service_changes = $this->ServiceInvoices->getList($page, $order_by, $service_id, null, 'change', $filters);
+        foreach ($service_changes as &$entry) {
             $entry->service = $this->Services->get($entry->service_id ?? null);
             $entry->invoice = $this->Invoices->get($entry->invoice_id ?? null);
             $entry->client = $this->Clients->get($entry->service->client_id ?? null);
+
+            $entry->status = ($entry->failed_attempts >= $entry->maximum_attempts)
+                ? 'error'
+                : 'pending';
+            $entry->date_added = $entry->date_next_attempt;
+            $entry->date_status = $entry->date_next_attempt;
         }
 
-        return $entries;
+        return $service_changes;
     }
 
     /**
@@ -492,7 +497,8 @@ class ServiceChanges extends AppModel
 
         // Fetch any coupon that may exist or be set
         $coupons = [];
-        if (!empty($vars['coupon_code'])
+        if (
+            !empty($vars['coupon_code'])
             && ($coupon = $this->Coupons->getByCode($vars['coupon_code']))
             && $coupon->company_id == Configure::get('Blesta.company_id')
         ) {
@@ -500,7 +506,8 @@ class ServiceChanges extends AppModel
         }
 
         // If no coupon was given, fallback to the service coupon, if any
-        if (!empty($service->coupon_id)
+        if (
+            !empty($service->coupon_id)
             && ($coupon = $this->Coupons->get($service->coupon_id))
             && $coupon->company_id == Configure::get('Blesta.company_id')
         ) {
@@ -509,6 +516,15 @@ class ServiceChanges extends AppModel
             if (empty($coupons['new'])) {
                 $coupons['new'] = $coupons['old'];
             }
+        }
+
+        // When the submitted coupon is the one already bound to the service,
+        // share the old-branch object so both sides reference the same instance.
+        // This lets the change builder pair the old and new items together.
+        if (!empty($coupons['new']) && !empty($coupons['old'])
+            && $coupons['new'][0]->id == $coupons['old'][0]->id
+        ) {
+            $coupons['new'] = $coupons['old'];
         }
 
         // Set options for the builder to use to construct the presenter
@@ -528,12 +544,14 @@ class ServiceChanges extends AppModel
             'prorateEndDate' => (!empty($service->date_renews) ? $service->date_renews . 'Z' : null),
             // If the renew date has changed, we are prorating to the new renew date
             'prorateEndDateData' => ($change_renew_date ? $vars['date_renews'] : null),
-            // Service changes always apply as recurring for non-onetime services
+            // NEW-side recur reflects whether the service is currently in its
+            // recurring-tier pricing (i.e. has already renewed at least once).
+            // First-term changes use initial-tier pricing on NEW side. OLD-side
+            // is forced to recur=true in ServiceChangeBuilder::serviceBuilder().
+            // The asymmetry is intentional — see CORE-5058 for the rationale.
             'recur' => ($pricing->period != 'onetime' && $service->date_last_renewed !== null),
             'applyDate' => (!empty($service->date_renews) ? $service->date_renews . 'Z' : $now),
-            'config_options' => isset($formatted_service_options['configoptions'])
-                ? $formatted_service_options['configoptions']
-                : [],
+            'config_options' => $formatted_service_options['configoptions'] ?? [],
             'upgrade' => $package->id != $service->package->id,
             // Convert current service and option prices to the new currency for comparison
             'option_currency' => $pricing->currency,
@@ -550,13 +568,15 @@ class ServiceChanges extends AppModel
         ];
 
         // Determine if this is a domain service
-        if ((
+        if (
+            (
             $registrar = $this->ModuleManager->getInstalled([
                 'type' => 'registrar',
                 'company_id' => Configure::get('Blesta.company_id'),
                 'module_id' => $package->module_id
             ])
-        )) {
+            )
+        ) {
             $options['item_type'] = 'domain';
         }
 
@@ -595,6 +615,47 @@ class ServiceChanges extends AppModel
     }
 
     /**
+     * Builds the filter comparing failed_attempts to maximum_attempts for the
+     * requested status(es). Returns null if both pending and error are
+     * requested (no filter needed, the union covers every row of
+     * type=change). Returns false if the status list resolves to neither
+     * pending nor error, in which case the caller should short-circuit.
+     *
+     * @param string|array $status A single status or array of statuses
+     * @return array|null|false The filter, null for "no filter needed", or false for "no match"
+     */
+    private function buildStatusFilter($status)
+    {
+        $statuses = (array) $status;
+        $pending = in_array('pending', $statuses, true);
+        $error = in_array('error', $statuses, true);
+
+        if ($pending && $error) {
+            return null;
+        }
+
+        if ($pending) {
+            return [
+                'column' => 'failed_attempts',
+                'operator' => '<',
+                'value' => 'maximum_attempts',
+                'bind' => false
+            ];
+        }
+
+        if ($error) {
+            return [
+                'column' => 'failed_attempts',
+                'operator' => '>=',
+                'value' => 'maximum_attempts',
+                'bind' => false
+            ];
+        }
+
+        return false;
+    }
+
+    /**
      * Retrieves a list of available service change statuses and their language
      *
      * @return array A list of service change statuses and their language
@@ -603,9 +664,7 @@ class ServiceChanges extends AppModel
     {
         return [
             'pending' => $this->_('ServiceChanges.status.pending', true),
-            'completed' => $this->_('ServiceChanges.status.completed', true),
             'error' => $this->_('ServiceChanges.status.error', true),
-            'canceled' => $this->_('ServiceChanges.status.canceled', true),
         ];
     }
 
@@ -627,61 +686,5 @@ class ServiceChanges extends AppModel
         }
 
         return $result;
-    }
-
-    /**
-     * Retrieves validation rules for ::add
-     *
-     * @param array $vars An array of input data for validation
-     * @return array The input validation rules
-     */
-    private function getRules(array $vars)
-    {
-        return [
-            'service_id' => [
-                'exists' => [
-                    'rule' => [[$this, 'validateExists'], 'id', 'services'],
-                    'message' => $this->_('ServiceChanges.!error.service_id.exists')
-                ]
-            ],
-            'invoice_id' => [
-                'exists' => [
-                    'rule' => [[$this, 'validateExists'], 'id', 'invoices'],
-                    'message' => $this->_('ServiceChanges.!error.invoice_id.exists')
-                ],
-                'unique' => [
-                    'rule' => [[$this, 'validateExists'], 'invoice_id', 'service_changes'],
-                    'negate' => true,
-                    'message' => $this->_('ServiceChanges.!error.invoice_id.unique')
-                ]
-            ],
-            'status' => [
-                'valid' => [
-                    'rule' => ['in_array', array_keys($this->getStatuses())],
-                    'message' => $this->_('ServiceChanges.!error.status.valid')
-                ]
-            ],
-            'data' => [
-                'valid' => [
-                    'rule' => true,
-                    'post_format' => 'json_encode',
-                    'message' => ''
-                ]
-            ],
-            'date_added' => [
-                'format' => [
-                    'rule' => true,
-                    'post_format' => [[$this, 'dateToUtc']],
-                    'message' => ''
-                ]
-            ],
-            'date_status' => [
-                'format' => [
-                    'rule' => true,
-                    'post_format' => [[$this, 'dateToUtc']],
-                    'message' => ''
-                ]
-            ]
-        ];
     }
 }

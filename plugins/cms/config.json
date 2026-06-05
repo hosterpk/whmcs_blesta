@@ -1,7 +1,8 @@
 {
-    "version": "3.0.3",
+    "version": "4.0.0",
     "name": "CmsPlugin.name",
     "description": "CmsPlugin.description",
+    "icon": "bi bi-circle",
     "authors": [
         {
             "name": "Phillips Data, Inc.",

@@ -18,14 +18,8 @@ class AdminCompanyCurrencies extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Companies', 'Currencies', 'Navigation']);
+        $this->uses(['Companies', 'Currencies']);
         $this->components(['SettingsCollection']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**

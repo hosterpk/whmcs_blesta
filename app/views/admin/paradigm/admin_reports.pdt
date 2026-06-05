@@ -1,0 +1,142 @@
+<?php
+echo (isset($message) ? $message : null);
+?>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminReports.index.box_title');?></h5>
+    </div>
+    <div class="card-filter-bar">
+        <ul class="nav nav-tabs-custom border-0 mb-0" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="<?php echo $this->base_uri . 'reports/';?>">
+                    <?php $this->_('AdminReports.index.reports');?>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="<?php echo $this->base_uri . 'reports_customize';?>">
+                    <?php $this->_('AdminReports.index.customize');?>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <?php
+    $this->Form->create(null, ['id' => 'report_form', 'class' => 'disable-on-submit']);
+    ?>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label for="format" class="form-label"><?php $this->_('AdminReports.index.field_format');?></label>
+                <?php
+                $this->Form->fieldSelect('format', (isset($formats) ? $formats : null), (isset($vars->format) ? $vars->format : null), ['id' => 'format', 'class' => 'form-select']);
+                ?>
+            </div>
+            <div class="col-md-6" id="type_div">
+                <label for="type" class="form-label"><?php $this->_('AdminReports.index.field_report_type');?></label>
+                <?php
+                $this->Form->fieldSelect('type', (isset($types) ? $types : null), (isset($vars->type) ? $vars->type : null), ['id' => 'type', 'class' => 'form-select']);
+                ?>
+            </div>
+        </div>
+        <div id="report_options">
+            <?php echo (isset($report_fields) ? $report_fields : null);?>
+        </div>
+    </div>
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminReports.index.field_submit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+    <?php
+    $this->Form->end();
+    ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formatSelect = document.getElementById('format');
+    const reportForm = document.getElementById('report_form');
+    const typeDiv = document.getElementById('type_div');
+    const reportOptions = document.getElementById('report_options');
+
+    if (!formatSelect || !reportForm) return;
+
+    // Format change triggers loading report types
+    formatSelect.addEventListener('change', function() {
+        getReportTypes();
+    });
+
+    // Type change triggers loading report fields (using event delegation)
+    // Also listen for report dropdown changes within Custom Reports
+    document.addEventListener('change', function(e) {
+        if (e.target && (e.target.id === 'type' || e.target.id === 'report')) {
+            getReportFields();
+        }
+    });
+
+    function getReportTypes() {
+        const formData = new FormData(reportForm);
+        const params = new URLSearchParams(formData).toString();
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'reports/getReportTypes/');?>?' + params, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.types && typeDiv) {
+                typeDiv.innerHTML = data.types;
+                // Add Bootstrap class to the new select and label
+                const newSelect = typeDiv.querySelector('select');
+                if (newSelect) {
+                    newSelect.classList.add('form-select');
+                }
+                const newLabel = typeDiv.querySelector('label');
+                if (newLabel) {
+                    newLabel.classList.add('form-label');
+                }
+            }
+            getReportFields();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function getReportFields() {
+        const typeSelect = document.getElementById('type');
+        if (!typeSelect || typeSelect.value === '') {
+            if (reportOptions) {
+                reportOptions.innerHTML = '';
+            }
+            return;
+        }
+
+        const formData = new FormData(reportForm);
+        const params = new URLSearchParams(formData).toString();
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'reports/getreportfields/');?>?' + params, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.fields && reportOptions) {
+                reportOptions.innerHTML = data.fields;
+
+                // Initialize tooltips if any
+                const tooltipTriggerList = reportOptions.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+});
+</script>

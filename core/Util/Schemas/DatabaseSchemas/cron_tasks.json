@@ -1,0 +1,99 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "key",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "task_type",
+            "type": "enum('module','plugin','system')",
+            "nullable": false,
+            "key": null,
+            "default": "system",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "dir",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "is_lang",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "type",
+            "type": "enum('time','interval')",
+            "nullable": false,
+            "key": null,
+            "default": "interval",
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "key",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "key",
+                "task_type",
+                "dir"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

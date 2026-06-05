@@ -78,7 +78,7 @@ $lang['AdminCompanyClientoptions.general.field_password_format_custom'] = 'Custo
 $lang['AdminCompanyClientoptions.general.field_password_rule'] = 'Password Custom Rule';
 $lang['AdminCompanyClientoptions.general.field_password_length'] = 'Password Length';
 $lang['AdminCompanyClientoptions.general.prevent_unverified_payments'] = 'Prevent Payments from Unverified Clients';
-$lang['AdminCompanyClientoptions.general.text_submit'] = 'Submit';
+$lang['AdminCompanyClientoptions.general.text_submit'] = 'Update Settings';
 
 // Custom Client Fields
 $lang['AdminCompanyClientoptions.customfields.page_title'] = 'Settings > Company > Client Options > Client Custom Fields > Browse';
@@ -113,7 +113,7 @@ $lang['AdminCompanyClientoptions.addcustomfield.field.read_only'] = 'Read Only f
 $lang['AdminCompanyClientoptions.addcustomfield.field.required'] = 'Required';
 $lang['AdminCompanyClientoptions.addcustomfield.field.regex'] = 'Custom Regex';
 $lang['AdminCompanyClientoptions.addcustomfield.field.encrypted'] = 'Encrypt Values';
-$lang['AdminCompanyClientoptions.addcustomfield.field.addsubmit'] = 'Add Custom Field';
+$lang['AdminCompanyClientoptions.addcustomfield.field.addsubmit'] = 'Create Custom Field';
 
 $lang['AdminCompanyClientoptions.addcustomfield.field.checkbox_value'] = 'Value';
 $lang['AdminCompanyClientoptions.addcustomfield.field.default_checkbox'] = 'Default Value Checked';
@@ -141,7 +141,7 @@ $lang['AdminCompanyClientoptions.editcustomfield.field.read_only'] = 'Read Only 
 $lang['AdminCompanyClientoptions.editcustomfield.field.required'] = 'Required';
 $lang['AdminCompanyClientoptions.editcustomfield.field.regex'] = 'Custom Regex';
 $lang['AdminCompanyClientoptions.editcustomfield.field.encrypted'] = 'Encrypt Values';
-$lang['AdminCompanyClientoptions.editcustomfield.field.editsubmit'] = 'Edit Custom Field';
+$lang['AdminCompanyClientoptions.editcustomfield.field.editsubmit'] = 'Update Custom Field';
 
 $lang['AdminCompanyClientoptions.editcustomfield.field.checkbox_value'] = 'Value';
 $lang['AdminCompanyClientoptions.editcustomfield.field.default_checkbox'] = 'Default Value Checked';

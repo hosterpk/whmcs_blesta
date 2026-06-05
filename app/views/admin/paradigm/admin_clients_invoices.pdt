@@ -1,0 +1,518 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$tabs = [
+    ['name' => $this->_('AdminClients.invoices.category_open', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['open'] ?? 0) . '</span>', 'current' => (($status ?? null) == 'open'), 'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/open/'), 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.invoices.category_drafts', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['draft'] ?? 0) . '</span>', 'current' => (($status ?? null) == 'draft'), 'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/draft/'), 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.invoices.category_closed', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['closed'] ?? 0) . '</span>', 'current' => (($status ?? null) == 'closed'), 'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/closed/'), 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.invoices.category_voided', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['void'] ?? 0) . '</span>', 'current' => (($status ?? null) == 'void'), 'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/void/'), 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.invoices.category_recurring', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['recurring'] ?? 0) . '</span>', 'current' => (($status ?? null) == 'recurring'), 'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/recurring/'), 'class' => 'ajax']],
+    ['name' => $this->_('AdminClients.invoices.category_pending', true) . '<span class="badge bg-secondary ms-2">' . ($status_count['pending'] ?? 0) . '</span>', 'current' => (($status ?? null) == 'pending'), 'attributes' => ['href' => $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/pending/'), 'class' => 'ajax']]
+];
+$link_buttons = [
+    [
+        'icon' => 'bi bi-plus-lg',
+        'name' => '',
+        'attributes' => [
+            'title' => $this->_('AdminClients.invoices.categorylink_createinvoice', true),
+            'href' => $this->base_uri . 'clients/createinvoice/' . ($client->id ?? null) . '/'
+        ]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setLinkButtons($link_buttons);
+$this->Widget->setBadgeUri($this->base_uri . 'clients/invoicecount/' . ($client->id ?? null) . '/' . ($status ?? null));
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null)), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setWidgetButton('arrow');
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.invoices.boxtitle_invoices', true), ['id' => 'admin_clients_invoices'], ($render_section ?? null));
+
+$this->Form->create(null, ['id' => 'invoices_form', 'class' => 'disable-on-submit']);
+
+if (($invoices ?? false) && ($num_invoices = count($invoices)) > 0) {
+    if (($status ?? null) == 'recurring') {
+    ?>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=id&order=' . ($sort == 'id' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_recurinvoice');?>
+                            <?php if ($sort == 'id') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=subtotal&order=' . ($sort == 'subtotal' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_amount');?>
+                            <?php if ($sort == 'subtotal') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=term&order=' . ($sort == 'term' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_term');?>
+                            <?php if ($sort == 'term') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=duration&order=' . ($sort == 'duration' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_duration');?>
+                            <?php if ($sort == 'duration') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=count&order=' . ($sort == 'count' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_count');?>
+                            <?php if ($sort == 'count') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th style="width: 80px;"><?php $this->_('AdminClients.invoices.heading_options');?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php for ($i = 0; $i < $num_invoices; $i++) { ?>
+                <tr>
+                    <td><?php echo $this->Html->safe($invoices[$i]->id ?? null);?></td>
+                    <td>
+                        <?php
+                        if ($invoices[$i]->taxable ?? null) {
+                            $this->_('AdminClients.invoices.subtotal_w_tax', false, $this->CurrencyFormat->format(($invoices[$i]->subtotal ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]));
+                        } else {
+                            echo $this->CurrencyFormat->format(($invoices[$i]->subtotal ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);
+                        }
+                        ?>
+                    </td>
+                    <td><?php $this->_(($invoices[$i]->term ?? null) > 1 ? 'AdminClients.invoices.term_' . ($invoices[$i]->period ?? null) . '_plural' : 'AdminClients.invoices.term_' . ($invoices[$i]->period ?? null), false, $invoices[$i]->term);?></td>
+                    <td><?php $this->_(($invoices[$i]->duration ?? null) != null ? 'AdminClients.invoices.duration_finite' : 'AdminClients.invoices.duration_infinite', false, ($invoices[$i]->duration ?? null));?></td>
+                    <td><?php echo $this->Html->safe($invoices[$i]->count ?? null);?></td>
+                    <td>
+                        <a href="<?php echo $this->base_uri . 'clients/editrecurinvoice/' . ($client->id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/';?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.invoices.option_edit');?>">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
+    } else {
+    ?>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="invoices">
+            <thead>
+                <tr>
+                    <?php if (in_array(($status ?? null), ($deliverable_invoice_statuses ?? []))) { ?>
+                    <th style="width: 40px;" class="text-center">
+                        <?php $this->Form->fieldCheckbox('invoice_id[]', 'all', (($vars->invoice_id[0] ?? null) == 'all'), ['class' => 'form-check-input', 'id' => 'select-all']);?>
+                    </th>
+                    <?php } ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=id_code&order=' . ($sort == 'id_code' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_invoice');?>
+                            <?php if ($sort == 'id_code') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=total&order=' . ($sort == 'total' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_amount');?>
+                            <?php if ($sort == 'total') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=paid&order=' . ($sort == 'paid' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_paid');?>
+                            <?php if ($sort == 'paid') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php if (($status ?? null) == 'closed') { ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_closed&order=' . ($sort == 'date_closed' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_dateclosed');?>
+                            <?php if ($sort == 'date_closed') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php } else { ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=due&order=' . ($sort == 'due' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_due');?>
+                            <?php if ($sort == 'due') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php } ?>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_billed&order=' . ($sort == 'date_billed' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_datebilled');?>
+                            <?php if ($sort == 'date_billed') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=date_due&order=' . ($sort == 'date_due' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_datedue');?>
+                            <?php if ($sort == 'date_due') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/invoices/' . ($client->id ?? null) . '/' . ($status ?? null) . '/?sort=delivery_date_sent&order=' . ($sort == 'delivery_date_sent' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                            <?php $this->_('AdminClients.invoices.heading_status');?>
+                            <?php if ($sort == 'delivery_date_sent') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <th style="width: 140px;"><?php $this->_('AdminClients.invoices.heading_options');?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                for ($i = 0; $i < $num_invoices; $i++) {
+                    $past_due = (($status ?? null) == 'open'
+                        && empty($invoices[$i]->date_closed)
+                        && $this->Date->toTime($this->Date->cast($invoices[$i]->date_due)) < $this->Date->toTime(date('c'))
+                    );
+                ?>
+                <tr<?php if (($status ?? null) != 'draft') { ?> style="cursor: pointer;" data-collapse-row aria-expanded="false"<?php } ?>>
+                    <?php if (in_array(($status ?? null), ($deliverable_invoice_statuses ?? []))) { ?>
+                    <td class="text-center">
+                        <?php $this->Form->fieldCheckbox('invoice_id[]', ($invoices[$i]->id ?? null), false, ['class' => 'form-check-input row-checkbox']);?>
+                    </td>
+                    <?php } ?>
+                    <td><?php echo $this->Html->safe($invoices[$i]->id_code ?? null);?></td>
+                    <td><?php echo $this->CurrencyFormat->format(($invoices[$i]->total ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);?></td>
+                    <td><?php echo $this->CurrencyFormat->format(($invoices[$i]->paid ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);?></td>
+                    <?php if (($status ?? null) == 'closed') { ?>
+                    <td><?php echo $this->Date->cast($invoices[$i]->date_closed ?? null);?></td>
+                    <?php } else { ?>
+                    <td><?php echo $this->CurrencyFormat->format(($invoices[$i]->due ?? null), ($invoices[$i]->currency ?? null), ['html_code' => true]);?></td>
+                    <?php } ?>
+                    <td><?php echo $this->Date->cast($invoices[$i]->date_billed ?? null);?></td>
+                    <td<?php echo $past_due ? ' class="text-danger"' : '';?>><?php echo $this->Date->cast($invoices[$i]->date_due ?? null);?></td>
+                    <td><?php echo empty($invoices[$i]->delivery_date_sent) ? $this->_('AdminClients.invoices.status_unsent') : $this->_('AdminClients.invoices.status_sent');?></td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editinvoice/' . ($client->id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.invoices.option_edit');?>">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/createinvoice/' . ($client->id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.invoices.option_copy');?>">
+                                <i class="bi bi-copy"></i>
+                            </a>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/viewinvoice/' . ($client->id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.invoices.option_view');?>">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <?php if ($status == 'open') { ?>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/makepayment/' . ($invoices[$i]->client_id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/');?>" class="btn btn-sm btn-outline-primary" title="<?php $this->_('AdminClients.invoices.option_pay');?>">
+                                <i class="bi bi-credit-card"></i>
+                            </a>
+                            <?php } elseif ($status == 'draft') { ?>
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/deletedraftinvoice/' . ($invoices[$i]->client_id ?? null) . '/' . ($invoices[$i]->id ?? null) . '/');?>" class="btn btn-sm btn-outline-danger manage" rel="<?php echo $this->Html->safe($this->_('AdminClients.invoices.confirm_delete', true));?>" title="<?php $this->_('AdminClients.invoices.option_delete');?>">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            <?php } ?>
+                        </div>
+                    </td>
+                </tr>
+                <?php if (($status ?? null) != 'draft') { ?>
+                <tr class="collapse" id="invoice-details-<?php echo $this->Html->safe($invoices[$i]->id ?? null);?>">
+                    <td colspan="10" style="padding: 0; background-color: var(--bg-secondary);">
+                        <div class="invoice-applied-container" data-invoice-id="<?php echo $this->Html->safe($invoices[$i]->id ?? null);?>">
+                            <div class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <?php
+                    }
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
+<?php
+    }
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-receipt" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.invoices.no_results');?></p>
+</div>
+<?php
+}
+
+if (!empty($invoice_actions)) {
+?>
+<div id="invoice_action" class="bulk-actions-bar d-none">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <span class="selected-count" id="invoicesSelectedCount">0 <?php $this->_('AdminClients.invoices.text_items_selected');?></span>
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+            <?php
+            $this->Form->fieldSelect('action', ($invoice_actions ?? null), ($vars->type ?? null), ['class' => 'form-select form-select-sm', 'id' => 'action_select', 'style' => 'width: 180px;']);
+            ?>
+            <div id="action_options" class="gap-2 align-items-center" style="display: none;">
+                <?php
+                $this->Form->fieldText('email', ($client->email ?? null), ['class' => 'action d-none form-control form-control-sm', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('paper', null, ['class' => 'action d-none form-control form-control-sm', 'disabled' => 'disabled', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('interfax', ($contact_fax[0]->number ?? null), ['class' => 'action d-none form-control form-control-sm', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('postalmethods', ($this->Html->concat(' ', ($client->address1 ?? null), ($client->address2 ?? null), ($client->city ?? null), ($client->state ?? null), ($client->zip ?? null))), ['class' => 'action d-none form-control form-control-sm', 'disabled' => 'disabled', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('sms', ($contact_mobile[0]->number ?? null), ['class' => 'action d-none form-control form-control-sm', 'style' => 'width: 200px;']);
+                $this->Form->fieldText('merge', '', ['class' => 'action d-none form-control form-control-sm', 'placeholder' => $this->_('AdminClients.invoices.merge_placeholder', true), 'style' => 'width: 200px;']);
+                $this->Form->fieldHidden('to_invoice_id', '', ['id' => 'to_invoice_id']);
+                if (!empty($electronic_formats)) {
+                    $this->Form->fieldSelect('electronic_invoice_format', $electronic_formats, null, ['class' => 'action d-none form-select form-select-sm', 'id' => 'electronic_invoice_format', 'style' => 'width: 200px;']);
+                }
+                ?>
+            </div>
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminClients.invoices.field_invoicesubmit', true), ['class' => 'btn btn-sm btn-primary']);
+            ?>
+        </div>
+    </div>
+</div>
+<?php
+}
+
+$this->Form->end();
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+?>
+
+<div id="validation_modal" style="display: none;">
+    <div class="modal-header">
+        <h5 class="modal-title"><?php $this->_('AppController.modal.text_confirm');?></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <div class="alert alert-warning mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <?php $this->_('AdminClients.!notice.void_invoice_pending_services');?>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary cancel" data-bs-dismiss="modal"><?php $this->_('AdminClients.invoices.field_cancel');?></button>
+        <button type="button" class="btn btn-primary continue"><?php $this->_('AdminClients.invoices.field_continue');?></button>
+    </div>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var clientId = <?php echo json_encode($client->id ?? null);?>;
+    var textItemSelected = <?php echo json_encode($this->_('AdminClients.invoices.text_item_selected', true));?>;
+    var textItemsSelected = <?php echo json_encode($this->_('AdminClients.invoices.text_items_selected', true));?>;
+
+    // Update bulk actions bar visibility and count - looks up elements fresh each time
+    function updateBulkActions() {
+        var widgetContainer = document.getElementById('admin_clients_invoices');
+        var invoiceAction = document.getElementById('invoice_action');
+        var selectedCount = document.getElementById('invoicesSelectedCount');
+
+        if (!widgetContainer || !invoiceAction) return;
+
+        var checkedBoxes = widgetContainer.querySelectorAll('.row-checkbox:checked');
+        if (checkedBoxes.length > 0) {
+            invoiceAction.classList.remove('d-none');
+            if (selectedCount) {
+                var text = checkedBoxes.length === 1 ? textItemSelected : textItemsSelected;
+                selectedCount.textContent = checkedBoxes.length + ' ' + text;
+            }
+        } else {
+            invoiceAction.classList.add('d-none');
+        }
+    }
+
+    // Update action input visibility
+    function updateActionOptions() {
+        var actionOptions = document.getElementById('action_options');
+        var actionSelect = document.getElementById('action_select');
+        var actionInputs = document.querySelectorAll('#action_options .action');
+
+        // Hide all action inputs first
+        actionInputs.forEach(function(input) {
+            input.classList.add('d-none');
+        });
+
+        if (!actionSelect || !actionOptions) return;
+
+        var selectedAction = actionSelect.value;
+
+        // Show action options container if an action needs additional input
+        if (selectedAction === 'electronic_invoice') {
+            actionOptions.style.display = 'flex';
+            var formatSelect = document.querySelector("#action_options select[name='electronic_invoice_format']");
+            if (formatSelect) {
+                formatSelect.classList.remove('d-none');
+            }
+        } else {
+            var targetInput = document.querySelector("#action_options input[name='" + selectedAction + "']");
+            if (targetInput) {
+                actionOptions.style.display = 'flex';
+                targetInput.classList.remove('d-none');
+            } else {
+                actionOptions.style.display = 'none';
+            }
+        }
+    }
+
+    // Use document-level event delegation so events work after AJAX content replacement
+    document.addEventListener('change', function(e) {
+        var target = e.target;
+        var widgetContainer = document.getElementById('admin_clients_invoices');
+        if (!widgetContainer || !widgetContainer.contains(target)) return;
+
+        // Handle checkbox changes
+        if (target.type === 'checkbox') {
+            // Handle "select all" checkbox
+            if (target.id === 'select-all') {
+                var rowCheckboxes = widgetContainer.querySelectorAll('.row-checkbox');
+                rowCheckboxes.forEach(function(cb) {
+                    cb.checked = target.checked;
+                });
+            } else if (target.classList.contains('row-checkbox')) {
+                // Uncheck "select all" if individual checkbox is unchecked
+                var selectAllCheckbox = document.getElementById('select-all');
+                if (!target.checked && selectAllCheckbox) {
+                    selectAllCheckbox.checked = false;
+                }
+            }
+            updateBulkActions();
+            return;
+        }
+
+        // Handle action select change
+        if (target.id === 'action_select' && target.closest('#invoice_action')) {
+            updateActionOptions();
+        }
+    });
+
+    // Handle click events with document-level delegation
+    document.addEventListener('click', function(e) {
+        var widgetContainer = document.getElementById('admin_clients_invoices');
+        if (!widgetContainer) return;
+
+        // Handle confirmation links
+        var manageLink = e.target.closest('a.manage[rel]');
+        if (manageLink && widgetContainer.contains(manageLink)) {
+            e.stopPropagation();
+            var message = manageLink.getAttribute('rel');
+            if (message && !confirm(message)) {
+                e.preventDefault();
+            }
+            return;
+        }
+
+    });
+
+    // Lazy-load invoice details when expandable row opens
+    document.addEventListener('show.bs.collapse', function(e) {
+        var container = e.target.querySelector('.invoice-applied-container');
+        if (!container) return;
+
+        var invoiceId = container.getAttribute('data-invoice-id');
+        if (!invoiceId || container.hasAttribute('data-loaded')) return;
+
+        fetch(baseUri + 'clients/invoiceapplied/' + clientId + '/' + invoiceId + '/', {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('HTTP error ' + response.status);
+            return response.text();
+        })
+        .then(function(html) {
+            container.innerHTML = html;
+            container.setAttribute('data-loaded', 'true');
+        })
+        .catch(function(error) {
+            container.innerHTML = '<div class="alert alert-danger m-3">Error loading invoice details.</div>';
+        });
+    });
+
+    // Validate invoices before voiding
+    function submitInvoices(event) {
+        var form = document.getElementById('invoices_form');
+        var actionSelect = document.getElementById('action_select');
+
+        if (actionSelect && actionSelect.value === 'void') {
+            event.preventDefault();
+
+            fetch(baseUri + 'clients/validateinvoices/', {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (!data.continue) {
+                    // Show validation modal
+                    var modalContent = document.getElementById('validation_modal').innerHTML;
+                    var modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.innerHTML = '<div class="modal-dialog"><div class="modal-content">' + modalContent + '</div></div>';
+                    document.body.appendChild(modal);
+
+                    var modalInstance = new bootstrap.Modal(modal);
+                    modalInstance.show();
+
+                    modal.querySelector('.btn.continue').addEventListener('click', function() {
+                        modalInstance.hide();
+                        resubmitInvoices();
+                    });
+
+                    modal.querySelector('.btn.cancel').addEventListener('click', function() {
+                        modalInstance.hide();
+                    });
+
+                    modal.addEventListener('hidden.bs.modal', function() {
+                        document.body.removeChild(modal);
+                    });
+                } else {
+                    resubmitInvoices();
+                }
+            })
+            .catch(function(error) { console.error('Error:', error); });
+        }
+    }
+
+    function resubmitInvoices() {
+        var form = document.getElementById('invoices_form');
+        if (form) {
+            form.removeEventListener('submit', submitInvoices);
+            form.submit();
+        }
+    }
+
+    // Handle form submit for void validation
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        if (form.id === 'invoices_form') {
+            var actionSelect = document.getElementById('action_select');
+            if (actionSelect && actionSelect.value === 'void') {
+                submitInvoices(e);
+            }
+        }
+    });
+
+    // Initialize on page load
+    function init() {
+        updateBulkActions();
+        updateActionOptions();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+        // Content was loaded via AJAX after page load — notify expandable-rows.js
+        document.dispatchEvent(new Event('blestaAjaxComplete'));
+    }
+})();
+</script>

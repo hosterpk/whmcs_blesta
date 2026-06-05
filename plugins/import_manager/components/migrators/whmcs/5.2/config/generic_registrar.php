@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('generic_registrar.map', [
     'module' => 'generic_domains',
     'module_row_meta' => [(object)['key' => 'name', 'value' => 'Generic Module Row', 'serialized' => 0, 'encrypted' => 0]],

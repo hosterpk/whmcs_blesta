@@ -5,6 +5,6 @@
     "type": "blesta-module",
     "require": {
         "blesta/composer-installer": "~1.0",
-        "ovh/ovh": "2.1.0"
+        "ovh/ovh": "~3.5"
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Namecheap API response handler
  *
@@ -28,7 +29,7 @@ class NamecheapResponse
 
         try {
             $this->xml = new SimpleXMLElement($this->raw);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Invalid response
         }
     }

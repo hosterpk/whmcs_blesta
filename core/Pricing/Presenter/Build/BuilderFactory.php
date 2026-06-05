@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Build;
 
 use Blesta\Core\Pricing\Presenter\Build\Invoice\InvoiceBuilder;

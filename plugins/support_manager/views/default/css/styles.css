@@ -606,18 +606,61 @@ div.reply .image-attachments {
     background-color: rgba(0, 0, 0, 0.8);
 }
 
+/* Refresh Message Notification - Fixed position notification for new ticket replies */
 #refresh_message {
-    width: 98%;
-    left: 1%;
-    bottom: 10px;
-    z-index: 100;
-    text-align: center;
     position: fixed;
+    bottom: 1rem;
+    left: calc(var(--sidebar-width, 260px) + var(--icon-bar-width, 60px) + 1rem);
+    right: 1rem;
+    z-index: 1090;
+    max-width: 600px;
+    pointer-events: auto;
+}
+
+#refresh_message .alert {
+    margin: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+[data-theme=light] #refresh_message .alert {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 #refresh_message p {
     padding: 0;
     margin: 0;
+}
+
+#refresh_message a {
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+/* When side-content panel is present, adjust left position */
+body:has(.with-side-content) #refresh_message {
+    left: calc(var(--sidebar-width, 260px) + var(--icon-bar-width, 60px) + var(--side-content-width, 320px) + 1rem);
+}
+
+/* Tablet: Sidebar is collapsed, only icon bar visible */
+@media (max-width: 991px) and (min-width: 768px) {
+    #refresh_message {
+        left: calc(var(--icon-bar-width, 60px) + 1rem);
+    }
+
+    body:has(.with-side-content) #refresh_message {
+        left: calc(var(--icon-bar-width, 60px) + var(--side-content-width, 320px) + 1rem);
+    }
+}
+
+/* Mobile: Full width with padding */
+@media (max-width: 767px) {
+    #refresh_message,
+    body:has(.with-side-content) #refresh_message {
+        left: 1rem;
+        right: 1rem;
+        max-width: none;
+    }
 }
 
 .text_link {

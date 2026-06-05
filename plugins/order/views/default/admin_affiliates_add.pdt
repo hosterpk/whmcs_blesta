@@ -1,103 +1,159 @@
+<?php /** @var View $this */ ?>
 
-        <?php
-        if (!(isset($is_ajax) ? $is_ajax : false)) {
-            echo (isset($left_nav) ? $left_nav : null);
-        ?>
-        <div id="right_outer">
+    <?php
+    echo (isset($message) ? $message : null);
+
+    $this->Form->create(null, ['id' => 'order_affiliate', 'class' => 'disable-on-submit']);
+
+    $this->Widget->clear();
+    $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'order_form_styles']);
+    $this->Widget->setBodyWrapper(false);
+    $this->Widget->create($this->_('AdminAffiliates.add.boxtitle_order', true), [], ($render_section ?? null));
+    ?>
+    <div class="card-body">
+        <div class="mb-3">
             <?php
-            if (!(isset($render_section) ? $render_section : null)) {
-                echo (isset($message) ? $message : null);
+            $this->Form->label($this->_('AdminAffiliates.add.field_client', true), 'client', ['class' => 'form-label']);
+            ?>
+            <?php
+            if (($client ?? null)) {
+                $this->Form->fieldHidden('client_id', ($client->id ?? null), ['id' => 'client_id']);
+            ?>
+                <div>
+                    <a href="<?php echo $this->Html->safe(($this->base_uri ?? null) . 'clients/view/' . ($client->id ?? null));?>"><?php echo ($client->first_name ?? null) ? $this->Html->safe($client->first_name) : null; ?> <?php echo ($client->last_name ?? null) ? $this->Html->safe($client->last_name) : null; ?></a>
+                </div>
+            <?php
+            } else {
+            ?>
+                <div class="position-relative">
+                    <?php
+                    $this->Form->fieldText('client', ($vars->client ?? null), ['id' => 'client', 'class' => 'form-control', 'placeholder' => $this->_('AdminAffiliates.add.client_placeholder', true), 'autocomplete' => 'off']);
+                    $this->Form->fieldHidden('client_id', ($vars->client_id ?? null), ['id' => 'client_id']);
+                    ?>
+                    <div id="client_autocomplete_results" class="autocomplete-results position-absolute bg-body border rounded shadow-sm" style="display: none; z-index: 1050; width: 100%; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            <?php
             }
             ?>
-            <section id="right_container">
-        <?php
-        }
-        ?>
-                <?php
-                $this->Widget->clear();
-                $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'order_form_styles']);
-                $this->Widget->create($this->_('AdminAffiliates.add.boxtitle_order', true));
-                $this->Form->create(null, ['id' => 'order_affiliate', 'class' => 'disable-on-submit']);
-                ?>
-                <div class="inner">
-                    <div class="pad">
-                        <ul>
-                            <li>
-                                <?php
-                                $this->Form->label($this->_('AdminAffiliates.add.field_client', true), 'client');
-                                ?>
-                                <p>
-                                <?php
-                                if ((isset($client) ? $client : null)) {
-                                    $this->Form->fieldHidden('client_id', (isset($client->id) ? $client->id : null), ['id' => 'client_id']);
-                                ?>
-                                    <a href="<?php echo $this->Html->safe((isset($this->base_uri) ? $this->base_uri : null) . 'clients/view/' . (isset($client->id) ? $client->id : null));?>"><?php echo (isset($client->first_name) ? $this->Html->safe($client->first_name) : null) . ' ' . (isset($client->last_name) ? $this->Html->safe($client->last_name) : null);?></a>
-                                <?php
-                                } else {
-                                    $this->Form->fieldText('client', (isset($vars->client) ? $vars->client : null), ['id' => 'client', 'placeholder' => $this->_('AdminAffiliates.add.client_placeholder', true)]);
-                                    $this->Form->fieldHidden('client_id', (isset($vars->client_id) ? $vars->client_id : null), ['id' => 'client_id']);
-                                }
-                                ?>
-                                </p>
-                                <div id="no_clients" class="empty_section" style="display:none;">
-                                    <div class="empty_box"><?php $this->_('AdminAffiliates.add.text_no_clients');?></div>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="button_row">
-                        <?php
-                        $this->Form->fieldSubmit('save', $this->_('AdminAffiliates.add.field_addsubmit', true), ['class' => 'btn btn-primary pull-right']);
-                        ?>
-                    </div>
-                </div>
-                <?php
-                $this->Form->end();
-                $this->Widget->end();
-                ?>
-        <?php
-        if (!(isset($is_ajax) ? $is_ajax : false)) {
-        ?>
-            </section>
+            <div id="no_clients" class="text-center text-muted py-4" style="display:none;">
+                <i class="bi bi-people fs-1 mb-2"></i>
+                <p class="mb-0"><?php $this->_('AdminAffiliates.add.text_no_clients');?></p>
+            </div>
         </div>
-        <?php
-        }
-        ?>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#client').autocomplete({
-            minLength: 3,
-            source: function(request, response) {
-                $(document).blestaRequest(
-                    'POST',
-                    '<?php echo (isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null);?>plugin/order/admin_affiliates/getclients/',
-                    { _csrf_token: $('#order_affiliate').find('input[name=_csrf_token]').val(), search: request.term},
-                    function(data) {
-                        if (data && data.clients) {
-                            // Build the response to show
-                            var clients = new Array();
-                            for (var id in data.clients) {
-                                clients.push({label:data.clients[id], value:data.clients[id], id:id});
-                            }
-                            response(clients);
+    </div>
 
-                            // No results
-                            if (clients.length == 0) {
-                                $('#no_clients').show();
-                            } else {
-                                $('#no_clients').hide();
-                            }
-                        }
-                    },
-                    null,
-                    {dataType:'json'}
-                );
-            },
-            select: function(event, ui) {
-                $('#client_id').val(ui.item.id);
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end gap-2">
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminAffiliates.add.field_addsubmit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+    <?php
+    $this->Widget->end();
+    $this->Form->end();
+    ?>
+<script type="text/javascript">
+(function() {
+    'use strict';
+
+    var baseUri = <?php echo json_encode($this->base_uri ?? null);?>;
+    var debounceTimer;
+
+    // Client autocomplete using event delegation
+    document.addEventListener('input', function(e) {
+        var clientInput = e.target;
+        if (clientInput.id !== 'client' || !clientInput.closest('#order_affiliate')) return;
+
+        clearTimeout(debounceTimer);
+        var query = clientInput.value;
+        var resultsContainer = document.getElementById('client_autocomplete_results');
+        var noClientsContainer = document.getElementById('no_clients');
+
+        if (query.length < 3) {
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'none';
             }
-        });
+            if (noClientsContainer) {
+                noClientsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        debounceTimer = setTimeout(function() {
+            var formData = new FormData();
+            formData.append('search', query);
+
+            // Get CSRF token from form
+            var form = clientInput.closest('form');
+            var csrfToken = form ? form.querySelector('input[name="_csrf_token"]') : null;
+            if (csrfToken) {
+                formData.append('_csrf_token', csrfToken.value);
+            }
+
+            fetch(baseUri + 'plugin/order/admin_affiliates/getclients/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (!resultsContainer) return;
+
+                resultsContainer.innerHTML = '';
+
+                if (data && data.clients) {
+                    var html = '';
+                    var hasResults = false;
+                    for (var id in data.clients) {
+                        hasResults = true;
+                        html += '<a href="#" class="list-group-item list-group-item-action py-2" data-client-id="' + id + '">' + data.clients[id] + '</a>';
+                    }
+
+                    if (hasResults) {
+                        resultsContainer.innerHTML = '<div class="list-group list-group-flush">' + html + '</div>';
+                        resultsContainer.style.display = 'block';
+                        if (noClientsContainer) {
+                            noClientsContainer.style.display = 'none';
+                        }
+                    } else {
+                        resultsContainer.style.display = 'none';
+                        if (noClientsContainer) {
+                            noClientsContainer.style.display = 'block';
+                        }
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error('Error fetching clients:', error);
+            });
+        }, 300);
     });
 
+    // Handle clicks on autocomplete results
+    document.addEventListener('click', function(e) {
+        var resultsContainer = document.getElementById('client_autocomplete_results');
+        var clientInput = document.getElementById('client');
+        var clientIdInput = document.getElementById('client_id');
+
+        // Handle selection from autocomplete
+        var listItem = e.target.closest('#client_autocomplete_results .list-group-item');
+        if (listItem && clientInput && clientIdInput) {
+            e.preventDefault();
+            clientInput.value = listItem.textContent.trim();
+            clientIdInput.value = listItem.getAttribute('data-client-id');
+            if (resultsContainer) {
+                resultsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        // Hide autocomplete when clicking outside
+        if (resultsContainer && clientInput && !clientInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+})();
 </script>

@@ -1,6 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
 use phpseclib\Crypt\Random;
+use Blesta\App\AppModel;
+use Language;
+use stdClass;
 
 /**
  * API Key management
@@ -224,8 +229,8 @@ class ApiKeys extends AppModel
                 'unique' => [
                     'rule' => [
                         [$this, 'validateUniqueUser'],
-                        (isset($vars['company_id']) ? $vars['company_id'] : null),
-                        (isset($vars['id']) ? $vars['id'] : null)
+                        ($vars['company_id'] ?? null),
+                        ($vars['id'] ?? null)
                     ],
                     'message' => $this->_('ApiKeys.!error.user.unique')
                 ]

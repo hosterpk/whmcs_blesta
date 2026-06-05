@@ -1,0 +1,14 @@
+[
+    {
+        "transaction_id": 41,
+        "invoice_id": 121,
+        "amount": "14.0000",
+        "date": "2026-02-20 15:00:00"
+    },
+    {
+        "transaction_id": 42,
+        "invoice_id": 122,
+        "amount": "25.0000",
+        "date": "2026-02-21 10:15:00"
+    }
+]

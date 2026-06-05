@@ -37,7 +37,7 @@ class Signup extends OrderFormController
         $company_settings = $this->SettingsCollection->fetchSettings($this->Companies, $this->company_id);
 
         // Check if captcha is required for signups
-        $catpcha_forms = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($company_settings['captcha_enabled_forms']);
+        $catpcha_forms = safe_unserialize($company_settings['captcha_enabled_forms']);
         $require_captcha = (
                 ($this->order_form->require_captcha ?? '0') == '1' || Captcha::enabled('client_login')
             )
@@ -55,7 +55,7 @@ class Signup extends OrderFormController
             null,
             'show_client_tax_id'
         );
-        $show_client_tax_id = (isset($show_client_tax_id['value']) ? $show_client_tax_id['value'] : '');
+        $show_client_tax_id = ($show_client_tax_id['value'] ?? '');
 
         // Fetch client group force email setting
         $force_email_usernames = $this->SettingsCollection->fetchClientGroupSetting(
@@ -63,8 +63,8 @@ class Signup extends OrderFormController
             null,
             'force_email_usernames'
         );
-        $force_email_usernames = (isset($force_email_usernames['value']) ? $force_email_usernames['value'] :
-            (isset($company_settings['force_email_usernames']) ? $company_settings['force_email_usernames'] : 'false')
+        $force_email_usernames = ($force_email_usernames['value'] ??
+            ($company_settings['force_email_usernames'] ?? 'false')
         );
 
         // Record TOS acceptance
@@ -119,9 +119,7 @@ class Signup extends OrderFormController
                     'tax_id' => ($show_client_tax_id == 'true' ? $this->post['tax_id'] : ''),
                     'default_currency' => $this->SessionCart->getData('currency'),
                     'language' => $company_settings['language'],
-                    'receive_email_marketing' => (isset($this->post['receive_email_marketing'])
-                        ? $this->post['receive_email_marketing']
-                        : 'false'
+                    'receive_email_marketing' => ($this->post['receive_email_marketing'] ?? 'false'
                     )
                 ];
 
@@ -148,7 +146,8 @@ class Signup extends OrderFormController
                 }
 
                 // Check client info before fraud check if set to do so
-                if (isset($order_settings['antifraud_after_validate'])
+                if (
+                    isset($order_settings['antifraud_after_validate'])
                     && $order_settings['antifraud_after_validate'] == 'true'
                 ) {
                     $this->Clients->validateCreation($client_info);
@@ -275,35 +274,23 @@ class Signup extends OrderFormController
         }
 
         // Get required contact fields
-        $required_contact_fields = [];
-        $setting = $this->ClientGroups->getSetting(
+        $required_contact_fields = $this->ClientGroups->getSetting(
             $this->client->client_group_id ?? $this->order_form->client_group_id,
             'required_contact_fields'
         );
 
-        if ($setting) {
-            $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
-                base64_decode($setting->value)
-            );
-            if (is_array($unserialized)) {
-                $required_contact_fields = $unserialized;
-            }
+        if ($required_contact_fields) {
+            $required_contact_fields = safe_unserialize(base64_decode($required_contact_fields->value));
         }
 
         // Get shown contact fields
-        $shown_contact_fields = [];
-        $setting = $this->ClientGroups->getSetting(
+        $shown_contact_fields = $this->ClientGroups->getSetting(
             $this->client->client_group_id ?? $this->order_form->client_group_id,
             'shown_contact_fields'
         );
 
-        if ($setting) {
-            $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
-                base64_decode($setting->value)
-            );
-            if (is_array($unserialized)) {
-                $shown_contact_fields = $unserialized;
-            }
+        if ($shown_contact_fields) {
+            $shown_contact_fields = safe_unserialize(base64_decode($shown_contact_fields->value));
         }
 
         $this->set('order_form', $this->order_form);
@@ -333,8 +320,8 @@ class Signup extends OrderFormController
         $this->set('show_tos', $show_tos);
         $this->set('captcha', ($signup_captcha ?? ''));
         $this->set('login_captcha', ($login_captcha ?? ''));
-        $this->set('required_contact_fields', $required_contact_fields);
-        $this->set('shown_contact_fields', $shown_contact_fields);
+        $this->set('required_contact_fields', ($required_contact_fields ?? ''));
+        $this->set('shown_contact_fields', ($shown_contact_fields ?? ''));
 
         return $this->renderView();
     }

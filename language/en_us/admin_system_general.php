@@ -21,6 +21,8 @@ $lang['AdminSystemGeneral.!success.deletetype_deleted'] = 'The payment type "%1$
 // Error messages
 $lang['AdminSystemGeneral.!error.geoip_mbstring_required'] = 'The mbstring extension is required for this feature.';
 $lang['AdminSystemGeneral.!error.upload_dir'] = 'The upload directory must exist and be outside the root web directory.';
+$lang['AdminSystemGeneral.!error.cache_dir'] = 'The cache directory must be an existing writable directory.';
+$lang['AdminSystemGeneral.!error.cache_dir_marker'] = 'The cache directory change cannot be applied because the marker file at config/cache.dir.php cannot be written or removed. Grant write permission on the config directory (and on the marker file, if it exists) and try again.';
 
 // Notice messages
 $lang['AdminSystemGeneral.!notice.text_open_basedir_description'] = 'PHP open_basedir is enabled. File access is restricted to: %1$s. Directories outside these paths cannot be accessed.'; // %1$s is the allowed path
@@ -32,6 +34,7 @@ $lang['AdminSystemGeneral.!tooltip.root_web_dir'] = 'This value represents the f
 $lang['AdminSystemGeneral.!tooltip.temp_dir'] = 'This value represents the full server path to where Blesta should write temporary files. This directory must be writable by the server\'s web user and cron user.';
 $lang['AdminSystemGeneral.!tooltip.uploads_dir'] = 'This value represents the full server path to where Blesta should write uploaded files. This directory must be writable by the server\'s web user and cron user.';
 $lang['AdminSystemGeneral.!tooltip.log_dir'] = 'This value represents the full server path to where Blesta should write log files. This directory must be writable by the server\'s web user and cron user.';
+$lang['AdminSystemGeneral.!tooltip.cache_dir'] = 'This value represents the full server path to where Blesta should write cached files. This directory must be writable by the server\'s web user and cron user. For security, this path should be located outside of the web root; if it must be inside the web root, Blesta will write a .htaccess file as a partial mitigation, but server configurations that ignore .htaccess (such as Nginx) provide no such protection.';
 $lang['AdminSystemGeneral.!tooltip.log_days'] = 'The Rotation Policy sets the length of time to retain most company log data. The system configuration file may set additional log retention settings.';
 $lang['AdminSystemGeneral.!tooltip.behind_proxy'] = 'When checked, Blesta will assume it is behind a proxy and will determine IP addresses from an x-forwarded-for header provided by the proxy. You should only check this setting if the x-forwarded-for header can be trusted.';
 
@@ -46,6 +49,7 @@ $lang['AdminSystemGeneral.basic.field.root_web_dir'] = 'Root Web Directory';
 $lang['AdminSystemGeneral.basic.field.temp_dir'] = 'Temp Directory';
 $lang['AdminSystemGeneral.basic.field.uploads_dir'] = 'Uploads Directory';
 $lang['AdminSystemGeneral.basic.field.log_dir'] = 'Log Directory';
+$lang['AdminSystemGeneral.basic.field.cache_dir'] = 'Cache Directory';
 $lang['AdminSystemGeneral.basic.field.log_days'] = 'Rotation Policy';
 $lang['AdminSystemGeneral.basic.field.behind_proxy'] = 'My installation is behind a proxy or load balancer';
 $lang['AdminSystemGeneral.basic.field.basicsubmit'] = 'Update Settings';
@@ -101,7 +105,7 @@ $lang['AdminSystemGeneral.paymenttypes.boxtitle_types'] = 'Payment Types';
 $lang['AdminSystemGeneral.paymenttypes.heading_name'] = 'Name';
 $lang['AdminSystemGeneral.paymenttypes.heading_type'] = 'Type';
 $lang['AdminSystemGeneral.paymenttypes.heading_is_lang'] = 'Uses Language Definition';
-$lang['AdminSystemGeneral.paymenttypes.heading_options'] = 'Options';
+$lang['AdminSystemGeneral.paymenttypes.heading_options'] = 'Actions';
 
 $lang['AdminSystemGeneral.paymenttypes.option_edit'] = 'Edit';
 $lang['AdminSystemGeneral.paymenttypes.option_delete'] = 'Delete';
@@ -136,4 +140,4 @@ $lang['AdminSystemGeneral.edittype.field_name'] = 'Name';
 $lang['AdminSystemGeneral.edittype.field_type'] = 'Type';
 $lang['AdminSystemGeneral.edittype.field_is_lang'] = 'Use Language Definition';
 
-$lang['AdminSystemGeneral.edittype.field_typesubmit'] = 'Edit Payment Type';
+$lang['AdminSystemGeneral.edittype.field_typesubmit'] = 'Update Payment Type';

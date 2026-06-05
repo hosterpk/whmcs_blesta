@@ -1,0 +1,122 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "staff_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "gateway_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "direction",
+            "type": "enum('input','output')",
+            "nullable": false,
+            "key": null,
+            "default": "input",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "url",
+            "type": "text",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "data",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "status",
+            "type": "enum('error','success')",
+            "nullable": false,
+            "key": null,
+            "default": "error",
+            "extra": null,
+            "max_length": 7
+        },
+        {
+            "name": "group",
+            "type": "char(8)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 8
+        }
+    ],
+    "indexes": [
+        {
+            "name": "gateway_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "gateway_id"
+            ]
+        },
+        {
+            "name": "group",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "group"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "staff_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "staff_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

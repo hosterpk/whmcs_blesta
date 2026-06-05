@@ -47,7 +47,7 @@ class LogicboxesResponse
     {
         if ($this->errors()) {
             return 'ERROR';
-        } elseif ($this->raw) {
+        } elseif ($this->raw && $this->response !== null) {
             return 'OK';
         }
         return null;

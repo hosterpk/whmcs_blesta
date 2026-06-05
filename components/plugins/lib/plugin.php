@@ -37,6 +37,19 @@ abstract class Plugin
     }
 
     /**
+     * Returns the icon of this plugin
+     *
+     * @return string The icon of this plugin
+     */
+    public function getIcon()
+    {
+        if (isset($this->config->icon)) {
+            return $this->config->icon;
+        }
+        return null;
+    }
+
+    /**
      * Returns the description of this plugin
      *
      * @return string The description of this plugin
@@ -118,6 +131,7 @@ abstract class Plugin
      *  - action The action to register for
      *  - uri The URI to be invoked for the given action
      *  - name The name to represent the action (can be language definition)
+     *  - icon The Bootstrap Icons class for this action (e.g. 'bi-headset'), defaults to 'bi-gear'
      *  - options An array of key/value pair options for the given action
      */
     public function getActions()

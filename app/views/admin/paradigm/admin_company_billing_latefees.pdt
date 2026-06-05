@@ -1,0 +1,59 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyBilling.latefees.boxtitle_latefees', true), ['id' => 'admin_company_billing_latefees']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <h6 class="form-section-header"><?php $this->_('AdminCompanyBilling.latefees.heading_basic');?></h6>
+
+            <?php echo (isset($late_fees_form) ? $late_fees_form : null); ?>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyBilling.latefees.field_submit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+        <?php $this->Form->end(); ?>
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Disable the minimum field if the fee type is fixed
+    document.querySelectorAll('.fee_type').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const minimumField = row.querySelector('.minimum');
+
+            if (minimumField) {
+                minimumField.disabled = (this.value === 'fixed');
+            }
+        });
+    });
+
+    // Force a number in the amount and minimum fields
+    document.querySelectorAll('.amount, .minimum').forEach(field => {
+        field.addEventListener('change', function() {
+            const value = this.value;
+
+            if (isNaN(value)) {
+                this.value = '';
+            }
+        });
+    });
+});
+</script>

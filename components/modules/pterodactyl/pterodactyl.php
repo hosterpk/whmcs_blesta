@@ -1,6 +1,8 @@
 <?php
+
 use Blesta\PterodactylSDK\PterodactylApi;
 use Blesta\Core\Util\Validate\Server;
+use Blesta\Core\Util\Common\Traits\Container;
 
 /**
  * Pterodactyl Module
@@ -13,6 +15,13 @@ use Blesta\Core\Util\Validate\Server;
  */
 class Pterodactyl extends Module
 {
+    // Load traits
+    use Container;
+    /**
+     * @var Blesta\Core\ServiceProviders\Logger Container logger
+     */
+    private $logger;
+
     /**
      * Initializes the module
      */
@@ -32,6 +41,9 @@ class Pterodactyl extends Module
 
         // Load additional config values
         Configure::load('pterodactyl', dirname(__FILE__) . DS . 'config' . DS);
+
+        // Initialize logger
+        $this->logger = $this->getFromContainer('logger');
     }
 
     /**
@@ -69,7 +81,8 @@ class Pterodactyl extends Module
      *
      * @param string $command The filename of the class to load
      */
-    private function loadLib($command) {
+    private function loadLib($command)
+    {
         Loader::load(dirname(__FILE__) . DS . 'lib' . DS . $command . '.php');
     }
 
@@ -109,7 +122,6 @@ class Pterodactyl extends Module
             switch ($group->add_order) {
                 default:
                 case 'first':
-
                     foreach ($group->rows as $row) {
                         return $row->id;
                     }
@@ -141,7 +153,7 @@ class Pterodactyl extends Module
      */
     public function validateServiceEdit($service, array $vars = null)
     {
-        $package = isset($service->package) ? $service->package : null;
+        $package = $service->package ?? null;
         return $this->getServiceRules($vars, $package, true);
     }
 
@@ -302,8 +314,8 @@ class Pterodactyl extends Module
                 $module->id
             );
 
-            $vars['server_username'] = isset($server_username->value) ? $server_username->value : null;
-            $vars['server_password'] = isset($server_password->value) ? $server_password->value : null;
+            $vars['server_username'] = $server_username->value ?? null;
+            $vars['server_password'] = $server_password->value ?? null;
 
             // Create server
             $pterodactyl_server = $this->apiRequest(
@@ -318,69 +330,73 @@ class Pterodactyl extends Module
 
             $meta['server_id'] = $pterodactyl_server->attributes->id;
             $meta['external_id'] = $pterodactyl_server->attributes->external_id;
-            if (isset($pterodactyl_server->attributes->relationships)
+            if (
+                isset($pterodactyl_server->attributes->relationships)
                 && isset($pterodactyl_server->attributes->relationships->allocations)
                 && isset($pterodactyl_server->attributes->relationships->allocations->data[0])
             ) {
                 $allocation = $pterodactyl_server->attributes->relationships->allocations->data[0];
-                $meta['server_ip'] = isset($allocation->attributes->ip) ? $allocation->attributes->ip : null;
-                $meta['server_port'] = isset($allocation->attributes->port) ? $allocation->attributes->port : null;
+                $meta['server_ip'] = $allocation->attributes->ip ?? null;
+                $meta['server_port'] = $allocation->attributes->port ?? null;
             }
         }
 
         $return = [
             [
                 'key' => 'server_id',
-                'value' => isset($meta['server_id'])
-                    ? $meta['server_id'] :
-                    (isset($vars['server_id']) ? $vars['server_id'] : null),
+                'value' => $meta['server_id'] ??
+                    ($vars['server_id'] ?? null),
                 'encrypted' => 0
             ],
             [
                 'key' => 'external_id',
                 'value' => !empty($meta['external_id'])
                     ? $meta['external_id']
-                    : (isset($vars['external_id']) ? $vars['external_id'] : null),
+                    : ($vars['external_id'] ?? null),
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_ip',
-                'value' => isset($meta['server_ip'])
-                    ? $meta['server_ip'] :
-                    (isset($vars['server_ip']) ? $vars['server_ip'] : null),
+                'value' => $meta['server_ip'] ??
+                    ($vars['server_ip'] ?? null),
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_port',
-                'value' => isset($meta['server_port'])
-                    ? $meta['server_port'] :
-                    (isset($vars['server_port']) ? $vars['server_port'] : null),
+                'value' => $meta['server_port'] ??
+                    ($vars['server_port'] ?? null),
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_name',
-                'value' => isset($vars['server_name']) ? $vars['server_name'] : '',
+                'value' => $vars['server_name'] ?? '',
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_description',
-                'value' => isset($vars['server_description']) ? $vars['server_description'] : '',
+                'value' => $vars['server_description'] ?? '',
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_username',
-                'value' => isset($vars['server_username']) ? $vars['server_username'] : '',
+                'value' => $vars['server_username'] ?? '',
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_password',
-                'value' => isset($vars['server_password']) ? $vars['server_password'] : '',
+                'value' => $vars['server_password'] ?? '',
                 'encrypted' => 1
             ],
         ];
 
         $environment_variables = $service_helper->getEnvironmentVariables($vars, $package, $pterodactyl_egg);
         foreach ($environment_variables as $environment_variable => $value) {
+            foreach ($return as $item) {
+                if ($item['key'] === strtolower($environment_variable)) {
+                    continue 2;
+                }
+            }
+
             $return[] = [
                 'key' => strtolower($environment_variable),
                 'value' => $value,
@@ -467,13 +483,14 @@ class Pterodactyl extends Module
             // Set service fields
             $vars['server_id'] = $pterodactyl_server_edited->attributes->id;
             $vars['external_id'] = $pterodactyl_server_edited->attributes->external_id;
-            if (isset($pterodactyl_server_edited->attributes->relationships)
+            if (
+                isset($pterodactyl_server_edited->attributes->relationships)
                 && isset($pterodactyl_server_edited->attributes->relationships->allocations)
                 && isset($pterodactyl_server_edited->attributes->relationships->allocations->data[0])
             ) {
                 $allocation = $pterodactyl_server_edited->attributes->relationships->allocations->data[0];
-                $vars['server_ip'] = isset($allocation->attributes->ip) ? $allocation->attributes->ip : null;
-                $vars['server_port'] = isset($allocation->attributes->port) ? $allocation->attributes->port : null;
+                $vars['server_ip'] = $allocation->attributes->ip ?? null;
+                $vars['server_port'] = $allocation->attributes->port ?? null;
             }
 
             // Set package fields
@@ -508,7 +525,7 @@ class Pterodactyl extends Module
                 'key' => 'external_id',
                 'value' => !empty($vars['external_id'])
                     ? $vars['external_id']
-                    : (isset($service_fields->external_id) ? $service_fields->external_id : null),
+                    : ($service_fields->external_id ?? null),
                 'encrypted' => 0
             ],
             [
@@ -523,24 +540,22 @@ class Pterodactyl extends Module
             ],
             [
                 'key' => 'server_name',
-                'value' => isset($vars['server_name']) ? $vars['server_name'] : $service_fields->server_name,
+                'value' => $vars['server_name'] ?? $service_fields->server_name,
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_description',
-                'value' => isset($vars['server_description'])
-                    ? $vars['server_description']
-                    : $service_fields->server_description,
+                'value' => $vars['server_description'] ?? $service_fields->server_description,
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_username',
-                'value' => isset($vars['server_username']) ? $vars['server_username'] : $service_fields->server_username,
+                'value' => $vars['server_username'] ?? $service_fields->server_username,
                 'encrypted' => 0
             ],
             [
                 'key' => 'server_password',
-                'value' => isset($vars['server_password']) ? $vars['server_password'] : $service_fields->server_password,
+                'value' => $vars['server_password'] ?? $service_fields->server_password,
                 'encrypted' => 1
             ],
         ];
@@ -553,6 +568,12 @@ class Pterodactyl extends Module
             $service_fields
         );
         foreach ($environment_variables as $environment_variable => $value) {
+            foreach ($return as $key => $item) {
+                if ($item['key'] === strtolower($environment_variable)) {
+                    unset($return[$key]);
+                }
+            }
+
             $return[] = [
                 'key' => strtolower($environment_variable),
                 'value' => $value,
@@ -842,7 +863,7 @@ class Pterodactyl extends Module
 
         // Get server information from the application API
         $server = $this->getServer($service);
-        $server_id = isset($server->attributes->identifier) ? $server->attributes->identifier : null;
+        $server_id = $server->attributes->identifier ?? null;
 
         // Get the service fields
         $get_key = '3';
@@ -851,7 +872,8 @@ class Pterodactyl extends Module
         }
 
         // Perform actions
-        if (array_key_exists($get_key, (array)$get)
+        if (
+            array_key_exists($get_key, (array)$get)
             && in_array($get[$get_key], ['start', 'stop', 'restart'])
             && isset($server->attributes->identifier)
         ) {
@@ -1056,6 +1078,14 @@ class Pterodactyl extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -1087,6 +1117,14 @@ class Pterodactyl extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -1487,14 +1525,17 @@ class Pterodactyl extends Module
                     'rule' => function ($api_key) use ($vars) {
                         try {
                             $api = $this->getApi(
-                                isset($vars['host_name']) ? $vars['host_name'] : '',
+                                $vars['host_name'] ?? '',
                                 $api_key,
-                                (isset($vars['use_ssl']) ? $vars['use_ssl'] : 'true') == 'true'
+                                ($vars['use_ssl'] ?? 'true') == 'true'
                             );
+                            $this->log('Client.getServers', json_encode([]), 'input', true);
                             $servers_response = $api->Client->getServers();
+                            $this->log('Client.getServers', $servers_response->raw(), 'output', $servers_response->status() == 200);
 
                             return $servers_response->status() == 200;
-                        } catch (Exception $e) {
+                        } catch (\Throwable $e) {
+                            $this->logger->error($e->getMessage());
                             return false;
                         }
                     },
@@ -1511,14 +1552,17 @@ class Pterodactyl extends Module
                     'rule' => function ($api_key) use ($vars) {
                         try {
                             $api = $this->getApi(
-                                isset($vars['host_name']) ? $vars['host_name'] : '',
+                                $vars['host_name'] ?? '',
                                 $api_key,
-                                (isset($vars['use_ssl']) ? $vars['use_ssl'] : 'true') == 'true'
+                                ($vars['use_ssl'] ?? 'true') == 'true'
                             );
+                            $this->log('Locations.getAll', json_encode([]), 'input', true);
                             $locations_response = $api->Locations->getAll();
+                            $this->log('Locations.getAll', $locations_response->raw(), 'output', $locations_response->status() == 200);
 
                             return $locations_response->status() == 200;
-                        } catch (Exception $e) {
+                        } catch (\Throwable $e) {
+                            $this->logger->error($e->getMessage());
                             return false;
                         }
                     },

@@ -1,51 +1,55 @@
-<?php /** @var View $this */ ?>
+<?php
+/** @var View $this */
+?>
 <div id="dns-records" class="pad">
-    <h4><?php $this->_('Logicboxes.tab_dnssec.title_disclaimer');?></h4>
+    <h4><?php $this->_('Logicboxes.tab_dnssec.title_disclaimer'); ?></h4>
     <p><?php $this->_('Logicboxes.tab_dnssec.warning_message1'); ?></p>
     <p class="mb-2"><?php $this->_('Logicboxes.tab_dnssec.warning_message2'); ?></p>
     
-    <h4 class="mt-3"><?php $this->_('Logicboxes.tab_dnssec.title');?></h4>
+    <h4 class="mt-3"><?php $this->_('Logicboxes.tab_dnssec.title'); ?></h4>
     <?php if (count($records ?? []) > 0) { ?>
         <div class="table-responsive my-2">
             <table class="table table-curved table-striped">
                 <thead>
                     <tr class="heading_row">
-                        <th><span><?php $this->_('Logicboxes.tab_dnssec.keytag');?></span></th>
-                        <th><span><?php $this->_('Logicboxes.tab_dnssec.algorithm');?></span></th>
-                        <th><span><?php $this->_('Logicboxes.tab_dnssec.digesttype');?></span></th>
-                        <th><span><?php $this->_('Logicboxes.tab_dnssec.digest');?></span></th>
-                        <th><span><?php $this->_('Logicboxes.tab_dnssec.field_delete');?></span></th>
+                        <th><span><?php $this->_('Logicboxes.tab_dnssec.keytag'); ?></span></th>
+                        <th><span><?php $this->_('Logicboxes.tab_dnssec.algorithm'); ?></span></th>
+                        <th><span><?php $this->_('Logicboxes.tab_dnssec.digesttype'); ?></span></th>
+                        <th><span><?php $this->_('Logicboxes.tab_dnssec.digest'); ?></span></th>
+                        <th><span><?php $this->_('Logicboxes.tab_dnssec.field_delete'); ?></span></th>
                     </tr>
                 </thead>
 
                 <tbody>
                     <?php foreach ($records as $record) { ?>
                         <tr>
-                            <td><?php echo $this->Html->safe($record->keytag ?? null) ?></td>
-                            <td><?php echo $this->Html->safe($record->algorithm ?? null) ?></td>
-                            <td><?php echo $this->Html->safe($record->digesttype ?? null) ?></td>
-                            <td style="word-wrap:break-word; overflow-wrap: break-word; word-break: break-word;"><?php echo $this->Html->safe($record->digest ?? null) ?></td>
+                            <td><?php echo $this->Html->safe($record->keytag ?? null); ?></td>
+                            <td><?php echo $this->Html->safe($record->algorithm ?? null); ?></td>
+                            <td><?php echo $this->Html->safe($record->digesttype ?? null); ?></td>
+                            <td style="word-wrap:break-word; overflow-wrap: break-word; word-break: break-word;"><?php echo $this->Html->safe(
+                                $record->digest ?? null,
+                            ); ?></td>
                             <td>
                                 <?php
-                                    $this->Form->create();
-                                    $this->Form->fieldHidden('keytag', ($record->keytag ?? null));
-                                    $this->Form->fieldHidden('algorithm', ($record->algorithm ?? null));
-                                    $this->Form->fieldHidden('digesttype', ($record->digesttype ?? null));
-                                    $this->Form->fieldHidden('digest', ($record->digest ?? null));
+                                $this->Form->create();
+                                $this->Form->fieldHidden('keytag', $record->keytag ?? null);
+                                $this->Form->fieldHidden('algorithm', $record->algorithm ?? null);
+                                $this->Form->fieldHidden('digesttype', $record->digesttype ?? null);
+                                $this->Form->fieldHidden('digest', $record->digest ?? null);
 
-                                    $button_attributes = [
-                                        'class' => 'btn btn-sm btn-danger',
-                                        'value' => 'deleteDsRecord',
-                                        'type' => 'submit',
-                                    ];
+                                $button_attributes = [
+                                    'class' => 'btn btn-sm btn-danger',
+                                    'value' => 'deleteDsRecord',
+                                    'type' => 'submit',
+                                ];
 
-                                    $this->Form->fieldButton(
-                                        'action',
-                                        $this->_('Logicboxes.tab_dnssec.field_delete', true),
-                                        $button_attributes
-                                    );
+                                $this->Form->fieldButton(
+                                    'action',
+                                    $this->_('Logicboxes.tab_dnssec.field_delete', true),
+                                    $button_attributes,
+                                );
 
-                                    $this->Form->end();
+                                $this->Form->end();
                                 ?>
                             </td>
                         </tr>
@@ -55,36 +59,42 @@
         </div>
     <?php } else { ?> 
         <div class="alert alert-info" role="alert">
-            <?php $this->_('Logicboxes.tab_dnssec.no_records');?>
+            <?php $this->_('Logicboxes.tab_dnssec.no_records'); ?>
         </div>
     <?php } ?>
 
-    <h4 class="mt-3"><?php $this->_('Logicboxes.tab_dnssec.title_add') ?></h4>
-    <?php $this->Form->create() ?>
+    <h4 class="mt-3"><?php $this->_('Logicboxes.tab_dnssec.title_add'); ?></h4>
+    <?php $this->Form->create(); ?>
         <div>
             <table class="table table-curved">
                 <thead>
                     <tr class="heading_row">
-                        <th><?php $this->_('Logicboxes.tab_dnssec.keytag') ?></th>
-                        <th><?php $this->_('Logicboxes.tab_dnssec.algorithm') ?></th>
-                        <th><?php $this->_('Logicboxes.tab_dnssec.digesttype') ?></th>
-                        <th><?php $this->_('Logicboxes.tab_dnssec.digest') ?></th>
+                        <th><?php $this->_('Logicboxes.tab_dnssec.keytag'); ?></th>
+                        <th><?php $this->_('Logicboxes.tab_dnssec.algorithm'); ?></th>
+                        <th><?php $this->_('Logicboxes.tab_dnssec.digesttype'); ?></th>
+                        <th><?php $this->_('Logicboxes.tab_dnssec.digest'); ?></th>
                     </tr>
                 </thead>
 
                 <tbody>
                     <tr>
-                        <td><?php $this->Form->fieldNumber('keytag', null, 0, 65536, 1, ['class' => 'form-control']) ?></td>
-                        <td><?php $this->Form->fieldSelect('algorithm', $algorithms ?? [], null, ['class' => 'form-control']) ?></td>
-                        <td><?php $this->Form->fieldSelect('digesttype', $digests ?? [], null, ['class' => 'form-control']) ?></td>
-                        <td><?php $this->Form->fieldText('digest', null, ['class' => 'form-control']) ?></td>
+                        <td><?php $this->Form->fieldNumber('keytag', null, 0, 65536, 1, [
+                            'class' => 'form-control',
+                        ]); ?></td>
+                        <td><?php $this->Form->fieldSelect('algorithm', $algorithms ?? [], null, [
+                            'class' => 'form-control',
+                        ]); ?></td>
+                        <td><?php $this->Form->fieldSelect('digesttype', $digests ?? [], null, [
+                            'class' => 'form-control',
+                        ]); ?></td>
+                        <td><?php $this->Form->fieldText('digest', null, ['class' => 'form-control']); ?></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <button class="btn btn-light float-right" type="submit" name="action" value="addDsRecord">
-            <i class="fas fa-edit"></i> <?php $this->_('Logicboxes.tab_dnssec.field_add') ?>
+            <i class="fas fa-edit"></i> <?php $this->_('Logicboxes.tab_dnssec.field_add'); ?>
         </button>
-    <?php $this->Form->end() ?>
+    <?php $this->Form->end(); ?>
 </div>

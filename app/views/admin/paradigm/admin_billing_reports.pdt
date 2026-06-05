@@ -1,0 +1,74 @@
+<?php
+echo (isset($message) ? $message : null);
+
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminBilling.reports.boxtitle_reports', true), ['id' => 'admin_billing_reports'], ($render_section ?? null));
+
+$this->Form->create(null, ['id' => 'report_form', 'class' => 'disable-on-submit']);
+?>
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label for="format" class="form-label"><?php $this->_('AdminBilling.reports.field_format');?></label>
+            <?php
+            $this->Form->fieldSelect('format', (isset($formats) ? $formats : null), (isset($vars->format) ? $vars->format : null), ['id' => 'format', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="col-md-6">
+            <label for="type" class="form-label"><?php $this->_('AdminBilling.reports.field_report_type');?></label>
+            <?php
+            $this->Form->fieldSelect('type', (isset($types) ? $types : null), (isset($vars->type) ? $vars->type : null), ['id' => 'type', 'class' => 'form-select']);
+            ?>
+        </div>
+    </div>
+    <div id="report_options">
+        <?php echo (isset($report_fields) ? $report_fields : null);?>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminBilling.reports.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+
+$this->Widget->end();
+?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('type');
+    const reportOptions = document.getElementById('report_options');
+    const reportForm = document.getElementById('report_form');
+
+    if (!typeSelect || !reportForm) return;
+
+    typeSelect.addEventListener('change', function() {
+        getReportFields();
+    });
+
+    function getReportFields() {
+        if (typeSelect.value === '') return;
+
+        const formData = new FormData(reportForm);
+        const params = new URLSearchParams(formData).toString();
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'billing/getreportfields/');?>?' + params, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.fields) {
+                reportOptions.innerHTML = data.fields;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+});
+</script>

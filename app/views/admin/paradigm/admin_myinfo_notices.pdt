@@ -1,0 +1,134 @@
+<?php
+echo (isset($message) ? $message : null);
+
+$current_tab = 'notices';
+?>
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminMyinfo.index.boxtitle_myinfo');?></h5>
+    </div>
+    <div class="card-filter-bar">
+        <ul class="nav nav-tabs-box border-0 mb-0" role="tablist">
+            <?php
+            foreach ((isset($link_tabs) ? $link_tabs : []) as $tab) {
+                $is_current = ((isset($tab['uri']) ? $tab['uri'] : 'index') == $current_tab);
+            ?>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link<?php echo $is_current ? ' active' : '';?>"
+                   href="<?php echo $this->base_uri . 'myinfo/' . $tab['uri'] . '/';?>">
+                    <?php echo (isset($tab['name']) ? $this->Html->safe($tab['name']) : '');?>
+                </a>
+            </li>
+            <?php
+            }
+            ?>
+        </ul>
+    </div>
+    <?php
+    $this->Form->create(null, ['id' => 'noticesForm', 'class' => 'disable-on-submit']);
+    $this->Form->fieldHidden('empty', '0');
+    ?>
+    <div class="card-body">
+        <!-- Email BCC Notices -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.notices.heading_notices');?></h6>
+
+        <?php if (!empty($bcc_notices)) { ?>
+        <div class="row mb-4">
+            <?php
+            $notices_count = count($bcc_notices);
+            $per_column = ceil($notices_count / 3);
+            $columns = array_chunk($bcc_notices, $per_column);
+
+            foreach ($columns as $column) {
+            ?>
+            <div class="col-md-4">
+                <?php foreach ($column as $notice) { ?>
+                <div class="mb-2 form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'notices[]',
+                        (isset($notice->action) ? $this->Html->safe($notice->action) : null),
+                        in_array((isset($notice->action) ? $this->Html->safe($notice->action) : null), (array)(isset($vars->notices) ? $vars->notices : null)),
+                        ['id' => 'notice_' . (isset($notice->id) ? $this->Html->safe($notice->id) : null), 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="notice_<?php echo (isset($notice->id) ? $this->Html->safe($notice->id) : null);?>">
+                        <?php echo (isset($notice->lang) ? $this->Html->safe($notice->lang) : '');?>
+                        <?php if (!empty($notice->lang_description)) { ?>
+                        <i class="bi bi-info-circle ms-1 text-secondary"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($notice->lang_description);?>"></i>
+                        <?php } ?>
+                    </label>
+                </div>
+                <?php } ?>
+            </div>
+            <?php } ?>
+        </div>
+        <?php } else { ?>
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-0"><?php $this->_('AdminMyinfo.notices.no_bcc_results');?></p>
+        </div>
+        <?php } ?>
+
+        <!-- Email Subscription Notices -->
+        <h6 class="form-section-header"><?php $this->_('AdminMyinfo.notices.heading_subscription_notices');?></h6>
+
+        <?php if (!empty($subscription_notices)) { ?>
+        <div class="row">
+            <?php
+            $sub_notices_count = count($subscription_notices);
+            $sub_per_column = ceil($sub_notices_count / 3);
+            $sub_columns = array_chunk($subscription_notices, $sub_per_column);
+
+            foreach ($sub_columns as $column) {
+            ?>
+            <div class="col-md-4">
+                <?php foreach ($column as $notice) { ?>
+                <div class="mb-2 form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'notices[]',
+                        (isset($notice->action) ? $this->Html->safe($notice->action) : null),
+                        in_array((isset($notice->action) ? $this->Html->safe($notice->action) : null), (array)(isset($vars->notices) ? $vars->notices : null)),
+                        ['id' => 'notice_' . (isset($notice->id) ? $this->Html->safe($notice->id) : null), 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label class="form-check-label" for="notice_<?php echo (isset($notice->id) ? $this->Html->safe($notice->id) : null);?>">
+                        <?php echo (isset($notice->lang) ? $this->Html->safe($notice->lang) : '');?>
+                        <?php if (!empty($notice->lang_description)) { ?>
+                        <i class="bi bi-info-circle ms-1 text-secondary"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($notice->lang_description);?>"></i>
+                        <?php } ?>
+                    </label>
+                </div>
+                <?php } ?>
+            </div>
+            <?php } ?>
+        </div>
+        <?php } else { ?>
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-0"><?php $this->_('AdminMyinfo.notices.no_subscription_results');?></p>
+        </div>
+        <?php } ?>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end">
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminMyinfo.notices.field_noticesubmit', true), ['class' => 'btn btn-primary']);?>
+        </div>
+    </div>
+    <?php $this->Form->end();?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

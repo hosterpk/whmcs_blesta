@@ -1,0 +1,78 @@
+<?php /** @var View $this **/ ?>
+
+<?php echo ($message ?? null); ?>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><?php $this->_('AdminTools.blacklistadd.boxtitle_addrule');?></h5>
+    </div>
+    <div class="card-body">
+        <?php $this->Form->create(null, ['class' => 'disable-on-submit']);?>
+
+        <div class="mb-3">
+            <label for="type" class="form-label">
+                <?php $this->_('AdminTools.blacklistadd.field_type');?>
+            </label>
+            <?php $this->Form->fieldSelect('type', ($types ?? []), ($vars->type ?? null), ['id' => 'type', 'class' => 'form-select']);?>
+        </div>
+
+        <div class="mb-3">
+            <label for="rule" class="form-label">
+                <?php $this->_('AdminTools.blacklistadd.field_rule');?>
+                <i class="bi bi-info-circle ms-1"
+                   data-bs-toggle="tooltip"
+                   data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('AdminTools.!tooltip.rule', true));?>"></i>
+            </label>
+            <?php $this->Form->fieldText('rule', ($vars->rule ?? null), ['id' => 'rule', 'class' => 'form-control']);?>
+        </div>
+
+        <div class="mb-3" id="block_outgoing_container">
+            <div class="form-check">
+                <?php $this->Form->fieldCheckbox('block_outgoing', '1', isset($vars->block_outgoing), ['id' => 'block_outgoing', 'class' => 'form-check-input']); ?>
+                <label for="block_outgoing" class="form-check-label">
+                    <?php $this->_('AdminTools.blacklistadd.field_block_outgoing');?>
+                </label>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="note" class="form-label">
+                <?php $this->_('AdminTools.blacklistadd.field_note');?>
+            </label>
+            <?php $this->Form->fieldTextarea('note', ($vars->note ?? null), ['id' => 'note', 'class' => 'form-control', 'rows' => '3']);?>
+        </div>
+
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminTools.blacklistadd.field_submit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+    </div>
+    <?php $this->Form->end();?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Toggle block outgoing field based on type
+    const typeSelect = document.getElementById('type');
+    const blockOutgoingContainer = document.getElementById('block_outgoing_container');
+
+    function toggleBlockOutgoing() {
+        if (typeSelect.value === 'ip') {
+            blockOutgoingContainer.style.display = 'none';
+        } else {
+            blockOutgoingContainer.style.display = '';
+        }
+    }
+
+    toggleBlockOutgoing();
+    typeSelect.addEventListener('change', toggleBlockOutgoing);
+});
+</script>

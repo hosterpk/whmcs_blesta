@@ -27,7 +27,7 @@ $lang['OrderTypeDomain.settings.text_term'] = 'Minimum Term and Period';
 
 $lang['OrderTypeDomain.settings.heading_term'] = 'Term';
 $lang['OrderTypeDomain.settings.heading_period'] = 'Period';
-$lang['OrderTypeDomain.settings.heading_options'] = 'Options';
+$lang['OrderTypeDomain.settings.heading_options'] = 'Actions';
 
 // Override default step 1 description
 $lang['Main.steps.step_1_description'] = "Choose a domain";

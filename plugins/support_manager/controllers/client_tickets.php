@@ -74,8 +74,8 @@ class ClientTickets extends SupportManagerController
     {
         return [
             'low' => 'secondary',
-            'medium' => 'info',
-            'high' => 'success',
+            'medium' => 'primary',
+            'high' => 'info',
             'critical' => 'warning',
             'emergency' => 'danger'
         ];
@@ -262,24 +262,54 @@ class ClientTickets extends SupportManagerController
                     }
                 }
 
-                // Create a transaction
-                $this->SupportManagerTickets->begin();
-
-                // Create the ticket
-                $ticket_id = $this->SupportManagerTickets->add($data, !$logged_in);
-                $ticket_errors = $this->SupportManagerTickets->errors();
-                $reply_errors = [];
-
-                // Create the initial reply
-                if (!$ticket_errors) {
-                    $reply_id = $this->SupportManagerTickets->addReply($ticket_id, $data, $this->files, true);
-                    $reply_errors = $this->SupportManagerTickets->errors();
+                // Reject base64 inline images
+                if ($this->SupportManagerTickets->containsBase64Images($data['details'] ?? '')) {
+                    $errors = [
+                        'details' => ['base64' => Language::_(
+                            'SupportManagerTickets.!error.inline_image.base64',
+                            true
+                        )]
+                    ];
                 }
 
-                $errors = array_merge(($ticket_errors ? $ticket_errors : []), ($reply_errors ? $reply_errors : []));
-                if ($errors) {
-                    // Rollback changes
-                    $this->SupportManagerTickets->rollBack();
+                // Finalize inline images and create the ticket
+                $inline_attachment_ids = [];
+                if (empty($errors)) {
+                    $temp_ids = $this->post['inline_image_temp_ids'] ?? [];
+                    if (!empty($temp_ids)) {
+                        if (is_string($temp_ids)) {
+                            $temp_ids = json_decode($temp_ids, true) ?: [];
+                        }
+                        $finalized = $this->SupportManagerTickets->finalizeInlineImages(
+                            $data['details'],
+                            $temp_ids
+                        );
+                        $data['details'] = $finalized['details'];
+                        $inline_attachment_ids = $finalized['attachment_ids'];
+                    }
+
+                    // Create a transaction
+                    $this->SupportManagerTickets->begin();
+
+                    // Create the ticket
+                    $ticket_id = $this->SupportManagerTickets->add($data, !$logged_in);
+                    $ticket_errors = $this->SupportManagerTickets->errors();
+                    $reply_errors = [];
+
+                    // Create the initial reply
+                    if (!$ticket_errors) {
+                        $reply_id = $this->SupportManagerTickets->addReply($ticket_id, $data, $this->files, true);
+                        $reply_errors = $this->SupportManagerTickets->errors();
+                    }
+
+                    $errors = array_merge(($ticket_errors ? $ticket_errors : []), ($reply_errors ? $reply_errors : []));
+                    if ($errors) {
+                        // Rollback changes
+                        $this->SupportManagerTickets->rollBack();
+
+                        // Rollback inline attachments since the reply failed
+                        $this->SupportManagerTickets->rollbackInlineAttachments($inline_attachment_ids);
+                    }
                 }
             }
 
@@ -290,6 +320,14 @@ class ClientTickets extends SupportManagerController
             } else {
                 // Success, commit the transaction
                 $this->SupportManagerTickets->commit();
+
+                // Link inline attachments to the reply
+                if (!empty($inline_attachment_ids) && !empty($reply_id)) {
+                    $this->SupportManagerTickets->linkInlineAttachmentsToReply(
+                        $inline_attachment_ids,
+                        $reply_id
+                    );
+                }
 
                 // Send the email associated with this ticket
                 $this->SupportManagerTickets->sendEmail($reply_id);
@@ -560,6 +598,34 @@ class ClientTickets extends SupportManagerController
                 }
             }
 
+            // Reject base64 inline images
+            $has_base64 = $this->SupportManagerTickets->containsBase64Images($data['details'] ?? '');
+            if ($has_base64) {
+                $vars = (object)$this->post;
+                $this->setMessage('error', [
+                    'details' => ['base64' => Language::_(
+                        'SupportManagerTickets.!error.inline_image.base64',
+                        true
+                    )]
+                ], false, null, false);
+            }
+
+            // Finalize inline images and create the reply
+            $inline_attachment_ids = [];
+            if (!$has_base64) {
+                $temp_ids = $this->post['inline_image_temp_ids'] ?? [];
+                if (!empty($temp_ids)) {
+                    if (is_string($temp_ids)) {
+                        $temp_ids = json_decode($temp_ids, true) ?: [];
+                    }
+                    $finalized = $this->SupportManagerTickets->finalizeInlineImages(
+                        $data['details'],
+                        $temp_ids
+                    );
+                    $data['details'] = $finalized['details'];
+                    $inline_attachment_ids = $finalized['attachment_ids'];
+                }
+
             // Create a transaction
             $this->SupportManagerTickets->begin();
 
@@ -569,6 +635,9 @@ class ClientTickets extends SupportManagerController
             if (($errors = $this->SupportManagerTickets->errors())) {
                 // Error, reset vars
                 $this->SupportManagerTickets->rollBack();
+
+                // Rollback inline attachments since the reply failed
+                $this->SupportManagerTickets->rollbackInlineAttachments($inline_attachment_ids);
 
                 // Close the ticket if necessary
                 if ($close && ($ticket = $this->SupportManagerTickets->get($ticket->id))
@@ -595,6 +664,14 @@ class ClientTickets extends SupportManagerController
             } else {
                 // Success, commit
                 $this->SupportManagerTickets->commit();
+
+                // Link inline attachments to the reply
+                if (!empty($inline_attachment_ids) && !empty($reply_id)) {
+                    $this->SupportManagerTickets->linkInlineAttachmentsToReply(
+                        $inline_attachment_ids,
+                        $reply_id
+                    );
+                }
 
                 // Send the email associated with this ticket
                 $this->SupportManagerTickets->sendEmail($reply_id);
@@ -625,6 +702,7 @@ class ClientTickets extends SupportManagerController
                     )
                 );
             }
+            } // end if (!$has_base64)
         }
 
         // Load the Text Parser
@@ -680,6 +758,11 @@ class ClientTickets extends SupportManagerController
 
         $this->set('staff_settings', $staff_settings);
 
+        // Get AI assistant name for display on AI-generated replies
+        Loader::loadModels($this, ['SupportManager.SupportManagerSettings']);
+        $ai_name_setting = $this->SupportManagerSettings->getSetting('sm_ai_assistant_name', $this->company_id);
+        $this->set('ai_assistant_name', $ai_name_setting ? $ai_name_setting->value : null);
+
         $this->set('thumbnails_per_row', Configure::get('SupportManager.thumbnails_per_row'));
         $this->set('service', $service);
         $this->set('module', $module);
@@ -692,6 +775,7 @@ class ClientTickets extends SupportManagerController
         $this->set('department_fields', $department_fields->generate());
         $this->set('priority_classes', $this->getPriorityClasses());
         $this->set('contacts', $contacts);
+        $this->set('logged_in', $this->isLoggedIn());
     }
 
     /**
@@ -723,6 +807,79 @@ class ClientTickets extends SupportManagerController
             $redirect_url
             . ($access['allow_reply_by_url'] ? 'reply/' . $ticket->id . '/?sid=' . rawurlencode($access['sid']) : '')
         );
+    }
+
+    /**
+     * AJAX endpoint for uploading inline images from the markdown editor.
+     * Returns JSON with temp_id and alt text on success.
+     */
+    public function uploadImage()
+    {
+        // Require AJAX request and logged-in client
+        if (!$this->isAjax() || !$this->isLoggedIn()) {
+            header($this->server_protocol . ' 401 Unauthorized');
+            exit();
+        }
+
+        // Validate the uploaded file exists
+        if (empty($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $this->outputAsJson([
+                'error' => Language::_('SupportManagerTickets.!error.inline_image.upload', true)
+            ]);
+            return false;
+        }
+
+        $result = $this->SupportManagerTickets->uploadInlineImageTemp($_FILES['image']);
+
+        if (($errors = $this->SupportManagerTickets->errors())) {
+            // Return the first error message
+            $error_message = '';
+            foreach ($errors as $field_errors) {
+                foreach ($field_errors as $message) {
+                    $error_message = $message;
+                    break 2;
+                }
+            }
+            $this->outputAsJson(['error' => $error_message]);
+            return false;
+        }
+
+        // Include preview URL so the editor can display the image
+        $result['preview_url'] = $this->base_uri
+            . 'plugin/support_manager/client_tickets/getinlineimagetemp/'
+            . $result['temp_id'] . '/';
+
+        $this->outputAsJson($result);
+        return false;
+    }
+
+    /**
+     * AJAX Serves a temp inline image for editor preview
+     */
+    public function getInlineImageTemp()
+    {
+        if (!$this->isLoggedIn()) {
+            header($this->server_protocol . ' 401 Unauthorized');
+            exit();
+        }
+
+        $temp_id = $this->get[0] ?? null;
+        if (!$temp_id) {
+            header($this->server_protocol . ' 404 Not Found');
+            exit();
+        }
+
+        $file = $this->SupportManagerTickets->getInlineImageTempFile($temp_id);
+        if (!$file) {
+            header($this->server_protocol . ' 404 Not Found');
+            exit();
+        }
+
+        header('Content-Type: ' . $file['mime']);
+        header('Content-Length: ' . filesize($file['file_path']));
+        header('Cache-Control: private, max-age=300');
+        readfile($file['file_path']);
+        exit();
     }
 
     /**

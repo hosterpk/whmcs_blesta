@@ -1,0 +1,645 @@
+<?php
+echo (isset($message) ? $message : null);
+
+// Build tabs for the widget
+$tabs = [
+    [
+        'name' => $this->_('AdminBilling.services.category_active', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['active']) ? $this->Html->safe($status_count['active']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'active'),
+        'attributes' => ['href' => $this->Html->safe($this->base_uri . 'billing/services/active/')]
+    ],
+    [
+        'name' => $this->_('AdminBilling.services.category_pending', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['pending']) ? $this->Html->safe($status_count['pending']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'pending'),
+        'attributes' => ['href' => $this->Html->safe($this->base_uri . 'billing/services/pending/')]
+    ],
+    [
+        'name' => $this->_('AdminBilling.services.category_suspended', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['suspended']) ? $this->Html->safe($status_count['suspended']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'suspended'),
+        'highlight' => true,
+        'attributes' => ['href' => $this->Html->safe($this->base_uri . 'billing/services/suspended/')]
+    ],
+    [
+        'name' => $this->_('AdminBilling.services.category_canceled', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['canceled']) ? $this->Html->safe($status_count['canceled']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'canceled'),
+        'attributes' => ['href' => $this->Html->safe($this->base_uri . 'billing/services/canceled/')]
+    ],
+    [
+        'name' => $this->_('AdminBilling.services.category_scheduled_cancellation', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['scheduled_cancellation']) ? $this->Html->safe($status_count['scheduled_cancellation']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'scheduled_cancellation'),
+        'highlight' => true,
+        'attributes' => ['href' => $this->Html->safe($this->base_uri . 'billing/services/scheduled_cancellation/')]
+    ],
+    [
+        'name' => $this->_('AdminBilling.services.category_in_review', true)
+            . '<span class="badge bg-secondary ms-2">' . (isset($status_count['in_review']) ? $this->Html->safe($status_count['in_review']) : 0) . '</span>',
+        'current' => (($status ?? null) == 'in_review'),
+        'attributes' => ['href' => $this->Html->safe($this->base_uri . 'billing/services/in_review/')]
+    ]
+];
+
+$this->Widget->clear();
+$this->Widget->setTabs($tabs);
+$this->Widget->setNavStyle('nav-tabs-custom');
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($this->base_uri . 'billing/services/' . ($status ?? 'active') . '/'), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminBilling.services.boxtitle_services', true), ['id' => 'admin_billing_services'], ($render_section ?? null));
+?>
+
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'services_form']);
+
+if (($num_services = count((isset($services) ? $services : []))) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="services">
+        <thead>
+            <tr>
+                <?php
+                if (!in_array((isset($status) ? $status : null), ['in_review', 'canceled'])) {
+                ?>
+                <th style="width: 40px;">
+                    <?php $this->Form->fieldCheckbox('service_ids[]', 'all', ((isset($vars->service_ids[0]) ? $vars->service_ids[0] : null) == 'all'), ['class' => 'form-check-input service-checkbox', 'id' => 'select-all']);?>
+                </th>
+                <?php
+                }
+                if (in_array((isset($status) ? $status : null), ['active', 'suspended'])) {
+                ?>
+                <th style="width: 30px;">&nbsp;</th>
+                <th style="width: 30px;">&nbsp;</th>
+                <?php
+                }
+                ?>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=clients.id_value&order=' . ($sort == 'clients.id_value' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_client');?>
+                        <?php if ($sort == 'clients.id_value') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=name&order=' . ($sort == 'name' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_package');?>
+                        <?php if ($sort == 'name') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th><?php $this->_('AdminBilling.services.heading_label');?></th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=term&order=' . ($sort == 'term' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_term');?>
+                        <?php if ($sort == 'term') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=date_added&order=' . ($sort == 'date_added' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_dateadded');?>
+                        <?php if ($sort == 'date_added') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=date_renews&order=' . ($sort == 'date_renews' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_daterenews');?>
+                        <?php if ($sort == 'date_renews') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <?php
+                if ((isset($status) ? $status : null) == 'suspended') {
+                ?>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=date_suspended&order=' . ($sort == 'date_suspended' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_datesuspended');?>
+                        <?php if ($sort == 'date_suspended') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <?php
+                } elseif ((isset($status) ? $status : null) == 'canceled' || (isset($status) ? $status : null) == 'scheduled_cancellation') {
+                ?>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/?sort=date_canceled&order=' . ($sort == 'date_canceled' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminBilling.services.heading_datecanceled');?>
+                        <?php if ($sort == 'date_canceled') { ?>
+                            <i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i>
+                        <?php } ?>
+                    </a>
+                </th>
+                <?php
+                }
+                if (in_array((isset($status) ? $status : null), ['active', 'pending', 'suspended', 'canceled', 'in_review'])) {
+                ?>
+                <th style="width: 100px;"><?php $this->_('AdminBilling.services.heading_options');?></th>
+                <?php
+                }
+                ?>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Display all services
+            for ($i = 0; $i < $num_services; $i++) {
+            ?>
+            <tr data-collapse-row aria-expanded="false" style="cursor: pointer;" class="service-row">
+                <?php
+                if (!in_array((isset($status) ? $status : null), ['in_review', 'canceled'])) {
+                ?>
+                <td>
+                    <?php $this->Form->fieldCheckbox('service_ids[]', (isset($services[$i]->id) ? $services[$i]->id : null), in_array((isset($services[$i]->id) ? $services[$i]->id : null), (isset($vars->service_ids) ? $vars->service_ids : [])), ['class' => 'form-check-input service-checkbox row-checkbox']);?>
+                </td>
+                <?php
+                }
+                if (in_array((isset($status) ? $status : null), ['active', 'suspended'])) {
+                    $icon = empty($services[$i]->date_canceled) ? 'check-circle-fill text-success' : 'calendar-x text-warning';
+                ?>
+                <td><i class="bi bi-<?php (print (isset($icon) ? $this->Html->safe($icon) : null));?>" data-bs-toggle="tooltip" title="<?php echo empty($services[$i]->date_canceled) ? $this->_('AdminBilling.services.text_status_active', true) : $this->_('AdminBilling.services.text_scheduled_cancellation', true);?>"></i></td>
+                <td>
+                    <?php
+                    if (!empty($services[$i]->service_changes)) {
+                    ?>
+                    <i class="bi bi-clock text-info" data-bs-toggle="tooltip" title="<?php $this->_('AdminBilling.services.text_pending_service_changes');?>"></i>
+                    <?php
+                    }
+                    ?>
+                </td>
+                <?php
+                }
+                ?>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . (isset($services[$i]->client_id) ? $services[$i]->client_id : null) . '/');?>" data-bs-toggle="tooltip" title="<?php echo (isset($services[$i]->client_first_name) ? $this->Html->safe($services[$i]->client_first_name) : null) . ' ' . (isset($services[$i]->client_last_name) ? $this->Html->safe($services[$i]->client_last_name) : null) . ($services[$i]->client_company ? ' - ' . $this->Html->safe($services[$i]->client_company) : '');?>">
+                        <?php (print (isset($services[$i]->client_id_code) ? $this->Html->safe($services[$i]->client_id_code) : null));?>
+                    </a>
+                </td>
+                <td><?php (print (isset($services[$i]->package->name) ? $this->Html->safe($services[$i]->package->name) : null));?></td>
+                <td><?php (print (isset($services[$i]->name) ? $this->Html->safe($services[$i]->name) : null));?></td>
+                <td>
+                    <?php
+                    if ((isset($services[$i]->package_pricing->period) ? $services[$i]->package_pricing->period : null) == 'onetime') {
+                        (print (isset($periods[$services[$i]->package_pricing->period]) ? $this->Html->safe($periods[$services[$i]->package_pricing->period]) : null));
+                    } else {
+                        $term = (isset($services[$i]->package_pricing->term) ? $this->Html->safe($services[$i]->package_pricing->term) : null);
+                        $period = ($term == 1 ? (isset($periods[$services[$i]->package_pricing->period]) ? $periods[$services[$i]->package_pricing->period] : null) : (isset($periods[$services[$i]->package_pricing->period . '_plural']) ? $periods[$services[$i]->package_pricing->period . '_plural'] : null));
+                        $renewal_price = $this->CurrencyFormat->format((isset($services[$i]->renewal_price) ? $services[$i]->renewal_price : null), (isset($services[$i]->override_currency) ? $services[$i]->override_currency : (isset($services[$i]->package_pricing->currency) ? $services[$i]->package_pricing->currency : null)));
+                        $this->_('AdminBilling.services.recurring_term', false, $this->Html->safe($term), $this->Html->safe($period), $this->Html->safe($renewal_price));
+                    }
+                    ?>
+                </td>
+                <td><?php echo $this->Date->cast($services[$i]->date_added);?></td>
+                <td>
+                    <?php
+                    $date_renews_text = (!empty($services[$i]->date_renews) ? $this->Date->cast($services[$i]->date_renews) : $this->_('AdminBilling.services.text_never', true));
+                    echo $date_renews_text;
+
+                    if ($services[$i]->date_paid_through && $services[$i]->date_paid_through != $services[$i]->date_renews) {
+                    ?>
+                    <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" title="<?php $this->_('AdminBilling.!tooltip.datepaidthrough', false, !empty($services[$i]->date_paid_through) ? $this->Date->cast($services[$i]->date_paid_through) : $date_renews_text);?>"></i>
+                    <?php
+                    }
+                    ?>
+                </td>
+                <?php
+                if ((isset($status) ? $status : null) == 'suspended') {
+                ?>
+                <td><?php echo (empty($services[$i]->date_suspended) ? $this->_('AdminBilling.services.text_never', true) : $this->Date->cast($services[$i]->date_suspended));?></td>
+                <?php
+                } elseif ((isset($status) ? $status : null) == 'canceled' || (isset($status) ? $status : null) == 'scheduled_cancellation') {
+                ?>
+                <td><?php echo (empty($services[$i]->date_canceled) ? $this->_('AdminBilling.services.text_never', true) : $this->Date->cast($services[$i]->date_canceled));?></td>
+                <?php
+                }
+                if (in_array((isset($status) ? $status : null), ['active', 'pending', 'suspended', 'canceled', 'in_review'])) {
+                ?>
+                <td>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/editservice/' . (isset($services[$i]->client_id) ? $services[$i]->client_id : null) . '/' . (isset($services[$i]->id) ? $services[$i]->id : null) . '/');?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminBilling.services.option_manage');?>">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                        <?php
+                        // Delete pending services
+                        if (in_array((isset($status) ? $status : null), ['pending', 'canceled', 'in_review'])) {
+                        ?>
+                        <button type="button" class="btn btn-sm btn-outline-danger service-delete-btn"
+                            data-client-id="<?php echo $this->Html->safe($services[$i]->client_id ?? '');?>"
+                            data-delete-id="<?php echo $this->Html->safe($services[$i]->id ?? '');?>"
+                            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminBilling.services.confirm_delete', true));?>"
+                            title="<?php $this->_('AdminBilling.services.option_delete');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                </td>
+                <?php
+                }
+                ?>
+            </tr>
+            <!-- Expandable Row -->
+            <tr class="collapse" id="service-details-<?php echo (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null);?>">
+                <td colspan="10" style="padding: 0; background-color: var(--bg-secondary);">
+                    <div class="service-info-container" data-service-id="<?php echo (isset($services[$i]->id) ? $this->Html->safe($services[$i]->id) : null);?>">
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- Bulk Actions Bar -->
+<div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <span class="selected-count" id="selectedCount">0 <?php $this->_('AdminBilling.services.text_items_selected');?></span>
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+            <?php $this->Form->fieldSelect('action', (isset($actions) ? $actions : []), (isset($vars->action) ? $vars->action : null), ['id' => 'action_select', 'class' => 'form-select form-select-sm', 'style' => 'width: 180px;']);?>
+
+            <!-- Schedule Cancellation -->
+            <div id="schedule_cancellation" class="action-option gap-2 align-items-center" style="display: none;">
+                <div class="form-check form-check-inline mb-0">
+                    <?php
+                    $this->Form->fieldRadio('action_type', 'none', (isset($vars->action_type) ? $vars->action_type : 'none') == 'none', ['id' => 'action_type_none', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminBilling.services.action.field_action_type_none', true), 'action_type_none', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <div class="form-check form-check-inline mb-0">
+                    <?php
+                    $this->Form->fieldRadio('action_type', 'date', (isset($vars->action_type) ? $vars->action_type : null) == 'date', ['id' => 'action_type_date', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminBilling.services.action.field_action_type_date', true), 'action_type_date', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+                <?php $this->Form->fieldText('date', (isset($vars->date) ? $vars->date : $this->Date->modify(date('c'), '+1 day', 'Y-m-d', Configure::get('Blesta.company_timezone'))), ['class' => 'form-control form-control-sm', 'id' => 'cancellation_date', 'style' => 'width: 130px;']);?>
+                <div class="form-check form-check-inline mb-0">
+                    <?php
+                    $this->Form->fieldRadio('action_type', 'term', (isset($vars->action_type) ? $vars->action_type : 'none') == 'term', ['id' => 'action_type_term', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminBilling.services.action.field_action_type_term', true), 'action_type_term', ['class' => 'form-check-label']);
+                    ?>
+                </div>
+            </div>
+
+            <!-- Push to Client -->
+            <div id="push_to_client" class="action-option gap-2 align-items-center" style="display: none;">
+                <label for="client" class="form-label mb-0"><?php $this->_('AdminBilling.services.action.field_client');?></label>
+                <div class="position-relative">
+                    <?php
+                    $this->Form->fieldText('client', ($vars->client ?? ''), ['class' => 'form-control form-control-sm', 'id' => 'client', 'style' => 'width: 200px;', 'autocomplete' => 'off']);
+                    $this->Form->fieldHidden('client_id', ($vars->client_id ?? null), ['id' => 'client_id']);
+                    ?>
+                    <div id="client_autocomplete_results" class="autocomplete-results position-absolute bg-body border rounded shadow-sm" style="display: none; z-index: 1050; width: 100%; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <!-- Suspension -->
+            <div id="suspend" class="action-option gap-2 align-items-center" style="display: none;">
+                <label for="suspension_reason" class="form-label mb-0"><?php $this->_('AdminBilling.services.action.field_suspension_reason');?></label>
+                <?php
+                $this->Form->fieldText('suspension_reason', ($vars->suspension_reason ?? ''), ['class' => 'form-control form-control-sm', 'id' => 'suspension_reason', 'style' => 'width: 200px;']);
+                ?>
+            </div>
+
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminBilling.services.field_actionsubmit', true), ['class' => 'btn btn-sm btn-primary']);?>
+        </div>
+    </div>
+</div>
+
+<?php
+} else {
+?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminBilling.services.no_results');?></p>
+</div>
+<?php
+}
+$this->Form->end();
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+
+// Delete service form outside the widget to avoid AJAX replacement
+$this->Form->create($this->base_uri . 'clients/deleteservice/', ['id' => 'delete_service_form']);
+$this->Form->fieldHidden('client_id', '', ['id' => 'delete_service_client_id']);
+$this->Form->fieldHidden('id', '', ['id' => 'delete_service_service_id']);
+$this->Form->fieldHidden('redirect_uri', $this->base_uri . 'billing/services/' . (isset($status) ? $status : null) . '/');
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var textItemSelected = <?php echo json_encode($this->_('AdminBilling.services.text_item_selected', true));?>;
+    var textItemsSelected = <?php echo json_encode($this->_('AdminBilling.services.text_items_selected', true));?>;
+
+    // Show/hide bulk actions bar based on checkbox state
+    function showBulkActions() {
+        var servicesContainer = document.getElementById('admin_billing_services');
+        var bulkActionsBar = document.getElementById('bulkActionsBar');
+        var selectedCountEl = document.getElementById('selectedCount');
+
+        if (!servicesContainer || !bulkActionsBar) return;
+
+        var checkedBoxes = servicesContainer.querySelectorAll('input.row-checkbox:checked');
+        if (checkedBoxes.length > 0) {
+            bulkActionsBar.style.display = 'block';
+            if (selectedCountEl) {
+                var text = checkedBoxes.length === 1 ? textItemSelected : textItemsSelected;
+                selectedCountEl.textContent = checkedBoxes.length + ' ' + text;
+            }
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+    }
+
+    // Switch action options visibility based on selected action
+    function switchServiceActions() {
+        var bulkActionsBar = document.getElementById('bulkActionsBar');
+        if (!bulkActionsBar) return;
+
+        var actionSelectEl = bulkActionsBar.querySelector('select[name="action"]');
+        if (!actionSelectEl) return;
+
+        var actionOptions = bulkActionsBar.querySelectorAll('.action-option');
+        actionOptions.forEach(function(opt) {
+            opt.style.display = 'none';
+        });
+
+        var action = actionSelectEl.value;
+        if (action) {
+            var targetElement = document.getElementById(action);
+            if (targetElement) {
+                targetElement.style.display = 'flex';
+            }
+        }
+    }
+
+    // Initialize tooltips in container
+    function initTooltips(container) {
+        if (!container) return;
+        var tooltipTriggerList = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(function(el) {
+            if (!el._tooltipInitialized) {
+                new bootstrap.Tooltip(el);
+                el._tooltipInitialized = true;
+            }
+        });
+    }
+
+    // Initialize on page load or after AJAX content replacement
+    function init() {
+        var servicesContainer = document.getElementById('admin_billing_services');
+        if (servicesContainer) {
+            initTooltips(servicesContainer);
+            switchServiceActions();
+            showBulkActions();
+        }
+    }
+
+    // Handle checkbox changes via event delegation
+    document.addEventListener('change', function(e) {
+        var checkbox = e.target;
+        if (checkbox.type !== 'checkbox') return;
+
+        var servicesContainer = document.getElementById('admin_billing_services');
+        if (!servicesContainer || !servicesContainer.contains(checkbox)) return;
+
+        // Handle "select all" checkbox
+        if (checkbox.id === 'select-all') {
+            var isChecked = checkbox.checked;
+            var rowCheckboxes = servicesContainer.querySelectorAll('input.row-checkbox');
+            rowCheckboxes.forEach(function(cb) {
+                cb.checked = isChecked;
+            });
+        } else if (checkbox.classList.contains('row-checkbox')) {
+            var selectAllCheckbox = document.getElementById('select-all');
+            if (!checkbox.checked && selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+        }
+
+        showBulkActions();
+    });
+
+    // Handle action select change via event delegation
+    document.addEventListener('change', function(e) {
+        var target = e.target;
+        if (target.name === 'action' && target.closest('#bulkActionsBar')) {
+            switchServiceActions();
+        }
+    });
+
+    // Handle service delete buttons with confirmation modal
+    document.addEventListener('click', function(e) {
+        var deleteBtn = e.target.closest('.service-delete-btn');
+        if (!deleteBtn) return;
+
+        var servicesContainer = document.getElementById('admin_billing_services');
+        if (!servicesContainer || !servicesContainer.contains(deleteBtn)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        var clientId = deleteBtn.getAttribute('data-client-id');
+        var serviceId = deleteBtn.getAttribute('data-delete-id');
+        var confirmMessage = deleteBtn.getAttribute('data-confirm-message');
+
+        document.getElementById('delete_service_client_id').value = clientId;
+        document.getElementById('delete_service_service_id').value = serviceId;
+
+        var modalEl = document.createElement('div');
+        modalEl.className = 'modal fade';
+        modalEl.setAttribute('tabindex', '-1');
+        modalEl.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered">' +
+                '<div class="modal-content">' +
+                    '<div class="modal-header border-0 pb-0">' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                    '</div>' +
+                    '<div class="modal-body text-center py-4">' +
+                        '<div class="mb-3"><i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i></div>' +
+                        '<h5 class="modal-title mb-3">' + <?php echo json_encode($this->_('AppController.modal.confirm_delete', true));?> + '</h5>' +
+                        '<p class="text-secondary">' + confirmMessage + '</p>' +
+                    '</div>' +
+                    '<div class="modal-footer border-0 justify-content-center">' +
+                        '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + <?php echo json_encode($this->_('AppController.modal.btn_cancel', true));?> + '</button>' +
+                        '<button type="button" class="btn btn-danger btn-confirm">' + <?php echo json_encode($this->_('AppController.modal.btn_delete', true));?> + '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(modalEl);
+        var modal = new bootstrap.Modal(modalEl);
+        var confirmed = false;
+
+        modalEl.querySelector('.btn-confirm').addEventListener('click', function() {
+            confirmed = true;
+            modal.hide();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            modalEl.remove();
+            if (confirmed) {
+                document.getElementById('delete_service_form').submit();
+            }
+        });
+
+        modal.show();
+    });
+
+    // Load service info when expanding a row
+    document.addEventListener('show.bs.collapse', function(e) {
+        var servicesContainer = document.getElementById('admin_billing_services');
+        if (!servicesContainer || !servicesContainer.contains(e.target)) return;
+
+        var container = e.target.querySelector('.service-info-container');
+        if (!container || container.hasAttribute('data-loaded')) return;
+
+        var serviceId = container.getAttribute('data-service-id');
+        fetch(baseUri + 'billing/serviceinfo/' + serviceId, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('HTTP error ' + response.status);
+            return response.json();
+        })
+        .then(function(html) {
+            container.innerHTML = html;
+            container.setAttribute('data-loaded', 'true');
+            document.dispatchEvent(new Event('blestaAjaxComplete'));
+        })
+        .catch(function(error) {
+            container.innerHTML = '<div class="alert alert-danger m-3">Error loading service details.</div>';
+        });
+    });
+
+    // Client autocomplete for "Push to Client" action
+    var debounceTimer;
+    document.addEventListener('input', function(e) {
+        var clientInput = e.target;
+        if (clientInput.id !== 'client' || !clientInput.closest('#push_to_client')) return;
+
+        clearTimeout(debounceTimer);
+        var query = clientInput.value;
+        var resultsContainer = document.getElementById('client_autocomplete_results');
+
+        if (query.length < 3) {
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '';
+                resultsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        debounceTimer = setTimeout(function() {
+            var formData = new FormData();
+            formData.append('search', query);
+
+            var form = clientInput.closest('form');
+            var csrfToken = form ? form.querySelector('input[name="_csrf_token"]') : null;
+            if (csrfToken) {
+                formData.append('_csrf_token', csrfToken.value);
+            }
+
+            fetch(baseUri + 'clients/getclients/', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data && data.clients && resultsContainer) {
+                    var html = '';
+                    var hasResults = false;
+                    for (var id in data.clients) {
+                        hasResults = true;
+                        html += '<a href="#" class="list-group-item list-group-item-action py-2" data-client-id="' + id + '">' + data.clients[id] + '</a>';
+                    }
+
+                    if (hasResults) {
+                        resultsContainer.innerHTML = '<div class="list-group list-group-flush">' + html + '</div>';
+                        resultsContainer.style.display = 'block';
+                    } else {
+                        resultsContainer.innerHTML = '';
+                        resultsContainer.style.display = 'none';
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+            });
+        }, 300);
+    });
+
+    // Handle clicks on autocomplete results
+    document.addEventListener('click', function(e) {
+        var resultsContainer = document.getElementById('client_autocomplete_results');
+        var clientInput = document.getElementById('client');
+        var clientIdInput = document.getElementById('client_id');
+
+        var listItem = e.target.closest('#client_autocomplete_results .list-group-item');
+        if (listItem && clientInput && clientIdInput) {
+            e.preventDefault();
+            clientInput.value = listItem.textContent.trim();
+            clientIdInput.value = listItem.getAttribute('data-client-id');
+            if (resultsContainer) {
+                resultsContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        if (resultsContainer && clientInput && !clientInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    // Run init on DOMContentLoaded, or immediately if loaded via AJAX
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+        document.dispatchEvent(new Event('blestaAjaxComplete'));
+    }
+
+    // Re-init when widget content is replaced via AJAX
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) {
+                        var servicesContainer = document.getElementById('admin_billing_services');
+                        if (servicesContainer && (servicesContainer.contains(node) || node === servicesContainer || (node.querySelector && node.querySelector('#admin_billing_services')))) {
+                            setTimeout(function() { init(); }, 0);
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+

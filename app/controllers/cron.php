@@ -122,6 +122,11 @@ class Cron extends AppController
      */
     public function index()
     {
+        // Skip automation if a system upgrade is in progress
+        if ($this->isUpgradeLockActive()) {
+            return;
+        }
+
         // Run all tasks for all companies
         $companies = $this->Companies->getAll();
         $i = 0;
@@ -1103,7 +1108,7 @@ class Cron extends AppController
      */
     private function createCronLogGroup()
     {
-        return microtime(true);
+        return uniqid('', true);
     }
 
     /**
@@ -1269,5 +1274,17 @@ class Cron extends AppController
 
         // No include/exclude means run all
         return true;
+    }
+
+    /**
+     * Checks whether a system upgrade lock is currently active.
+     *
+     * @return bool True if an upgrade is in progress, false otherwise
+     */
+    private function isUpgradeLockActive()
+    {
+        Loader::loadModels($this, ['SystemUpgrade']);
+
+        return $this->SystemUpgrade->isLockActive();
     }
 }

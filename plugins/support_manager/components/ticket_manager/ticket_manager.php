@@ -225,13 +225,12 @@ class TicketManager
         }
         $to = array_unique($to);
 
-        $from = $this->EmailParser->getAddress($email, 'from');
-        if (isset($from[0])) {
-            $from = $from[0];
-        }
-
-        // From address must be a string
-        $from = (is_string($from) ? $from : '');
+        $from_addresses = $this->EmailParser->getAddress($email, 'from');
+        // Require exactly one From mailbox; ambiguous multi-address From headers
+        // must not be auto-attributed to any sender
+        $from = (count($from_addresses) === 1 && is_string($from_addresses[0]))
+            ? $from_addresses[0]
+            : '';
 
         // Extract CC addresses
         $cc = $this->EmailParser->getAddress($email, 'cc');
@@ -515,11 +514,12 @@ class TicketManager
             Loader::loadModels($this, ['Clients']);
         }
 
-        // Send email to the from address
-        $to = $this->EmailParser->getAddress($email, 'from');
-        if (isset($to[0])) {
-            $to = $to[0];
+        // Send email to the from address; require exactly one mailbox to prevent bounce backscatter
+        $from_addresses = $this->EmailParser->getAddress($email, 'from');
+        if (count($from_addresses) !== 1) {
+            return;
         }
+        $to = $from_addresses[0];
 
         // Don't allow bounce to be sent if enough emails have been sent to this
         // address within the given window of time

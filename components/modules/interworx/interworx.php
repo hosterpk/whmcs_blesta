@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * Interworx Module
  *
@@ -164,27 +166,27 @@ class Interworx extends Module
 					';
 
         if (!empty($reseller_packages)) {
-            $fields_html.= '
+            $fields_html .= '
 					var interworxStandardPackages = [];
 					';
             if (!empty($packages)) {
                 foreach ($packages as $id => $name) {
-                    $fields_html.= 'interworxStandardPackages['.$id."] = '".$name."';
+                    $fields_html .= 'interworxStandardPackages[' . $id . "] = '" . $name . "';
 					";
                 }
             }
 
-            $fields_html.= '
+            $fields_html .= '
 					var interworxResellerPackages = [];
 					';
 
 
             foreach ($reseller_packages as $id => $name) {
-                $fields_html.= 'interworxResellerPackages['.$id."] = '".$name."';
+                $fields_html .= 'interworxResellerPackages[' . $id . "] = '" . $name . "';
 					";
             }
 
-            $fields_html.= "
+            $fields_html .= "
 					var selectPackages = $('#interworx_package');
 					if(selectPackages.prop) {
 					  var options = selectPackages.prop('options');
@@ -208,9 +210,9 @@ class Interworx extends Module
 					});
 					";
         } else {
-            $fields_html.= "$('#interworx_type_standard').parent().hide();";
+            $fields_html .= "$('#interworx_type_standard').parent().hide();";
         }
-        $fields_html.= '
+        $fields_html .= '
 				});
 			</script>
 		';
@@ -231,7 +233,7 @@ class Interworx extends Module
             $fields->fieldRadio(
                 'meta[type]',
                 'standard',
-                (isset($vars->meta['type']) ? $vars->meta['type'] : 'standard') == 'standard',
+                ($vars->meta['type'] ?? 'standard') == 'standard',
                 ['id' => 'interworx_type_standard'],
                 $type_standard
             )
@@ -240,7 +242,7 @@ class Interworx extends Module
             $fields->fieldRadio(
                 'meta[type]',
                 'reseller',
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null) == 'reseller',
+                ($vars->meta['type'] ?? null) == 'reseller',
                 ['id' => 'interworx_type_reseller'],
                 $type_reseller
             )
@@ -253,7 +255,7 @@ class Interworx extends Module
             $fields->fieldSelect(
                 'meta[package]',
                 (isset($vars->meta['type']) && $vars->meta['type'] == 'reseller' ? $reseller_packages : $packages),
-                (isset($vars->meta['package']) ? $vars->meta['package'] : null),
+                ($vars->meta['package'] ?? null),
                 ['id' => 'interworx_package']
             )
         );
@@ -378,6 +380,14 @@ class Interworx extends Module
             $vars['use_ssl'] = (empty($vars['use_ssl']) ? 'false' : $vars['use_ssl']);
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -406,6 +416,14 @@ class Interworx extends Module
             $vars['use_ssl'] = (empty($vars['use_ssl']) ? 'false' : $vars['use_ssl']);
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -441,9 +459,9 @@ class Interworx extends Module
             foreach ($vars as $key => $value) {
                 if (in_array($key, $meta_fields)) {
                     $meta[] = [
-                        'key'=>$key,
-                        'value'=>$value,
-                        'encrypted'=>in_array($key, $encrypted_fields) ? 1 : 0
+                        'key' => $key,
+                        'value' => $value,
+                        'encrypted' => in_array($key, $encrypted_fields) ? 1 : 0
                     ];
                 }
             }
@@ -484,9 +502,9 @@ class Interworx extends Module
             foreach ($vars as $key => $value) {
                 if (in_array($key, $meta_fields)) {
                     $meta[] = [
-                        'key'=>$key,
-                        'value'=>$value,
-                        'encrypted'=>in_array($key, $encrypted_fields) ? 1 : 0
+                        'key' => $key,
+                        'value' => $value,
+                        'encrypted' => in_array($key, $encrypted_fields) ? 1 : 0
                     ];
                 }
             }
@@ -516,7 +534,7 @@ class Interworx extends Module
             $domain->attach(
                 $fields->fieldText(
                     'interworx_domain',
-                    (isset($vars->interworx_domain) ? $vars->interworx_domain : null),
+                    ($vars->interworx_domain ?? null),
                     ['id' => 'interworx_domain']
                 )
             );
@@ -532,7 +550,7 @@ class Interworx extends Module
             $reseller_id->attach(
                 $fields->fieldText(
                     'interworx_reseller_id',
-                    (isset($vars->interworx_reseller_id) ? $vars->interworx_reseller_id : null),
+                    ($vars->interworx_reseller_id ?? null),
                     ['id' => 'interworx_reseller_id']
                 )
             );
@@ -546,7 +564,7 @@ class Interworx extends Module
         $email = $fields->label(Language::_('Interworx.service_field.email', true), 'interworx_email');
         // Create email field and attach to email label
         $email->attach(
-            $fields->fieldText('interworx_email', (isset($vars->interworx_email) ? $vars->interworx_email : null), ['id'=>'interworx_email'])
+            $fields->fieldText('interworx_email', ($vars->interworx_email ?? null), ['id' => 'interworx_email'])
         );
         // Add tooltip
         $tooltip = $fields->tooltip(Language::_('Interworx.service_field.tooltip.email', true));
@@ -560,7 +578,7 @@ class Interworx extends Module
         $username->attach(
             $fields->fieldText(
                 'interworx_username',
-                (isset($vars->interworx_username) ? $vars->interworx_username : null),
+                ($vars->interworx_username ?? null),
                 ['id' => 'interworx_username']
             )
         );
@@ -576,7 +594,7 @@ class Interworx extends Module
         $password->attach(
             $fields->fieldPassword(
                 'interworx_password',
-                ['id' => 'interworx_password', 'value' => (isset($vars->interworx_password) ? $vars->interworx_password : null)]
+                ['id' => 'interworx_password', 'value' => ($vars->interworx_password ?? null)]
             )
         );
         // Add tooltip
@@ -594,7 +612,7 @@ class Interworx extends Module
         $confirm_password->attach(
             $fields->fieldPassword(
                 'interworx_confirm_password',
-                ['id' => 'interworx_confirm_password', 'value' => (isset($vars->interworx_password) ? $vars->interworx_password : null)]
+                ['id' => 'interworx_confirm_password', 'value' => ($vars->interworx_password ?? null)]
             )
         );
         // Add tooltip
@@ -625,7 +643,7 @@ class Interworx extends Module
         $domain->attach(
             $fields->fieldText(
                 'interworx_domain',
-                (isset($vars->interworx_domain) ? $vars->interworx_domain : ($vars->domain ?? null)),
+                ($vars->interworx_domain ?? ($vars->domain ?? null)),
                 ['id' => 'interworx_domain']
             )
         );
@@ -650,7 +668,8 @@ class Interworx extends Module
         $fields = new ModuleFields();
 
         // Set a domain field if this is not a reseller
-        if ((!isset($vars->interworx_reseller_id) || $vars->interworx_reseller_id == 0)
+        if (
+            (!isset($vars->interworx_reseller_id) || $vars->interworx_reseller_id == 0)
             && $package->meta->type != 'reseller'
         ) {
             // Create domain label
@@ -659,7 +678,7 @@ class Interworx extends Module
             $domain->attach(
                 $fields->fieldText(
                     'interworx_domain',
-                    (isset($vars->interworx_domain) ? $vars->interworx_domain : null),
+                    ($vars->interworx_domain ?? null),
                     ['id' => 'interworx_domain']
                 )
             );
@@ -678,7 +697,7 @@ class Interworx extends Module
             $reseller_id->attach(
                 $fields->fieldText(
                     'interworx_reseller_id',
-                    (isset($vars->interworx_reseller_id) ? $vars->interworx_reseller_id : null),
+                    ($vars->interworx_reseller_id ?? null),
                     ['id' => 'interworx_reseller_id']
                 )
             );
@@ -694,7 +713,7 @@ class Interworx extends Module
         $email->attach(
             $fields->fieldText(
                 'interworx_email',
-                (isset($vars->interworx_email) ? $vars->interworx_email : null),
+                ($vars->interworx_email ?? null),
                 ['id' => 'interworx_email']
             )
         );
@@ -707,7 +726,7 @@ class Interworx extends Module
         $username->attach(
             $fields->fieldText(
                 'interworx_username',
-                (isset($vars->interworx_username) ? $vars->interworx_username : null),
+                ($vars->interworx_username ?? null),
                 ['id' => 'interworx_username']
             )
         );
@@ -720,7 +739,7 @@ class Interworx extends Module
         $password->attach(
             $fields->fieldPassword(
                 'interworx_password',
-                ['id' => 'interworx_password', 'value' => (isset($vars->interworx_password) ? $vars->interworx_password : null)]
+                ['id' => 'interworx_password', 'value' => ($vars->interworx_password ?? null)]
             )
         );
         // Set the label as a field
@@ -829,9 +848,7 @@ class Interworx extends Module
         }
 
         // Use the reseller ID given, or the one set if available. Default to 0 otherwise
-        $reseller_id = (isset($result->reseller_id)
-            ? $result->reseller_id
-            : (!empty($vars['interworx_reseller_id']) ? $vars['interworx_reseller_id'] : 0)
+        $reseller_id = ($result->reseller_id ?? (!empty($vars['interworx_reseller_id']) ? $vars['interworx_reseller_id'] : 0)
         );
 
         // Return service fields
@@ -920,13 +937,9 @@ class Interworx extends Module
             }
 
             $input = [
-                'email' => (isset($delta['interworx_email'])
-                    ? $delta['interworx_email']
-                    : $service_fields->interworx_email
+                'email' => ($delta['interworx_email'] ?? $service_fields->interworx_email
                 ),
-                'nickname' => (isset($delta['interworx_username'])
-                    ? $delta['interworx_username']
-                    : $service_fields->interworx_username
+                'nickname' => ($delta['interworx_username'] ?? $service_fields->interworx_username
                 )
             ];
 
@@ -1236,8 +1249,8 @@ class Interworx extends Module
         $pool_size = strlen($pool);
 
         if ($length < 5) {
-            for ($i=$length; $i<8; $i++) {
-                $username .= substr($pool, mt_rand(0, $pool_size-1), 1);
+            for ($i = $length; $i < 8; $i++) {
+                $username .= substr($pool, mt_rand(0, $pool_size - 1), 1);
             }
             $length = strlen($username);
         }
@@ -1268,8 +1281,8 @@ class Interworx extends Module
         if (!empty($post)) {
             Loader::loadModels($this, ['Services']);
             $data = [
-                'interworx_password' => (isset($post['interworx_password']) ? $post['interworx_password'] : null),
-                'interworx_confirm_password' => (isset($post['interworx_confirm_password']) ? $post['interworx_confirm_password'] : null)
+                'interworx_password' => ($post['interworx_password'] ?? null),
+                'interworx_confirm_password' => ($post['interworx_confirm_password'] ?? null)
             ];
             $this->Services->edit($service->id, $data);
 
@@ -1282,7 +1295,7 @@ class Interworx extends Module
 
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'interworx' . DS);
         return $this->view->fetch();
@@ -1369,7 +1382,7 @@ class Interworx extends Module
 
         $all_accounts = $bw->response;
         if ($package->meta->type == 'reseller') {
-            $bw = new stdClass;
+            $bw = new stdClass();
             $bw->bandwidth_used = 0;
             $bw->bandwidth = 0;
             $bw->storage_used = 0;
@@ -1426,7 +1439,7 @@ class Interworx extends Module
             if ($result && isset($result->status) && $result->status == 'success' && isset($result->response)) {
                 $accounts = count((array) $result->response);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
         return $accounts;
@@ -1514,7 +1527,7 @@ class Interworx extends Module
             if (!empty($connection->response) && isset($connection->status) && $connection->status == 'success') {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
         }
         return false;
@@ -1602,7 +1615,7 @@ class Interworx extends Module
                     'rule' => [
                         'compares',
                         '==',
-                        (isset($vars['interworx_password']) ? $vars['interworx_password'] : '')
+                        ($vars['interworx_password'] ?? '')
                     ],
                     'message' => Language::_('Interworx.!error.interworx_confirm_password.matches', true)
                 ]
@@ -1649,9 +1662,9 @@ class Interworx extends Module
     {
         $fields = [
             'domain' => isset($vars['interworx_domain']) ? strtolower($vars['interworx_domain']) : null,
-            'email' => isset($vars['interworx_email']) ? $vars['interworx_email']: null,
-            'username' => isset($vars['interworx_username']) ? $vars['interworx_username']: null,
-            'password' => isset($vars['interworx_password']) ? $vars['interworx_password'] : null,
+            'email' => $vars['interworx_email'] ?? null,
+            'username' => $vars['interworx_username'] ?? null,
+            'password' => $vars['interworx_password'] ?? null,
             'plan' => $package->meta->package,
             'reseller' => ($package->meta->type == 'reseller' ? 1 : 0)
         ];
@@ -1794,8 +1807,8 @@ class Interworx extends Module
         $length = mt_rand(max($min_length, 5), min($max_length, 14));
         $password = '';
 
-        for ($i=0; $i<$length; $i++) {
-            $password .= substr($pool, mt_rand(0, $pool_size-1), 1);
+        for ($i = 0; $i < $length; $i++) {
+            $password .= substr($pool, mt_rand(0, $pool_size - 1), 1);
         }
 
         return $password;
@@ -1810,45 +1823,45 @@ class Interworx extends Module
     private function getRowRules(&$vars)
     {
         $rules = [
-            'server_name'=>[
-                'valid'=>[
-                    'rule'=>'isEmpty',
-                    'negate'=>true,
-                    'message'=>Language::_('Interworx.!error.server_name_valid', true)
+            'server_name' => [
+                'valid' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Interworx.!error.server_name_valid', true)
                 ]
             ],
-            'host_name'=>[
-                'valid'=>[
-                    'rule'=>[[$this, 'validateHostName']],
-                    'message'=>Language::_('Interworx.!error.host_name_valid', true)
+            'host_name' => [
+                'valid' => [
+                    'rule' => [[$this, 'validateHostName']],
+                    'message' => Language::_('Interworx.!error.host_name_valid', true)
                 ]
             ],
-            'key'=>[
-                'valid'=>[
-                    'last'=>true,
-                    'rule'=>'isEmpty',
-                    'negate'=>true,
-                    'message'=>Language::_('Interworx.!error.remote_key_valid', true)
+            'key' => [
+                'valid' => [
+                    'last' => true,
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Interworx.!error.remote_key_valid', true)
                 ],
-                'valid_connection'=>[
-                    'rule'=>[[$this, 'validateConnection'], (object)$vars],
-                    'message'=>Language::_('Interworx.!error.remote_key_valid_connection', true)
+                'valid_connection' => [
+                    'rule' => [[$this, 'validateConnection'], (object)$vars],
+                    'message' => Language::_('Interworx.!error.remote_key_valid_connection', true)
                 ]
             ],
-            'account_limit'=>[
-                'valid'=>[
-                    'rule'=>['matches', '/^([0-9]+)?$/'],
-                    'message'=>Language::_('Interworx.!error.account_limit_valid', true)
+            'account_limit' => [
+                'valid' => [
+                    'rule' => ['matches', '/^([0-9]+)?$/'],
+                    'message' => Language::_('Interworx.!error.account_limit_valid', true)
                 ]
             ],
-            'name_servers'=>[
-                'count'=>[
-                    'rule'=>[[$this, 'validateNameServerCount']],
-                    'message'=>Language::_('Interworx.!error.name_servers_count', true)
+            'name_servers' => [
+                'count' => [
+                    'rule' => [[$this, 'validateNameServerCount']],
+                    'message' => Language::_('Interworx.!error.name_servers_count', true)
                 ],
-                'valid'=>[
-                    'rule'=>[[$this, 'validateNameServers']],
-                    'message'=>Language::_('Interworx.!error.name_servers_valid', true)
+                'valid' => [
+                    'rule' => [[$this, 'validateNameServers']],
+                    'message' => Language::_('Interworx.!error.name_servers_valid', true)
                 ]
             ]
         ];

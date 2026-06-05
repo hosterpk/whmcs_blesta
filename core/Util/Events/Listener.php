@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events;
 
 use Blesta\Core\Util\Events\Common\AbstractListener;
@@ -120,7 +121,7 @@ class Listener extends AbstractListener
 
         return [
             (isset($callback[0]) ? '\Blesta\Core\Util\Events\Observers\\' . $callback[0] : ''),
-            (isset($callback[1]) ? $callback[1] : '')
+            ($callback[1] ?? '')
         ];
     }
 }

@@ -26,7 +26,7 @@ class Summary extends OrderFormController
         $company_settings = $this->SettingsCollection->fetchSettings($this->Companies, $this->company_id);
 
         // Check if captcha is required for signups
-        $catpcha_forms = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($company_settings['captcha_enabled_forms']);
+        $catpcha_forms = safe_unserialize($company_settings['captcha_enabled_forms']);
         $require_captcha = Captcha::enabled('client_login') && isset($company_settings['captcha']);
 
         $captcha = null;
@@ -57,7 +57,7 @@ class Summary extends OrderFormController
             }
             unset($item['addon'], $item['submit']);
         }
-        $summary = $this->getSummary($items, isset($this->get['item']) ? $this->get['item'] : null);
+        $summary = $this->getSummary($items, $this->get['item'] ?? null);
 
         $client = $this->client;
         $order_form = $this->order_form;

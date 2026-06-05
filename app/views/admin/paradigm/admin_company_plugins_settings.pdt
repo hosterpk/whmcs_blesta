@@ -1,0 +1,54 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $widget_tabs = [];
+            if (!empty($tabs)) {
+                foreach ($tabs as $tab_data) {
+                    $widget_tabs[] = [
+                        'name' => $tab_data['name'],
+                        'current' => !empty($tab_data['current']),
+                        'attributes' => $tab_data['attributes']
+                    ];
+                }
+            }
+            $this->Widget->clear();
+            if (!empty($widget_tabs)) {
+                $this->Widget->setTabs($widget_tabs);
+            }
+
+            if (!empty($has_tab_content)) {
+                $this->Form->create(null, ['class' => 'disable-on-submit']);
+            }
+
+            $this->Widget->create($this->Html->safe($plugin->name), ['id' => 'admin_company_plugins_settings']);?>
+
+            <?php echo (isset($tab) ? $tab : null);?>
+
+            <?php
+            if (!empty($has_tab_content)) {
+                $this->Widget->footer();
+            ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminCompanyPlugins.settings.field_submit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+
+        <?php $this->Widget->end();?>
+
+        <?php
+        if (!empty($has_tab_content)) {
+            $this->Form->end();
+        }
+        ?>
+        </div>

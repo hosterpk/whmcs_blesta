@@ -1,0 +1,226 @@
+
+<?php echo (isset($left_nav) ? $left_nav : null);?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemAutomation.index.boxtitle_automation', true), ['id' => 'admin_system_automation']);
+    ?>
+            <?php $this->Form->create($this->base_uri . 'settings/system/automation/', ['class' => 'disable-on-submit']);?>
+
+            <div class="form-label fw-semibold mb-2"><?php $this->_('AdminSystemAutomation.index.heading_status');?></div>
+
+            <div class="mb-3">
+                <?php
+                // Show the cron last ran time
+                $last_run_time = $this->_('AdminSystemAutomation.index.text_cron_never_ran', true);
+                if ($cron_last_ran === null) {
+                    $last_run_time = $this->_('AdminSystemAutomation.index.text_cron_currently_running', true);
+                } elseif ((isset($cron_last_ran) ? $cron_last_ran : false)) {
+                    $last_run_time = $this->_('AdminSystemAutomation.index.text_cron_last_ran', true, $this->Date->cast($cron_last_ran, 'date_time'));
+                }
+
+                $icon = ($cron_icon == 'active' ? 'check-circle' : 'exclamation-triangle');
+                $icon_color = ($cron_icon == 'active' ? 'text-success' : 'text-warning');
+                ?>
+                <i class="bi bi-<?php echo $this->Html->safe($icon);?> <?php echo $icon_color;?> me-2"></i>
+                <?php echo $this->Html->safe($last_run_time);?>
+            </div>
+
+            <div class="mb-3">
+                <label for="cron_command" class="form-label">
+                    <?php $this->_('AdminSystemAutomation.index.field_croncommand');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemAutomation.index.note_cron_command', true));?>"></i>
+                </label>
+                <div class="input-group">
+                    <?php
+                    $this->Form->fieldText(
+                        'cron_command',
+                        (isset($cron_command) ? $cron_command : null),
+                        ['id' => 'cron_command', 'readonly' => 'readonly', 'class' => 'form-control font-monospace']
+                    );
+                    ?>
+                    <button type="button" class="btn btn-outline-secondary copy-btn" data-copy-target="cron_command" title="<?php $this->_('AppController.clipboard.copy');?>">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+            </div>
+
+            <h6 class="form-section-header">
+                <a id="update_cron_key" href="#" class="text-decoration-none">
+                    <i class="bi bi-chevron-down"></i>
+                    <?php $this->_('AdminSystemAutomation.index.text_alternative_method');?>
+                </a>
+            </h6>
+
+            <div id="cron_key_section" style="display:none;">
+                <div class="mb-3">
+                    <label for="cron_key" class="form-label">
+                        <?php $this->_('AdminSystemAutomation.index.field_cron_key');?>
+                    </label>
+                    <div class="input-group">
+                        <?php
+                        $this->Form->fieldText(
+                            'cron_key',
+                            (isset($vars->cron_key) ? $vars->cron_key : null),
+                            ['id' => 'cron_key', 'class' => 'form-control']
+                        );
+                        ?>
+                        <button type="button" class="btn btn-outline-secondary" id="generate_code">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <?php $this->_('AdminSystemAutomation.index.text_generate_code');?>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="example_command" class="form-label">
+                        <?php $this->_('AdminSystemAutomation.index.field_example_command');?>
+                    </label>
+                    <div class="input-group">
+                        <?php
+                        $this->Form->fieldText(
+                            'example_command',
+                            (isset($cron_http_command) ? $cron_http_command : null),
+                            [
+                                'id' => 'example_command',
+                                'class' => 'form-control font-monospace',
+                                'data-template' => (isset($cron_http_command_template) ? $cron_http_command_template : null)
+                            ]
+                        );
+                        ?>
+                        <button type="button" class="btn btn-outline-secondary copy-btn" data-copy-target="example_command" title="<?php $this->_('AppController.clipboard.copy');?>">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mb-3">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminSystemAutomation.index.field_cronkey_submit', true),
+                        ['class' => 'btn btn-primary']
+                    );
+                    ?>
+                </div>
+            </div>
+
+            <?php $this->Form->end();?>
+
+            <div id="cron_results" class="mt-4" style="display:none;">
+                <div class="ratio ratio-16x9">
+                    <iframe src="#" scrolling="auto"></iframe>
+                </div>
+            </div>
+    <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <button type="button" id="run_cron" class="btn btn-warning">
+                <?php $this->_('AdminSystemAutomation.index.field_runcron');?>
+            </button>
+        </div>
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // Run cron button
+    const runCronBtn = document.getElementById('run_cron');
+    const cronResults = document.getElementById('cron_results');
+    const cronIframe = cronResults.querySelector('iframe');
+    const cronKey = '<?php echo $this->Html->safe((isset($vars->cron_key) ? $vars->cron_key : null));?>';
+
+    runCronBtn.addEventListener('click', function() {
+        cronResults.style.display = 'block';
+        cronIframe.src = '<?php echo $this->Html->safe(WEBDIR);?>cron/?cron_key=' + cronKey;
+    });
+
+    // Toggle cron key section
+    const updateCronKey = document.getElementById('update_cron_key');
+    const cronKeySection = document.getElementById('cron_key_section');
+    const chevron = updateCronKey.querySelector('i');
+
+    <?php if ((isset($show_cron_key) ? $show_cron_key : false)) { ?>
+        cronKeySection.style.display = 'block';
+        updateCronKey.style.display = 'none';
+    <?php } ?>
+
+    updateCronKey.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (cronKeySection.style.display === 'none') {
+            cronKeySection.style.display = 'block';
+            chevron.classList.remove('bi-chevron-down');
+            chevron.classList.add('bi-chevron-up');
+        } else {
+            cronKeySection.style.display = 'none';
+            chevron.classList.remove('bi-chevron-up');
+            chevron.classList.add('bi-chevron-down');
+        }
+    });
+
+    // Select all on focus for cron command
+    const cronCommand = document.getElementById('cron_command');
+    cronCommand.addEventListener('focusin', function() {
+        this.select();
+    });
+
+    // Update example command when cron key changes
+    const cronKeyInput = document.getElementById('cron_key');
+    const exampleCommand = document.getElementById('example_command');
+
+    function updateExampleCommand() {
+        const newKey = cronKeyInput.value.trim();
+        const template = exampleCommand.getAttribute('data-template');
+        if (template && newKey) {
+            exampleCommand.value = template.replace('{{CRON_KEY}}', newKey);
+        }
+    }
+
+    cronKeyInput.addEventListener('input', updateExampleCommand);
+    cronKeyInput.addEventListener('change', updateExampleCommand);
+
+    // Generate random code
+    const generateCodeBtn = document.getElementById('generate_code');
+    generateCodeBtn.addEventListener('click', function() {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomString = '';
+        for (let i = 0; i < 8; i++) {
+            randomString += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        cronKeyInput.value = randomString;
+        updateExampleCommand();
+    });
+
+    // Copy to clipboard functionality
+    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-copy-target');
+            const targetInput = document.getElementById(targetId);
+            if (targetInput) {
+                navigator.clipboard.writeText(targetInput.value).then(function() {
+                    // Show success feedback
+                    const icon = btn.querySelector('i');
+                    icon.classList.remove('bi-clipboard');
+                    icon.classList.add('bi-clipboard-check');
+                    setTimeout(function() {
+                        icon.classList.remove('bi-clipboard-check');
+                        icon.classList.add('bi-clipboard');
+                    }, 2000);
+                }).catch(function(err) {
+                    // Fallback for older browsers
+                    targetInput.select();
+                    document.execCommand('copy');
+                });
+            }
+        });
+    });
+});
+</script>

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -68,9 +69,7 @@ class CardExpirationReminders extends AbstractTask
         $ccAccounts = $this->Accounts->getCardsExpireSoon(date('c'));
 
         // Get the company hostname
-        $hostname = isset(Configure::get('Blesta.company')->hostname)
-            ? Configure::get('Blesta.company')->hostname
-            : '';
+        $hostname = Configure::get('Blesta.company')->hostname ?? '';
 
         // Send an email to every contact regarding the payment account card expiration
         $cardTypes = $this->Accounts->getCcTypes();
@@ -81,7 +80,7 @@ class CardExpirationReminders extends AbstractTask
 
             $tags = [
                 'contact' => $contact,
-                'card_type' => (isset($cardTypes[$account->type]) ? $cardTypes[$account->type] : ''),
+                'card_type' => ($cardTypes[$account->type] ?? ''),
                 'last_four' => $account->last4,
                 'client_url' => $this->Html->safe($hostname . $this->options['client_uri'])
             ];

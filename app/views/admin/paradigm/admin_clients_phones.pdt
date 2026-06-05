@@ -1,0 +1,111 @@
+<?php /** @var View $this **/ ?>
+
+<!-- Phone Numbers Section -->
+<h6 class="form-section-header"><?php $this->_('AdminClients.phones.rowheading_number');?></h6>
+
+<div class="mb-4">
+    <div class="table-responsive mb-3">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th><?php $this->_('AdminClients.phones.field_phonetype');?></th>
+                    <th><?php $this->_('AdminClients.phones.field_phonelocation');?></th>
+                    <th><?php $this->_('AdminClients.phones.field_phonenumber');?></th>
+                    <th class="text-end"></th>
+                </tr>
+            </thead>
+            <tbody id="phoneRows">
+                <?php
+                $num_numbers = count((isset($numbers['type']) ? $numbers['type'] : []));
+                for ($i = 0; $i < max(1, $num_numbers); $i++) {
+                ?>
+                <tr class="phone_row">
+                    <?php $this->Form->fieldHidden('numbers[id][]', (isset($numbers['id'][$i]) ? $numbers['id'][$i] : null), ['class' => 'phone_id']);?>
+                    <td><?php $this->Form->fieldSelect('numbers[type][]', (isset($number_types) ? $number_types : null), (isset($numbers['type'][$i]) ? $numbers['type'][$i] : null), ['class' => 'form-select form-select-sm']);?></td>
+                    <td><?php $this->Form->fieldSelect('numbers[location][]', (isset($number_locations) ? $number_locations : null), (isset($numbers['location'][$i]) ? $numbers['location'][$i] : null), ['class' => 'form-select form-select-sm']);?></td>
+                    <td><?php $this->Form->fieldText('numbers[number][]', (isset($numbers['number'][$i]) ? $numbers['number'][$i] : null), ['class' => 'form-control form-control-sm']);?></td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger phone_row_remove" title="<?php $this->_('AdminClients.phones.text_remove');?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <?php
+                }
+
+                // Reset any numbers that should be deleted
+                foreach ((isset($numbers['id']) ? $numbers['id'] : []) as $index => $id) {
+                    if (!isset($numbers['type'][$index])) {
+                        $this->Form->fieldHidden('numbers[id][]', (isset($id) ? $id : null), ['class' => 'phone_id']);
+                    }
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-success phone_row_add">
+        <i class="bi bi-plus-lg me-1"></i><?php $this->_('AdminClients.phones.categorylink_number');?>
+    </button>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var phoneRows = document.getElementById('phoneRows');
+    var addButton = document.querySelector('.phone_row_add');
+    var removeButtons = document.querySelectorAll('.phone_row_remove');
+
+    function updatePhoneRows() {
+        var rows = phoneRows.querySelectorAll('tr.phone_row');
+
+        // Show/hide remove buttons based on row count
+        removeButtons = document.querySelectorAll('.phone_row_remove');
+        removeButtons.forEach(function(btn) {
+            btn.style.visibility = removeButtons.length > 1 ? 'visible' : 'hidden';
+        });
+    }
+
+    // Add phone row
+    if (addButton) {
+        addButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            var firstRow = phoneRows.querySelector('tr.phone_row');
+            if (!firstRow) return;
+
+            var newRow = firstRow.cloneNode(true);
+
+            // Clear input values
+            newRow.querySelectorAll('input[type="text"], input[type="hidden"], textarea').forEach(function(input) {
+                input.value = '';
+            });
+            newRow.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(input) {
+                input.checked = false;
+            });
+            newRow.querySelectorAll('option').forEach(function(option) {
+                option.selected = false;
+            });
+
+            phoneRows.appendChild(newRow);
+            updatePhoneRows();
+        });
+    }
+
+    // Remove phone row (delegated event)
+    phoneRows.addEventListener('click', function(e) {
+        if (e.target.closest('.phone_row_remove')) {
+            var rows = phoneRows.querySelectorAll('tr.phone_row');
+            if (rows.length > 1) {
+                var row = e.target.closest('tr');
+                var phoneId = row.querySelector('.phone_id');
+                if (phoneId && phoneId.value) {
+                    phoneRows.appendChild(phoneId);
+                }
+                row.remove();
+                updatePhoneRows();
+            }
+        }
+    });
+
+    // Initial update
+    updatePhoneRows();
+})();
+</script>

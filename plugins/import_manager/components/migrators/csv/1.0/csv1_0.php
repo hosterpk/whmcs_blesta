@@ -118,7 +118,7 @@ class Csv1_0 extends CsvMigrator
 
         // Get csv fields
         $this->loadModel('CsvParser');
-        $remote_fields = $this->CsvParser->getColumnsSelect(isset($vars['csv_data']) ? $vars['csv_data'] : '');
+        $remote_fields = $this->CsvParser->getColumnsSelect($vars['csv_data'] ?? '');
         $remote_fields = array_merge(
             [Language::_('Csv1_0.configuration.no_import', true)],
             $remote_fields ? $remote_fields : []

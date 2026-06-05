@@ -1,5 +1,6 @@
 <?php
 use Blesta\Core\Util\Events\Common\EventInterface;
+use Blesta\Core\Util\Common\Traits\Container;
 
 /**
  * Support Manager plugin handler
@@ -12,6 +13,13 @@ use Blesta\Core\Util\Events\Common\EventInterface;
  */
 class SupportManagerPlugin extends Plugin
 {
+    use Container;
+
+    /**
+     * @var Monolog\Logger An instance of the logger
+     */
+    protected $logger;
+
     public function __construct()
     {
         Language::loadLang('support_manager_plugin', null, dirname(__FILE__) . DS . 'language' . DS);
@@ -20,6 +28,10 @@ class SupportManagerPlugin extends Plugin
         Loader::loadComponents($this, ['Input', 'Record']);
 
         $this->loadConfig(dirname(__FILE__) . DS . 'config.json');
+
+        // Initialize logger
+        $logger = $this->getFromContainer('logger');
+        $this->logger = $logger;
     }
 
     /**
@@ -58,6 +70,7 @@ class SupportManagerPlugin extends Plugin
                 ->setField('request_feedback', ['type'=>'tinyint', 'size'=>1, 'default'=>0])
                 ->setField('rating', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
                 ->setField('rating_comment', ['type'=>'text', 'is_null'=>true, 'default'=>null])
+                ->setField('date_rated', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
                 ->setField(
                     'status',
                     [
@@ -103,9 +116,17 @@ class SupportManagerPlugin extends Plugin
                 )
                 ->setField('type', ['type'=>'enum', 'size'=>"'reply','note','log'", 'default'=>'reply'])
                 ->setField('details', ['type'=>'mediumtext'])
+                ->setField('ai_response_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
+                ->setField('ai_tool_analysis_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
+                ->setField('ai_queued', ['type'=>'tinyint', 'size'=>1, 'default'=>0])
                 ->setField('date_added', ['type'=>'datetime'])
+                ->setField('is_ai_generated', ['type'=>'tinyint', 'size'=>1, 'is_null'=>true, 'default'=>null])
+                ->setField('ai_summary', ['type'=>'text', 'is_null'=>true, 'default'=>null])
                 ->setKey(['id'], 'primary')
                 ->setKey(['ticket_id', 'type'], 'index')
+                ->setKey(['ai_response_id'], 'index', 'idx_ai_response')
+                ->setKey(['ai_tool_analysis_id'], 'index', 'idx_ai_tool_analysis')
+                ->setKey(['ai_queued', 'ticket_id'], 'index', 'idx_ai_queued')
                 ->setKey(['details'], 'fulltext')
                 ->create('support_replies', true);
 
@@ -323,6 +344,9 @@ class SupportManagerPlugin extends Plugin
             $upload_path = $temp['value'] . Configure::get('Blesta.company_id') . DS . 'support_manager_files' . DS;
             // Create the upload path if it doesn't already exist
             $this->Upload->createUploadPath($upload_path, 0777);
+
+            // Add AI schema
+            $this->addAiSchema();
         } catch (Exception $e) {
             // Error adding... no permission?
             $this->Input->setErrors(['db'=> ['create'=>$e->getMessage()]]);
@@ -382,7 +406,90 @@ class SupportManagerPlugin extends Plugin
                 'company_id' => $company->id,
                 'value' => 'gravatar'
             ]);
+
+            // Add AI analyze trigger setting (when to trigger AI analysis)
+            $this->Record->insert('support_settings', [
+                'key' => 'sm_ai_analyze_trigger',
+                'company_id' => $company->id,
+                'value' => 'every_reply'
+            ]);
         }
+
+        // Register bell notification actions
+        $this->addNotificationActions();
+    }
+
+    /**
+     * Creates AI-related database schema (tables for AI response/tool analysis and tool usage)
+     */
+    private function addAiSchema()
+    {
+        // Create support_ai_response_analyses table (reply-centric response tracking)
+        $this->Record
+            ->setField('id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'auto_increment' => true])
+            ->setField('ticket_id', ['type' => 'int', 'size' => 10, 'unsigned' => true])
+            ->setField('conversation_id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('response_text', ['type' => 'mediumtext', 'is_null' => true, 'default' => null])
+            ->setField('internal_notes', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('concerns', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('status', ['type' => 'enum', 'size' => "'pending','used','expired','no_response_needed'", 'default' => 'pending'])
+            ->setField('used_at', ['type' => 'datetime', 'is_null' => true, 'default' => null])
+            ->setField('used_by_staff_id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('expired_at', ['type' => 'datetime', 'is_null' => true, 'default' => null])
+            ->setField('confidence', ['type' => 'tinyint', 'size' => 3, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('confidence_reasoning', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('model', ['type' => 'varchar', 'size' => 100, 'is_null' => true, 'default' => null])
+            ->setField('prompt_tokens', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('completion_tokens', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('cost', ['type' => 'decimal', 'size' => '10,6', 'is_null' => true, 'default' => null])
+            ->setField('created_at', ['type' => 'datetime'])
+            ->setField('updated_at', ['type' => 'datetime', 'is_null' => true, 'default' => null])
+            ->setKey(['id'], 'primary')
+            ->setKey(['ticket_id', 'status'], 'index', 'idx_ticket_status')
+            ->setKey(['conversation_id'], 'index', 'idx_conversation')
+            ->create('support_ai_response_analyses', true);
+
+        // Create support_ai_tool_analyses table (reply-centric tool analysis tracking)
+        $this->Record
+            ->setField('id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'auto_increment' => true])
+            ->setField('ticket_id', ['type' => 'int', 'size' => 10, 'unsigned' => true])
+            ->setField('conversation_id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('suggested_tools', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('analysis_notes', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('concerns', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('execution_status', ['type' => 'enum', 'size' => "'pending','completed','failed','no_tools_needed'", 'default' => 'pending'])
+            ->setField('executed_at', ['type' => 'datetime', 'is_null' => true, 'default' => null])
+            ->setField('tools_executed_count', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'default' => 0])
+            ->setField('tools_skipped_count', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'default' => 0])
+            ->setField('tools_failed_count', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'default' => 0])
+            ->setField('model', ['type' => 'varchar', 'size' => 100, 'is_null' => true, 'default' => null])
+            ->setField('prompt_tokens', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('completion_tokens', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('cost', ['type' => 'decimal', 'size' => '10,6', 'is_null' => true, 'default' => null])
+            ->setField('created_at', ['type' => 'datetime'])
+            ->setField('updated_at', ['type' => 'datetime', 'is_null' => true, 'default' => null])
+            ->setKey(['id'], 'primary')
+            ->setKey(['ticket_id', 'execution_status'], 'index', 'idx_ticket_status')
+            ->setKey(['conversation_id'], 'index', 'idx_conversation')
+            ->create('support_ai_tool_analyses', true);
+
+        // Create support_ai_tool_uses table for audit logging of AI tool executions
+        $this->Record
+            ->setField('id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'auto_increment' => true])
+            ->setField('ticket_id', ['type' => 'int', 'size' => 10, 'unsigned' => true])
+            ->setField('tool_analysis_id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('tool_name', ['type' => 'varchar', 'size' => 50])
+            ->setField('arguments', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('result', ['type' => 'text', 'is_null' => true, 'default' => null])
+            ->setField('confidence', ['type' => 'tinyint', 'size' => 3, 'unsigned' => true, 'is_null' => true, 'default' => null])
+            ->setField('executed_at', ['type' => 'datetime'])
+            ->setField('executed_by', ['type' => 'varchar', 'size' => 50, 'default' => 'ai_system'])
+            ->setKey(['id'], 'primary')
+            ->setKey(['ticket_id'], 'index')
+            ->setKey(['tool_analysis_id'], 'index', 'idx_tool_analysis')
+            ->setKey(['tool_name'], 'index')
+            ->setKey(['executed_at'], 'index')
+            ->create('support_ai_tool_uses', true);
     }
 
     /**
@@ -840,6 +947,11 @@ class SupportManagerPlugin extends Plugin
             $this->upgrade2_38_0($current_version);
             $this->upgrade2_39_0($current_version);
             $this->upgrade2_40_0($current_version);
+            $this->upgrade3_0_0($current_version);
+            $this->upgrade3_1_0($current_version);
+            $this->upgrade3_2_0($current_version);
+            $this->upgrade3_2_1($current_version);
+            $this->upgrade3_3_0($current_version);
         }
     }
 
@@ -1229,6 +1341,144 @@ class SupportManagerPlugin extends Plugin
     }
 
     /**
+     * Run the upgrade for v3.0.0 if being upgraded from a previous version
+     *
+     * @param string $current_version The current version of the plugin being upgraded
+     */
+    private function upgrade3_0_0($current_version)
+    {
+        if (version_compare($current_version, '3.0.0', '<')) {
+            // Add the 'date_rated' column to 'support_tickets' table
+            $this->Record->query("ALTER TABLE `support_tickets`
+                ADD `date_rated` DATETIME NULL DEFAULT NULL AFTER `rating_comment`;
+            ");
+        }
+    }
+
+    /**
+     * Run the upgrade for v3.1.0 if being upgraded from a previous version
+     *
+     * @param string $current_version The current version of the plugin being upgraded
+     */
+    private function upgrade3_1_0($current_version)
+    {
+        if (version_compare($current_version, '3.1.0', '<')) {
+            // Register bell notification actions for existing installations
+            $this->addNotificationActions();
+        }
+    }
+
+    /**
+     * Run the upgrade for v3.2.0 if being upgraded from a previous version
+     *
+     * @param string $current_version The current version of the plugin being upgraded
+     */
+    private function upgrade3_2_0($current_version)
+    {
+        if (version_compare($current_version, '3.2.0', '<')) {
+            // Create AI schema (tables for AI response/tool analysis and tool usage)
+            $this->addAiSchema();
+
+            // Add new cron task to generate AI responses
+            Loader::loadModels($this, ['CronTasks']);
+
+            $cron_tasks = $this->getCronTasks();
+            $task = null;
+            foreach ($cron_tasks as $cron_task) {
+                if ($cron_task['key'] == 'process_tickets_with_ai') {
+                    $task = $cron_task;
+                    break;
+                }
+            }
+
+            if ($task) {
+                $this->addCronTasks([$task]);
+            }
+
+            // Add AI tracking columns to support_replies table
+            $this->Record->query("
+                ALTER TABLE `support_replies`
+                ADD COLUMN `ai_response_id` INT(10) UNSIGNED NULL DEFAULT NULL
+                    COMMENT 'Links to AI response analysis for this reply' AFTER `details`,
+                ADD COLUMN `ai_tool_analysis_id` INT(10) UNSIGNED NULL DEFAULT NULL
+                    COMMENT 'Links to AI tool analysis for this reply' AFTER `ai_response_id`,
+                ADD COLUMN `ai_queued` TINYINT(1) NOT NULL DEFAULT 0
+                    COMMENT 'Flag: reply is queued for AI processing' AFTER `ai_tool_analysis_id`,
+                ADD INDEX `idx_ai_response` (`ai_response_id`),
+                ADD INDEX `idx_ai_tool_analysis` (`ai_tool_analysis_id`),
+                ADD INDEX `idx_ai_queued` (`ai_queued`, `ticket_id`)
+            ");
+
+            // Add new setting for AI analyze trigger (when to trigger AI analysis)
+            Loader::loadModels($this, ['Companies']);
+            $companies = $this->Companies->getAll();
+
+            foreach ($companies as $company) {
+                $this->Record->duplicate('value', '=', 'every_reply')
+                    ->insert('support_settings', [
+                        'key' => 'sm_ai_analyze_trigger',
+                        'company_id' => $company->id,
+                        'value' => 'every_reply'
+                    ]);
+            }
+        }
+    }
+
+    /**
+     * Run the upgrade for v3.2.1 if being upgraded from a previous version
+     *
+     * @param string $current_version The current version of the plugin being upgraded
+     */
+    private function upgrade3_2_1($current_version)
+    {
+        if (version_compare($current_version, '3.2.1', '<')) {
+            // Add is_ai_generated column to support_replies table for existing installations
+            // This column was added in install() but missed in upgrade3_2_0
+            // Check if column exists first to avoid error on fresh 3.2.0 installations
+            $columns = $this->Record->query("SHOW COLUMNS FROM `support_replies` LIKE 'is_ai_generated'")->fetch();
+            if (empty($columns)) {
+                $this->Record->query("
+                    ALTER TABLE `support_replies`
+                    ADD COLUMN `is_ai_generated` TINYINT(1) NULL DEFAULT NULL
+                        COMMENT 'Flag: reply was generated by AI' AFTER `date_added`
+                ");
+            }
+
+            // Add AI assistant name setting for all companies
+            Loader::loadModels($this, ['Companies']);
+            $companies = $this->Companies->getAll();
+
+            foreach ($companies as $company) {
+                $this->Record->duplicate('value', '=', '')
+                    ->insert('support_settings', [
+                        'key' => 'sm_ai_assistant_name',
+                        'company_id' => $company->id,
+                        'value' => ''
+                    ]);
+            }
+        }
+    }
+
+    /**
+     * Run the upgrade for v3.3.0 if being upgraded from a previous version
+     *
+     * @param string $current_version The current version of the plugin being upgraded
+     */
+    private function upgrade3_3_0($current_version)
+    {
+        if (version_compare($current_version, '3.3.0', '<')) {
+            // Add ai_summary column to support_replies table
+            $columns = $this->Record->query("SHOW COLUMNS FROM `support_replies` LIKE 'ai_summary'")->fetch();
+            if (empty($columns)) {
+                $this->Record->query("
+                    ALTER TABLE `support_replies`
+                    ADD COLUMN `ai_summary` TEXT NULL DEFAULT NULL AFTER `is_ai_generated`
+                ");
+            }
+        }
+    }
+
+    /**
      * Adds a new email template to the system
      *
      * @param array $templates An array with the email templates to add (optional)
@@ -1301,6 +1551,115 @@ class SupportManagerPlugin extends Plugin
     }
 
     /**
+     * Registers bell notification actions for the support manager plugin
+     * and enables them for all staff groups in the current company
+     */
+    private function addNotificationActions()
+    {
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Record']);
+        }
+
+        $actions = [
+            [
+                'action' => 'SupportManager.staff_ticket_updated',
+                'target' => 'staff'
+            ],
+            [
+                'action' => 'SupportManager.staff_ticket_assigned',
+                'target' => 'staff'
+            ]
+        ];
+
+        $company_id = Configure::get('Blesta.company_id');
+
+        // Get all staff groups for this company
+        $staff_groups = $this->Record->select(['id'])
+            ->from('staff_groups')
+            ->where('company_id', '=', $company_id)
+            ->fetchAll();
+
+        foreach ($actions as $action) {
+            // Only add to notification_actions if it doesn't already exist
+            $exists = $this->Record->select(['id'])
+                ->from('notification_actions')
+                ->where('company_id', '=', $company_id)
+                ->where('action', '=', $action['action'])
+                ->where('target', '=', $action['target'])
+                ->fetch();
+
+            if (!$exists) {
+                $this->Record->insert('notification_actions', [
+                    'company_id' => $company_id,
+                    'dir' => 'support_manager',
+                    'type' => 'plugin',
+                    'target' => $action['target'],
+                    'action' => $action['action']
+                ]);
+            }
+
+            // Enable for all staff groups and their staff members (allow duplicates without error)
+            foreach ($staff_groups as $staff_group) {
+                $this->Record->duplicate('action', '=', $action['action'])
+                    ->insert('staff_group_notifications', [
+                        'staff_group_id' => $staff_group->id,
+                        'action' => $action['action']
+                    ]);
+
+                // Opt in all staff members in this group by default
+                $staff_members = $this->Record->select(['staff_group.staff_id'])
+                    ->from('staff_group')
+                    ->where('staff_group.staff_group_id', '=', $staff_group->id)
+                    ->fetchAll();
+
+                foreach ($staff_members as $staff_member) {
+                    $this->Record->duplicate('action', '=', $action['action'])
+                        ->insert('staff_notifications', [
+                            'staff_group_id' => $staff_group->id,
+                            'staff_id' => $staff_member->staff_id,
+                            'action' => $action['action']
+                        ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes bell notification actions for the support manager plugin
+     * and cleans up staff group notification entries
+     */
+    private function removeNotificationActions()
+    {
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Record']);
+        }
+
+        $actions = [
+            'SupportManager.staff_ticket_updated',
+            'SupportManager.staff_ticket_assigned'
+        ];
+
+        foreach ($actions as $action) {
+            // Remove from staff_group_notifications
+            $this->Record->from('staff_group_notifications')
+                ->where('action', '=', $action)
+                ->delete();
+
+            // Remove from staff_notifications
+            $this->Record->from('staff_notifications')
+                ->where('action', '=', $action)
+                ->delete();
+        }
+
+        // Remove from notification_actions
+        $this->Record->from('notification_actions')
+            ->where('dir', '=', 'support_manager')
+            ->where('type', '=', 'plugin')
+            ->where('company_id', '=', Configure::get('Blesta.company_id'))
+            ->delete();
+    }
+
+    /**
      * Performs any necessary cleanup actions
      *
      * @param int $plugin_id The ID of the plugin being uninstalled
@@ -1323,6 +1682,7 @@ class SupportManagerPlugin extends Plugin
                 // Uninstall tables
                 $this->Record->drop('support_tickets');
                 $this->Record->drop('support_ticket_fields');
+                $this->Record->drop('support_ticket_recipients');
                 $this->Record->drop('support_replies');
                 $this->Record->drop('support_attachments');
                 $this->Record->drop('support_departments');
@@ -1338,6 +1698,10 @@ class SupportManagerPlugin extends Plugin
                 $this->Record->drop('support_kb_article_content');
                 $this->Record->drop('support_kb_categories');
                 $this->Record->drop('support_reminders');
+                // Drop AI tables
+                $this->Record->drop('support_ai_response_analyses');
+                $this->Record->drop('support_ai_tool_analyses');
+                $this->Record->drop('support_ai_tool_uses');
             } catch (Exception $e) {
                 // Error dropping... no permission?
                 $this->Input->setErrors(['db'=> ['create'=>$e->getMessage()]]);
@@ -1375,6 +1739,9 @@ class SupportManagerPlugin extends Plugin
                 }
             }
         }
+
+        // Remove bell notification actions
+        $this->removeNotificationActions();
     }
 
     /**
@@ -1432,6 +1799,7 @@ class SupportManagerPlugin extends Plugin
                 'action' => 'nav_primary_staff',
                 'uri' => 'plugin/support_manager/admin_main/',
                 'name' => 'SupportManagerPlugin.nav_primary_staff.main',
+                'icon' => 'bi-headset',
                 'options' => [
                     'sub' => [
                         [
@@ -1457,6 +1825,10 @@ class SupportManagerPlugin extends Plugin
                         [
                             'uri' => 'plugin/support_manager/admin_main/settings/',
                             'name' => 'SupportManagerPlugin.nav_primary_staff.settings'
+                        ],
+                        [
+                            'uri' => 'plugin/support_manager/admin_main/ai/',
+                            'name' => 'SupportManagerPlugin.nav_primary_staff.ai'
                         ]
                     ]
                 ]
@@ -1803,6 +2175,9 @@ class SupportManagerPlugin extends Plugin
             case 'send_reminders':
                 $this->sendReminders();
                 break;
+            case 'process_tickets_with_ai':
+                $this->cronProcessTicketsWithAi();
+                break;
             default:
                 break;
         }
@@ -1834,6 +2209,9 @@ class SupportManagerPlugin extends Plugin
         foreach ($departments as $department) {
             $this->SupportManagerTickets->deleteAllByDepartment($department->id);
         }
+
+        // Clean up orphaned inline image temp files
+        $this->SupportManagerTickets->cleanupOrphanedInlineImageTemps(24);
     }
 
     /**
@@ -1862,6 +2240,409 @@ class SupportManagerPlugin extends Plugin
         foreach ($departments as $department) {
             $this->SupportManagerTickets->notifyAllByDepartment($department->id);
         }
+    }
+
+    /**
+     * Processes queued ticket replies with AI - generates responses and executes tool uses
+     *
+     * Processes client replies that have been flagged for AI analysis (ai_queued=1).
+     * Batches multiple rapid replies together for efficient processing.
+     */
+    private function cronProcessTicketsWithAi()
+    {
+        // Load required models
+        Loader::loadModels($this, [
+            'SupportManager.SupportManagerTickets',
+            'SupportManager.SupportManagerDepartments',
+            'SupportManager.SupportManagerSettings',
+            'SupportManager.SupportManagerAiResponseAnalyses',
+            'SupportManager.SupportManagerAiToolAnalyses',
+            'SupportManager.SupportManagerAiToolUses'
+        ]);
+
+        // Load AI helper
+        Loader::load(PLUGINDIR . 'support_manager' . DS . 'lib' . DS . 'support_manager_ai_helper.php');
+
+        // Get current company ID
+        $company_id = Configure::get('Blesta.company_id');
+
+        // Check if AI is enabled for this company
+        $ai_enabled = $this->SupportManagerSettings->getSetting('sm_ai_enabled', $company_id);
+        if (!$ai_enabled || $ai_enabled->value !== 'true') {
+            return; // AI not enabled, skip
+        }
+
+        // Get rate limiting settings
+        $batch_size = $this->SupportManagerSettings->getSetting('sm_ai_cron_batch_size', $company_id);
+        $max_batch_size = $batch_size ? (int)$batch_size->value : 50;
+
+        $max_calls = $this->SupportManagerSettings->getSetting('sm_ai_cron_max_calls', $company_id);
+        $max_api_calls = $max_calls ? (int)$max_calls->value : 100;
+
+        // Get max queue age in hours (default 24) — replies older than this are
+        // considered stale and will be discarded rather than processed. Prevents
+        // processing a large backlog if the cron has been disabled for some time.
+        $max_age = $this->SupportManagerSettings->getSetting('sm_ai_max_queue_age_hours', $company_id);
+        $max_age_hours = ($max_age && $max_age->value !== '') ? (int)$max_age->value : 24;
+        // Defensive fallback: invalid values would cause destructive cleanup
+        if ($max_age_hours < 1 || $max_age_hours > 8760) {
+            $max_age_hours = 24;
+        }
+        $stale_cutoff = date('Y-m-d H:i:s', strtotime('-' . $max_age_hours . ' hours'));
+
+        // Discard any stale queued replies before processing
+        $stale_tickets = $this->Record->select(['ticket_id'])
+            ->from('support_replies')
+            ->where('ai_queued', '=', 1)
+            ->where('staff_id', '=', null)
+            ->where('date_added', '<', $stale_cutoff)
+            ->group(['ticket_id'])
+            ->fetchAll();
+
+        if (!empty($stale_tickets)) {
+            $this->Record->where('ai_queued', '=', 1)
+                ->where('staff_id', '=', null)
+                ->where('date_added', '<', $stale_cutoff)
+                ->update('support_replies', ['ai_queued' => 0]);
+
+            foreach ($stale_tickets as $stale) {
+                $this->SupportManagerAiResponseAnalyses->expirePendingForTicket($stale->ticket_id);
+            }
+            echo 'Discarded stale AI queue entries from ' . count($stale_tickets) . " ticket(s)\n";
+        }
+
+        // Initialize counters
+        $tickets_processed = 0;
+        $replies_processed = 0;
+        $api_calls_made = 0;
+        $responses_generated = 0;
+        $tools_executed = 0;
+
+        // Get department restrictions (fetch once before loop to avoid N+1 query)
+        $ai_departments = $this->SupportManagerSettings->getSetting('sm_ai_auto_reply_departments', $company_id);
+        $allowed_departments = [];
+        if ($ai_departments && $ai_departments->value) {
+            $allowed_departments = json_decode($ai_departments->value, true);
+            if (!is_array($allowed_departments)) {
+                $allowed_departments = [];
+            }
+        }
+
+        // Query for queued replies grouped by ticket
+        $queued_reply_groups = $this->Record->select(['ticket_id', 'MIN(id)' => 'oldest_reply_id', 'MIN(date_added)' => 'oldest_date', 'COUNT(*)' => 'reply_count'])
+            ->from('support_replies')
+            ->where('ai_queued', '=', 1)
+            ->where('staff_id', '=', null) // Client replies only
+            ->group(['ticket_id'])
+            ->order(['oldest_date' => 'asc'])
+            ->limit($max_batch_size)
+            ->fetchAll();
+
+        foreach ($queued_reply_groups as $queue_group) {
+            // Check rate limits
+            if ($tickets_processed >= $max_batch_size || $api_calls_made >= $max_api_calls) {
+                break;
+            }
+
+            // Get full ticket to check department restrictions and status
+            $ticket = $this->SupportManagerTickets->get($queue_group->ticket_id);
+            if (!$ticket) {
+                continue; // Invalid ticket
+            }
+
+            // Skip closed tickets — de-queue their pending replies
+            if ($ticket->status === 'closed') {
+                $this->Record->where('ticket_id', '=', $queue_group->ticket_id)
+                    ->where('ai_queued', '=', 1)
+                    ->update('support_replies', ['ai_queued' => 0]);
+                if (!isset($this->SupportManagerAiResponseAnalyses)) {
+                    Loader::loadModels($this, ['SupportManager.SupportManagerAiResponseAnalyses']);
+                }
+                $this->SupportManagerAiResponseAnalyses->expirePendingForTicket($queue_group->ticket_id);
+                echo "Ticket #{$ticket->code} is closed, skipping AI processing\n";
+                continue;
+            }
+
+            // Check if AI is enabled for this department
+            if (!empty($allowed_departments) && !in_array($ticket->department_id, $allowed_departments)) {
+                continue; // Skip this ticket's department
+            }
+
+            // Get ALL queued replies for this ticket
+            $batched_replies = $this->Record->select()
+                ->from('support_replies')
+                ->where('ticket_id', '=', $queue_group->ticket_id)
+                ->where('ai_queued', '=', 1)
+                ->where('staff_id', '=', null)
+                ->order(['date_added' => 'asc'])
+                ->fetchAll();
+
+            if (empty($batched_replies)) {
+                continue; // No replies to process
+            }
+
+            $reply_ids = array_map(function ($r) {
+                return $r->id;
+            }, $batched_replies);
+
+            // Atomically claim replies (race condition prevention)
+            $this->Record->where('id', 'in', $reply_ids)
+                ->where('ai_queued', '=', 1)
+                ->update('support_replies', ['ai_queued' => 0]);
+
+            if ($this->Record->affectedRows() === 0) {
+                // Another process claimed them
+                echo "Ticket #{$ticket->code} replies already being processed, skipping\n";
+                continue;
+            }
+
+            // Check if a staff member has already replied after the queued client messages
+            // Compare by reply ID (auto-increment) rather than date_added to avoid
+            // same-second timestamp ties incorrectly suppressing AI processing
+            $oldest_queued_reply_id = $batched_replies[0]->id;
+            $staff_reply_after = $this->Record->select(['id'])
+                ->from('support_replies')
+                ->where('ticket_id', '=', $queue_group->ticket_id)
+                ->where('staff_id', '!=', null)
+                ->where('type', '=', 'reply')
+                ->where('id', '>', $oldest_queued_reply_id)
+                ->fetch();
+
+            if ($staff_reply_after) {
+                echo "Ticket #{$ticket->code} already has a staff reply, skipping AI processing\n";
+                // Expire any pending AI response analyses for this ticket
+                if (!isset($this->SupportManagerAiResponseAnalyses)) {
+                    Loader::loadModels($this, ['SupportManager.SupportManagerAiResponseAnalyses']);
+                }
+                $this->SupportManagerAiResponseAnalyses->expirePendingForTicket($queue_group->ticket_id);
+                continue;
+            }
+
+            echo "Processing ticket #{$ticket->code} (" . count($batched_replies) . " batched replies)...";
+            $replies_processed += count($batched_replies);
+
+            // Initialize AI helper
+            try {
+                $ai_helper = new SupportManagerAiHelper($company_id);
+
+                // Step 1: Analyze for tool use (FIRST API CALL)
+                $tool_result = $ai_helper->generateToolAnalysisForReplies(
+                    $reply_ids,
+                    $ticket,
+                    $batched_replies,
+                    ['save_to_db' => true]
+                );
+                $api_calls_made++; // Count the tool analysis call
+
+                $tool_analysis_id = $tool_result['analysis_id'];
+                $tool_calls = $tool_result['tool_calls'];
+
+                // Step 2: Generate customer response (SECOND API CALL)
+                $response_analysis_id = $ai_helper->generateResponseForReplies(
+                    $reply_ids,
+                    $ticket,
+                    $batched_replies,
+                    ['save_to_db' => true]
+                );
+
+                if ($response_analysis_id) {
+                    $api_calls_made++; // Count the response generation call
+                }
+
+                // Step 3: Link analyses to ALL batched replies
+                $this->Record->where('id', 'in', $reply_ids)
+                    ->update('support_replies', [
+                        'ai_response_id' => $response_analysis_id,
+                        'ai_tool_analysis_id' => $tool_analysis_id
+                    ]);
+
+                $tickets_processed++;
+
+                // Step 4: Handle auto-reply logic (before tool execution so replies
+                // are posted before destructive actions like close_ticket)
+                $analysis = null;
+                if ($response_analysis_id) {
+                    $analysis = $ai_helper->SupportManagerAiResponseAnalyses->get($response_analysis_id);
+                }
+
+                // Re-check for staff replies and ticket status before auto-posting
+                // or tool execution (covers changes that occurred while API calls
+                // were in progress)
+                $staff_replied_since = $this->Record->select(['id'])
+                    ->from('support_replies')
+                    ->where('ticket_id', '=', $ticket->id)
+                    ->where('staff_id', '!=', null)
+                    ->where('type', '=', 'reply')
+                    ->where('id', '>', $oldest_queued_reply_id)
+                    ->fetch();
+
+                $fresh_ticket = $this->SupportManagerTickets->get($ticket->id);
+                $ticket_closed_since = $fresh_ticket && $fresh_ticket->status === 'closed';
+
+                $skip_actions = $staff_replied_since || $ticket_closed_since;
+
+                // Expire the just-generated analysis if we're skipping actions
+                if ($skip_actions && $response_analysis_id) {
+                    $ai_helper->SupportManagerAiResponseAnalyses->markExpired($response_analysis_id);
+                }
+
+                if ($analysis && $analysis->response_text && $analysis->status !== 'no_response_needed') {
+                    $responses_generated++;
+                    echo " success\n";
+
+                    // Check if auto-reply is enabled
+                    $auto_reply_enabled = $this->SupportManagerSettings->getSetting(
+                        'sm_ai_auto_reply_enabled',
+                        $company_id
+                    );
+
+                    $require_review = $this->SupportManagerSettings->getSetting(
+                        'sm_ai_require_human_review',
+                        $company_id
+                    );
+
+                    $confidence_threshold = $this->SupportManagerSettings->getSetting(
+                        'sm_ai_confidence_threshold',
+                        $company_id
+                    );
+                    $threshold = $confidence_threshold ? (int)$confidence_threshold->value : 90;
+
+                    // Auto-reply if conditions are met
+                    if (!$skip_actions
+                        && $auto_reply_enabled
+                        && $auto_reply_enabled->value === 'true'
+                        && (!$require_review || $require_review->value === 'false')
+                        && isset($analysis->confidence)
+                        && ((int) $analysis->confidence >= (int) $threshold)
+                    ) {
+                        // Post the reply automatically
+                        $reply_data = [
+                            'staff_id' => 0, // AI assistant (staff_id 0)
+                            'type' => 'reply',
+                            'details' => $analysis->response_text,
+                            'date_added' => date('Y-m-d H:i:s'),
+                            'is_ai_generated' => 1  // Mark as AI-generated
+                        ];
+
+                        // Add AI disclaimer if enabled
+                        $show_disclaimer = $this->SupportManagerSettings->getSetting(
+                            'sm_ai_show_disclaimer',
+                            $company_id
+                        );
+
+                        if ($show_disclaimer && $show_disclaimer->value === 'true') {
+                            $custom_disclaimer = $this->SupportManagerSettings->getSetting(
+                                'sm_ai_custom_disclaimer',
+                                $company_id
+                            );
+
+                            if ($custom_disclaimer && $custom_disclaimer->value) {
+                                $disclaimer = $custom_disclaimer->value;
+                            } else {
+                                $disclaimer = Language::_('SupportManagerPlugin.ai.default_disclaimer', true);
+                            }
+
+                            $reply_data['details'] = $reply_data['details'] . "\n\n" . $disclaimer;
+                        }
+
+                        // Add the reply
+                        $reply_id = $this->SupportManagerTickets->addReply(
+                            $ticket->id,
+                            $reply_data
+                        );
+
+                        if ($reply_id) {
+                            // Transition ticket status if department has automatic_transition enabled
+                            if ($ticket->status === 'open') {
+                                $department = $this->SupportManagerDepartments->get($ticket->department_id);
+                                if ($department && $department->automatic_transition == '1') {
+                                    $this->SupportManagerTickets->edit($ticket->id, [
+                                        'status' => 'awaiting_reply'
+                                    ], false);
+                                }
+                            }
+
+                            // Mark AI response analysis as used (staff_id 0 = AI assistant)
+                            $ai_helper->SupportManagerAiResponseAnalyses->markUsed(
+                                $response_analysis_id,
+                                0
+                            );
+
+                            // Log the auto-reply tool use
+                            $this->SupportManagerAiToolUses->add([
+                                'ticket_id' => $ticket->id,
+                                'tool_analysis_id' => $response_analysis_id,
+                                'tool_name' => 'auto_reply',
+                                'arguments' => json_encode([
+                                    'confidence' => $analysis->confidence,
+                                    'threshold' => $threshold
+                                ]),
+                                'result' => json_encode([
+                                    'success' => true,
+                                    'reply_id' => $reply_id
+                                ]),
+                                'confidence' => $analysis->confidence,
+                                'executed_at' => date('Y-m-d H:i:s'),
+                                'executed_by' => 'ai_cron'
+                            ]);
+                        }
+                    }
+                } else {
+                    echo " (no response needed)\n";
+                }
+
+                // Step 5: Execute tools if any were suggested (after reply is posted
+                // so close_ticket doesn't prevent the reply from being sent)
+                // Skip tool execution if a staff member has replied in the meantime
+                $execution_summary = null;
+                if (!empty($tool_calls) && !$skip_actions) {
+                    echo " - Executing " . count($tool_calls) . " tool(s)...";
+
+                    $execution_summary = $ai_helper->executeToolUses(
+                        $ticket->id,
+                        $tool_calls,
+                        50, // overall confidence (no longer stored in tool analysis)
+                        $tool_analysis_id
+                    );
+
+                    // Update tool analysis with execution stats
+                    if ($execution_summary) {
+                        $this->SupportManagerAiToolAnalyses->markExecuted($tool_analysis_id, [
+                            'execution_status' => 'completed',
+                            'tools_executed_count' => count($execution_summary['executed']),
+                            'tools_skipped_count' => count($execution_summary['skipped']),
+                            'tools_failed_count' => count($execution_summary['failed'])
+                        ]);
+                    }
+
+                    // Log execution results
+                    if (!empty($execution_summary['executed'])) {
+                        $tools_executed += count($execution_summary['executed']);
+                        echo " executed: " . count($execution_summary['executed']);
+                    }
+                    if (!empty($execution_summary['skipped'])) {
+                        echo " skipped: " . count($execution_summary['skipped']);
+                    }
+                    if (!empty($execution_summary['failed'])) {
+                        echo " failed: " . count($execution_summary['failed']);
+                        $this->logger->warning('Support Manager AI: Some tool executions failed for ticket #' . $ticket->code);
+                    }
+                }
+
+            } catch (Exception $e) {
+                // Re-queue the replies on error
+                $this->Record->where('id', 'in', $reply_ids)
+                    ->update('support_replies', ['ai_queued' => 1]);
+
+                // Log error and continue to next ticket
+                echo " error\n";
+                $this->logger->error('Support Manager AI: Error processing ticket #' . $ticket->code . ': ' . $e->getMessage());
+                continue;
+            }
+        }
+
+        // Output summary
+        echo "\nAI cron task completed: {$tickets_processed} tickets processed ({$replies_processed} replies), {$responses_generated} responses generated, {$tools_executed} tools executed\n";
     }
 
     /**
@@ -1925,6 +2706,17 @@ class SupportManagerPlugin extends Plugin
                 'description' => Language::_('SupportManagerPlugin.cron.send_reminders_desc', true),
                 'type' => 'interval',
                 'type_value' => 5,
+                'enabled' => 1
+            ],
+            // Cron task to process tickets with AI (responses and tool execution)
+            [
+                'key' => 'process_tickets_with_ai',
+                'task_type' => 'plugin',
+                'dir' => 'support_manager',
+                'name' => Language::_('SupportManagerPlugin.cron.process_tickets_with_ai_name', true),
+                'description' => Language::_('SupportManagerPlugin.cron.process_tickets_with_ai_desc', true),
+                'type' => 'interval',
+                'type_value' => 15,
                 'enabled' => 1
             ]
         ];

@@ -60,8 +60,8 @@
                 event.preventDefault();
 
                 // Disable ACH form
-                if ($('select[name="payment_type"]').val() === 'cc') {
-                    $('input,select,textarea', '#payment_details_ach').attr('disabled', true);
+                if ($('select[name="payment_type"]').val() == 'cc') {
+                    $('#payment_details_ach input').attr('disabled', true);
                 }
 
                 // Send data to Authorize.net

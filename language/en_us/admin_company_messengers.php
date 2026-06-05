@@ -121,3 +121,8 @@ $lang['AdminCompanyMessengers.edittemplate.field.tags'] = 'Available Tags';
 $lang['AdminCompanyMessengers.edittemplate.field.status'] = 'Enabled';
 $lang['AdminCompanyMessengers.edittemplate.field.cancel'] = 'Cancel';
 $lang['AdminCompanyMessengers.edittemplate.field.edittemplatesubmit'] = 'Update Template';
+
+
+// Filter
+$lang['AdminCompanyMessengers.text_filter_placeholder'] = 'Filter messengers...';
+$lang['AdminCompanyMessengers.text_filter_no_results'] = 'No matching messengers found.';

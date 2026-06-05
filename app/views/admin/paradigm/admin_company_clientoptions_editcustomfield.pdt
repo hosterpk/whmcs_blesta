@@ -1,0 +1,501 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+    <div id="configuration_warning" style="display:none;">
+        <?php echo (isset($configuration_warning) ? $configuration_warning : null);?>
+    </div>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyClientoptions.editcustomfield.boxtitle_edit', true), ['id' => 'admin_company_clientoptions_editcustomfield']);
+    ?>
+            <?php $this->Form->create(null, ['id' => 'edit-custom-field', 'class' => 'disable-on-submit']); ?>
+
+            <!-- Client Group (Disabled) -->
+            <div class="mb-3">
+                <label for="client_group_id" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.client_group_id');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.client_group_id', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'client_group_id',
+                    (isset($groups) ? $groups : null),
+                    (isset($vars->client_group_id) ? $vars->client_group_id : null),
+                    ['id' => 'client_group_id', 'class' => 'form-select', 'disabled' => 'disabled']
+                );
+                ?>
+            </div>
+
+            <!-- Name -->
+            <div class="mb-3">
+                <label for="name" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.name');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.name', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'name',
+                    (isset($vars->name) ? $vars->name : null),
+                    ['id' => 'name', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <!-- Type -->
+            <div class="mb-3">
+                <label for="type" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.type');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.type', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'type',
+                    (isset($types) ? $types : null),
+                    (isset($vars->type) ? $vars->type : null),
+                    ['id' => 'type', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <!-- Is Language Definition -->
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'is_lang',
+                    '1',
+                    ((isset($vars->is_lang) ? $vars->is_lang : null) == '1'),
+                    ['id' => 'is_lang', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="is_lang" class="form-check-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.is_lang');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.is_lang', true));?>"></i>
+                </label>
+            </div>
+
+            <!-- Link -->
+            <div class="mb-3">
+                <label for="link" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.link');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.link', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'link',
+                    (isset($vars->link) ? $vars->link : null),
+                    ['id' => 'link', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <!-- Text Type Default -->
+            <div class="mb-3 text-type" style="display:none;">
+                <label for="default-text" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.default_text');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.default_text', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'default_text',
+                    (isset($vars->default_text) ? $vars->default_text : null),
+                    ['id' => 'default-text', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <!-- Textarea Type Default -->
+            <div class="mb-3 textarea-type" style="display:none;">
+                <label for="default-textarea" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.default_text');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.default_text', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldTextarea(
+                    'default_textarea',
+                    (isset($vars->default_textarea) ? $vars->default_textarea : null),
+                    ['id' => 'default-textarea', 'class' => 'form-control', 'rows' => '3']
+                );
+                ?>
+            </div>
+
+            <!-- Checkbox Type Value -->
+            <div class="mb-3 checkbox-type" style="display:none;">
+                <label for="checkbox_value" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.checkbox_value');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.checkbox_value', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'checkbox_value',
+                    (isset($vars->checkbox_value) ? $vars->checkbox_value : null),
+                    ['id' => 'checkbox_value', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <!-- Checkbox Type Default -->
+            <div class="mb-3 form-check checkbox-type" style="display:none;">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'default_checkbox',
+                    '1',
+                    (isset($vars->default_checkbox) ? $vars->default_checkbox : null),
+                    ['id' => 'default-checkbox', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="default-checkbox" class="form-check-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.default_checkbox');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.default_checkbox', true));?>"></i>
+                </label>
+            </div>
+
+            <!-- Select Type Options -->
+            <div class="mb-3 select-type" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label mb-0"><?php $this->_('AdminCompanyClientoptions.editcustomfield.heading_select_option');?></label>
+                    <button type="button" class="btn btn-sm btn-primary select_row_add">
+                        <i class="bi bi-plus-lg"></i>
+                        <span><?php $this->_('AdminCompanyClientoptions.editcustomfield.categorylink_select');?></span>
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th><?php $this->_('AdminCompanyClientoptions.editcustomfield.heading_select_value');?></th>
+                                <th><?php $this->_('AdminCompanyClientoptions.editcustomfield.heading_select_option');?></th>
+                                <th style="width: 100px;">
+                                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.heading_select_default');?>
+                                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.select_default', true));?>"></i>
+                                </th>
+                                <th style="width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                        // Display each select option
+                        $num_options = max(1, count((isset($vars->select['value']) ? $vars->select['value'] : [])));
+                        $set_default = ($num_options === 1);
+                        for ($i = 0; $i < $num_options; $i++) {
+                        ?>
+                            <tr class="select_row">
+                                <td>
+                                    <?php
+                                    $this->Form->fieldText(
+                                        'select[value][]',
+                                        (isset($vars->select['value'][$i]) ? $vars->select['value'][$i] : null),
+                                        ['class' => 'form-control form-control-sm']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldText(
+                                        'select[option][]',
+                                        (isset($vars->select['option'][$i]) ? $vars->select['option'][$i] : null),
+                                        ['class' => 'form-control form-control-sm']
+                                    );
+                                    ?>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check d-inline-block">
+                                        <?php
+                                        $this->Form->fieldRadio(
+                                            'select[default][]',
+                                            '1',
+                                            (isset($vars->select['default'][$i]) ? $vars->select['default'][$i] : $set_default),
+                                            ['class' => 'form-check-input']
+                                        );
+                                        ?>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <a href="#" class="text-danger select_row_remove">
+                                        <?php $this->_('AdminCompanyClientoptions.editcustomfield.text_remove');?>
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php
+                        }
+                        ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Show Client -->
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'show_client',
+                    '1',
+                    ((isset($vars->show_client) ? $vars->show_client : null) == '1'),
+                    ['id' => 'show_client', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="show_client" class="form-check-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.show_client');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.show_client', true));?>"></i>
+                </label>
+            </div>
+
+            <!-- Read Only -->
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'read_only',
+                    '1',
+                    ((isset($vars->read_only) ? $vars->read_only : null) == '1'),
+                    ['id' => 'read_only', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="read_only" class="form-check-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.read_only');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.read_only_field', true));?>"></i>
+                </label>
+            </div>
+
+            <!-- Required -->
+            <div class="mb-3">
+                <label for="required" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.required');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.required', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldSelect(
+                    'required',
+                    (isset($required_types) ? $required_types : null),
+                    (isset($vars->required) ? $vars->required : null),
+                    ['id' => 'required', 'class' => 'form-select']
+                );
+                ?>
+            </div>
+
+            <!-- Regex -->
+            <div class="mb-3 regex_enabled">
+                <label for="regex" class="form-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.regex');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.regex', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'regex',
+                    (isset($vars->regex) ? $vars->regex : null),
+                    ['id' => 'regex', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <!-- Encrypted -->
+            <div class="mb-3 form-check">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'encrypted',
+                    '1',
+                    ((isset($vars->encrypted) ? $vars->encrypted : null) == '1'),
+                    ['id' => 'encrypted', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="encrypted" class="form-check-label">
+                    <?php $this->_('AdminCompanyClientoptions.editcustomfield.field.encrypted');?>
+                    <i class="bi bi-info-circle ms-1"
+   data-bs-toggle="tooltip"
+   data-bs-placement="top"
+   title="<?php echo $this->Html->safe($this->_('AdminCompanyClientoptions.!tooltip.encrypted', true));?>"></i>
+                </label>
+            </div>
+
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit(
+                'save',
+                $this->_('AdminCompanyClientoptions.editcustomfield.field.editsubmit', true),
+                ['class' => 'btn btn-primary']
+            );
+            ?>
+        </div>
+            <?php $this->Form->end(); ?>
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    const form = document.getElementById('edit-custom-field');
+    const typeSelect = document.getElementById('type');
+    const requiredSelect = document.getElementById('required');
+    const showClientCheckbox = document.getElementById('show_client');
+    const configWarning = document.getElementById('configuration_warning');
+
+    // Update form fields before submission
+    form.addEventListener('submit', function() {
+        updateFieldOrder();
+    });
+
+    // Show/hide custom regex field
+    function updateRegexVisibility() {
+        const regexEnabled = document.querySelector('.regex_enabled');
+        if (requiredSelect.value !== 'regex') {
+            regexEnabled.style.display = 'none';
+        } else {
+            regexEnabled.style.display = 'block';
+        }
+    }
+
+    // Show the selected type
+    function showType(value) {
+        hideAllTypes();
+
+        switch (value) {
+            case 'checkbox':
+                document.querySelectorAll('.checkbox-type').forEach(el => el.style.display = 'block');
+                break;
+            case 'select':
+                document.querySelectorAll('.select-type').forEach(el => el.style.display = 'block');
+                break;
+            case 'text':
+                document.querySelectorAll('.text-type').forEach(el => el.style.display = 'block');
+                break;
+            case 'textarea':
+                document.querySelectorAll('.textarea-type').forEach(el => el.style.display = 'block');
+                break;
+        }
+    }
+
+    // Hides all custom field types
+    function hideAllTypes() {
+        document.querySelectorAll('.checkbox-type, .select-type, .text-type, .textarea-type').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+
+    // Update the Select rows
+    function updateRows() {
+        const rows = document.querySelectorAll('.select-type table tr.select_row');
+        rows.forEach((row, index) => {
+            if (index % 2 === 1) {
+                row.classList.add('table-secondary');
+            } else {
+                row.classList.remove('table-secondary');
+            }
+        });
+    }
+
+    // Set option indices for each row
+    function updateFieldOrder() {
+        const rows = document.querySelectorAll('#edit-custom-field table tr.select_row');
+        rows.forEach((row, rowIndex) => {
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.name = input.name.replace('[]', '[' + rowIndex + ']');
+            });
+        });
+    }
+
+    // Display warning message when the field is marked as both required and not visible
+    function updateConfigWarning() {
+        if (requiredSelect.value !== '' && !showClientCheckbox.checked) {
+            configWarning.style.display = 'block';
+        } else {
+            configWarning.style.display = 'none';
+        }
+    }
+
+    // Initialize
+    updateRegexVisibility();
+    showType(typeSelect.value);
+    updateRows();
+    updateConfigWarning();
+
+    // Event listeners
+    requiredSelect.addEventListener('change', function() {
+        updateRegexVisibility();
+        updateConfigWarning();
+    });
+
+    typeSelect.addEventListener('change', function() {
+        showType(this.value);
+    });
+
+    showClientCheckbox.addEventListener('change', updateConfigWarning);
+
+    // Add select row
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.select_row_add')) {
+            e.preventDefault();
+            const firstRow = document.querySelector('tr.select_row');
+            const newRow = firstRow.cloneNode(true);
+
+            // Clear input values and uncheck radio
+            newRow.querySelectorAll('input[type=text]').forEach(input => input.value = '');
+            newRow.querySelectorAll('input[type=radio]').forEach(input => input.checked = false);
+
+            // Add the new row
+            const lastRow = document.querySelector('tr.select_row:last-of-type');
+            lastRow.parentNode.insertBefore(newRow, lastRow.nextSibling);
+            updateRows();
+        }
+    });
+
+    // Remove select row
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.select_row_remove')) {
+            e.preventDefault();
+            const rows = document.querySelectorAll('tr.select_row');
+            if (rows.length > 1) {
+                e.target.closest('tr').remove();
+                updateRows();
+            }
+        }
+    });
+});
+</script>

@@ -1,0 +1,216 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "id_format",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "id_value",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "date_billed",
+            "type": "datetime",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_due",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_closed",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "date_autodebit",
+            "type": "datetime",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null
+        },
+        {
+            "name": "autodebit",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        },
+        {
+            "name": "status",
+            "type": "enum('active','proforma','draft','void')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "subtotal",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "total",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "paid",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "previous_due",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "currency",
+            "type": "char(3)",
+            "nullable": false,
+            "key": null,
+            "default": "USD",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "note_public",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        },
+        {
+            "name": "note_private",
+            "type": "text",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 65535
+        }
+    ],
+    "indexes": [
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id",
+                "status",
+                "date_billed",
+                "date_closed"
+            ]
+        },
+        {
+            "name": "date_billed",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "date_billed",
+                "status"
+            ]
+        },
+        {
+            "name": "id_format",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "id_format"
+            ]
+        },
+        {
+            "name": "id_value",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "id_value"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "status",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "status"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

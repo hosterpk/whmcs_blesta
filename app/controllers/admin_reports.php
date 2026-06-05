@@ -67,11 +67,6 @@ class AdminReports extends AppController
         $this->set('formats', $select + $this->ReportManager->getFormats());
         $this->set('vars', (isset($vars) ? $vars : new stdClass()));
 
-        $this->Javascript->setFile('date.min.js');
-        $this->Javascript->setFile('jquery.datePicker.min.js');
-        $this->Javascript->setInline(
-            'Date.firstDayOfWeek=' . ($company_settings['calendar_begins'] == 'sunday' ? 0 : 1) . ';'
-        );
     }
 
     /**

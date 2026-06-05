@@ -1,0 +1,111 @@
+<?php
+echo (isset($message) ? $message : null);
+
+// Prefer combined start_datetime/end_datetime (set after a failed POST). Fall back to
+// the controller's separate start_date + start_time vars on initial GET.
+$start_datetime = $vars->start_datetime
+    ?? (isset($vars->start_date)
+        ? $vars->start_date . (isset($vars->start_time) ? 'T' . substr($vars->start_time, 0, 5) : '')
+        : '');
+$end_datetime = $vars->end_datetime
+    ?? (isset($vars->end_date)
+        ? $vars->end_date . (isset($vars->end_time) ? 'T' . substr($vars->end_time, 0, 5) : '')
+        : '');
+
+$is_all_day = (isset($vars->all_day) ? $vars->all_day : '0') == '1';
+$input_type = $is_all_day ? 'date' : 'datetime-local';
+$start_value = $is_all_day ? substr($start_datetime, 0, 10) : $start_datetime;
+$end_value = $is_all_day ? substr($end_datetime, 0, 10) : $end_datetime;
+
+$this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'add_event_form']);
+?>
+<div class="mb-3">
+    <?php
+    $this->Form->label($this->_('AdminMain.addevent.field_title', true), 'title', ['class' => 'form-label']);
+    $this->Form->fieldText('title', (isset($vars->title) ? $vars->title : null), ['id' => 'title', 'class' => 'form-control']);
+    ?>
+</div>
+
+<div class="mb-3 form-check">
+    <?php
+    $this->Form->fieldCheckbox('all_day', '1', $is_all_day, ['id' => 'all_day', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminMain.addevent.field_all_day', true), 'all_day', ['class' => 'form-check-label']);
+    ?>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <?php $this->Form->label($this->_('AdminMain.addevent.field_start_date', true), 'start_datetime', ['class' => 'form-label']);?>
+        <input type="<?php echo $input_type;?>" class="form-control" id="start_datetime" name="start_datetime" value="<?php echo $this->Html->safe($start_value);?>" />
+    </div>
+    <div class="col-md-6 mb-3">
+        <?php $this->Form->label($this->_('AdminMain.addevent.field_end_date', true), 'end_datetime', ['class' => 'form-label']);?>
+        <input type="<?php echo $input_type;?>" class="form-control" id="end_datetime" name="end_datetime" value="<?php echo $this->Html->safe($end_value);?>" />
+    </div>
+</div>
+
+<div class="mb-3 form-check">
+    <?php
+    $this->Form->fieldCheckbox('shared', '1', ((isset($vars->shared) ? $vars->shared : '0') == '1'), ['id' => 'shared', 'class' => 'form-check-input']);
+    $this->Form->label($this->_('AdminMain.addevent.field_shared', true), 'shared', ['class' => 'form-check-label']);
+    ?>
+</div>
+
+<?php
+$this->Form->end();
+?>
+
+<div class="modal-footer-actions d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminMain.addevent.field_addeventsubmit', true), ['class' => 'btn btn-primary', 'form' => 'add_event_form']);
+    ?>
+</div>
+
+<script type="text/javascript">
+    (function() {
+        var allDayCheckbox = document.getElementById('all_day');
+        var startInput = document.getElementById('start_datetime');
+        var endInput = document.getElementById('end_datetime');
+        if (!startInput || !endInput) return;
+
+        function applyAllDay() {
+            var isAllDay = allDayCheckbox && allDayCheckbox.checked;
+            var newType = isAllDay ? 'date' : 'datetime-local';
+            [startInput, endInput].forEach(function(input) {
+                if (input.type === newType) return;
+                var oldValue = input.value;
+                var newValue;
+                if (isAllDay) {
+                    var separatorIndex = oldValue.indexOf('T');
+                    if (separatorIndex !== -1) {
+                        input.dataset.savedTime = oldValue.slice(separatorIndex + 1);
+                    }
+                    newValue = oldValue.slice(0, 10);
+                } else {
+                    var savedTime = input.dataset.savedTime || '00:00';
+                    newValue = oldValue ? oldValue + 'T' + savedTime : '';
+                }
+                input.type = newType;
+                input.value = newValue;
+            });
+        }
+        if (allDayCheckbox) allDayCheckbox.addEventListener('change', applyAllDay);
+
+        startInput.addEventListener('change', function() {
+            if (!startInput.value) return;
+            if (endInput.value && endInput.value > startInput.value) return;
+            if (startInput.type === 'datetime-local') {
+                var newEndDate = new Date(startInput.value);
+                newEndDate.setHours(newEndDate.getHours() + 1);
+                var padTwoDigits = function(value) { return String(value).padStart(2, '0'); };
+                endInput.value = newEndDate.getFullYear()
+                    + '-' + padTwoDigits(newEndDate.getMonth() + 1)
+                    + '-' + padTwoDigits(newEndDate.getDate())
+                    + 'T' + padTwoDigits(newEndDate.getHours())
+                    + ':' + padTwoDigits(newEndDate.getMinutes());
+            } else {
+                endInput.value = startInput.value;
+            }
+        });
+    })();
+</script>

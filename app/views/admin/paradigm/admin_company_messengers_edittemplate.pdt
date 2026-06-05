@@ -1,0 +1,139 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $tabs = [];
+    if (is_array((isset($template->messages) ? $template->messages : null)) && count($template->messages) > 0) {
+        foreach ($template->messages as $type => $messages) {
+            $tabs[] = [
+                'name' => (isset($types[$type]) ? $types[$type] : null),
+                'current' => (isset($message_type) ? $message_type : null) == $type,
+                'attributes' => [
+                    'href' => $this->Html->safe($this->base_uri . 'settings/company/messengers/edittemplate/' . $template->id . '/' . $type . '/')
+                ]
+            ];
+        }
+    }
+    $this->Widget->clear();
+    if (!empty($tabs)) {
+        $this->Widget->setTabs($tabs);
+    }
+    $this->Widget->create($this->_('AdminCompanyMessengers.edittemplate.boxtitle_edittemplate', true, (isset($template_name) ? $template_name : null)), ['id' => 'admin_company_messengers_edittemplate']);?>
+
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <!-- Available Tags -->
+            <div class="mb-3">
+                <label class="form-label">
+                    <?php $this->_('AdminCompanyMessengers.edittemplate.field.tags');?>
+                </label>
+                <?php
+                if (is_array($template->tags)) {
+                ?>
+                    <div class="alert alert-info mb-3">
+                        <?php
+                        for ($i = 0, $num_tags = count($template->tags); $i < $num_tags; $i++) {
+                        ?>
+                        <code class="me-2"><?php echo (isset($template->tags[$i]) ? $this->Html->safe($template->tags[$i]) : null);?></code>
+                        <?php
+                        }
+                        ?>
+                    </div>
+                <?php
+                }
+                ?>
+            </div>
+
+            <!-- Language Tabs -->
+            <div class="mb-3">
+                <ul class="nav nav-pills mb-3" role="tablist" id="language-tabs">
+                    <?php
+                    $i = 0;
+                    foreach ($template->messages[$message_type]->content as $message) {
+                    ?>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link<?php echo $i == 0 ? ' active' : '';?>"
+                                    id="tab-<?php echo $this->Html->safe($message->lang);?>"
+                                    data-bs-toggle="pill"
+                                    data-bs-target="#content-<?php echo $this->Html->safe($message->lang);?>"
+                                    type="button"
+                                    role="tab"
+                                    aria-controls="content-<?php echo $this->Html->safe($message->lang);?>"
+                                    aria-selected="<?php echo $i == 0 ? 'true' : 'false';?>">
+                                <?php echo (isset($message->lang_name) ? $message->lang_name : null);?>
+                            </button>
+                        </li>
+                    <?php
+                        $i++;
+                    }
+                    ?>
+                </ul>
+
+                <div class="tab-content">
+                    <?php
+                    $i = 0;
+                    foreach ($template->messages[$message_type]->content as $message) {
+                    ?>
+                        <div class="tab-pane fade<?php echo $i == 0 ? ' show active' : '';?>"
+                             id="content-<?php echo $this->Html->safe($message->lang);?>"
+                             role="tabpanel"
+                             aria-labelledby="tab-<?php echo $this->Html->safe($message->lang);?>">
+                            <?php
+                            $this->Form->fieldTextarea(
+                                'message[' . $message->message_id . '][content][' . $message->lang . ']',
+                                (isset($vars->message[$message->message_id]['content'][$message->lang]) ? $vars->message[$message->message_id]['content'][$message->lang] : $message->content),
+                                ['id' => 'content_' . $message->lang, 'class' => 'form-control', 'rows' => 10]
+                            );
+                            ?>
+                        </div>
+                    <?php
+                        $i++;
+                    }
+                    ?>
+                </div>
+            </div>
+
+            <!-- Status Checkbox -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'message[' . $template->messages[$message_type]->id . '][status]',
+                        'active',
+                        ((isset($vars->message[$template->messages[$message_type]->id]['status']) ? $vars->message[$template->messages[$message_type]->id]['status'] : (isset($template->messages[$message_type]->status) ? $template->messages[$message_type]->status : null)) == 'active' ? true : false),
+                        ['id' => 'status', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="status" class="form-check-label">
+                        <?php $this->_('AdminCompanyMessengers.edittemplate.field.status');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminCompanyMessengers.!tooltip.status', true));?>"></i>
+                    </label>
+                </div>
+            </div>
+
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end gap-2">
+            <a class="btn btn-secondary"
+               href="<?php echo $this->base_uri;?>settings/company/messengers/templates/">
+                <?php $this->_('AdminCompanyMessengers.edittemplate.field.cancel');?>
+            </a>
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyMessengers.edittemplate.field.edittemplatesubmit', true), ['class' => 'btn btn-primary']);
+            $this->Form->end();
+            ?>
+        </div>
+    <?php $this->Widget->end();?>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>

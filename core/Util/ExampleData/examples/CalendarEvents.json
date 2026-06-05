@@ -1,0 +1,11 @@
+{
+    "id": 25,
+    "company_id": 1,
+    "staff_id": 38,
+    "shared": 1,
+    "title": "Seed Test Meeting",
+    "url": null,
+    "start_date": "2026-02-27 09:00:00",
+    "end_date": "2026-02-27 10:00:00",
+    "all_day": 0
+}

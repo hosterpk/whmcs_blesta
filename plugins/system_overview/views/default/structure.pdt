@@ -1,3 +1,2 @@
-
-        <?php
-        echo (isset($content) ? $content : null);
+<?php
+echo $content ?? null;

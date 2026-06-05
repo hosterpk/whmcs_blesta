@@ -1,0 +1,155 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+
+if ((isset($accounts) ? $accounts : false) && (($num_accounts = count($accounts)) > 0)) {
+?>
+<div class="payment-method-cards p-3" id="accounts">
+    <?php
+    // Save the account type of the account that is checked
+    $account_type = 'cc';
+
+    for ($i = 0; $i < $num_accounts; $i++) {
+        // Radio is checked if both account ID and account type match
+        $radio_checked = false;
+
+        if (((isset($vars->account_id) ? $this->Html->safe($vars->account_id) : null) == (isset($accounts[$i]->id) ? $accounts[$i]->id : null)) &&
+            ((isset($vars->type) ? $this->Html->safe($vars->type) : null) == (isset($accounts[$i]->account_type) ? $accounts[$i]->account_type : null))) {
+            $radio_checked = true;
+            $account_type = (isset($accounts[$i]->account_type) ? $accounts[$i]->account_type : null);
+        }
+
+        $is_cc = ((isset($accounts[$i]->account_type) ? $accounts[$i]->account_type : null) == 'cc');
+        $is_unverified = (($accounts[$i]->status ?? 'active') != 'active');
+
+        // Determine expiration status for CC accounts
+        $is_expired = false;
+        $is_expiring = false;
+        $expiration_display = '';
+        if ($is_cc && !empty($accounts[$i]->expiration)) {
+            $exp_raw = $accounts[$i]->expiration;
+            $exp_year = substr($exp_raw, 0, 4);
+            $exp_month = substr($exp_raw, 4, 2);
+            $exp_date = new DateTime($exp_year . '-' . $exp_month . '-01');
+            $exp_date->modify('last day of this month');
+            $exp_date->setTime(23, 59, 59);
+            $now = new DateTime();
+            $is_expired = ($exp_date < $now);
+            if (!$is_expired) {
+                $diff = $now->diff($exp_date);
+                $months_remaining = ($diff->y * 12) + $diff->m;
+                $is_expiring = ($months_remaining < 3);
+            }
+            $expiration_display = $exp_date->format('m/Y');
+        }
+
+        // Determine the type label
+        $type_label = $is_cc
+            ? (isset($cc_types[$accounts[$i]->type]) ? $cc_types[$accounts[$i]->type] : '')
+            : (isset($ach_types[$accounts[$i]->type]) ? $ach_types[$accounts[$i]->type] : '');
+
+        // Build URLs
+        $edit_url = $this->base_uri . 'clients/' . ($is_cc ? 'editccaccount' : 'editachaccount') . '/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/' . (isset($accounts[$i]->id) ? $this->Html->safe($accounts[$i]->id) : null) . '/';
+        $delete_url = $this->base_uri . 'clients/' . ($is_cc ? 'deleteccaccount' : 'deleteachaccount') . '/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/' . (isset($accounts[$i]->id) ? $this->Html->safe($accounts[$i]->id) : null) . '/';
+        $verify_url = $this->base_uri . 'clients/verifyachaccount/' . (isset($client->id) ? $this->Html->safe($client->id) : null) . '/' . (isset($accounts[$i]->id) ? $this->Html->safe($accounts[$i]->id) : null) . '/';
+    ?>
+    <label class="payment-method-card">
+        <?php
+        $this->Form->fieldRadio('account_id', (isset($accounts[$i]->id) ? $accounts[$i]->id : null), $radio_checked, ['data-account-type' => (isset($accounts[$i]->account_type) ? $accounts[$i]->account_type : null)]);
+        ?>
+        <div class="payment-method-content">
+            <div class="payment-method-icon">
+                <i class="bi <?php echo $is_cc ? 'bi-credit-card' : 'bi-bank';?>"></i>
+            </div>
+            <div class="payment-method-details">
+                <div class="payment-method-name">
+                    <?php echo $this->Html->safe($type_label);?>
+                    &bull;&bull;&bull;&bull; <?php echo (isset($accounts[$i]->last4) ? $this->Html->safe($accounts[$i]->last4) : null);?>
+                    <?php if ($radio_checked) { ?>
+                    <span class="payment-method-badge auto-debit"><?php $this->_('AdminClients.accounts.badge_auto_debit');?></span>
+                    <?php } ?>
+                    <?php if ($is_expired) { ?>
+                    <span class="payment-method-badge expired"><?php $this->_('AdminClients.accounts.badge_expired');?></span>
+                    <?php } elseif ($is_expiring) { ?>
+                    <span class="payment-method-badge expiring"><?php $this->_('AdminClients.accounts.badge_expiring');?></span>
+                    <?php } ?>
+                    <?php if ($is_unverified) { ?>
+                    <span class="payment-method-badge expired"><?php $this->_('AdminClients.accounts.badge_unverified');?></span>
+                    <?php } ?>
+                </div>
+                <div class="payment-method-info">
+                    <?php echo (isset($accounts[$i]->first_name) ? $this->Html->safe($accounts[$i]->first_name) : null) . ' ' . (isset($accounts[$i]->last_name) ? $this->Html->safe($accounts[$i]->last_name) : null);?>
+                    <?php if ($is_cc && $expiration_display) { ?>
+                    &middot; <?php $this->_('AdminClients.accounts.text_expires', false, $expiration_display);?>
+                    <?php } ?>
+                    <?php if (isset($accounts[$i]->gateway_name)) { ?>
+                    &middot; <?php echo $this->Html->safe($accounts[$i]->gateway_name);?>
+                    <?php } ?>
+                </div>
+            </div>
+            <div class="payment-method-actions">
+                <?php if (!$is_unverified) { ?>
+                <a href="<?php echo $edit_url;?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.accounts.option_edit');?>">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <?php } elseif (!$is_cc) { ?>
+                <a href="<?php echo $verify_url;?>" class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminClients.accounts.option_verify');?>">
+                    <i class="bi bi-patch-check"></i>
+                </a>
+                <?php } ?>
+                <a href="<?php echo $delete_url;?>" class="btn btn-sm btn-outline-danger modal-confirm-delete-account"
+                    data-confirm-message="<?php echo $this->Html->safe($this->_('AdminClients.accounts.confirm_delete', true));?>"
+                    title="<?php $this->_('AdminClients.accounts.option_delete');?>">
+                    <i class="bi bi-trash"></i>
+                </a>
+            </div>
+        </div>
+    </label>
+    <?php
+    }
+    ?>
+
+    <!-- No Auto Debit option -->
+    <label class="payment-method-card add-payment-method-card">
+        <?php
+        $this->Form->fieldRadio('account_id', 'none', ((isset($vars->account_id) ? $this->Html->safe($vars->account_id) : null) == 'none'), ['data-account-type' => '']);
+        ?>
+        <div class="payment-method-content">
+            <div class="payment-method-icon">
+                <i class="bi bi-x-lg"></i>
+            </div>
+            <div class="payment-method-details">
+                <div class="payment-method-name">
+                    <?php $this->_('AdminClients.accounts.text_no_autodebit');?>
+                </div>
+                <div class="payment-method-info">
+                    <?php $this->_('AdminClients.accounts.text_no_autodebit_desc');?>
+                </div>
+            </div>
+        </div>
+    </label>
+</div>
+<?php
+$this->Form->fieldHidden('type', (isset($account_type) ? $this->Html->safe($account_type) : null), ['id' => 'account_type']);
+?>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.accounts.field_accountsubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+} else {
+?>
+<div class="empty-section">
+    <div class="empty-box text-center p-4">
+        <i class="bi bi-credit-card text-muted" style="font-size: 3rem;"></i>
+        <p class="text-muted mt-3"><?php $this->_('AdminClients.accounts.no_results');?></p>
+    </div>
+</div>
+<?php
+}
+
+$this->Form->end();
+?>

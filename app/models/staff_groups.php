@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use Loader;
+use Cache;
+use stdClass;
+
 /**
  * Staff group management
  *
@@ -11,6 +19,19 @@
  */
 class StaffGroups extends AppModel
 {
+    /**
+     * @var array In-memory cache of staff group lookups keyed by "staff_id.company_id"
+     */
+    private static $staffGroupCache = [];
+
+    /**
+     * Clears the in-memory staff group cache
+     */
+    public static function clearStaffGroupCache()
+    {
+        self::$staffGroupCache = [];
+    }
+
     /**
      * Initialize Staff Groups
      */
@@ -56,8 +77,13 @@ class StaffGroups extends AppModel
             $this->setPermissions($aro, $vars, $vars['company_id']);
 
             // Add group notices
-            foreach ((isset($vars['notices']) ? $vars['notices'] : []) as $notice) {
+            foreach (($vars['notices'] ?? []) as $notice) {
                 $this->addNotice(['staff_group_id' => $staff_group_id, 'action' => $notice]);
+            }
+
+            // Add group notifications
+            foreach (($vars['notifications'] ?? []) as $notification) {
+                $this->addNotification(['staff_group_id' => $staff_group_id, 'action' => $notification]);
             }
 
             return $staff_group_id;
@@ -97,6 +123,8 @@ class StaffGroups extends AppModel
         $vars['staff_group_id'] = $staff_group_id;
 
         if ($this->Input->validates($vars)) {
+            self::clearStaffGroupCache();
+
             $fields = ['company_id', 'name', 'session_lock'];
             $this->Record->where('id', '=', $staff_group_id)->update('staff_groups', $vars, $fields);
 
@@ -113,17 +141,34 @@ class StaffGroups extends AppModel
             // Get current group notices
             $current_notices = $this->getNotices($staff_group_id);
 
+            // Get current group notifications
+            $current_notifications = $this->getNotifications($staff_group_id);
+
             // Add new group notices
             $new_notices = [];
-            foreach ((isset($vars['notices']) ? $vars['notices'] : []) as $notice) {
+            foreach (($vars['notices'] ?? []) as $notice) {
                 $this->addNotice(['staff_group_id' => $staff_group_id, 'action' => $notice]);
                 $new_notices[] = $notice;
+            }
+
+            // Add new group notifications
+            $new_notifications = [];
+            foreach (($vars['notifications'] ?? []) as $notification) {
+                $this->addNotification(['staff_group_id' => $staff_group_id, 'action' => $notification]);
+                $new_notifications[] = $notification;
             }
 
             // Delete any notices that were not given, but still exist
             foreach ($current_notices as $current_notice) {
                 if (!in_array($current_notice->action, $new_notices)) {
                     $this->deleteNotice($staff_group_id, $current_notice->action);
+                }
+            }
+
+            // Delete any notifications that were not given, but still exist
+            foreach ($current_notifications as $current_notification) {
+                if (!in_array($current_notification->action, $new_notifications)) {
+                    $this->deleteNotification($staff_group_id, $current_notification->action);
                 }
             }
 
@@ -172,6 +217,8 @@ class StaffGroups extends AppModel
         $this->Input->setRules($rules);
 
         if ($this->Input->validates($vars)) {
+            self::clearStaffGroupCache();
+
             // Begin transaction
             $this->Record->begin();
 
@@ -183,6 +230,12 @@ class StaffGroups extends AppModel
             // Add the staff group to the ACL's ARO and ACL
             $this->Acl->removeAro('staff_group_' . $staff_group_id);
             $this->Acl->removeAcl('staff_group_' . $staff_group_id);
+
+            // Remove notices
+            $this->deleteGroupNotices($staff_group_id);
+
+            // Remove notifications
+            $this->deleteGroupNotifications($staff_group_id);
 
             // Commit transaction
             $this->Record->commit();
@@ -244,6 +297,7 @@ class StaffGroups extends AppModel
                 'company_id' => $company_id,
                 'name' => $staff_group->name,
                 'notices' => [],
+                'notifications' => [],
                 'permission_group' => [],
                 'permission' => [],
                 'session_lock' => $staff_group->session_lock
@@ -252,6 +306,11 @@ class StaffGroups extends AppModel
             // Set notices
             foreach ($staff_group->notices as $notice) {
                 $vars['notices'][] = $notice->action;
+            }
+
+            // Set notifications
+            foreach ($staff_group->notifications as $notification) {
+                $vars['notifications'][] = $notification->action;
             }
 
             // Set permissions
@@ -331,6 +390,65 @@ class StaffGroups extends AppModel
     }
 
     /**
+     * Adds a staff group notification
+     *
+     * @param array $vars An array of staff group notification information including:
+     *
+     *  - staff_group_id The ID of the staff group this notification will be added to
+     *  - action The notification action
+     */
+    public function addNotification(array $vars)
+    {
+        $this->Input->setRules($this->getNotificationRules($vars));
+
+        if ($this->Input->validates($vars)) {
+            // Add a new notification, but allow duplicates to be added without error
+            $this->Record->duplicate('action', '=', $vars['action'])->
+                insert('staff_group_notifications', $vars, ['staff_group_id', 'action']);
+        }
+    }
+
+    /**
+     * Deletes the given staff group notification
+     *
+     * @param int $staff_group_id The ID of the staff group the notification belongs to
+     * @param string $action The notification action to remove (optional, default null to delete all notifications)
+     */
+    public function deleteNotification($staff_group_id, $action = null)
+    {
+        $this->deleteGroupNotifications($staff_group_id, $action);
+    }
+
+    /**
+     * Deletes the staff group notifications
+     *
+     * @param int $staff_group_id The ID of the staff group
+     * @param string $action The notification action (optional)
+     */
+    private function deleteGroupNotifications($staff_group_id, $action = null)
+    {
+        // Delete the notification from all staff members
+        $this->Record->from('staff_notifications')->
+            where('staff_group_id', '=', $staff_group_id);
+
+        if ($action) {
+            $this->Record->where('action', '=', $action);
+        }
+
+        $this->Record->delete();
+
+        // Delete the staff group notification
+        $this->Record->from('staff_group_notifications')->
+            where('staff_group_id', '=', $staff_group_id);
+
+        if ($action) {
+            $this->Record->where('action', '=', $action);
+        }
+
+        $this->Record->delete();
+    }
+
+    /**
      * Fetches a staff group
      *
      * @param int $staff_group_id The staff group ID to fetch
@@ -351,6 +469,7 @@ class StaffGroups extends AppModel
         // Set staff group notices
         if ($staff_group) {
             $staff_group->notices = $this->getNotices($staff_group_id);
+            $staff_group->notifications = $this->getNotifications($staff_group_id);
         }
 
         return $staff_group;
@@ -369,6 +488,7 @@ class StaffGroups extends AppModel
         // Set staff group notices
         foreach ($staff_groups as &$staff_group) {
             $staff_group->notices = $this->getNotices($staff_group->id);
+            $staff_group->notifications = $this->getNotifications($staff_group->id);
         }
 
         return $staff_groups;
@@ -401,6 +521,12 @@ class StaffGroups extends AppModel
      */
     public function getStaffGroupByStaff($staff_id, $company_id)
     {
+        // Return cached result if available (avoids duplicate fetches within the same request)
+        $cacheKey = $staff_id . '.' . $company_id;
+        if (array_key_exists($cacheKey, self::$staffGroupCache)) {
+            return self::$staffGroupCache[$cacheKey];
+        }
+
         $staff_group = $this->Record->select(['staff_groups.*'])->from('staff_group')->
             innerJoin('staff_groups', 'staff_groups.id', '=', 'staff_group.staff_group_id', false)->
             where('staff_group.staff_id', '=', $staff_id)->where('staff_groups.company_id', '=', $company_id)->
@@ -409,7 +535,10 @@ class StaffGroups extends AppModel
         // Set staff group notices
         if ($staff_group) {
             $staff_group->notices = $this->getNotices($staff_group->id);
+            $staff_group->notifications = $this->getNotifications($staff_group->id);
         }
+
+        self::$staffGroupCache[$cacheKey] = $staff_group;
 
         return $staff_group;
     }
@@ -433,6 +562,7 @@ class StaffGroups extends AppModel
         // Set staff group notices
         foreach ($staff_groups as &$staff_group) {
             $staff_group->notices = $this->getNotices($staff_group->id);
+            $staff_group->notifications = $this->getNotifications($staff_group->id);
         }
 
         return $staff_groups;
@@ -462,10 +592,39 @@ class StaffGroups extends AppModel
      */
     public function getNotices($staff_group_id)
     {
-        $fields = ['staff_group_notices.*', 'email_groups.notice_type'];
-        return $this->Record->select($fields)->from('staff_group_notices')->
-            innerJoin('email_groups', 'email_groups.action', '=', 'staff_group_notices.action', false)->
-            where('staff_group_id', '=', $staff_group_id)->fetchAll();
+        try {
+            $fields = ['staff_group_notices.*', 'email_groups.notice_type'];
+            return $this->Record->select($fields)->from('staff_group_notices')->
+                innerJoin('email_groups', 'email_groups.action', '=', 'staff_group_notices.action', false)->
+                where('staff_group_id', '=', $staff_group_id)->fetchAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Fetches all staff group notifications
+     *
+     * @param int $staff_group_id The ID of the staff group
+     * @return array A list of all staff group notices
+     */
+    public function getNotifications($staff_group_id)
+    {
+        try {
+            return $this->Record->select([
+                'notification_actions.id', 'notification_actions.dir',
+                'notification_actions.type', 'staff_group_notifications.*'
+            ])->
+                from('staff_group_notifications')->
+                innerJoin('staff_groups', 'staff_groups.id', '=', 'staff_group_notifications.staff_group_id', false)->
+                innerJoin('notification_actions', 'notification_actions.action', '=', 'staff_group_notifications.action', false)->
+                where('staff_group_notifications.staff_group_id', '=', $staff_group_id)->
+                where('notification_actions.target', '=', 'staff')->
+                where('notification_actions.company_id', '=', 'staff_groups.company_id', false)->
+                fetchAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     /**
@@ -477,6 +636,7 @@ class StaffGroups extends AppModel
      */
     private function getGroups($company_id = null)
     {
+        $this->Record->reset();
         $fields = [
             'staff_groups.id', 'staff_groups.company_id', 'staff_groups.name',
             'COUNT(staff.id)' => 'num_staff', 'companies.name' => 'company_name'
@@ -602,7 +762,33 @@ class StaffGroups extends AppModel
             'action' => [
                 'exists' => [
                     'rule' => [[$this, 'validateExists'], 'action', 'email_groups'],
-                    'message' => $this->_('StaffGroups.!error.action.exists', (isset($vars['action']) ? $vars['action'] : null))
+                    'message' => $this->_('StaffGroups.!error.action.exists', ($vars['action'] ?? null))
+                ]
+            ]
+        ];
+
+        return $rules;
+    }
+
+    /**
+     * Fetches the rules for adding/editing a staff group notification
+     *
+     * @param array $vars A list of input vars
+     * @return array The staff group notification rules
+     */
+    private function getNotificationRules(array $vars)
+    {
+        $rules = [
+            'staff_group_id' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateExists'], 'id', 'staff_groups'],
+                    'message' => $this->_('StaffGroups.!error.staff_group_id.exists')
+                ]
+            ],
+            'action' => [
+                'exists' => [
+                    'rule' => [[$this, 'validateExists'], 'action', 'notification_actions'],
+                    'message' => $this->_('StaffGroups.!error.action.exists', ($vars['action'] ?? null))
                 ]
             ]
         ];

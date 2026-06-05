@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * ispmanager Module.
  *
@@ -108,7 +110,7 @@ class Ispmanager extends Module
             $fields->fieldSelect(
                 'meta[template]',
                 $templates,
-                (isset($vars->meta['template']) ? $vars->meta['template'] : null),
+                ($vars->meta['template'] ?? null),
                 ['id' => 'ispmanager_template']
             )
         );
@@ -236,6 +238,14 @@ class Ispmanager extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -268,6 +278,14 @@ class Ispmanager extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -378,7 +396,7 @@ class Ispmanager extends Module
         $domain->attach(
             $fields->fieldText(
                 'ispmanager_domain',
-                (isset($vars->ispmanager_domain) ? $vars->ispmanager_domain : null),
+                ($vars->ispmanager_domain ?? null),
                 ['id' => 'ispmanager_domain']
             )
         );
@@ -394,7 +412,7 @@ class Ispmanager extends Module
         $username->attach(
             $fields->fieldText(
                 'ispmanager_username',
-                (isset($vars->ispmanager_username) ? $vars->ispmanager_username : null),
+                ($vars->ispmanager_username ?? null),
                 ['id' => 'ispmanager_username']
             )
         );
@@ -413,7 +431,7 @@ class Ispmanager extends Module
         $password->attach(
             $fields->fieldPassword(
                 'ispmanager_password',
-                ['id' => 'ispmanager_password', 'value' => (isset($vars->ispmanager_password) ? $vars->ispmanager_password : null)]
+                ['id' => 'ispmanager_password', 'value' => ($vars->ispmanager_password ?? null)]
             )
         );
         // Add tooltip
@@ -445,7 +463,7 @@ class Ispmanager extends Module
         $domain->attach(
             $fields->fieldText(
                 'ispmanager_domain',
-                (isset($vars->ispmanager_domain) ? $vars->ispmanager_domain : ($vars->domain ?? null)),
+                ($vars->ispmanager_domain ?? ($vars->domain ?? null)),
                 ['id' => 'ispmanager_domain']
             )
         );
@@ -478,7 +496,7 @@ class Ispmanager extends Module
         $password->attach(
             $fields->fieldPassword(
                 'ispmanager_password',
-                ['id' => 'ispmanager_password', 'value' => (isset($vars->ispmanager_password) ? $vars->ispmanager_password : null)]
+                ['id' => 'ispmanager_password', 'value' => ($vars->ispmanager_password ?? null)]
             )
         );
         // Set the label as a field
@@ -1034,7 +1052,7 @@ class Ispmanager extends Module
                 && !empty($post['ispmanager_password'])
             ) {
                 $data = [
-                    'ispmanager_password' => (isset($post['ispmanager_password']) ? $post['ispmanager_password'] : null)
+                    'ispmanager_password' => ($post['ispmanager_password'] ?? null)
                 ];
                 $this->Services->edit($service->id, $data);
             } else {
@@ -1054,7 +1072,7 @@ class Ispmanager extends Module
 
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'ispmanager' . DS);
         return $this->view->fetch();
@@ -1120,11 +1138,7 @@ class Ispmanager extends Module
         // Update account count
         $count = (int) $vars->account_count;
 
-        if ($increase) {
-            $vars->account_count = $count + 1;
-        } else {
-            $vars->account_count = $count - 1;
-        }
+        $vars->account_count = $increase ? $count + 1 : $count - 1;
 
         if ($vars->account_count < 0) {
             $vars->account_count = 0;
@@ -1171,8 +1185,8 @@ class Ispmanager extends Module
             if ($success) {
                 return true;
             }
-        } catch (Exception $e) {
-            // Trap any errors encountered, could not validate connection
+        } catch (\Throwable $e) {
+            $this->log($hostname . '|user', serialize(['error' => $e->getMessage()]), 'output', false);
         }
 
         return false;
@@ -1255,12 +1269,12 @@ class Ispmanager extends Module
     private function getFieldsFromInput(array $vars, $package)
     {
         $fields = [
-            'name' => isset($vars['ispmanager_username']) ? $vars['ispmanager_username'] : null,
-            'fullname' => isset($vars['ispmanager_full_name']) ? $vars['ispmanager_full_name'] : null,
-            'passwd' => isset($vars['ispmanager_password']) ? $vars['ispmanager_password'] : null,
-            'confirm' => isset($vars['ispmanager_password']) ? $vars['ispmanager_password'] : null,
-            'webdomain_name' => isset($vars['ispmanager_domain']) ? $vars['ispmanager_domain'] : null,
-            'emaildomain_name' => isset($vars['ispmanager_domain']) ? $vars['ispmanager_domain'] : null,
+            'name' => $vars['ispmanager_username'] ?? null,
+            'fullname' => $vars['ispmanager_full_name'] ?? null,
+            'passwd' => $vars['ispmanager_password'] ?? null,
+            'confirm' => $vars['ispmanager_password'] ?? null,
+            'webdomain_name' => $vars['ispmanager_domain'] ?? null,
+            'emaildomain_name' => $vars['ispmanager_domain'] ?? null,
             'preset' => $package->meta->template
         ];
 
@@ -1299,7 +1313,7 @@ class Ispmanager extends Module
             return;
         }
 
-        return isset($response->response) ? $response->response : $response;
+        return $response->response ?? $response;
     }
 
     /**
@@ -1349,7 +1363,7 @@ class Ispmanager extends Module
             }
 
             $this->log($module_row->meta->host_name, serialize($package_list), 'output', $success);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
         }
 

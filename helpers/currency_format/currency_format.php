@@ -1,5 +1,9 @@
 <?php
+
+namespace Blesta\Helpers\CurrencyFormat;
+
 use Blesta\Core\Util\Helpers\Helper;
+use Loader;
 
 /**
  * Currency Format Helper
@@ -77,7 +81,7 @@ class CurrencyFormat extends Helper
      * @see CurrencyFormat::cast()
      * @see CurrencyFormat::clear()
      */
-    public function format($value, $currency, array $options = null)
+    public function format($value, $currency, ?array $options = null)
     {
         // Currency should be a 3-character string
         if (!is_string($currency) || strlen($currency) != 3) {

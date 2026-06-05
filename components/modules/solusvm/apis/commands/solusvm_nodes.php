@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SolusVM Node Management
  *

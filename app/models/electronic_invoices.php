@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+
 /**
  * Electronic Invoice management
  *
@@ -199,6 +206,11 @@ class ElectronicInvoices extends AppModel
             if ($this->isCacheEnabled($company_settings)) {
                 $cached_content = $this->fetchCache($invoice_id, $format);
             }
+
+            // Set security headers
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none';");
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: DENY');
 
             // If cached, download cached content using Download component
             if ($cached_content !== false) {
@@ -433,12 +445,14 @@ class ElectronicInvoices extends AppModel
      */
     private function getEnabledFormats($company_settings)
     {
-        if (!isset($company_settings['electronic_invoice_formats'])
-            || empty($company_settings['electronic_invoice_formats'])) {
+        if (
+            !isset($company_settings['electronic_invoice_formats'])
+            || empty($company_settings['electronic_invoice_formats'])
+        ) {
             return [];
         }
 
-        $formats = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($company_settings['electronic_invoice_formats']);
+        $formats = safe_unserialize($company_settings['electronic_invoice_formats']);
 
         return is_array($formats) ? $formats : [];
     }

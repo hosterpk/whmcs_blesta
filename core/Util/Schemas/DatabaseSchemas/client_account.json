@@ -1,0 +1,63 @@
+{
+    "columns": [
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "account_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "type",
+            "type": "enum('ach','cc')",
+            "nullable": false,
+            "key": null,
+            "default": "cc",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "failed_count",
+            "type": "smallint",
+            "nullable": false,
+            "key": null,
+            "default": "0",
+            "extra": null,
+            "precision": 5,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "account_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "account_id",
+                "type"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "client_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

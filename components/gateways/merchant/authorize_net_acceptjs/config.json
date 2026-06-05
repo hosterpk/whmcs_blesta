@@ -1,5 +1,5 @@
 {
-    "version": "1.0.1",
+    "version": "2.0.0",
     "name": "AuthorizeNetAcceptjs.name",
     "description": "AuthorizeNetAcceptjs.description",
     "authors": [
@@ -8,6 +8,11 @@
             "url": "http://www.blesta.com"
         }
     ],
-    "currencies": ["CAD", "GBP", "EUR", "USD"],
+    "currencies": [
+        "CAD",
+        "GBP",
+        "EUR",
+        "USD"
+    ],
     "signup_url": "http://go.evopayments.us/blesta"
 }

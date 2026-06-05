@@ -1,0 +1,14 @@
+{
+    "id": 32,
+    "code": "SEEDTEST1771599597",
+    "company_id": 1,
+    "used_qty": 1,
+    "max_qty": 0,
+    "start_date": null,
+    "end_date": null,
+    "status": "active",
+    "recurring": 0,
+    "limit_recurring": 0,
+    "apply_package_options": 0,
+    "internal_use_only": 0
+}

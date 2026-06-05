@@ -14,6 +14,7 @@ $lang['ServiceChanges.!error.service_id.exists'] = 'Invalid service ID.';
 $lang['ServiceChanges.!error.invoice_id.exists'] = 'Invalid invoice ID.';
 $lang['ServiceChanges.!error.invoice_id.unique'] = 'The invoice ID is already set for a service change and may not be set again.';
 $lang['ServiceChanges.!error.status.valid'] = 'Please select a valid status.';
+$lang['ServiceChanges.!error.void_invoice.paid'] = 'The invoice has already been paid and cannot be voided.';
 
 $lang['ServiceChanges.status.pending'] = 'Pending';
 $lang['ServiceChanges.status.completed'] = 'Completed';

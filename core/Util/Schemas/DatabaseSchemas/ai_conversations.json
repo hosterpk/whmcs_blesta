@@ -1,0 +1,112 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "company_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "staff_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": "0",
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "title",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "model",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "status",
+            "type": "enum('active','archived')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "active",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "date_created",
+            "type": "datetime",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "company_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "company_id"
+            ]
+        },
+        {
+            "name": "date_created",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "date_created"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "staff_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "staff_id"
+            ]
+        },
+        {
+            "name": "status",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "status"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

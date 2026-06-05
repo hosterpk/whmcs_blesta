@@ -1,0 +1,337 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'addservice_basic_form']);
+if ((isset($parent_service_id) ? $parent_service_id : null)) {
+    $this->Form->fieldHidden('parent_service_id', $parent_service_id);
+}
+?>
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.addservice_basic.basic_heading');?>
+</h6>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <?php $this->Form->label($this->_('AdminClients.addservice_basic.field_invoice_method', true), 'invoice_method', ['class' => 'form-label']);?>
+
+        <div class="form-check">
+            <?php $this->Form->fieldRadio('invoice_method', 'create', !isset($vars->invoice_method) || (isset($vars->invoice_method) ? $vars->invoice_method : null) == 'create', ['id' => 'invoice_method_create', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.addservice_basic.field_invoice_method_create', true), 'invoice_method_create', ['class' => 'form-check-label']);?>
+        </div>
+        <?php
+        if (count((isset($invoices) ? $invoices : [])) > 0) {
+        ?>
+        <div class="form-check">
+            <?php
+            $this->Form->fieldRadio('invoice_method', 'append', (isset($vars->invoice_method) ? $vars->invoice_method : null) == 'append', ['id' => 'invoice_method_append', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.addservice_basic.field_invoice_method_append', true), 'invoice_method_append', ['class' => 'form-check-label']);
+            $this->Form->fieldSelect('invoice_id', $invoices, (isset($vars->invoice_id) ? $vars->invoice_id : null), ['id' => 'invoice_id', 'class' => 'form-select d-inline-block ms-3', 'style' => 'width: auto;']);
+            ?>
+        </div>
+        <?php
+        }
+        ?>
+        <div class="form-check">
+            <?php $this->Form->fieldRadio('invoice_method', 'none', (isset($vars->invoice_method) ? $vars->invoice_method : null) == 'none', ['id' => 'invoice_method_none', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.addservice_basic.field_invoice_method_dont', true), 'invoice_method_none', ['class' => 'form-check-label']);?>
+        </div>
+    </div>
+    <div class="col-12">
+        <?php $this->Form->label($this->_('AdminClients.addservice_basic.field_term', true), 'pricing_id', ['class' => 'form-label']);?>
+        <?php $this->Form->fieldSelect('pricing_id', ['' => $this->_('AppController.select.please', true)] + (array)(isset($terms) ? $terms : null), (isset($vars->pricing_id) ? $vars->pricing_id : null), ['id' => 'pricing_id', 'class' => 'form-select']);?>
+    </div>
+    <div class="col-12">
+        <label class="form-label d-block"><?php $this->_('AdminClients.addservice_basic.field_status');?></label>
+        <div class="btn-group" role="group">
+            <?php
+            $selected_status = (isset($vars->status) ? $vars->status : 'pending');
+            $status_order = ['active', 'pending', 'suspended', 'canceled'];
+            foreach ($status_order as $status_value) {
+                if (!isset($status[$status_value])) {
+                    continue;
+                }
+                $status_label = $status[$status_value];
+                $btn_class = 'btn-outline-primary';
+                if ($status_value == 'active') {
+                    $btn_class = 'btn-outline-success';
+                } elseif ($status_value == 'canceled') {
+                    $btn_class = 'btn-outline-danger';
+                } elseif ($status_value == 'pending') {
+                    $btn_class = 'btn-outline-warning';
+                } elseif ($status_value == 'suspended') {
+                    $btn_class = 'btn-outline-secondary';
+                }
+
+                $is_checked = ($selected_status == $status_value);
+            ?>
+            <input type="radio" class="btn-check" name="status" id="status-<?php echo $this->Html->safe($status_value);?>" value="<?php echo $this->Html->safe($status_value);?>"<?php echo $is_checked ? ' checked' : '';?>>
+            <label class="btn <?php echo $this->Html->safe($btn_class);?>" for="status-<?php echo $this->Html->safe($status_value);?>">
+                <?php echo $this->Html->safe($status_label);?>
+            </label>
+            <?php
+            }
+            ?>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            <?php
+            $this->Form->fieldCheckbox('price_override', 'true', (isset($vars->price_override) ? $vars->price_override : null) == 'true', ['id' => 'price_override', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.editservice.field_price_override', true), 'price_override', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+</div>
+
+<div id="overridePriceFields" class="row g-3 mb-4" style="display: none;">
+    <div class="col-md-4">
+        <?php
+        $this->Form->label($this->_('AdminClients.editservice.field_override_price', true), 'override_price', ['class' => 'form-label']);
+        $this->Form->fieldText('override_price', (isset($vars->override_price) ? $vars->override_price : null), ['id' => 'override_price', 'class' => 'form-control']);
+        ?>
+    </div>
+    <div class="col-md-2">
+        <?php
+        $this->Form->label($this->_('AdminClients.addservice_basic.field_currency', true), 'override_currency', ['class' => 'form-label']);
+        $this->Form->fieldSelect('override_currency', $this->Form->collapseObjectArray((isset($currencies) ? $currencies : []), 'code', 'code'), (isset($vars->override_currency) ? $vars->override_currency : null), ['id' => 'override_currency', 'class' => 'form-select']);
+        ?>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="form-check">
+            <?php $this->Form->fieldCheckbox('use_module', 'true', (isset($vars->use_module) ? $vars->use_module : 'true') === 'true', ['id' => 'use_module', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.addservice_basic.field_use_module', true, (isset($module_name) ? $module_name : null)), 'use_module', ['class' => 'form-check-label']);?>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            <?php $this->Form->fieldCheckbox('notify_order', 'true', (isset($vars->notify_order) ? $vars->notify_order : 'true') === 'true', ['id' => 'notify_order', 'class' => 'form-check-input']);?>
+            <?php $this->Form->label($this->_('AdminClients.addservice_basic.field_notify_order', true), 'notify_order', ['class' => 'form-check-label']);?>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="form-check">
+            <?php
+            $this->Form->fieldCheckbox('disable_option_logic', 'true', (isset($vars->disable_option_logic) ? $vars->disable_option_logic : 'false') == 'true', ['id' => 'disable_option_logic', 'class' => 'form-check-input']);
+            $this->Form->label($this->_('AdminClients.addservice_basic.field_disable_option_logic', true), 'disable_option_logic', ['class' => 'form-check-label']);
+            ?>
+            <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.addservice_basic.tooltip_disable_option_logic');?>"></i>
+        </div>
+    </div>
+    <?php
+    if (!empty($module_row_fields)) {
+    ?>
+    <div class="col-12">
+        <?php $this->Form->label((isset($module_row_name) ? $module_row_name : null), 'module_row_id', ['class' => 'form-label']);?>
+        <?php $this->Form->fieldSelect('module_row_id', (array)(isset($module_row_fields) ? $module_row_fields : []), (isset($vars->module_row_id) ? $vars->module_row_id : null), ['id' => 'module_row_id', 'class' => 'form-select']);?>
+    </div>
+    <?php
+    }
+    ?>
+</div>
+
+<?php
+if (isset($input_html)) {
+    $module_field_html = $input_html->generate(null, $this->view);
+?>
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.addservice_basic.module_heading', false, (isset($module_name) ? $module_name : null));?>
+</h6>
+<?php if (trim($module_field_html)) { ?>
+<div class="mb-4">
+    <?php echo $module_field_html;?>
+</div>
+<?php } else { ?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.addservice_basic.no_module_options');?></p>
+</div>
+<?php
+    }
+}
+?>
+
+<div class="package-options">
+    <?php
+    if (isset($vars->configoptions)) {
+        foreach ($vars->configoptions as $key => $value) {
+            $this->Form->fieldHidden('configoptions[' . $key . ']', $value);
+        }
+    }
+    ?>
+</div>
+
+<?php
+if ((isset($addon_groups) ? $addon_groups : null) && !empty($addon_groups)) {
+?>
+<h6 class="form-section-header">
+    <?php $this->_('AdminClients.addservice_basic.addons_heading');?>
+</h6>
+<?php
+    foreach ($addon_groups as $addon_group) {
+?>
+<div class="accordion mb-3" id="addonGroupAccordion<?php (print (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null));?>">
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#addonGroupContent<?php (print (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null));?>">
+                <?php (print (isset($addon_group->name) ? $this->Html->safe($addon_group->name) : null));?>
+            </button>
+        </h2>
+        <div id="addonGroupContent<?php (print (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null));?>" class="accordion-collapse collapse" data-bs-parent="#addonGroupAccordion<?php (print (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null));?>">
+            <div class="accordion-body">
+            <?php
+            $field_id = 'addon_' . (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null) . '_';
+            ?>
+            <div class="form-check">
+                <?php
+                $this->Form->fieldRadio('addon[' . (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null) . '][id]', '', (isset($vars->addon[$addon_group->id]['id']) ? $vars->addon[$addon_group->id]['id'] : null) == '', ['id' => $field_id, 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminClients.addservice_basic.field_default_addon', true), $field_id, ['class' => 'form-check-label']);
+                ?>
+            </div>
+            <?php
+            foreach ($addon_group->packages as $addon_package) {
+                $field_id = 'addon_' . (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null) . '_' . (isset($addon_package->id) ? $this->Html->safe($addon_package->id) : null);
+            ?>
+            <div class="form-check">
+                <?php
+                $this->Form->fieldRadio('addon[' . (isset($addon_group->id) ? $this->Html->safe($addon_group->id) : null) . '][id]', (isset($addon_package->id) ? $this->Html->safe($addon_package->id) : null), (isset($vars->addon[$addon_group->id]['id']) ? $vars->addon[$addon_group->id]['id'] : null) == $addon_package->id, ['id' => $field_id, 'class' => 'form-check-input']);
+                $this->Form->label($addon_package->name, $field_id, ['class' => 'form-check-label']);
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php
+    }
+?>
+<?php
+}
+?>
+
+<?php
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+(function() {
+    var baseUri = <?php echo json_encode($this->base_uri);?>;
+    var pricingId = document.getElementById('pricing_id');
+    var priceOverride = document.getElementById('price_override');
+    var overridePriceFields = document.getElementById('overridePriceFields');
+    var disableOptionLogic = document.getElementById('disable_option_logic');
+    var statusRadios = document.querySelectorAll('input[name="status"]');
+    var useModuleCheckbox = document.getElementById('use_module');
+    var notifyOrderCheckbox = document.getElementById('notify_order');
+    var packageOptions = document.querySelector('.package-options');
+
+    function updateServiceStatus(useModule, notifyOrder) {
+        var checkedRadio = document.querySelector('input[name="status"]:checked');
+        var status = checkedRadio ? checkedRadio.value : 'active';
+
+        if (useModuleCheckbox) {
+            useModuleCheckbox.checked = (status === 'active' && useModule) || status === 'pending';
+            useModuleCheckbox.disabled = status !== 'active';
+        }
+
+        if (notifyOrderCheckbox) {
+            notifyOrderCheckbox.checked = (status === 'active' && notifyOrder) || status === 'pending';
+            notifyOrderCheckbox.disabled = status !== 'active';
+        }
+    }
+
+    // Initial status update
+    updateServiceStatus(<?php echo (isset($vars->use_module) ? $vars->use_module : 'true');?>, <?php echo (isset($vars->notify_order) ? $vars->notify_order : 'true');?>);
+
+    statusRadios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            updateServiceStatus(true, true);
+        });
+    });
+
+    // Price override toggle
+    function showPriceOverrideFields() {
+        if (overridePriceFields) {
+            if (priceOverride && priceOverride.checked) {
+                overridePriceFields.style.display = '';
+                overridePriceFields.querySelectorAll('input,select').forEach(function(input) {
+                    input.disabled = false;
+                });
+            } else {
+                overridePriceFields.style.display = 'none';
+                overridePriceFields.querySelectorAll('input,select').forEach(function(input) {
+                    input.disabled = true;
+                });
+            }
+        }
+    }
+
+    showPriceOverrideFields();
+
+    if (priceOverride) {
+        priceOverride.addEventListener('change', showPriceOverrideFields);
+    }
+
+    // Package options fetch
+    function fetchPackageOptions() {
+        var pricingIdValue = pricingId ? pricingId.value : null;
+
+        if (pricingIdValue && packageOptions) {
+            var form = pricingId.closest('form');
+            var fields = form.querySelectorAll('[name^="configoptions"],[name="disable_option_logic"]');
+            var params = new URLSearchParams();
+            fields.forEach(function(field) {
+                if (field.type === 'checkbox' && !field.checked) return;
+                params.append(field.name, field.value);
+            });
+
+            fetch(baseUri + 'clients/packageoptions/' + pricingIdValue + '?' + params.toString(), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.text())
+            .then(text => {
+                if (packageOptions && text) {
+                    try { text = JSON.parse(text); } catch(e) { /* use raw text */ }
+                    packageOptions.innerHTML = text;
+                    packageOptions.querySelectorAll('script').forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(function(attr) {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+
+    if (pricingId) {
+        pricingId.addEventListener('change', fetchPackageOptions);
+    }
+
+    if (disableOptionLogic) {
+        disableOptionLogic.addEventListener('change', fetchPackageOptions);
+    }
+
+    fetchPackageOptions();
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+})();
+</script>
+<!-- WIDGET_FOOTER -->
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.addservice_basic.field_continue', true), ['class' => 'btn btn-primary', 'form' => 'addservice_basic_form']);
+    ?>
+</div>

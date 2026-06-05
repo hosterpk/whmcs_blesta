@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\DataFeed;
 
 use Configure;
@@ -54,6 +55,9 @@ class DataFeed
         // Initialize data feed factory
         $factory = new DataFeedFactory();
         $instance = $factory->build($feed, $options, $dir);
+        if ($instance === null) {
+            return null;
+        }
 
         $response = $instance->get($endpoint, $vars);
         if (($errors = $instance->errors())) {

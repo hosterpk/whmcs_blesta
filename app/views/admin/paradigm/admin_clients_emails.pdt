@@ -1,0 +1,145 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+
+$this->Widget->create($this->_('AdminClients.emails.boxtitle_maillog', true), ['id' => 'admin_clients_emails'], ($render_section ?? null));
+
+if (($logs ?? false) && ($num_logs = count($logs)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+        <thead>
+            <tr>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/emails/' . ($client->id ?? null) . '/?sort=date_sent&order=' . ($sort == 'date_sent' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.emails.heading_date');?>
+                        <?php if ($sort == 'date_sent') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/emails/' . ($client->id ?? null) . '/?sort=subject&order=' . ($sort == 'subject' ? $negate_order : $order));?>" class="ajax text-decoration-none">
+                        <?php $this->_('AdminClients.emails.heading_subject');?>
+                        <?php if ($sort == 'subject') { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                    </a>
+                </th>
+                <th><?php $this->_('AdminClients.emails.heading_summary');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            for ($i = 0; $i < $num_logs; $i++) {
+                $summary = $this->Html->safe($logs[$i]->body_text ?? null);
+                if (strlen($summary) > 40) {
+                    if (function_exists('mb_strimwidth')) {
+                        $summary = mb_strimwidth($summary, 0, 40) . '...';
+                    } else {
+                        $summary = substr($summary, 0, 40) . '...';
+                    }
+                }
+            ?>
+            <tr class="email-expandable" style="cursor: pointer;">
+                <td><?php echo $this->Date->cast(($logs[$i]->date_sent ?? null), 'date_time');?></td>
+                <td><?php echo $this->Html->safe($logs[$i]->subject ?? null);?></td>
+                <td><?php echo $summary;?></td>
+            </tr>
+            <tr class="email-details-row">
+                <td colspan="3" class="p-0">
+                    <div class="email-details collapse" id="email-details-<?php echo $this->Html->safe($logs[$i]->id ?? null);?>">
+                        <div class="p-3 bg-subtable">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <th width="150"><?php $this->_('AdminClients.emails.text_to');?></th>
+                                    <td>
+                                        <a href="mailto:<?php echo $this->Html->safe($logs[$i]->to_address ?? null);?>" class="text-decoration-none">
+                                            <?php echo $this->Html->safe($logs[$i]->to_address ?? null);?>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <?php if (!empty($logs[$i]->cc_address)) { ?>
+                                <tr>
+                                    <th><?php $this->_('AdminClients.emails.text_cc');?></th>
+                                    <td>
+                                        <?php
+                                        $j = 0;
+                                        foreach ($logs[$i]->cc_address as $cc_address) {
+                                            echo $j++ > 0 ? ', ' : '';
+                                        ?>
+                                            <a href="mailto:<?php echo $this->Html->safe($cc_address ?? null);?>" class="text-decoration-none">
+                                                <?php echo $this->Html->safe($cc_address ?? null);?>
+                                            </a>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                                <?php } ?>
+                                <tr>
+                                    <th><?php $this->_('AdminClients.emails.text_from');?></th>
+                                    <td>
+                                        <a href="mailto:<?php echo $this->Html->safe($logs[$i]->from_address ?? null);?>" class="text-decoration-none">
+                                            <?php echo $this->Html->safe($logs[$i]->from_name ?? null);?>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="pt-3">
+                                        <div class="bg-subtle p-3 rounded">
+                                            <?php echo nl2br($this->Html->hyperlink($this->Html->safe($logs[$i]->body_text ?? null)));?>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="pt-2">
+                                        <i class="bi bi-arrow-return-left"></i>
+                                        <a href="<?php echo $this->base_uri . 'clients/email/' . ($logs[$i]->to_client_id ?? null) . '/' . ($logs[$i]->id ?? null) . '/';?>" class="text-decoration-none">
+                                            <?php $this->_('AdminClients.emails.text_resend');?>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+<?php
+    if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        $this->Widget->footer();
+        $this->Pagination->build();
+    }
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-envelope" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminClients.emails.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Email expand functionality
+    var emailRows = document.querySelectorAll('.email-expandable');
+    emailRows.forEach(function(row) {
+        row.addEventListener('click', function() {
+            var detailsRow = this.nextElementSibling;
+            var detailsDiv = detailsRow.querySelector('.email-details');
+
+            // Close other open details
+            document.querySelectorAll('.email-details.show').forEach(function(openDiv) {
+                if (openDiv !== detailsDiv) {
+                    openDiv.classList.remove('show');
+                }
+            });
+
+            detailsDiv.classList.toggle('show');
+        });
+    });
+});
+</script>

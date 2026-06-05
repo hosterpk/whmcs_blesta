@@ -50,7 +50,7 @@ $lang['Proxmox.!error.module_row.missing'] = 'An internal error occurred. The mo
 // Common
 $lang['Proxmox.please_select'] = '-- Please Select --';
 $lang['Proxmox.!bytes.value'] = '%1$s%2$s'; // %1$s is a number value, %2$s is the unit of that value (i.e., one of B, KB, MB, GB)
-$lang['Proxmox.!uptime.value'] = '%3$s days, %2$s hours, %1$s minutes'; // %1$s is the number of uptime days, %2$s is the number of uptime hours, %3$s is the number of uptime minutes
+$lang['Proxmox.!uptime.value'] = '%1$s days, %2$s hours, %3$s minutes'; // %1$s is the number of uptime days, %2$s is the number of uptime hours, %3$s is the number of uptime minutes
 $lang['Proxmox.!percent.used'] = '%1$s%'; // %1$s is a percentage value
 
 // Basics
@@ -60,11 +60,14 @@ $lang['Proxmox.module_row'] = 'Proxmox Master Server';
 $lang['Proxmox.module_row_plural'] = 'Servers';
 $lang['Proxmox.module_group'] = 'Proxmox Master Group';
 
+$lang['Proxmox.back_to_manage'] = 'Back';
 
 // Module management
 $lang['Proxmox.add_module_row'] = 'Add Server';
 $lang['Proxmox.add_module_group'] = 'Add Server Group';
 $lang['Proxmox.manage.module_rows_title'] = 'Proxmox Master Servers';
+$lang['Proxmox.manage.tab_rows'] = 'Servers';
+$lang['Proxmox.manage.tab_groups'] = 'Server Groups';
 $lang['Proxmox.manage.module_groups_title'] = 'Proxmox Master Server Groups';
 $lang['Proxmox.manage.module_rows_heading.server_label'] = 'Server Label';
 $lang['Proxmox.manage.module_rows_heading.host'] = 'Hostname';
@@ -86,7 +89,7 @@ $lang['Proxmox.order_options.first'] = 'First non-full server';
 
 // Module row meta data
 $lang['Proxmox.row_meta.server_name'] = 'Server Label';
-$lang['Proxmox.row_meta.user'] = 'User';
+$lang['Proxmox.row_meta.user'] = 'User (with @pam or @pve after the username)';
 $lang['Proxmox.row_meta.password'] = 'Password';
 $lang['Proxmox.row_meta.host'] = 'Hostname';
 $lang['Proxmox.row_meta.port'] = 'SSL Port Number';
@@ -169,6 +172,8 @@ $lang['Proxmox.service_info.memory'] = 'MB RAM';
 $lang['Proxmox.tab_actions'] = 'Server Actions';
 $lang['Proxmox.tab_stats'] = 'Stats';
 $lang['Proxmox.tab_console'] = 'Console';
+$lang['Proxmox.tab_isomanager'] = 'ISO Manager';
+$lang['Proxmox.tab_lxcreinstall'] = 'Reinstall';
 
 
 // Actions Tab
@@ -196,13 +201,7 @@ $lang['Proxmox.tab_client_actions.status_running'] = 'Online';
 $lang['Proxmox.tab_client_actions.status_stopped'] = 'Offline';
 $lang['Proxmox.tab_client_actions.status_disabled'] = 'Disabled';
 
-$lang['Proxmox.tab_client_actions.heading_mount_iso'] = 'Mount ISO';
 $lang['Proxmox.tab_client_actions.heading_reinstall'] = 'Reinstall';
-$lang['Proxmox.tab_client_actions.field_iso'] = 'Image';
-$lang['Proxmox.tab_client_actions.field_mount_submit'] = 'Mount';
-$lang['Proxmox.tab_client_actions.field_template'] = 'Template';
-$lang['Proxmox.tab_client_actions.field_password'] = 'Root password';
-$lang['Proxmox.tab_client_actions.field_reinstall_submit'] = 'Reinstall';
 
 
 // Stats Tab
@@ -237,3 +236,15 @@ $lang['Proxmox.tab_client_console.vnc_ip'] = 'VNC Host';
 $lang['Proxmox.tab_client_console.vnc_port'] = 'VNC Port';
 $lang['Proxmox.tab_client_console.vnc_user'] = 'VNC Username';
 $lang['Proxmox.tab_client_console.vnc_password'] = 'VNC Password';
+
+// Client LXC Reinstall Tab
+$lang['Proxmox.tab_client_lxcreinstall.heading_lxcreinstall'] = 'Reinstall';
+$lang['Proxmox.tab_client_lxcreinstall.field_password'] = 'Root password';
+$lang['Proxmox.tab_client_lxcreinstall.field_template'] = 'Template';
+$lang['Proxmox.tab_client_lxcreinstall.field_reinstall_submit'] = 'Reinstall';
+
+// Client ISO Manager Tab
+$lang['Proxmox.tab_client_isomanager.heading_isomanager'] = 'ISO Manager';
+$lang['Proxmox.tab_client_isomanager.field_iso'] = 'Image';
+$lang['Proxmox.tab_client_isomanager.field_mount_submit'] = 'Mount';
+$lang['Proxmox.tab_client_isomanager.field_unmount_submit'] = 'Unmount ISO';

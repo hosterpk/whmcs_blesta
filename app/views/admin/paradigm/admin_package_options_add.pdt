@@ -1,0 +1,287 @@
+<?php
+echo ($message ?? null);
+
+if (!($in_modal ?? false)) {
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminPackageOptions.add.boxtitle_addoption', true));
+}
+
+$this->Form->create(null, ['id' => 'add_package_option', 'class' => 'disable-on-submit', 'enctype' => 'multipart/form-data']);
+?>
+<div class="<?php echo ($in_modal ?? false) ? '' : 'card-body'; ?>">
+    <ul class="nav nav-tabs-custom mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#addBasicTab"><?php $this->_('AdminPackageOptions.add.heading_basic'); ?></button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#addValuesTab"><?php $this->_('AdminPackageOptions.add.heading_options'); ?></button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#addGroupsTab"><?php $this->_('AdminPackageOptions.add.heading_groups'); ?></button>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <!-- Basic Tab -->
+        <div class="tab-pane fade show active" id="addBasicTab">
+            <div class="mb-3">
+                <?php
+                $this->Form->label($this->_('AdminPackageOptions.add.field_label', true), 'label', ['class' => 'form-label']);
+                ?>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.label', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button>
+                <?php $this->Form->fieldText('label', ($vars->label ?? null), ['id' => 'label', 'class' => 'form-control']); ?>
+            </div>
+            <div class="mb-3">
+                <?php
+                $this->Form->label($this->_('AdminPackageOptions.add.field_name', true), 'name', ['class' => 'form-label']);
+                ?>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.name', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button>
+                <?php $this->Form->fieldText('name', ($vars->name ?? null), ['id' => 'name', 'class' => 'form-control']); ?>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><?php $this->_('AdminPackageOptions.add.field_description'); ?></label>
+                <?php $this->Form->fieldTextarea('description', ($vars->description ?? null), ['id' => 'description', 'class' => 'form-control', 'rows' => '3']); ?>
+            </div>
+            <div class="mb-3">
+                <?php
+                $this->Form->label($this->_('AdminPackageOptions.add.field_type', true), 'type', ['class' => 'form-label']);
+                ?>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.type', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button>
+                <?php $this->Form->fieldSelect('type', ($types ?? null), ($vars->type ?? null), ['id' => 'type', 'class' => 'form-select']); ?>
+            </div>
+            <div class="form-check mb-2">
+                <?php
+                $this->Form->fieldCheckbox('addable', '1', ($vars->addable ?? null) == '1', ['id' => 'addable', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminPackageOptions.add.field_addable', true), 'addable', ['class' => 'form-check-label']);
+                ?>
+            </div>
+            <div class="form-check mb-2">
+                <?php
+                $this->Form->fieldCheckbox('editable', '1', ($vars->editable ?? null) == '1', ['id' => 'editable', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminPackageOptions.add.field_editable', true), 'editable', ['class' => 'form-check-label']);
+                ?>
+            </div>
+            <div class="form-check mb-2">
+                <?php
+                $this->Form->fieldCheckbox('disable_pricing', '1', ($vars->disable_pricing ?? null) == '1', ['id' => 'disable_pricing', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminPackageOptions.add.field_disable_pricing', true), 'disable_pricing', ['class' => 'form-check-label']);
+                ?>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.add.tooltip_disable_pricing', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button>
+            </div>
+            <div class="form-check mb-2 ms-4" id="hide_on_invoice_container" style="display:none;">
+                <?php
+                $this->Form->fieldCheckbox('hide_on_invoice', '1', ($vars->hide_on_invoice ?? null) == '1', ['id' => 'hide_on_invoice', 'class' => 'form-check-input']);
+                $this->Form->label($this->_('AdminPackageOptions.add.field_hide_on_invoice', true), 'hide_on_invoice', ['class' => 'form-check-label']);
+                ?>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.add.tooltip_hide_on_invoice', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button>
+            </div>
+        </div>
+
+        <!-- Values & Pricing Tab -->
+        <div class="tab-pane fade" id="addValuesTab">
+            <div class="select-type-message text-center py-5 text-secondary" style="display:none;">
+                <i class="bi bi-info-circle" style="font-size: 2rem; opacity: 0.5;"></i>
+                <p class="mt-2 mb-0"><?php $this->_('AdminPackageOptions.add.text_select_type_first'); ?></p>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm option_table">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;"></th>
+                            <th><?php $this->_('AdminPackageOptions.add.text_name'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_name', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="value"><?php $this->_('AdminPackageOptions.add.text_value'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_value', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="min" style="display:none;"><?php $this->_('AdminPackageOptions.add.text_min'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_min', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="max" style="display:none;"><?php $this->_('AdminPackageOptions.add.text_max'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_max', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="step" style="display:none;"><?php $this->_('AdminPackageOptions.add.text_step'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_step', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="default"><?php $this->_('AdminPackageOptions.add.text_default'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_default', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="status"><?php $this->_('AdminPackageOptions.add.text_status'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_status', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                            <th class="image" style="display:none;"><?php $this->_('AdminPackageOptions.add.text_image'); ?></th>
+                            <th style="width: 80px;"><?php $this->_('AdminPackageOptions.add.text_options'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php
+                    $rows = 1;
+                    if (isset($vars->values['name']) && $vars->values['name']) {
+                        $rows = count($vars->values['name']);
+                    }
+                    for ($i = 0; $i < $rows; $i++) {
+                    ?>
+                        <tr class="option_row" style="cursor: pointer;" data-collapse-row aria-expanded="true">
+                            <td class="text-center"><i class="bi bi-grip-vertical text-secondary" style="cursor: grab;"></i></td>
+                            <td><?php $this->Form->fieldText('values[name][]', ($vars->values['name'][$i] ?? null), ['class' => 'form-control form-control-sm name']); ?></td>
+                            <td class="value"><?php $this->Form->fieldText('values[value][]', ($vars->values['value'][$i] ?? null), ['class' => 'form-control form-control-sm']); ?></td>
+                            <td class="min" style="display:none;"><?php $this->Form->fieldText('values[min][]', ($vars->values['min'][$i] ?? null), ['class' => 'form-control form-control-sm']); ?></td>
+                            <td class="max" style="display:none;"><?php $this->Form->fieldText('values[max][]', ($vars->values['max'][$i] ?? null), ['class' => 'form-control form-control-sm']); ?></td>
+                            <td class="step" style="display:none;"><?php $this->Form->fieldText('values[step][]', ($vars->values['step'][$i] ?? null), ['class' => 'form-control form-control-sm']); ?></td>
+                            <td class="default">
+                                <?php
+                                if (in_array(($vars->type ?? null), ['', 'select', 'radio'])) {
+                                    $this->Form->fieldRadio('values[default][]', '1', ($vars->values['default'][$i] ?? '0') == '1');
+                                } elseif (($vars->type ?? null) == 'quantity') {
+                                    $this->Form->fieldText('values[default][]', ($vars->values['default'][$i] ?? null), ['class' => 'form-control form-control-sm']);
+                                } elseif (($vars->type ?? null) == 'checkbox') {
+                                    $this->Form->fieldCheckbox('values[default][]', '1', ($vars->values['default'][$i] ?? null) == '1', ['class' => 'form-check-input']);
+                                }
+                                ?>
+                            </td>
+                            <td class="status"><?php $this->Form->fieldSelect('values[status][]', ($value_statuses ?? []), ($vars->values['status'][$i] ?? null), ['class' => 'form-select form-select-sm']); ?></td>
+                            <td class="image" style="display:none;">
+                                <?php
+                                $existing_image = $vars->values['image'][$i] ?? null;
+                                $this->Form->fieldHidden('values[existing_image][]', ($existing_image ?? ''), ['class' => 'option-value-existing-image']);
+                                $this->Form->fieldHidden('values[remove_image][]', '0', ['class' => 'option-value-remove-image']);
+                                ?>
+                                <div class="d-flex align-items-center gap-1">
+                                    <?php if ($existing_image) { ?>
+                                    <img src="<?php echo $this->Html->safe(($option_image_url ?? '') . $existing_image); ?>" alt="" class="option-value-thumb" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">
+                                    <?php } ?>
+                                    <label class="btn btn-sm btn-outline-secondary mb-0" title="Upload image">
+                                        <i class="bi bi-upload"></i>
+                                        <input type="file" name="values_image_<?php echo $i; ?>" accept="image/jpeg,image/png,image/gif,image/webp" class="option-value-image-input" style="display:none;">
+                                    </label>
+                                    <?php if ($existing_image) { ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger option-value-image-remove" title="Remove image"><i class="bi bi-x-lg"></i></button>
+                                    <?php } ?>
+                                </div>
+                            </td>
+                            <td><button type="button" class="btn btn-sm btn-outline-danger option-row-remove"><i class="bi bi-trash"></i></button></td>
+                        </tr>
+                        <tr class="collapse show">
+                            <td colspan="10" style="padding: 0; background-color: var(--bg-secondary);">
+                                <div class="p-3">
+                                    <h6 class="mb-2"><?php $this->_('AdminPackageOptions.add.heading_prices'); ?></h6>
+                                    <table class="table table-sm price_table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 100px;"><?php $this->_('AdminPackageOptions.add.price_term'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.option_pricing_term', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                                                <th><?php $this->_('AdminPackageOptions.add.price_period'); ?></th>
+                                                <th><?php $this->_('AdminPackageOptions.add.price_currency'); ?></th>
+                                                <th><?php $this->_('AdminPackageOptions.add.price_price'); ?></th>
+                                                <th><?php $this->_('AdminPackageOptions.add.price_price_renews'); ?> <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="popover" data-bs-placement="top" data-bs-trigger="hover focus" data-bs-content="<?php echo $this->Html->safe($this->_('AdminPackageOptions.!tooltip.price_renews', true)); ?>"><i class="bi bi-info-circle text-secondary"></i></button></th>
+                                                <th><?php $this->_('AdminPackageOptions.add.price_setup'); ?></th>
+                                                <th style="width: 100px;"><?php $this->_('AdminPackageOptions.add.price_options'); ?></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        <?php
+                                        $price_rows = 1;
+                                        if (isset($vars->values['pricing'][$i]['term']) && $vars->values['pricing'][$i]['term']) {
+                                            $price_rows = count($vars->values['pricing'][$i]['term']);
+                                        }
+                                        for ($j = 0; $j < $price_rows; $j++) {
+                                            $price = ($vars->values['pricing'][$i] ?? []);
+                                        ?>
+                                        <tr class="price_row">
+                                            <td>
+                                                <?php
+                                                $disabled = [];
+                                                if (($price['period'][$j] ?? null) == 'onetime') {
+                                                    $disabled = ['disabled' => 'disabled'];
+                                                }
+                                                $this->Form->fieldText('values[pricing][][term][]', ($price['term'][$j] ?? null), array_merge(['class' => 'form-control form-control-sm term'], $disabled));
+                                                ?>
+                                            </td>
+                                            <td><?php $this->Form->fieldSelect('values[pricing][][period][]', ($periods ?? null), ($price['period'][$j] ?? 'month'), ['class' => 'form-select form-select-sm period']); ?></td>
+                                            <td><?php (!empty($currencies) ? $this->Form->fieldSelect('values[pricing][][currency][]', ($currencies ?? null), ($price['currency'][$j] ?? null), ['class' => 'form-select form-select-sm']) : (print ($this->Html->safe($default_currency ?? '')))); ?></td>
+                                            <td><?php $this->Form->fieldText('values[pricing][][price][]', $this->CurrencyFormat->format(($price['price'][$j] ?? null), ($price['currency'][$j] ?? null), ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false, 'decimals' => 4]), ['class' => 'form-control form-control-sm price']); ?></td>
+                                            <td>
+                                                <?php
+                                                $renewal_price_enabled = (
+                                                    isset($price['price_enable_renews'][$j])
+                                                        ? $price['price_enable_renews'][$j]
+                                                        : (($price['price_renews'][$j] ?? null)
+                                                                == ($price['price'][$j] ?? null)
+                                                            || ($price['price_renews'][$j] ?? null)
+                                                                === null
+                                                            ? '0'
+                                                            : '1')
+                                                ) == '1' && ($price['period'][$j] ?? null) != 'onetime';
+                                                $this->Form->fieldCheckbox('values[pricing][][price_enable_renews][]', '1', $renewal_price_enabled, array_merge(['class' => 'form-check-input price_enable_renews'], $disabled));
+                                                $this->Form->fieldText('values[pricing][][price_renews][]', $this->CurrencyFormat->format(($price['price_renews'][$j] ?? null), ($price['currency'][$j] ?? null), ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false, 'decimals' => 4]), array_merge(['class' => 'form-control form-control-sm price_renews d-inline-block', 'style' => 'width: 100px;'], $disabled));
+                                                ?>
+                                            </td>
+                                            <td><?php $this->Form->fieldText('values[pricing][][setup_fee][]', $this->CurrencyFormat->format(($price['setup_fee'][$j] ?? null), ($price['currency'][$j] ?? null), ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false, 'decimals' => 4]), ['class' => 'form-control form-control-sm setup_fee']); ?></td>
+                                            <td>
+                                                <a href="#" class="btn btn-sm btn-outline-success price-row-add"><i class="bi bi-plus-circle"></i></a>
+                                                <a href="#" class="btn btn-sm btn-outline-danger price-row-remove"><i class="bi bi-trash"></i></a>
+                                            </td>
+                                        </tr>
+                                        <?php } ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary option-row-add mt-2">
+                <?php $this->_('AdminPackageOptions.add.categorylink_addoption'); ?>
+            </button>
+        </div>
+
+        <!-- Groups Tab -->
+        <div class="tab-pane fade" id="addGroupsTab">
+            <div class="dual-select-container">
+                <div class="dual-select-panel">
+                    <label class="form-label"><?php $this->_('AdminPackageOptions.add.text_membergroups'); ?></label>
+                    <div class="dual-select-dropzone">
+                        <div class="drag-list" id="assigned_groups">
+                            <?php
+                            if (!empty($vars->groups)) {
+                                foreach ($vars->groups as $id => $name) {
+                            ?>
+                            <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($name);?></div>
+                            <?php
+                                }
+                            }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dual-select-controls">
+                    <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left" title="<?php $this->_('AdminPackageOptions.add.text_membergroups');?>">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right" title="<?php $this->_('AdminPackageOptions.add.text_availablegroups');?>">
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+
+                <div class="dual-select-panel">
+                    <label class="form-label"><?php $this->_('AdminPackageOptions.add.text_availablegroups'); ?></label>
+                    <div class="dual-select-dropzone">
+                        <div class="drag-list" id="available_groups">
+                            <?php
+                            if (!empty($package_option_groups)) {
+                                foreach ($package_option_groups as $id => $name) {
+                            ?>
+                            <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($name);?></div>
+                            <?php
+                                }
+                            }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="<?php echo ($in_modal ?? false) ? 'modal-submit-area' : 'card-footer text-end'; ?>">
+    <?php if ($in_modal ?? false) { ?>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminPackageOptions.modal.btn_cancel');?></button>
+    <?php } ?>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminPackageOptions.add.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+if (!($in_modal ?? false)) {
+    $this->Widget->end();
+}
+?>

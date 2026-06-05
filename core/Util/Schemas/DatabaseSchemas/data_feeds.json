@@ -1,0 +1,51 @@
+{
+    "columns": [
+        {
+            "name": "feed",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "dir",
+            "type": "varchar(64)",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "class",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        }
+    ],
+    "indexes": [
+        {
+            "name": "dir",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "dir",
+                "class"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "feed"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

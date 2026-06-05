@@ -1,4 +1,5 @@
 <?php
+
 /**
  * System Overview plugin handler
  *
@@ -32,16 +33,16 @@ class SystemOverviewPlugin extends Plugin
         try {
             // system_overview_settings
             $this->Record->
-                setField('staff_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>false])->
-                setField('company_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>false])->
-                setField('key', ['type'=>'varchar', 'size'=>255])->
-                setField('value', ['type'=>'varchar', 'size'=>255])->
-                setField('order', ['type'=>'int', 'size'=>5, 'default'=>0])->
+                setField('staff_id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'auto_increment' => false])->
+                setField('company_id', ['type' => 'int', 'size' => 10, 'unsigned' => true, 'auto_increment' => false])->
+                setField('key', ['type' => 'varchar', 'size' => 255])->
+                setField('value', ['type' => 'varchar', 'size' => 255])->
+                setField('order', ['type' => 'int', 'size' => 5, 'default' => 0])->
                 setKey(['staff_id', 'company_id', 'key'], 'primary')->
                 create('system_overview_settings', true);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Error adding... no permission?
-            $this->Input->setErrors(['db'=> ['create'=>$e->getMessage()]]);
+            $this->Input->setErrors(['db' => ['create' => $e->getMessage()]]);
             return;
         }
     }

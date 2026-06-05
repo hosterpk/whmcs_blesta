@@ -1,8 +1,15 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Core\Util\DataFeed\Common\AbstractDataFeed;
-use Blesta\Core\Util\Input\Fields\Html as FieldsHtml;
 use Blesta\Core\Util\DataFeed\DataFeed;
+use Blesta\Core\Util\Input\Fields\Html as FieldsHtml;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
 
 /**
  * Data feeds management
@@ -41,14 +48,29 @@ class DataFeeds extends AppModel
             ->from('data_feeds')
             ->where('feed', '=', $feed)
             ->fetch();
+
+        if (empty($data_feed)) {
+            return $data_feed;
+        }
+
         $data_feed->endpoints = $this->Record->select()
             ->from('data_feed_endpoints')
             ->where('feed', '=', $data_feed->feed)
             ->where('company_id', '=', $company_id)
             ->fetchAll();
 
-        // Get data feed name and description
+        // Get data feed name and description. Factory returns null when the
+        // stored class/dir cannot be resolved to a valid AbstractDataFeed
+        // (e.g. legacy or orphaned rows); fall back to placeholders rather
+        // than fataling so the admin UI and feed endpoint stay responsive.
         $instance = DataFeed::get($data_feed->class, $company_id, $data_feed->dir);
+        if ($instance === null) {
+            $data_feed->name = $data_feed->feed;
+            $data_feed->description = '';
+
+            return $data_feed;
+        }
+
         $data_feed->name = $instance->getName();
         $data_feed->description = $instance->getDescription();
 
@@ -150,8 +172,17 @@ class DataFeeds extends AppModel
 
         if (isset($feed_endpoint->enabled) && $feed_endpoint->enabled == '1') {
             $data_feed = $this->get($feed);
+            if (empty($data_feed)) {
+                return null;
+            }
 
-            return DataFeed::execute($data_feed->class, $feed_endpoint->endpoint, $vars, $company_id);
+            return DataFeed::execute(
+                $data_feed->class,
+                $feed_endpoint->endpoint,
+                $vars,
+                $company_id,
+                $data_feed->dir
+            );
         }
     }
 
@@ -208,6 +239,20 @@ class DataFeeds extends AppModel
     {
         if (!isset($vars['company_id'])) {
             $vars['company_id'] = Configure::get('Blesta.company_id');
+        }
+
+        // When editing class without an explicit dir, the class.valid file
+        // existence check needs the dir to build the path. Seed it from the
+        // existing row so edit() validates symmetrically with add() — this
+        // prevents storing an unverified class for the current dir.
+        if (isset($vars['class']) && empty($vars['dir'])) {
+            $existing = $this->Record->select(['dir'])
+                ->from('data_feeds')
+                ->where('feed', '=', $feed)
+                ->fetch();
+            if ($existing && !empty($existing->dir)) {
+                $vars['dir'] = $existing->dir;
+            }
         }
 
         $this->Input->setRules($this->getRules($vars, true));
@@ -387,17 +432,50 @@ class DataFeeds extends AppModel
                     'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => $this->_('DataFeeds.!error.dir.empty')
+                ],
+                // Reject any non-identifier characters so the stored value cannot
+                // be used for path traversal when consumed by DataFeedFactory.
+                'valid' => [
+                    'if_set' => true,
+                    'rule' => function ($dir) {
+                        return preg_match('/^[A-Za-z0-9_]+$/', (string)$dir) === 1;
+                    },
+                    'message' => $this->_('DataFeeds.!error.dir.valid')
                 ]
             ],
             'class' => [
                 'valid' => [
                     'rule' => function ($class) use ($vars) {
-                        if (!empty($vars['dir'])) {
-                            $file_name = Loader::fromCamelCase(trim($vars['class'], '\\'));
-                            Loader::load(PLUGINDIR . $vars['dir'] . DS . 'lib' . DS . $file_name . '.php');
+                        $trimmed = trim((string)$class, '\\');
+                        if (!preg_match('/^[A-Za-z0-9_]+$/', $trimmed)) {
+                            return false;
                         }
 
-                        return class_exists($class) && (new $class()) instanceof AbstractDataFeed;
+                        // If a plugin dir was specified, verify the source file
+                        // exists at the bounded path. Pure stat — no include
+                        // happens here; the actual load is performed by
+                        // DataFeedFactory at runtime.
+                        if (!empty($vars['dir'])) {
+                            if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$vars['dir'])) {
+                                return false;
+                            }
+
+                            $file_name = Loader::fromCamelCase($trimmed);
+                            if (!preg_match('/^[A-Za-z0-9_]+$/', $file_name)) {
+                                return false;
+                            }
+
+                            $file = PLUGINDIR . $vars['dir'] . DS . 'lib' . DS . $file_name . '.php';
+                            $real_file = realpath($file);
+                            $real_plugin_dir = realpath(PLUGINDIR);
+                            if ($real_file === false || $real_plugin_dir === false
+                                || strpos($real_file, rtrim($real_plugin_dir, DS) . DS) !== 0
+                            ) {
+                                return false;
+                            }
+                        }
+
+                        return true;
                     },
                     'message' => $this->_('DataFeeds.!error.class.valid')
                 ]

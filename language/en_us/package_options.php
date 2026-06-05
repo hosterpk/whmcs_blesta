@@ -16,6 +16,7 @@ $lang['PackageOptions.!error.label.length'] = 'The label may not exceed 128 char
 $lang['PackageOptions.!error.name.empty'] = 'Please enter a name for this option.';
 $lang['PackageOptions.!error.name.length'] = 'The name may not exceed 128 characters in length.';
 $lang['PackageOptions.!error.type.valid'] = 'Please select an option type.';
+$lang['PackageOptions.!error.type.in_use'] = 'The type cannot be changed because one or more option values not included in the submission are in use by a service.';
 $lang['PackageOptions.!error.values.count'] = 'There may only be one option value entry for checkbox, quantity, text, textarea, or password types.';
 $lang['PackageOptions.!error.values.unique'] = 'Option values must be unique.';
 $lang['PackageOptions.!error.values.select_value'] = 'At least one option value contains invalid special characters.';

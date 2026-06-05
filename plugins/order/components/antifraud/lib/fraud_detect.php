@@ -1,6 +1,7 @@
 <?php
-Loader::load(COMPONENTDIR . "modules" . DS . "module_field.php");
-Loader::load(COMPONENTDIR . "modules" . DS . "module_fields.php");
+
+Loader::load(COMPONENTDIR . 'modules' . DS . 'module_field.php');
+Loader::load(COMPONENTDIR . 'modules' . DS . 'module_fields.php');
 
 /**
  * Fraud Detect Interface
@@ -13,7 +14,6 @@ Loader::load(COMPONENTDIR . "modules" . DS . "module_fields.php");
  */
 interface FraudDetect
 {
-
     /**
      * Sets key/value pair options for initializing the fraud detection
      *

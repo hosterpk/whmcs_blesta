@@ -13,12 +13,15 @@ $lang['Centovacast.tab_actions'] = 'Actions';
 $lang['Centovacast.tab_client_stats'] = 'Statistics';
 $lang['Centovacast.tab_client_actions'] = 'Actions';
 
+$lang['Centovacast.back_to_manage'] = 'Back';
 
 // Module management
 $lang['Centovacast.add_module_row'] = 'Add Server';
 $lang['Centovacast.add_module_group'] = 'Add Server Group';
 $lang['Centovacast.manage.module_rows_title'] = 'Servers';
 $lang['Centovacast.manage.module_groups_title'] = 'Server Groups';
+$lang['Centovacast.manage.tab_rows'] = 'Servers';
+$lang['Centovacast.manage.tab_groups'] = 'Server Groups';
 $lang['Centovacast.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Centovacast.manage.module_rows_heading.hostname'] = 'Hostname';
 $lang['Centovacast.manage.module_rows_heading.accounts'] = 'Accounts';

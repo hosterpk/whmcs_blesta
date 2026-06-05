@@ -14,6 +14,7 @@ $lang['ThesslstoreModule.!error.profit_margin.valid'] = "Only Numbers Allowed In
 $lang['ThesslstoreModule.!error.invalid_screen'] = "Invalid Action! Something went Wrong!";
 $lang['ThesslstoreModule.!error.empty_package_group'] = "Opps, It appears you haven't created any package groups. You'll need to first create a group prior to importing any products. Once you've done that please return back and proceed with importation.";
 $lang['ThesslstoreModule.!error.import_package_error'] = "Products already there within the selected product group.";
+$lang['ThesslstoreModule.!error.import_no_products'] = "No products were returned from the API. Please check your API credentials and try again.";
 
 //Success Message
 $lang['ThesslstoreModule.!success.import_package_success'] = "Products Imported Successfully";
@@ -46,7 +47,10 @@ $lang['ThesslstoreModule.setup_price.margin_percentage'] = "Profit Margin(in %)"
 $lang['ThesslstoreModule.setup_price.update_success'] = "Price updated successfully.";
 $lang['ThesslstoreModule.add_row.manage_credential'] = "API Credential";
 $lang['ThesslstoreModule.add_row.import_packages'] = "SSL Store Products Import";
+$lang['ThesslstoreModule.import_packages.margin_note'] = "% Margin will apply to the price of all the products. You can change it later on from the price setup menu.";
 $lang['ThesslstoreModule.setup_price.update_mode'] = "It seems that you have changed the \"Operation Mode\" to \"LIVE\"! If current products pricing were setup for the \"TEST\" mode then Please update it from here.";
+
+$lang['Thesslstore_module.back_to_manage'] = 'Back to Thesslstore Module';
 
 $lang['ThesslstoreModule.row_meta.thesslstore_reseller_name'] = 'Reseller Name';
 $lang['ThesslstoreModule.row_meta.api_partner_code_live'] = "Live PartnerCode";
@@ -188,6 +192,7 @@ $lang['ThesslstoreModule.!error.resend_invalid_status'] = "Resend Approver Email
 $lang['ThesslstoreModule.tab_ReissueCert'] = "Re-issue Certificate";
 
 $lang['ThesslstoreModule.tab_AdminManagementAction'] = "Management Actions";
+$lang['ThesslstoreModule.tab_AdminChangeApproverEmail'] = "Change Approver Email";
 
 //Symantec Replacement Order Related
 $lang['ThesslstoreModule.replacement_order.box_title'] = "Symantec Replacement Orders List";

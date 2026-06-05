@@ -1,6 +1,5 @@
 
-    <div class="pad">
-        <div class="empty_section">
-            <div class="empty_box"><?php $this->_('Logicboxes.tab_unavailable.message');?></div>
-        </div>
-    </div>
+<div class="alert alert-info d-flex align-items-center" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    <div><?php $this->_('Logicboxes.tab_unavailable.message'); ?></div>
+</div>

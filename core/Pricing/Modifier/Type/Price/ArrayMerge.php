@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Price;
 
 /**
@@ -41,7 +42,7 @@ class ArrayMerge
             } else {
                 // Merge the item with the existing object in the result set
                 $currentItem = $result[$item[$id]];
-                $currentItem->{$key} = (isset($currentItem->{$key}) ? $currentItem->{$key} : 0);
+                $currentItem->{$key} = ($currentItem->{$key} ?? 0);
 
                 // Sum the value if it exists
                 if (array_key_exists($key, $item)) {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Client Registration Order Type
  *
@@ -13,7 +14,7 @@ class OrderTypeRegistration extends OrderType
     /**
      * @var string The authors of this order type
      */
-    private static $authors = [['name'=>'Phillips Data, Inc.','url'=>'http://www.blesta.com']];
+    private static $authors = [['name' => 'Phillips Data, Inc.','url' => 'http://www.blesta.com']];
 
     /**
      * Construct

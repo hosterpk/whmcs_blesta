@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  *
@@ -97,8 +98,8 @@ class WhmcsServices
      *
      * @param mixed $term_name The term name (e.g. "Monthly", "Semi-Annually", etc.), or an integer representing the number of years
      * @return array An array of key/value pairs including:
-     * 	- term The term
-     * 	- period The period
+     *  - term The term
+     *  - period The period
      */
     public function getTerm($term_name)
     {

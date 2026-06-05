@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('generic_server.map', [
     'module' => 'universal_module',
     'module_row_meta' => [

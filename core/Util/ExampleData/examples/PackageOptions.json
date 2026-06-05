@@ -1,0 +1,13 @@
+{
+    "id": 53,
+    "company_id": 1,
+    "label": "Extra Storage",
+    "name": "seed_extra_storage",
+    "description": null,
+    "type": "select",
+    "addable": 1,
+    "editable": 1,
+    "hidden": 0,
+    "disable_pricing": 0,
+    "hide_on_invoice": 0
+}

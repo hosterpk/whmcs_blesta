@@ -34,7 +34,7 @@ class VirtfusionServer
         return $this->api->submit('servers/' . $serverId . '/build', 'POST', $vars);
     }
 
-    public function changePkg($serverId, $pkgId, array $vars = array())
+    public function changePkg($serverId, $pkgId, array $vars = [])
     {
         return $this->api->submit('servers/' . $serverId . '/package/' . $pkgId, 'PUT', $vars);
     }
@@ -49,7 +49,8 @@ class VirtfusionServer
         return $this->api->submit('users/' . $clientId . '/serverAuthenticationTokens/' . $serverId, 'POST', $vars);
     }
 
-    public function addIpv4Qty($serverId, $qty, $interface = 'primary') {
+    public function addIpv4Qty($serverId, $qty, $interface = 'primary')
+    {
         $vars = [
             'interface' => $interface,
             'quantity' => (int) $qty
@@ -58,12 +59,12 @@ class VirtfusionServer
         return $this->api->submit('servers/' . $serverId . '/ipv4Qty', 'POST', $vars);
     }
 
-    public function removeIpv4($serverId, array $ips) {
+    public function removeIpv4($serverId, array $ips)
+    {
         $vars = [
             'ip' => $ips
         ];
-        
+
         return $this->api->submit('servers/' . $serverId . '/ipv4', 'DELETE', $vars);
     }
-
 }

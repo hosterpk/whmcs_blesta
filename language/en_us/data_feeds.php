@@ -12,6 +12,7 @@
 // Errors
 $lang['DataFeeds.!error.feed.valid'] = 'Please enter the data feed name.';
 $lang['DataFeeds.!error.dir.empty'] = 'Please enter the plugin directory.';
+$lang['DataFeeds.!error.dir.valid'] = 'The plugin directory contains invalid characters.';
 $lang['DataFeeds.!error.class.valid'] = 'The provided class is not a valid data feed class.';
 
 $lang['DataFeeds.!error.company_id.exists'] = 'Invalid company ID.';

@@ -1,0 +1,199 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $tabs = [];
+            foreach ((isset($theme_types) ? $theme_types : []) as $type => $name) {
+                $tabs[] = [
+                    'name' => $name,
+                    'current' => ((isset($selected_type) ? $selected_type : null) == $type),
+                    'attributes' => [
+                        'href' => $this->Html->safe($this->base_uri . 'settings/company/themes/index/' . $type)
+                    ]
+                ];
+            }
+
+            $link_buttons = [
+                [
+                    'attributes' => [
+                        'href' => $this->Html->safe($this->base_uri . 'settings/company/themes/add/' . (isset($selected_type) ? $selected_type : null) . '/'),
+                        'class' => 'btn btn-sm btn-primary',
+                        'title' => $this->_('AdminCompanyThemes.index.categorylink_addtheme', true)
+                    ],
+                    'icon' => 'bi bi-plus-lg'
+                ]
+            ];
+
+            $this->Widget->clear();
+            $this->Widget->setTabs($tabs);
+            $this->Widget->setLinkButtons($link_buttons);
+            $this->Widget->setBodyWrapper(false);
+            $this->Widget->create($this->_('AdminCompanyThemes.index.boxtitle_themes', true), ['id' => 'admin_company_themes'], ($render_section ?? null));?>
+
+            <?php
+            $this->Form->create(
+                $this->Html->safe($this->base_uri . 'settings/company/themes/index/' . (isset($selected_type) ? $selected_type : null) . '/'),
+                ['class' => 'disable-on-submit']
+            );
+            ?>
+
+                <?php if ((isset($themes) ? $themes : false) && count($themes) > 0) { ?>
+                <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"></th>
+                                        <th style="width: 80px;"><?php $this->_('AdminCompanyThemes.index.heading_id');?></th>
+                                        <?php if ((isset($selected_type) ? $selected_type : null) != 'admin') { ?>
+                                        <th><?php $this->_('AdminCompanyThemes.index.heading_color');?></th>
+                                        <?php } ?>
+                                        <th><?php $this->_('AdminCompanyThemes.index.heading_name');?></th>
+                                        <th style="width: 100px;"><?php $this->_('AdminCompanyThemes.index.heading_options');?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    foreach ($themes as $theme) {
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <?php
+                                            $this->Form->fieldRadio(
+                                                'theme_id',
+                                                (isset($theme->id) ? $theme->id : null),
+                                                ((isset($theme->id) ? $theme->id : true) == (isset($vars->id) ? $vars->id : false)),
+                                                ['class' => 'form-check-input']
+                                            );
+                                            ?>
+                                        </td>
+                                        <td><?php echo $this->Html->safe($theme->id ?? null);?></td>
+                                        <?php if ((isset($selected_type) ? $selected_type : null) != 'admin') { ?>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <?php
+                                                $j = 0;
+                                                $limit = 10;
+                                                foreach ((isset($colors) ? $colors : []) as $color) {
+                                                    if ($j == $limit) {
+                                                        break;
+                                                    }
+
+                                                    if (count((isset($color) ? $color : [])) == 2) {
+                                                        // Show gradient top/bottom
+                                                        $top_color = (isset($theme->colors[$color[0]]) ? $theme->colors[$color[0]] : null);
+                                                        $top_color = ($top_color !== 'transparent' ? '#' . $top_color : $top_color);
+                                                        $bot_color = (isset($theme->colors[$color[1]]) ? $theme->colors[$color[1]] : null);
+                                                        $bot_color = ($bot_color !== 'transparent' ? '#' . $bot_color : $bot_color);
+                                                        $style = str_replace(
+                                                            ['theme_top_color', 'theme_bottom_color'],
+                                                            [$top_color, $bot_color],
+                                                            "background: linear-gradient(to bottom, theme_top_color 0%, theme_bottom_color 100%);"
+                                                        );
+                                                    } elseif (count((isset($color) ? $color : [])) > 2) {
+                                                        $top_color = (isset($theme->colors[$color[0]]) ? $theme->colors[$color[0]] : null);
+                                                        $top_color = ($top_color !== 'transparent' ? '#' . $top_color : $top_color);
+                                                        $percentage = 100 / count((isset($color) ? $color : null));
+                                                        $gradient = '';
+                                                        $c = 0;
+
+                                                        foreach ($color as $sub_color) {
+                                                            $gradient .= '#' . (isset($theme->colors[$sub_color]) ? $theme->colors[$sub_color] : 'ffffff') . ' ' . ($c * $percentage) . '%,#' . (isset($theme->colors[$sub_color]) ? $theme->colors[$sub_color] : 'ffffff') . ' ' . (($c * $percentage) + $percentage) . '%,';
+                                                            $c++;
+                                                        }
+                                                        $gradient = rtrim($gradient, ',');
+
+                                                        $style = 'background: linear-gradient(180deg, ' . $gradient . ');';
+                                                    } else {
+                                                        // Show single color
+                                                        $bg_color = (isset($theme->colors[$color[0]]) ? $theme->colors[$color[0]] : null);
+                                                        $bg_color = ($bg_color !== 'transparent' ? '#' . $bg_color : $bg_color);
+                                                        $style = 'background-color:' . (isset($bg_color) ? $bg_color : null) . ';';
+                                                    }
+
+                                                    $j++;
+                                                    ?>
+                                                    <span class="color-box" style="<?php echo $this->Html->safe($style);?>"></span>
+                                                    <?php
+                                                }
+                                                ?>
+                                            </div>
+                                        </td>
+                                        <?php } ?>
+                                        <td><?php echo $this->Html->safe($theme->name);?></td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <?php
+                                                if ($theme->company_id != null) {
+                                                ?>
+                                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/themes/edit/' . (isset($theme->id) ? $theme->id : true) . '/');?>"
+                                                       class="btn btn-sm btn-outline-secondary"
+                                                       title="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.index.option_edit', true));?>">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/themes/export/' . (isset($theme->id) ? $theme->id : true) . '/');?>"
+                                                       class="btn btn-sm btn-outline-secondary"
+                                                       title="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.index.option_export', true));?>">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                    <?php
+                                                    $this->Form->create(
+                                                        $this->base_uri . 'settings/company/themes/delete/',
+                                                        ['class' => 'd-inline']
+                                                    );
+                                                    $this->Form->fieldHidden('id', (isset($theme->id) ? $theme->id : true));
+                                                    ?>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                                            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.index.confirm_deletetheme', true));?>"
+                                                            title="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.index.option_delete', true));?>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                    <?php
+                                                    $this->Form->end();
+                                                    ?>
+                                                <?php
+                                                } else {
+                                                ?>
+                                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/company/themes/export/' . (isset($theme->id) ? $theme->id : true) . '/');?>"
+                                                       class="btn btn-sm btn-outline-secondary"
+                                                       title="<?php echo $this->Html->safe($this->_('AdminCompanyThemes.index.option_export', true));?>">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                <?php
+                                                }
+                                                ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <?php
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                </div>
+
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminCompanyThemes.index.field_themessubmit', true),
+                        ['class' => 'btn btn-primary']
+                    );
+                    ?>
+                </div>
+
+                <?php } else { ?>
+                <div class="card-body text-center text-muted py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="mt-3 mb-0"><?php $this->_('AdminCompanyThemes.index.no_results');?></p>
+                </div>
+                <?php } ?>
+
+                <?php
+                $this->Form->end();
+                ?>
+            <?php $this->Widget->end();?>
+        </div>

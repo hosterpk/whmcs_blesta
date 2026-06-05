@@ -1,49 +1,39 @@
+<?php /** @var View $this **/ ?>
 
+<?php
+$this->Form->create();
+
+if ($ips_tag ?? false) {
+?>
+<h6 class="form-section-header"><?php $this->_('Nominet.tab_settings.heading_push_domain'); ?></h6>
+<div class="mb-3">
+    <p><?php $this->_('Nominet.tab_settings.text_push_domain'); ?></p>
     <?php
-    $this->Form->create();
-
-    if ($ips_tag ?? false) {
+    $this->Form->label($this->_('Nominet.tab_settings.field_tag', true), 'tag', ['class' => 'form-label']);
+    $this->Form->fieldText('tag', $vars->key_tag ?? null, [
+        'id' => 'tag',
+        'placeholder' => $this->_('Nominet.tab_settings.field_tag', true)
+    ]);
     ?>
-    <div class="title_row first">
-        <h3><?php $this->_('Nominet.tab_settings.heading_push_domain');?></h3>
-    </div>
-    <div class="pad">
-        <ul>
-            <li>
-                <p><?php $this->_('Nominet.tab_settings.text_push_domain');?></p>
-                <?php
-                $this->Form->label($this->_('Nominet.tab_settings.field_tag', true), 'tag');
-                $this->Form->fieldText('tag', ($vars->key_tag ?? null), ['id' => 'tag', 'placeholder' => $this->_('Nominet.tab_settings.field_tag', true)]);
-                ?>
-            </li>
-        </ul>
-    </div>
+</div>
 
-    <div class="button_row">
-        <?php
-        $this->Form->fieldSubmit(null, $this->_('Nominet.tab_settings.field_submit', true), ['class' => 'btn btn-primary float-right']);
-        ?>
-    </div>
-    <?php
-    }
+<div class="d-flex justify-content-end">
+    <?php $this->Form->fieldSubmit(null, $this->_('Nominet.tab_settings.field_submit', true), ['class' => 'btn btn-primary float-right']); ?>
+</div>
+<?php
+}
 
-    $this->Form->end();
-    ?>
+$this->Form->end();
+?>
 
-    <?php
-    if ($epp_code ?? false) {
-    ?>
-    <div class="title_row">
-        <h3><?php $this->_('Nominet.tab_settings.heading_auth_code');?></h3>
-    </div>
-    <div class="pad">
-        <ul>
-            <li>
-                <p><?php $this->_('Nominet.tab_settings.text_auth_code');?></p>
-                <div class="badge badge-info mt-2"><?php echo $this->Html->safe($domain['epp_code'] ?? 'None');?></div>
-            </li>
-        </ul>
-    </div>
-    <?php
-    }
-    ?>
+<?php
+if ($epp_code ?? false) {
+?>
+<h6 class="form-section-header"><?php $this->_('Nominet.tab_settings.heading_auth_code'); ?></h6>
+<div class="mb-3">
+    <p><?php $this->_('Nominet.tab_settings.text_auth_code'); ?></p>
+    <div class="badge badge-info mt-2"><?php echo $this->Html->safe($domain['epp_code'] ?? 'None'); ?></div>
+</div>
+<?php
+}
+?>

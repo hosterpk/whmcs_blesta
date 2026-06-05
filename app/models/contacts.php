@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Contact management
  *
@@ -52,7 +60,12 @@ class Contacts extends AppModel
     public function add(array $vars)
     {
         // Trigger the Contacts.addBefore event
-        extract($this->executeAndParseEvent('Contacts.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('Contacts.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         if ($this->validateContact($vars, false, true)) {
             $vars = $this->adjustInput($vars);
@@ -157,7 +170,7 @@ class Contacts extends AppModel
             );
 
             if ($required_contact_fields) {
-                $required_fields = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($required_contact_fields->value ?? ''));
+                $required_fields = safe_unserialize(base64_decode($required_contact_fields->value ?? ''));
             }
         }
 
@@ -226,7 +239,7 @@ class Contacts extends AppModel
             );
 
             if ($read_only_contact_fields) {
-                $read_only_fields = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($read_only_contact_fields->value ?? ''));
+                $read_only_fields = safe_unserialize(base64_decode($read_only_contact_fields->value ?? ''));
             }
         }
 
@@ -295,10 +308,20 @@ class Contacts extends AppModel
     public function edit($contact_id, array $vars)
     {
         // Trigger the Contacts.editBefore event
-        extract($this->executeAndParseEvent('Contacts.editBefore', ['contact_id' => $contact_id, 'vars' => $vars]));
+        $event = $this->executeAndParseEvent('Contacts.editBefore', ['contact_id' => $contact_id, 'vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $vars['contact_id'] = $contact_id;
         if ($this->validateContact($vars, true, true)) {
+            // Invalidate cached client objects since they embed primary contact data
+            if (class_exists('Blesta\App\Models\Clients', false)) {
+                Clients::clearClientCache();
+            }
+
             $vars = $this->adjustInput($vars, true);
 
             $old_contact = (array) $this->get($vars['contact_id']);
@@ -396,7 +419,7 @@ class Contacts extends AppModel
                     array_intersect_key($vars, array_flip($fields))
                 )
             );
-            
+
             // Calculate the changes made to the contact and log those results
             $diff = array_diff_assoc($old_contact, (array) $new_contact);
             $fields = [];
@@ -431,7 +454,12 @@ class Contacts extends AppModel
     public function delete($contact_id)
     {
         // Trigger the Contacts.deleteBefore event
-        extract($this->executeAndParseEvent('Contacts.deleteBefore', ['contact_id' => $contact_id]));
+        $event = $this->executeAndParseEvent('Contacts.deleteBefore', ['contact_id' => $contact_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $vars = ['contact_id' => $contact_id, 'contact_type' => null];
 
@@ -466,6 +494,11 @@ class Contacts extends AppModel
         $this->Input->setRules($rules);
 
         if ($this->Input->validates($vars)) {
+            // Invalidate cached client objects since they embed contact data
+            if (class_exists('Blesta\App\Models\Clients', false)) {
+                Clients::clearClientCache();
+            }
+
             // Remove contact and contact numbers
             $this->Record->from('contacts')
                 ->leftJoin('contact_numbers', 'contact_numbers.contact_id', '=', 'contacts.id', false)
@@ -524,9 +557,14 @@ class Contacts extends AppModel
         }
 
         // Trigger the Contacts.get event
-        extract($this->executeAndParseEvent('Contacts.get', [
+        $event = $this->executeAndParseEvent('Contacts.get', [
             'contact' => $contact
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $contact;
     }
@@ -581,12 +619,18 @@ class Contacts extends AppModel
      *
      * @param int $client_id The client ID to fetch contacts for
      * @param int $page The page to return results for (optional, default 1)
-     * @param string $order The sort and order fields (optional, default the last name and first name ascending)
+     * @param array $order The sort and order fields (optional, default the last name and first name ascending)
+     * @param array $exclude_types A list of contact types to exclude
+     *  (e.g. ['primary']) (optional, default [])
      * @return array An array of objects
      */
-    public function getList($client_id, $page = 1, array $order = ['last_name' => 'asc', 'first_name' => 'asc'])
-    {
-        $this->Record = $this->getContacts($client_id);
+    public function getList(
+        $client_id,
+        $page = 1,
+        array $order = ['last_name' => 'asc', 'first_name' => 'asc'],
+        array $exclude_types = []
+    ) {
+        $this->Record = $this->getContacts($client_id, $exclude_types);
 
         // Return the results
         return $this->Record->order($order)
@@ -599,12 +643,14 @@ class Contacts extends AppModel
      * useful in constructing pagination for the getList() method.
      *
      * @param int $client_id The client ID to fetch contacts for
+     * @param array $exclude_types A list of contact types to exclude
+     *  (e.g. ['primary']) (optional, default [])
      * @return int The total number of clients
      * @see Companies::getList()
      */
-    public function getListCount($client_id)
+    public function getListCount($client_id, array $exclude_types = [])
     {
-        $this->Record = $this->getContacts($client_id);
+        $this->Record = $this->getContacts($client_id, $exclude_types);
 
         // Return the number of results
         return $this->Record->numResults();
@@ -639,15 +685,20 @@ class Contacts extends AppModel
      * Contacts::getListCount()
      *
      * @param int $client_id The client ID to fetch contacts for
+     * @param array $exclude_types A list of contact types to exclude (optional, default [])
      * @return Record The partially constructed query Record object
      */
-    private function getContacts($client_id)
+    private function getContacts($client_id, array $exclude_types = [])
     {
         $fields = ['id', 'client_id', 'user_id', 'contact_type',
             'contact_type_id', 'first_name', 'last_name', 'title', 'company',
             'email', 'address1', 'address2', 'city', 'state', 'zip', 'country'];
 
         $this->Record->select($fields)->from('contacts')->where('client_id', '=', $client_id);
+
+        if (!empty($exclude_types)) {
+            $this->Record->where('contact_type', 'notin', $exclude_types);
+        }
 
         return $this->Record;
     }
@@ -679,11 +730,7 @@ class Contacts extends AppModel
 
         if ($contact_type) {
             // Set a real_name to the language definition, if applicable
-            if ($contact_type->is_lang == '1') {
-                $contact_type->real_name = $this->_('_ContactTypes.' . $contact_type->name, true);
-            } else {
-                $contact_type->real_name = $contact_type->name;
-            }
+            $contact_type->real_name = $contact_type->is_lang == '1' ? $this->_('_ContactTypes.' . $contact_type->name, true) : $contact_type->name;
         }
 
         return $contact_type;
@@ -707,11 +754,7 @@ class Contacts extends AppModel
 
         // Set a real_name to the language definition, if applicable
         foreach ($contact_types as &$contact_type) {
-            if ($contact_type->is_lang == '1') {
-                $contact_type->real_name = $this->_('_ContactTypes.' . $contact_type->name, true);
-            } else {
-                $contact_type->real_name = $contact_type->name;
-            }
+            $contact_type->real_name = $contact_type->is_lang == '1' ? $this->_('_ContactTypes.' . $contact_type->name, true) : $contact_type->name;
         }
 
         return $contact_types;
@@ -1050,7 +1093,7 @@ class Contacts extends AppModel
         $client_id = $contact->client_id;
 
         if (isset($options[$area])) {
-            return (boolean) $this->Record->select()->
+            return (bool) $this->Record->select()->
                 from('contact_permissions')->
                 where('contact_id', '=', $contact_id)->
                 where('client_id', '=', $client_id)->
@@ -1149,8 +1192,8 @@ class Contacts extends AppModel
                     'if_set' => true,
                     'rule' => [
                         [$this, 'validateContactType'],
-                        (isset($vars['contact_id']) ? $vars['contact_id'] : null),
-                        (isset($vars['client_id']) ? $vars['client_id'] : null)
+                        ($vars['contact_id'] ?? null),
+                        ($vars['client_id'] ?? null)
                     ],
                     'message' => $this->_('Contacts.!error.contact_type.format')
                 ]
@@ -1159,8 +1202,8 @@ class Contacts extends AppModel
                 'format' => [
                     'rule' => [
                         [$this, 'validateContactTypeId'],
-                        (isset($vars['contact_type']) ? $vars['contact_type'] : null),
-                        (isset($vars['client_id']) ? $vars['client_id'] : null)
+                        ($vars['contact_type'] ?? null),
+                        ($vars['client_id'] ?? null)
                     ],
                     'message' => $this->_('Contacts.!error.contact_type_id.format')
                 ]
@@ -1221,11 +1264,12 @@ class Contacts extends AppModel
                                     $client->company_id,
                                     'unique_contact_emails'
                                 );
-                                $contact_email = (isset($setting['value']) ? $setting['value'] : $contact_email);
+                                $contact_email = ($setting['value'] ?? $contact_email);
                             }
 
                             // No contact email setting, or it does not restrict against contact emails
-                            if (empty($client)
+                            if (
+                                empty($client)
                                 || empty($contact_email)
                                 || !in_array($contact_email, ['all', 'primary'])
                             ) {
@@ -1281,7 +1325,7 @@ class Contacts extends AppModel
                 ],
                 'country_exists' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateStateCountry'], (isset($vars['country']) ? $vars['country'] : null)],
+                    'rule' => [[$this, 'validateStateCountry'], ($vars['country'] ?? null)],
                     'message' => $this->_('Contacts.!error.state.country_exists')
                 ]
             ],
@@ -1325,7 +1369,7 @@ class Contacts extends AppModel
                 );
 
                 if ($required_contact_fields) {
-                    $required_fields = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($required_contact_fields->value ?? ''));
+                    $required_fields = safe_unserialize(base64_decode($required_contact_fields->value ?? ''));
                 }
             }
         }
@@ -1734,12 +1778,12 @@ class Contacts extends AppModel
     {
         $old_contact = null;
         if ($edit) {
-            $old_contact = $this->get((isset($vars['contact_id']) ? $vars['contact_id'] : null));
-            $vars['client_id'] = (isset($old_contact->client_id) ? $old_contact->client_id : null);
+            $old_contact = $this->get(($vars['contact_id'] ?? null));
+            $vars['client_id'] = ($old_contact->client_id ?? null);
 
             // Set the contact type for rule validation
-            $vars['contact_type'] = (isset($vars['contact_type']) ? $vars['contact_type'] : $old_contact->contact_type);
-            $vars['contact_type_id'] = (isset($vars['contact_type_id']) ? $vars['contact_type_id'] : $old_contact->contact_type_id);
+            $vars['contact_type'] = ($vars['contact_type'] ?? $old_contact->contact_type);
+            $vars['contact_type_id'] = ($vars['contact_type_id'] ?? $old_contact->contact_type_id);
 
             // Set contact type ID to null if the contact type is different from "other"
             if (($vars['contact_type'] ?? 'primary') !== 'other') {
@@ -1747,7 +1791,8 @@ class Contacts extends AppModel
             }
 
             // Set the state to null if it's not given and the country has changed
-            if (isset($vars['country'])
+            if (
+                isset($vars['country'])
                 && !isset($vars['state'])
                 && $old_contact
                 && $old_contact->country != $vars['country']

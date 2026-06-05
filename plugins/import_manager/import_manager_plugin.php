@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Import Manager plugin handler
  *

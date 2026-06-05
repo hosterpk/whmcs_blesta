@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs API Response
  *

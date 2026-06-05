@@ -1,7 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Core\Util\Events\Common\EventInterface;
 use Blesta\Core\Util\Events\Common\Observable;
+use Language;
+use Loader;
+use ReflectionClass;
+use Throwable;
 
 /**
  * Events model
@@ -147,17 +154,14 @@ class SystemEvents extends AppModel
             return false;
         }
 
+        // Reject non-observable classes
+        if (class_exists($observer) && !is_subclass_of($observer, Blesta\Core\Util\Events\Common\Observable::class)) {
+            return false;
+        }
+
         $instance = false;
 
         try {
-            // Load the class by filename if it is one
-            if (Loader::load($observer)) {
-                // Remove the file path with forward or backslashes so we are left with the file name
-                // e.g. /path/to/file_name.php becomes FileName
-                $file = preg_replace('/^.*[|\\\\|\/]\s*[\.\s*]*/', '', $observer);
-                $observer = Loader::toCamelCase(substr($file, 0, strrpos($file, '.')));
-            }
-
             // Instantiate the class and ensure it implements the Observable interface
             $instance = call_user_func_array(
                 [

@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * Cpanel Module
  *
@@ -197,7 +199,7 @@ class Cpanel extends Module
                 $fields->fieldRadio(
                     'meta[type]',
                     'standard',
-                    (isset($vars->meta['type']) ? $vars->meta['type'] : 'standard') == 'standard',
+                    ($vars->meta['type'] ?? 'standard') == 'standard',
                     ['id' => 'cpanel_type_standard'],
                     $type_standard
                 )
@@ -206,7 +208,7 @@ class Cpanel extends Module
                 $fields->fieldRadio(
                     'meta[type]',
                     'reseller',
-                    (isset($vars->meta['type']) ? $vars->meta['type'] : null) == 'reseller',
+                    ($vars->meta['type'] ?? null) == 'reseller',
                     ['id' => 'cpanel_type_reseller'],
                     $type_reseller
                 )
@@ -224,7 +226,7 @@ class Cpanel extends Module
             $fields->fieldSelect(
                 'meta[acl]',
                 $acls,
-                (isset($vars->meta['acl']) ? $vars->meta['acl'] : null),
+                ($vars->meta['acl'] ?? null),
                 ['id' => 'cpanel_acl']
             )
         );
@@ -238,7 +240,7 @@ class Cpanel extends Module
         $account_limit->attach(
             $fields->fieldText(
                 'meta[account_limit]',
-                (isset($vars->meta['account_limit']) ? $vars->meta['account_limit'] : null),
+                ($vars->meta['account_limit'] ?? null),
                 ['id' => 'cpanel_account_limit']
             )
         );
@@ -261,7 +263,7 @@ class Cpanel extends Module
             $fields->fieldRadio(
                 'meta[sub_domains]',
                 'disable',
-                (isset($vars->meta['sub_domains']) ? $vars->meta['sub_domains'] : 'disable') == 'disable',
+                ($vars->meta['sub_domains'] ?? 'disable') == 'disable',
                 ['id' => 'cpanel_sub_domains_disable'],
                 $sub_domains_disable
             )
@@ -270,7 +272,7 @@ class Cpanel extends Module
             $fields->fieldRadio(
                 'meta[sub_domains]',
                 'enable',
-                (isset($vars->meta['sub_domains']) ? $vars->meta['sub_domains'] : null) == 'enable',
+                ($vars->meta['sub_domains'] ?? null) == 'enable',
                 ['id' => 'cpanel_sub_domains_enable'],
                 $sub_domains_enable
             )
@@ -285,7 +287,7 @@ class Cpanel extends Module
         $domains_list->attach(
             $fields->fieldText(
                 'meta[domains_list]',
-                (isset($vars->meta['domains_list']) ? $vars->meta['domains_list'] : null),
+                ($vars->meta['domains_list'] ?? null),
                 ['id' => 'cpanel_domains_list']
             )
         );
@@ -302,7 +304,7 @@ class Cpanel extends Module
                     Language::_('Cpanel.package_fields.dedicated_ip_no', true),
                     Language::_('Cpanel.package_fields.dedicated_ip_yes', true)
                 ],
-                (isset($vars->meta['dedicated_ip']) ? $vars->meta['dedicated_ip'] : null),
+                ($vars->meta['dedicated_ip'] ?? null),
                 ['id' => 'cpanel_dedicated_ip']
             )
         );
@@ -449,6 +451,14 @@ class Cpanel extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -480,6 +490,14 @@ class Cpanel extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -515,9 +533,9 @@ class Cpanel extends Module
             foreach ($vars as $key => $value) {
                 if (in_array($key, $meta_fields)) {
                     $meta[] = [
-                        'key'=>$key,
-                        'value'=>$value,
-                        'encrypted'=>in_array($key, $encrypted_fields) ? 1 : 0
+                        'key' => $key,
+                        'value' => $value,
+                        'encrypted' => in_array($key, $encrypted_fields) ? 1 : 0
                     ];
                 }
             }
@@ -558,9 +576,9 @@ class Cpanel extends Module
             foreach ($vars as $key => $value) {
                 if (in_array($key, $meta_fields)) {
                     $meta[] = [
-                        'key'=>$key,
-                        'value'=>$value,
-                        'encrypted'=>in_array($key, $encrypted_fields) ? 1 : 0
+                        'key' => $key,
+                        'value' => $value,
+                        'encrypted' => in_array($key, $encrypted_fields) ? 1 : 0
                     ];
                 }
             }
@@ -680,7 +698,7 @@ class Cpanel extends Module
         $username = $fields->label(Language::_('Cpanel.service_field.username', true), 'cpanel_username');
         // Create username field and attach to username label
         $username->attach(
-            $fields->fieldText('cpanel_username', ($vars->cpanel_username ?? null), ['id'=>'cpanel_username'])
+            $fields->fieldText('cpanel_username', ($vars->cpanel_username ?? null), ['id' => 'cpanel_username'])
         );
         // Add tooltip
         $tooltip = $fields->tooltip(Language::_('Cpanel.service_field.tooltip.username', true));
@@ -695,7 +713,7 @@ class Cpanel extends Module
             $fields->fieldPassword(
                 'cpanel_password',
                 [
-                    'class' => 'cpanel_password',
+                    'class' => 'form-control cpanel_password',
                     'id' => 'cpanel_password',
                     'value' => ($vars->cpanel_password ?? null)
                 ]
@@ -706,20 +724,6 @@ class Cpanel extends Module
         $password->attach($tooltip);
         // Set the label as a field
         $fields->setField($password);
-        $fields->setHtml('<a class="generate-password"
-                href="#" data-options="' . $this->Html->safe($password_options) . '"
-                data-length="' . $this->Html->safe($password_length) . '"
-                data-base-url="' . $this->base_uri . '" data-for-class="cpanel_password">
-            <i class="fas fa-sync-alt"></i> ' . Language::_('Cpanel.service_field.text_generate_password', true) . '
-        </a>
-        <script type="text/javascript">
-            $(document).ready(function () {
-                $("#cpanel_password").wrap("<div></div>");
-                $("#cpanel_password").removeClass("block");
-                $("#cpanel_password").parent().append($(".generate-password"));
-            });
-        </script>
-        ');
 
         // Confirm password label
         $confirm_password = $fields->label(
@@ -731,7 +735,7 @@ class Cpanel extends Module
             $fields->fieldPassword(
                 'cpanel_confirm_password',
                 [
-                    'class' => 'cpanel_password',
+                    'class' => 'form-control cpanel_password',
                     'id' => 'cpanel_confirm_password',
                     'value' => ($vars->cpanel_password ?? null)
                 ]
@@ -742,6 +746,31 @@ class Cpanel extends Module
         $confirm_password->attach($tooltip);
         // Set the label as a field
         $fields->setField($confirm_password);
+
+        $fields->setHtml('
+        <button type="button" class="btn btn-secondary generate-password"
+            data-options="' . $this->Html->safe($password_options) . '"
+            data-length="' . $this->Html->safe($password_length) . '"
+            data-base-url="' . $this->base_uri . '"
+            data-for-class="cpanel_password"
+            aria-label="' . $this->Html->safe(Language::_('Cpanel.service_field.text_generate_password', true)) . '"
+            title="' . $this->Html->safe(Language::_('Cpanel.service_field.text_generate_password', true)) . '">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        </button>
+        <script type="text/javascript">
+            document.addEventListener("DOMContentLoaded", function() {
+                var field = document.getElementById("cpanel_password");
+                var btn = document.querySelector(".generate-password[data-for-class=\'cpanel_password\']");
+                if (field && btn) {
+                    var wrapper = document.createElement("div");
+                    wrapper.className = "input-group";
+                    field.parentNode.insertBefore(wrapper, field);
+                    wrapper.appendChild(field);
+                    wrapper.appendChild(btn);
+                }
+            });
+        </script>
+        ');
 
         return $fields;
     }
@@ -760,7 +789,7 @@ class Cpanel extends Module
 
         $fields = new ModuleFields();
 
-        if ((isset($package->meta->sub_domains) ? $package->meta->sub_domains : null) == 'enable') {
+        if (($package->meta->sub_domains ?? null) == 'enable') {
             $domains = $this->getPackageAvailableDomains($package);
 
             // Create sub_domain label
@@ -769,7 +798,7 @@ class Cpanel extends Module
             $sub_domain->attach(
                 $fields->fieldText(
                     'cpanel_sub_domain',
-                    (isset($vars->cpanel_sub_domain) ? $vars->cpanel_sub_domain : null),
+                    ($vars->cpanel_sub_domain ?? null),
                     ['id' => 'cpanel_sub_domain']
                 )
             );
@@ -784,7 +813,7 @@ class Cpanel extends Module
                 $fields->fieldSelect(
                     'cpanel_domain',
                     $domains,
-                    (isset($vars->cpanel_domain) ? $vars->cpanel_domain : null),
+                    ($vars->cpanel_domain ?? null),
                     ['id' => 'cpanel_domain']
                 )
             );
@@ -797,7 +826,7 @@ class Cpanel extends Module
             $domain->attach(
                 $fields->fieldText(
                     'cpanel_domain',
-                    (isset($vars->cpanel_domain) ? $vars->cpanel_domain : ($vars->domain ?? null)),
+                    ($vars->cpanel_domain ?? ($vars->domain ?? null)),
                     ['id' => 'cpanel_domain']
                 )
             );
@@ -844,7 +873,7 @@ class Cpanel extends Module
         $domain = $fields->label(Language::_('Cpanel.service_field.domain', true), 'cpanel_domain');
         // Create domain field and attach to domain label
         $domain->attach(
-            $fields->fieldText('cpanel_domain', (isset($vars->cpanel_domain) ? $vars->cpanel_domain : null), ['id'=>'cpanel_domain'])
+            $fields->fieldText('cpanel_domain', ($vars->cpanel_domain ?? null), ['id' => 'cpanel_domain'])
         );
         // Set the label as a field
         $fields->setField($domain);
@@ -853,7 +882,7 @@ class Cpanel extends Module
         $username = $fields->label(Language::_('Cpanel.service_field.username', true), 'cpanel_username');
         // Create username field and attach to username label
         $username->attach(
-            $fields->fieldText('cpanel_username', (isset($vars->cpanel_username) ? $vars->cpanel_username : null), ['id'=>'cpanel_username'])
+            $fields->fieldText('cpanel_username', ($vars->cpanel_username ?? null), ['id' => 'cpanel_username'])
         );
         // Set the label as a field
         $fields->setField($username);
@@ -1049,9 +1078,10 @@ class Cpanel extends Module
     {
         Loader::loadHelpers($this, ['Html']);
 
-        $name = $this->formatDomain((isset($vars['cpanel_domain']) ? $vars['cpanel_domain'] : null));
-        if ((isset($package->meta->sub_domains) ? $package->meta->sub_domains : null) == 'enable'
-            && (isset($vars['cpanel_sub_domain']) ? $vars['cpanel_sub_domain'] : null)
+        $name = $this->formatDomain(($vars['cpanel_domain'] ?? null));
+        if (
+            ($package->meta->sub_domains ?? null) == 'enable'
+            && ($vars['cpanel_sub_domain'] ?? null)
         ) {
             $name = $this->formatDomain($vars['cpanel_sub_domain'] . '.' . $vars['cpanel_domain']);
         }
@@ -1212,7 +1242,7 @@ class Cpanel extends Module
             ],
             [
                 'key' => 'cpanel_ip',
-                'value' => isset($result->result[0]->options->ip) ? $result->result[0]->options->ip : '',
+                'value' => $result->result[0]->options->ip ?? '',
                 'encrypted' => 0
             ]
         ];
@@ -1553,7 +1583,7 @@ class Cpanel extends Module
 
         // Retrieve a single sign-on session for the user to log in with
         $service_fields = $this->serviceFieldsToObject($service->fields);
-        $session = $this->getUserSession($row, (isset($service_fields->cpanel_username) ? $service_fields->cpanel_username : null));
+        $session = $this->getUserSession($row, ($service_fields->cpanel_username ?? null));
 
         $this->view->set('module_row', $row);
         $this->view->set('package', $package);
@@ -1586,7 +1616,7 @@ class Cpanel extends Module
 
         // Retrieve a single sign-on session for the user to log in with
         $service_fields = $this->serviceFieldsToObject($service->fields);
-        $session = $this->getUserSession($row, (isset($service_fields->cpanel_username) ? $service_fields->cpanel_username : null));
+        $session = $this->getUserSession($row, ($service_fields->cpanel_username ?? null));
 
         $this->view->set('module_row', $row);
         $this->view->set('package', $package);
@@ -1710,13 +1740,9 @@ class Cpanel extends Module
             $bw = $this->parseResponse($api->showbw($params));
 
             if (isset($bw->bandwidth[0]->acct[0])) {
-                $stats->bandwidth_usage['used'] = $bw->bandwidth[0]->acct[0]->totalbytes/(1024*1024);
+                $stats->bandwidth_usage['used'] = $bw->bandwidth[0]->acct[0]->totalbytes / (1024 * 1024);
 
-                if (is_numeric($bw->bandwidth[0]->acct[0]->limit)) {
-                    $stats->bandwidth_usage['limit'] = $bw->bandwidth[0]->acct[0]->limit / (1024 * 1024);
-                } else {
-                    $stats->bandwidth_usage['limit'] = '∞';
-                }
+                $stats->bandwidth_usage['limit'] = is_numeric($bw->bandwidth[0]->acct[0]->limit) ? $bw->bandwidth[0]->acct[0]->limit / (1024 * 1024) : '∞';
             }
 
             if (isset($stats->account_info->acct[0])) {
@@ -1907,7 +1933,7 @@ class Cpanel extends Module
             if (isset($output->acct) && is_array($output->acct)) {
                 $accounts = count($output->acct);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
         return $accounts;
@@ -1958,7 +1984,7 @@ class Cpanel extends Module
                 $account_count = $count;
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
         }
         return false;
@@ -1988,8 +2014,8 @@ class Cpanel extends Module
         $pool_size = strlen($pool);
 
         if ($length < 5) {
-            for ($i=$length; $i<8; $i++) {
-                $username .= substr($pool, mt_rand(0, $pool_size-1), 1);
+            for ($i = $length; $i < 8; $i++) {
+                $username .= substr($pool, mt_rand(0, $pool_size - 1), 1);
             }
             $length = strlen($username);
         }
@@ -2009,7 +2035,7 @@ class Cpanel extends Module
 
             // Username exists, create another instead
             if (array_key_exists($username, $accounts)) {
-                for ($i=0; $i<(int)str_repeat(9, $account_matching_characters); $i++) {
+                for ($i = 0; $i < (int)str_repeat(9, $account_matching_characters); $i++) {
                     $new_username = substr($username, 0, -$account_matching_characters) . $i;
                     if (!array_key_exists($new_username, $accounts)) {
                         $username = $new_username;
@@ -2045,7 +2071,7 @@ class Cpanel extends Module
                     $user = $output->acct;
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2105,8 +2131,8 @@ class Cpanel extends Module
         $length = mt_rand(max($min_length, 5), min($max_length, 14));
         $password = '';
 
-        for ($i=0; $i<$length; $i++) {
-            $password .= substr($pool, mt_rand(0, $pool_size-1), 1);
+        for ($i = 0; $i < $length; $i++) {
+            $password .= substr($pool, mt_rand(0, $pool_size - 1), 1);
         }
 
         return $password;
@@ -2134,12 +2160,12 @@ class Cpanel extends Module
         $domain = $this->getDomainNameFromData($package, $vars);
         $fields = [
             'domain' => !empty($domain) ? $domain : null,
-            'username' => isset($vars['cpanel_username']) ? $vars['cpanel_username']: null,
-            'password' => isset($vars['cpanel_password']) ? $vars['cpanel_password'] : null,
+            'username' => $vars['cpanel_username'] ?? null,
+            'password' => $vars['cpanel_password'] ?? null,
             'plan' => $package->meta->package,
             'reseller' => ($package->meta->type == 'reseller' ? 1 : 0),
             'ip' => $dedicated_ip,
-            'contactemail' => isset($vars['cpanel_email']) ? $vars['cpanel_email'] : null
+            'contactemail' => $vars['cpanel_email'] ?? null
         ];
 
         return $fields;
@@ -2168,12 +2194,14 @@ class Cpanel extends Module
         if (isset($result->status) && $result->status == 0) {
             $this->Input->setErrors(['api' => ['result' => $result->statusmsg]]);
             $success = false;
-        } elseif (isset($result->result) && is_array($result->result)
+        } elseif (
+            isset($result->result) && is_array($result->result)
             && isset($result->result[0]->status) && $result->result[0]->status == 0
         ) {
             $this->Input->setErrors(['api' => ['result' => $result->result[0]->statusmsg]]);
             $success = false;
-        } elseif (isset($result->passwd) && is_array($result->passwd)
+        } elseif (
+            isset($result->passwd) && is_array($result->passwd)
             && isset($result->passwd[0]->status) && $result->passwd[0]->status == 0
         ) {
             $this->Input->setErrors(['api' => ['result' => $result->passwd[0]->statusmsg]]);
@@ -2182,9 +2210,7 @@ class Cpanel extends Module
             $this->Input->setErrors(
                 [
                     'api' => [
-                        'error' => (isset($result->cpanelresult->data->reason)
-                            ? $result->cpanelresult->data->reason
-                            : $result->cpanelresult->error
+                        'error' => ($result->cpanelresult->data->reason ?? $result->cpanelresult->error
                         )
                     ]
                 ]
@@ -2269,7 +2295,7 @@ class Cpanel extends Module
             }
 
             $this->log($module_row->meta->host_name, $package_list, 'output', $success);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
         }
 
@@ -2306,7 +2332,7 @@ class Cpanel extends Module
                 $acls[$key] = $key;
             }
             return $acls;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
         }
 
@@ -2335,7 +2361,7 @@ class Cpanel extends Module
             $this->log($module_row->meta->host_name . '|create_user_session', serialize($data), 'input', true);
             $response = $api->xmlapi_query('create_user_session', $data);
             $result = $this->parseResponse($response);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // API request failed
         }
 
@@ -2366,34 +2392,34 @@ class Cpanel extends Module
     private function getRowRules(&$vars)
     {
         $rules = [
-            'server_name'=>[
-                'valid'=>[
-                    'rule'=>'isEmpty',
-                    'negate'=>true,
-                    'message'=>Language::_('Cpanel.!error.server_name_valid', true)
+            'server_name' => [
+                'valid' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Cpanel.!error.server_name_valid', true)
                 ]
             ],
-            'host_name'=>[
-                'valid'=>[
-                    'rule'=>[[$this, 'validateHostName']],
-                    'message'=>Language::_('Cpanel.!error.host_name_valid', true)
+            'host_name' => [
+                'valid' => [
+                    'rule' => [[$this, 'validateHostName']],
+                    'message' => Language::_('Cpanel.!error.host_name_valid', true)
                 ]
             ],
-            'user_name'=>[
-                'valid'=>[
-                    'rule'=>'isEmpty',
-                    'negate'=>true,
-                    'message'=>Language::_('Cpanel.!error.user_name_valid', true)
+            'user_name' => [
+                'valid' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Cpanel.!error.user_name_valid', true)
                 ]
             ],
-            'key'=>[
-                'valid'=>[
-                    'last'=>true,
-                    'rule'=>'isEmpty',
-                    'negate'=>true,
-                    'message'=>Language::_('Cpanel.!error.remote_key_valid', true)
+            'key' => [
+                'valid' => [
+                    'last' => true,
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Cpanel.!error.remote_key_valid', true)
                 ],
-                'valid_connection'=>[
+                'valid_connection' => [
                     'rule' => [
                         [$this, 'validateConnection'],
                         $vars['host_name'],
@@ -2401,23 +2427,23 @@ class Cpanel extends Module
                         $vars['use_ssl'],
                         &$vars['account_count']
                     ],
-                    'message'=>Language::_('Cpanel.!error.remote_key_valid_connection', true)
+                    'message' => Language::_('Cpanel.!error.remote_key_valid_connection', true)
                 ]
             ],
-            'account_limit'=>[
-                'valid'=>[
-                    'rule'=>['matches', '/^([0-9]+)?$/'],
-                    'message'=>Language::_('Cpanel.!error.account_limit_valid', true)
+            'account_limit' => [
+                'valid' => [
+                    'rule' => ['matches', '/^([0-9]+)?$/'],
+                    'message' => Language::_('Cpanel.!error.account_limit_valid', true)
                 ]
             ],
-            'name_servers'=>[
-                'count'=>[
-                    'rule'=>[[$this, 'validateNameServerCount']],
-                    'message'=>Language::_('Cpanel.!error.name_servers_count', true)
+            'name_servers' => [
+                'count' => [
+                    'rule' => [[$this, 'validateNameServerCount']],
+                    'message' => Language::_('Cpanel.!error.name_servers_count', true)
                 ],
-                'valid'=>[
-                    'rule'=>[[$this, 'validateNameServers']],
-                    'message'=>Language::_('Cpanel.!error.name_servers_valid', true)
+                'valid' => [
+                    'rule' => [[$this, 'validateNameServers']],
+                    'message' => Language::_('Cpanel.!error.name_servers_valid', true)
                 ]
             ]
         ];

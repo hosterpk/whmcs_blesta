@@ -1,0 +1,38 @@
+<?php /** @var View $this **/ ?>
+
+<div class="pricing-summary-box">
+    <div class="pricing-line">
+        <span class="pricing-label"><?php $this->_('AdminClientsService.totals.subtotal');?></span>
+        <span class="pricing-amount"><?php echo $this->CurrencyFormat->format((isset($totals->subtotal) ? $this->Html->safe($totals->subtotal) : null), (isset($currency) ? $currency : null));?></span>
+    </div>
+    <?php
+    foreach ((isset($discounts) ? $discounts : []) as $discount) {
+        // Show discount as negative
+        $amount = (isset($discount->total) ? $discount->total : 0) * -1;
+    ?>
+    <div class="pricing-line pricing-discount">
+        <span class="pricing-label"><?php (print (isset($discount->description) ? $this->Html->safe($discount->description) : null));?></span>
+        <span class="pricing-amount text-success"><?php echo $this->CurrencyFormat->format((isset($amount) ? $this->Html->safe($amount) : null), (isset($currency) ? $currency : null));?></span>
+    </div>
+    <?php
+    }
+
+    foreach ((isset($taxes) ? $taxes : []) as $tax) {
+    ?>
+    <div class="pricing-line pricing-tax">
+        <span class="pricing-label"><?php (print (isset($tax->description) ? $this->Html->safe($tax->description) : null));?></span>
+        <span class="pricing-amount"><?php echo $this->CurrencyFormat->format((isset($tax->total) ? $this->Html->safe($tax->total) : null), (isset($currency) ? $currency : null));?></span>
+    </div>
+    <?php
+    }
+    ?>
+
+    <div class="pricing-divider"></div>
+
+    <div class="pricing-line pricing-total">
+        <span class="pricing-label fw-bold"><?php $this->_('AdminClientsService.totals.total');?></span>
+        <span class="pricing-amount fw-bold">
+            <?php echo $this->CurrencyFormat->format((isset($settings['client_prorate_credits']) ? $settings['client_prorate_credits'] : null) == 'false' && (isset($totals->total_without_exclusive_tax) ? $this->Html->safe($totals->total_without_exclusive_tax) : null) < 0 ? 0 : (isset($totals->total_without_exclusive_tax) ? $this->Html->safe($totals->total_without_exclusive_tax) : null), (isset($currency) ? $currency : null));?>
+        </span>
+    </div>
+</div>

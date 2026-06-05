@@ -141,11 +141,15 @@ class ClientManagers extends ClientController
         $vars = new stdClass();
         $contact_id = $this->get[0] ?? null;
 
-        // Ensure a valid contact was given
+        // Ensure a valid contact was given and that it is an active manager for this client
         if (!($contact = $this->Contacts->get((int) $contact_id))
-            || ($contact->client_id == $this->client->id)) {
+            || ($contact->client_id == $this->client->id)
+            || !$this->ManagedAccounts->isActiveManager($contact_id, $this->client->id)) {
             $this->redirect($this->base_uri . 'managers/');
         }
+
+        // Get manager
+        $vars = $this->ManagedAccounts->getManager($contact_id, $this->client->id);
 
         // Get all possible permissions
         $permission_options = $this->ManagedAccounts->getPermissionOptions($this->company_id);
@@ -156,9 +160,6 @@ class ClientManagers extends ClientController
                 unset($permission_options[$key]);
             }
         }
-
-        // Get manager
-        $vars = $this->ManagedAccounts->getManager($contact_id, $this->client->id);
 
         // Update manager
         if (!empty($this->post)) {
@@ -211,7 +212,10 @@ class ClientManagers extends ClientController
         }
 
         if ((isset($invitation->client_id) && !($invitation->client_id == $this->client->id))
-            || (isset($contact->client_id) && ($contact->client_id == $this->client->id))
+            || (isset($contact->client_id) && (
+                ($contact->client_id == $this->client->id)
+                || !$this->ManagedAccounts->isActiveManager($contact->id, $this->client->id)
+            ))
         ) {
             $this->redirect($this->base_uri . 'managers/');
         }

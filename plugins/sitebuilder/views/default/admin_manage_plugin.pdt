@@ -1,58 +1,66 @@
 
-        <?php
-        $this->Widget->clear();
-        $this->Widget->create($this->_('SitebuilderManagePlugin.index.boxtitle_manage', true));
-        $this->Form->create();
-        ?>
-        <div class="inner">
-            <div class="pad">
-                <ul>
-                    <?php foreach ($pluginVars ?? [] as $id => $var): ?>
-                    <li>
-                        <?php
-                            if (($var->type ?? '') == 'checkbox') {
-                                $this->Form->fieldCheckbox($id, 'true', (($values[$id] ?? 'false') == 'true'), ['id' => $id]);
-                                $this->Form->label($this->_("SitebuilderManagePlugin.index.{$id}", true), $id, ['class' => 'inline']);
-                            } else {
-                                $label = $this->_("SitebuilderManagePlugin.index.{$id}", true);
-                                $fieldAttrs = ['id' => $id];
-                                if ($var->required ?? false) {
-                                    $label .= ' ('.$this->_("SitebuilderManagePlugin.index.required", true).')';
-                                    $fieldAttrs['required'] = 'required';
-                                }
-                                $this->Form->label($label, $id);
-                                $this->Form->fieldText($id, ($values[$id] ?? ''), $fieldAttrs);
-                            }
-                            if ($var->prompt ?? '') {
-                                if (($var->type ?? '') == 'checkbox') {
-                                    echo '<br>';
-                                }
-                                echo ' <small>'.$var->prompt.'</small>';
-                            }
-                        ?>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-                <div class="empty_section" style="margin-top: 10px;">
-                    <div class="empty_box">
-                        <?php
-                            printf(
-                                $this->_('SitebuilderManagePlugin.index.instruction', true),
-                                '<a href="https://site.pro/Plugin-installation-guide/blesta/" target="_blank">',
-                                '</a>'
-                            );
-                        ?>
-                    </div>
-                </div>
-            </div>
+<?php
+$this->Form->create(null, ['class' => 'disable-on-submit']);
 
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save_settings', $this->_('SitebuilderManagePlugin.index.submit_settings', true), ['class' => 'btn btn-primary pull-right']);
-                ?>
-            </div>
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('SitebuilderManagePlugin.index.boxtitle_manage', true), [], ($render_section ?? null));
+?>
+
+<div class="card-body">
+    <?php foreach ($pluginVars ?? [] as $id => $var): ?>
+        <div class="mb-3">
+            <?php
+            if (($var->type ?? '') == 'checkbox') {
+            ?>
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox($id, 'true', (($values[$id] ?? 'false') == 'true'), ['id' => $id, 'class' => 'form-check-input']);
+                    ?>
+                    <label class="form-check-label" for="<?php echo $this->Html->safe($id); ?>">
+                        <?php echo $this->_("SitebuilderManagePlugin.index.{$id}", true); ?>
+                    </label>
+                </div>
+            <?php
+            } else {
+                $label = $this->_("SitebuilderManagePlugin.index.{$id}", true);
+                $fieldAttrs = ['id' => $id, 'class' => 'form-control'];
+                if ($var->required ?? false) {
+                    $label .= ' ('.$this->_("SitebuilderManagePlugin.index.required", true).')';
+                    $fieldAttrs['required'] = 'required';
+                }
+                $this->Form->label($label, $id, ['class' => 'form-label']);
+                $this->Form->fieldText($id, ($values[$id] ?? ''), $fieldAttrs);
+            }
+            if ($var->prompt ?? '') {
+                if (($var->type ?? '') == 'checkbox') {
+                    echo '<br>';
+                }
+                echo ' <small class="text-muted">'.$var->prompt.'</small>';
+            }
+            ?>
         </div>
+    <?php endforeach; ?>
+
+    <div class="alert alert-info mb-0">
         <?php
-        $this->Form->end();
-        $this->Widget->end();
+        printf(
+            $this->_('SitebuilderManagePlugin.index.instruction', true),
+            '<a href="https://site.pro/Plugin-installation-guide/blesta/" target="_blank">',
+            '</a>'
+        );
         ?>
+    </div>
+</div>
+
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit('save_settings', $this->_('SitebuilderManagePlugin.index.submit_settings', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+
+<?php
+$this->Widget->end();
+$this->Form->end();
+?>

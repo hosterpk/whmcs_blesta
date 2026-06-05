@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs Domain DNS Record Management
  *
@@ -35,7 +36,7 @@ class InternetbsDomainDnsrecord
      *  - Priority A number representing the priority. It is only used for MX records and the default value is 10
      * @return InternetbsResponse The response object
      */
-    public function add(array $vars) : InternetbsResponse
+    public function add(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/DnsRecord/Add', $vars, 'POST');
     }
@@ -56,7 +57,7 @@ class InternetbsDomainDnsrecord
      *  - NewPriority A number representing the priority.
      * @return InternetbsResponse The response object
      */
-    public function update(array $vars) : InternetbsResponse
+    public function update(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/DnsRecord/Update', $vars, 'POST');
     }
@@ -73,7 +74,7 @@ class InternetbsDomainDnsrecord
      *  - Priority A number representing the priority. It is only used for MX records and the default value is 10
      * @return InternetbsResponse The response object
      */
-    public function remove(array $vars) : InternetbsResponse
+    public function remove(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/DnsRecord/Remove', $vars, 'POST');
     }
@@ -87,7 +88,7 @@ class InternetbsDomainDnsrecord
      *      By default all record are retrieved. Accepted values are: A, AAAA, DYNAMIC, CNAME, MX, TXT, NS and ALL
      * @return InternetbsResponse The response object
      */
-    public function list(array $vars) : InternetbsResponse
+    public function list(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/DnsRecord/List', $vars);
     }

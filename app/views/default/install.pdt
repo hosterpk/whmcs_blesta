@@ -1,32 +1,43 @@
-<div class="container">
-    <div class="card">
-        <div class="card-header p-3 h3">
-            <i class="fas fa-download"></i>
-            Blesta Installer
-            <img class="float-right blesta-logo" src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" />
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="card bg-light p-3">
-                        <h4>Install via Web Browser</h4>
-                        <p class="m-0">
-                            <a href="<?php echo $this->Html->safe(WEBDIR . 'install/process/');?>" class="btn btn-success btn-block btn-lg">
-                                <i class="fas fa-arrow-right fa-fw"></i> Continue with Installation
-                            </a>
-                        </p>
-                    </div>
+<?php /** @var View $this **/ ?>
+
+<div class="installer-container">
+    <div class="installer-header-section">
+        <img src="<?php echo $this->view_dir . 'images/logo.svg';?>" alt="Blesta" class="installer-logo installer-logo-dark">
+        <img src="<?php echo $this->view_dir . 'images/logo-color.svg';?>" alt="Blesta" class="installer-logo installer-logo-light">
+        <div class="logo-divider"></div>
+        <div class="installer-label">Installer</div>
+    </div>
+
+    <div class="installer-content">
+        <div class="row g-4">
+            <!-- Install via Web Browser -->
+            <div class="col-12 col-lg-6">
+                <div class="install-method-card">
+                    <h2>Install via Web Browser</h2>
+                    <p>The easiest way to install Blesta. This guided installation wizard will walk you through the setup process step by step.</p>
+                    <a href="<?php echo $this->Html->safe(WEBDIR . 'install/process/');?>" class="btn btn-continue">
+                        <span>Continue with Installation</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
+            </div>
 
-                <div class="col-lg-6">
-                    <div class="card bg-light p-3">
-                        <h4>Install via CLI</h4>
-                        <p>
-                            To install via the command line, run:
-                        </p>
-                        <pre class="rounded bg-dark text-light p-2 m-0">cd <?php echo DOCROOTDIR;?>
-
-php <?php echo '.' . DS . str_replace(DOCROOTDIR, '', ROOTWEBDIR);?>index.php install</pre>
+            <!-- Install via CLI -->
+            <div class="col-12 col-lg-6">
+                <div class="install-method-card">
+                    <h2>Install via CLI</h2>
+                    <p class="cli-instructions">To install via the command line, run:</p>
+                    <div class="code-block-wrapper">
+                        <div class="code-block" id="cli-command"><code>cd</code> <span class="path"><?php echo DOCROOTDIR;?></span><br><code>php</code> <span class="path"><?php echo '.' . DS . str_replace(DOCROOTDIR, '', ROOTWEBDIR);?>index.php</span> <span class="command">install</span></div>
+                        <button class="copy-code-btn" id="copy-btn" title="Copy to clipboard">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Advanced users can use the CLI for automated or scripted installations.
+                        </small>
                     </div>
                 </div>
             </div>

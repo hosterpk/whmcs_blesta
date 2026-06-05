@@ -1,255 +1,275 @@
+<?php /** @var View $this */ ?>
 
+<?php
+echo ($message ?? null);
+
+$widget_title = $this->_('AdminMain.add.boxtitle_root', true, $this->_('AdminMain.!text.root_directory', true));
+if (!empty($category))
+    $widget_title = $this->_('AdminMain.add.boxtitle_add', true, ($category->name ?? null));
+
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($widget_title);
+
+$this->Form->create(null, ['id' => 'add_download', 'enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+?>
+<div class="card-body">
+    <div class="mb-3">
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('type', 'public', ((isset($vars->type) ? $vars->type : 'public') == 'public'), ['id' => 'type_public', 'class' => 'form-check-input type']);
+            $this->Form->label($this->_('AdminMain.add.field_public', true), 'type_public', ['class' => 'form-check-label']);
+            ?>
+        </div>
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('type', 'logged_in', ((isset($vars->type) ? $vars->type : null) == 'logged_in'), ['id' => 'type_logged_in', 'class' => 'form-check-input type']);
+            $this->Form->label($this->_('AdminMain.add.field_logged_in', true), 'type_logged_in', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+
+    <div class="mb-3 form-check download_logged_in" style="display:none;">
         <?php
-        echo ($message ?? null);
-
-        $widget_title = $this->_('AdminMain.add.boxtitle_root', true, $this->_('AdminMain.!text.root_directory', true));
-        if (!empty($category))
-            $widget_title = $this->_('AdminMain.add.boxtitle_add', true, ($category->name ?? null));
-
-        $this->Widget->clear();
-        $this->Widget->create($widget_title);
-
-        $this->Form->create(null, ['id' => 'add_download', 'enctype' => 'multipart/form-data']);
+        $this->Form->fieldCheckbox('available_to_client_groups', '1', ((isset($vars->available_to_client_groups) ? $vars->available_to_client_groups : null) == '1'), ['id' => 'available_to_client_groups', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('AdminMain.add.field_available_to_client_groups', true), 'available_to_client_groups', ['class' => 'form-check-label']);
         ?>
-        <div class="inner">
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php
-                        $this->Form->fieldRadio('type', 'public', ((isset($vars->type) ? $vars->type : 'public') == 'public'), ['id' => 'public', 'class' => 'type']);
-                        $this->Form->label($this->_('AdminMain.add.field_public', true), 'public', ['class' => 'inline']);
-                        $this->Form->fieldRadio('type', 'logged_in', ((isset($vars->type) ? $vars->type : null) == 'logged_in'), ['id' => 'logged_in', 'class' => 'type']);
-                        $this->Form->label($this->_('AdminMain.add.field_logged_in', true), 'logged_in', ['class' => 'inline']);
-                        ?>
-                    </li>
-                    <li class="download_logged_in" style="display:none;">
-                        <?php
-                        $this->Form->fieldCheckbox('available_to_client_groups', '1', ((isset($vars->available_to_client_groups) ? $vars->available_to_client_groups : null) == '1'), ['id' => 'available_to_client_groups']);
-                        $this->Form->label($this->_('AdminMain.add.field_available_to_client_groups', true), 'available_to_client_groups', ['class' => 'inline']);
-                        ?>
-                    </li>
-                    <li id="download_client_groups" style="display:none;">
-                        <table id="assign_client_groups">
-                            <tr>
-                                <td><?php $this->Form->label($this->_('AdminMain.add.text_clientgroups', true), 'assigned');?></td>
-                                <td></td>
-                                <td><?php $this->Form->label($this->_('AdminMain.add.text_availableclientgroups', true), 'available');?></td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <?php $this->Form->fieldMultiSelect('file_groups[]', (isset($vars->file_groups) ? $vars->file_groups : null), [], ['id' => 'assigned_client_groups']);?>
-                                </td>
-                                <td><a href="#" class="client_group move_left">&nbsp;</a> &nbsp; <a href="#" class="client_group move_right">&nbsp;</a></td>
-                                <td>
-                                    <?php $this->Form->fieldMultiSelect('available_client_groups[]', (isset($client_groups) ? $client_groups : null), [], ['id' => 'available_client_groups']);?>
-                                </td>
-                            </tr>
-                        </table>
-                    </li>
-                    <li class="download_logged_in" style="display:none;">
-                        <?php
-                        $this->Form->fieldCheckbox('available_to_packages', '1', ((isset($vars->available_to_packages) ? $vars->available_to_packages : null) == '1'), ['id' => 'available_to_packages']);
-                        $this->Form->label($this->_('AdminMain.add.field_available_to_packages', true), 'available_to_packages', ['class' => 'inline']);
-                        ?>
-                    </li>
-                    <li id="download_packages" style="display:none;">
-                        <table id="assign_packages">
-                            <tr>
-                                <td><?php $this->Form->label($this->_('AdminMain.add.text_packagegroups', true), 'assigned');?></td>
-                                <td></td>
-                                <td><?php $this->Form->label($this->_('AdminMain.add.text_availablepackages', true), 'available');?></td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <?php $this->Form->fieldMultiSelect('file_packages[]', (isset($vars->file_packages) ? $vars->file_packages : null), [], ['id' => 'assigned_packages']);?>
-                                </td>
-                                <td><a href="#" class="packages move_left">&nbsp;</a> &nbsp; <a href="#" class="packages move_right">&nbsp;</a></td>
-                                <td>
-                                    <?php $this->Form->fieldMultiSelect('available_packages[]', (isset($packages) ? $packages : null), [], ['id' => 'available_packages']);?>
-                                </td>
-                            </tr>
-                        </table>
-                    </li>
-                    <li>
-                        <?php $this->Form->label($this->_('AdminMain.add.field_name', true), 'name');?>
-                        <?php $this->Form->fieldText('name', (isset($vars->name) ? $vars->name : null), ['id' => 'name']);?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->fieldRadio('file_type', 'upload', ((isset($vars->file_type) ? $vars->file_type : 'upload') == 'upload'), ['id' => 'upload', 'class' => 'file_path']);
-                        $this->Form->label($this->_('AdminMain.add.field_upload', true), 'upload', ['class' => 'inline']);
-                        $this->Form->fieldRadio('file_type', 'path', ((isset($vars->file_type) ? $vars->file_type : null) == 'path'), ['id' => 'path', 'class' => 'file_path']);
-                        $this->Form->label($this->_('AdminMain.add.field_path', true), 'path', ['class' => 'inline']);
-                        ?>
-                    </li>
-                    <li id="file_upload" style="display:none;">
-                        <?php $this->Form->label($this->_('AdminMain.add.field_file', true), 'file');?>
-                        <?php $this->Form->fieldFile('file', ['id' => 'file']);?>
-                    </li>
-                    <li id="file_full_path" style="display:none;">
-                        <section class="error_section">
-                            <article class="error_box alert">
-                                <div class="icon-line fa-2x">
-                                    <i class="fas fa-exclamation-triangle fa-fw"></i>
-                                    <p><?php $this->_('AdminMain.add.text_full_path', false, $uploads_dir ?? '');?></p>
-                                </div>
-                            </article>
-                        </section>
+    </div>
 
-                        <?php $this->Form->label($this->_('AdminMain.add.field_file_name', true), 'file_name');?>
-                        <?php $this->Form->fieldText('file_name', (isset($vars->file_name) ? $vars->file_name : null), ['id' => 'file_name']);?>
-                        <span class="tooltip"><?php $this->_('AppController.tooltip.text');?> <div><?php $this->_('AdminMain.!tooltip.path_to_file');?></div></span>
-                    </li>
-                </ul>
+    <div class="mb-3" id="download_client_groups" style="display:none;">
+        <div class="row">
+            <div class="col-md-5">
+                <?php $this->Form->label($this->_('AdminMain.add.text_clientgroups', true), 'assigned_client_groups', ['class' => 'form-label']); ?>
+                <?php $this->Form->fieldMultiSelect('file_groups[]', (isset($vars->file_groups) ? $vars->file_groups : null), [], ['id' => 'assigned_client_groups', 'class' => 'form-select', 'style' => 'height: 150px;']); ?>
             </div>
-
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('AdminMain.add.submit_add', true), ['class' => 'btn btn-primary pull-right']);
-                ?>
-                <a class="btn btn-default pull-right" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . ($category->id ?? null));?>"><?php $this->_('AdminMain.add.submit_cancel');?></a>
+            <div class="col-md-2 d-flex flex-column justify-content-center align-items-center gap-2 my-3 my-md-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm client_group move_left">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm client_group move_right">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            <div class="col-md-5">
+                <?php $this->Form->label($this->_('AdminMain.add.text_availableclientgroups', true), 'available_client_groups', ['class' => 'form-label']); ?>
+                <?php $this->Form->fieldMultiSelect('available_client_groups[]', (isset($client_groups) ? $client_groups : null), [], ['id' => 'available_client_groups', 'class' => 'form-select', 'style' => 'height: 150px;']); ?>
             </div>
         </div>
+    </div>
+
+    <div class="mb-3 form-check download_logged_in" style="display:none;">
         <?php
-        $this->Form->end();
-        $this->Widget->end();
+        $this->Form->fieldCheckbox('available_to_packages', '1', ((isset($vars->available_to_packages) ? $vars->available_to_packages : null) == '1'), ['id' => 'available_to_packages', 'class' => 'form-check-input']);
+        $this->Form->label($this->_('AdminMain.add.field_available_to_packages', true), 'available_to_packages', ['class' => 'form-check-label']);
         ?>
+    </div>
+
+    <div class="mb-3" id="download_packages" style="display:none;">
+        <div class="row">
+            <div class="col-md-5">
+                <?php $this->Form->label($this->_('AdminMain.add.text_packagegroups', true), 'assigned_packages', ['class' => 'form-label']); ?>
+                <?php $this->Form->fieldMultiSelect('file_packages[]', (isset($vars->file_packages) ? $vars->file_packages : null), [], ['id' => 'assigned_packages', 'class' => 'form-select', 'style' => 'height: 150px;']); ?>
+            </div>
+            <div class="col-md-2 d-flex flex-column justify-content-center align-items-center gap-2 my-3 my-md-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm packages move_left">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm packages move_right">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            <div class="col-md-5">
+                <?php $this->Form->label($this->_('AdminMain.add.text_availablepackages', true), 'available_packages', ['class' => 'form-label']); ?>
+                <?php $this->Form->fieldMultiSelect('available_packages[]', (isset($packages) ? $packages : null), [], ['id' => 'available_packages', 'class' => 'form-select', 'style' => 'height: 150px;']); ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <?php
+        $this->Form->label($this->_('AdminMain.add.field_name', true), 'name', ['class' => 'form-label']);
+        $this->Form->fieldText('name', (isset($vars->name) ? $vars->name : null), ['id' => 'name', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('file_type', 'upload', ((isset($vars->file_type) ? $vars->file_type : 'upload') == 'upload'), ['id' => 'file_type_upload', 'class' => 'form-check-input file_path']);
+            $this->Form->label($this->_('AdminMain.add.field_upload', true), 'file_type_upload', ['class' => 'form-check-label']);
+            ?>
+        </div>
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('file_type', 'path', ((isset($vars->file_type) ? $vars->file_type : null) == 'path'), ['id' => 'file_type_path', 'class' => 'form-check-input file_path']);
+            $this->Form->label($this->_('AdminMain.add.field_path', true), 'file_type_path', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+
+    <div class="mb-3" id="file_upload" style="display:none;">
+        <?php
+        $this->Form->label($this->_('AdminMain.add.field_file', true), 'file', ['class' => 'form-label']);
+        $this->Form->fieldFile('file', ['id' => 'file', 'class' => 'form-control']);
+        ?>
+    </div>
+
+    <div id="file_full_path" style="display:none;">
+        <div class="alert alert-warning mb-3">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <?php $this->_('AdminMain.add.text_full_path', false, $uploads_dir ?? ''); ?>
+        </div>
+
+        <div class="mb-3">
+            <?php
+            $this->Form->label($this->_('AdminMain.add.field_file_name', true), 'file_name', ['class' => 'form-label']);
+            ?>
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php $this->_('AdminMain.!tooltip.path_to_file'); ?>"></i>
+            <?php
+            $this->Form->fieldText('file_name', (isset($vars->file_name) ? $vars->file_name : null), ['id' => 'file_name', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+</div>
+
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/files/' . ($category->id ?? null)); ?>"><?php $this->_('AdminMain.add.submit_cancel'); ?></a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminMain.add.submit_add', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
 
 <script type="text/javascript">
-$(document).ready(function() {
-    $('#add_download').submit(function() {
-        $('#assigned_client_groups option').prop('selected', true);
-        $('#assigned_packages option').prop('selected', true);
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('add_download');
+    var type_public = document.getElementById('type_public');
+    var type_logged_in = document.getElementById('type_logged_in');
+    var file_type_upload = document.getElementById('file_type_upload');
+    var file_type_path = document.getElementById('file_type_path');
+    var available_to_client_groups = document.getElementById('available_to_client_groups');
+    var available_to_packages = document.getElementById('available_to_packages');
+    var file_name_input = document.getElementById('file_name');
+    var uploads_dir = '<?php echo $this->Html->safe(str_replace('\\', '\\\\', $uploads_dir ?? '')); ?>';
+
+    form.addEventListener('submit', function() {
+        var assigned_client_groups = document.getElementById('assigned_client_groups');
+        var assigned_packages = document.getElementById('assigned_packages');
+        Array.from(assigned_client_groups.options).forEach(function(option) {
+            option.selected = true;
+        });
+        Array.from(assigned_packages.options).forEach(function(option) {
+            option.selected = true;
+        });
     });
 
-    // Show selected fields
-    if ($('#logged_in').prop('checked'))
+    if (type_logged_in.checked) {
         showLoggedInFields(true);
-    if ($('#path').prop('checked'))
-        showFileFields("path", true);
-    if ($('#upload').prop('checked'))
-        showFileFields("upload", true);
+    }
+    if (file_type_path.checked) {
+        showFileFields('path');
+    }
+    if (file_type_upload.checked) {
+        showFileFields('upload');
+    }
 
-    // Move client groups from right to left
-    $('.client_group.move_left').click(function() {
-        $('#available_client_groups option:selected').appendTo($('#assigned_client_groups'));
-        return false;
+    document.querySelectorAll('.client_group.move_left').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            moveOptions('available_client_groups', 'assigned_client_groups');
+        });
     });
-    // Move client_groups from left to right
-    $('.client_group.move_right').click(function() {
-        $('#assigned_client_groups option:selected').appendTo($('#available_client_groups'));
-        return false;
-    });
-
-    // Move packages from right to left
-    $('.packages.move_left').click(function() {
-        $('#available_packages option:selected').appendTo($('#assigned_packages'));
-        return false;
-    });
-    // Move packages from left to right
-    $('.packages.move_right').click(function() {
-        $('#assigned_packages option:selected').appendTo($('#available_packages'));
-        return false;
+    document.querySelectorAll('.client_group.move_right').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            moveOptions('assigned_client_groups', 'available_client_groups');
+        });
     });
 
-    // Hide/show logged in fields
-    $('.type').change(function() {
-        if ($(this).val() == "logged_in")
-            showLoggedInFields(true);
-        else
-            showLoggedInFields(false);
+    document.querySelectorAll('.packages.move_left').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            moveOptions('available_packages', 'assigned_packages');
+        });
+    });
+    document.querySelectorAll('.packages.move_right').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            moveOptions('assigned_packages', 'available_packages');
+        });
     });
 
-    // Hide/show client groups/packages
-    $('#available_to_client_groups').change(function() {
-        if ($(this).prop('checked'))
-            showAvailableGroups("client_groups", true);
-        else
-            showAvailableGroups("client_groups", false);
-    });
-    $('#available_to_packages').change(function() {
-        if ($(this).prop('checked'))
-            showAvailableGroups("packages", true);
-        else
-            showAvailableGroups("packages", false);
+    document.querySelectorAll('.type').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            showLoggedInFields(this.value === 'logged_in');
+        });
     });
 
-    // Hide/show file fields
-    $('.file_path').change(function() {
-        if ($(this).val() == "path")
-            showFileFields("path", true);
-        else
-            showFileFields("upload", true);
+    available_to_client_groups.addEventListener('change', function() {
+        showAvailableGroups('client_groups', this.checked);
+    });
+    available_to_packages.addEventListener('change', function() {
+        showAvailableGroups('packages', this.checked);
     });
 
-    // Add red border if path doesn't contains the uploads dir
-    $('#file_name').change(function() {
-        var value = $(this).val();
-        if (value.includes("<?php echo $this->Html->safe(str_replace('\\', '\\\\', $uploads_dir ?? ''));?>"))
-            $(this).removeClass('border border-danger');
-        else
-            $(this).addClass('border border-danger');
+    document.querySelectorAll('.file_path').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            showFileFields(this.value);
+        });
     });
+
+    file_name_input.addEventListener('change', function() {
+        if (this.value.includes(uploads_dir)) {
+            this.classList.remove('border-danger');
+        } else {
+            this.classList.add('border-danger');
+        }
+    });
+
+    function moveOptions(fromId, toId) {
+        var from = document.getElementById(fromId);
+        var to = document.getElementById(toId);
+        Array.from(from.selectedOptions).forEach(function(option) {
+            to.appendChild(option);
+        });
+    }
+
+    function showLoggedInFields(show) {
+        var logged_in_elements = document.querySelectorAll('.download_logged_in');
+        logged_in_elements.forEach(function(el) {
+            el.style.display = show ? 'block' : 'none';
+        });
+        if (show) {
+            if (available_to_client_groups.checked) {
+                showAvailableGroups('client_groups', true);
+            }
+            if (available_to_packages.checked) {
+                showAvailableGroups('packages', true);
+            }
+        } else {
+            showAvailableGroups('client_groups', false);
+            showAvailableGroups('packages', false);
+        }
+    }
+
+    function showAvailableGroups(type, show) {
+        if (type === 'client_groups') {
+            document.getElementById('download_client_groups').style.display = show ? 'block' : 'none';
+        } else if (type === 'packages') {
+            document.getElementById('download_packages').style.display = show ? 'block' : 'none';
+        }
+    }
+
+    function showFileFields(type) {
+        var file_upload = document.getElementById('file_upload');
+        var file_full_path = document.getElementById('file_full_path');
+        if (type === 'path') {
+            file_full_path.style.display = 'block';
+            file_upload.style.display = 'none';
+        } else {
+            file_upload.style.display = 'block';
+            file_full_path.style.display = 'none';
+        }
+    }
 });
-
-function showLoggedInFields(show) {
-    if (show) {
-        // Show checkboxes
-        $('.download_logged_in').show();
-
-        // Show available/selected items
-        if ($('#available_to_client_groups').prop('checked'))
-            showAvailableGroups("client_groups", true);
-        if ($('#available_to_packages').prop('checked'))
-            showAvailableGroups("packages", true);
-    }
-    else {
-        // Hide checkboxes
-        $('.download_logged_in').hide();
-        showAvailableGroups("client_groups", false);
-        showAvailableGroups("packages", false);
-    }
-}
-
-function showAvailableGroups(type, show) {
-    switch (type) {
-        case "client_groups":
-            if (show)
-                $('#download_client_groups').show();
-            else
-                $('#download_client_groups').hide();
-            break;
-        case "packages":
-            if (show)
-                $('#download_packages').show();
-            else
-                $('#download_packages').hide();
-            break;
-    }
-}
-
-function showFileFields(type, show) {
-    switch (type) {
-        case "path":
-            if (show) {
-                $('#file_full_path').show();
-                $('#file_upload').hide();
-            }
-            else {
-                $('#file_full_path').hide();
-                $('#file_upload').show();
-            }
-            break;
-        case "upload":
-            if (show) {
-                $('#file_upload').show();
-                $('#file_full_path').hide();
-            }
-            else {
-                $('#file_upload').hide();
-                $('#file_full_path').show();
-            }
-            break;
-    }
-}
 </script>

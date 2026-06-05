@@ -97,8 +97,8 @@ class ClientDocumentsPlugin extends Plugin
                 'uri' => 'plugin/client_documents/admin_main/index/',
                 'name' => 'ClientDocumentsPlugin.action_staff_client.index',
                 'options' => [
-                    'class' => 'invoice',
-                    'icon' => 'fas fa-file-alt'
+                    'class' => 'client_documents',
+                    'icon' => 'bi bi-folder-fill'
                 ]
             ]
         ];

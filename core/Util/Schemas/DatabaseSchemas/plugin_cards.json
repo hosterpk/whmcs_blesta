@@ -1,0 +1,117 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "plugin_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "callback",
+            "type": "varchar(255)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "callback_type",
+            "type": "enum('value','html')",
+            "nullable": false,
+            "key": null,
+            "default": "value",
+            "extra": null,
+            "max_length": 5
+        },
+        {
+            "name": "text_color",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": "#343A40",
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "background",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "background_type",
+            "type": "enum('color','gradient','image')",
+            "nullable": false,
+            "key": null,
+            "default": "color",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "level",
+            "type": "enum('client','staff')",
+            "nullable": false,
+            "key": null,
+            "default": "client",
+            "extra": null,
+            "max_length": 6
+        },
+        {
+            "name": "label",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "link",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "enabled",
+            "type": "tinyint(1)",
+            "nullable": false,
+            "key": null,
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

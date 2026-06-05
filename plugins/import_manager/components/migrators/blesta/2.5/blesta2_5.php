@@ -1,4 +1,5 @@
 <?php
+
 require_once dirname(__FILE__) . DS . '..' . DS . 'blesta_migrator.php';
 
 /**
@@ -26,7 +27,7 @@ class Blesta2_5 extends BlestaMigrator
     {
         parent::__construct($local);
 
-        set_time_limit(60*60*15); // 15 minutes
+        set_time_limit(60 * 60 * 15); // 15 minutes
 
         Language::loadLang(['blesta2_5'], null, dirname(__FILE__) . DS . 'language' . DS);
 
@@ -101,7 +102,7 @@ class Blesta2_5 extends BlestaMigrator
         try {
             $this->remote = new Record($db_info);
             $this->remote->query("SET sql_mode='TRADITIONAL'");
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->Input->setErrors([[$e->getMessage()]]);
             $this->logException($e);
             return;
@@ -151,27 +152,27 @@ class Blesta2_5 extends BlestaMigrator
     {
         return [
             [
-                'label' => Language::_("Blesta2_5.settings.host", true),
+                'label' => Language::_('Blesta2_5.settings.host', true),
                 'field' => 'host',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Blesta2_5.settings.database", true),
+                'label' => Language::_('Blesta2_5.settings.database', true),
                 'field' => 'database',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Blesta2_5.settings.user", true),
+                'label' => Language::_('Blesta2_5.settings.user', true),
                 'field' => 'user',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Blesta2_5.settings.pass", true),
+                'label' => Language::_('Blesta2_5.settings.pass', true),
                 'field' => 'pass',
                 'type' => 'text'
             ],
             [
-                'label' => Language::_("Blesta2_5.settings.key", true),
+                'label' => Language::_('Blesta2_5.settings.key', true),
                 'field' => 'key',
                 'type' => 'text'
             ],
@@ -251,7 +252,7 @@ class Blesta2_5 extends BlestaMigrator
 
             try {
                 $this->{$action}();
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->Input->setErrors([[$e->getMessage()]]);
                 $this->logException($e);
             }
@@ -325,7 +326,7 @@ class Blesta2_5 extends BlestaMigrator
                 } else {
                     $this->Users->rollback();
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->logException($e);
                 $this->Users->rollback();
             }
@@ -361,7 +362,7 @@ class Blesta2_5 extends BlestaMigrator
                 $username_type = 'email';
                 // Attempt with email as username
                 $this->local->insert('users', $vars);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $username_type = 'username';
                 // If unable to add with email as username, use client ID as username
                 $vars['username'] = $client->u_id;
@@ -544,8 +545,10 @@ class Blesta2_5 extends BlestaMigrator
             }
 
             // If type is technical OR first/last name differ from client ADD AS CONTACT
-            if ($contact->c_type == 'technical'
-                || ($contact->c_fname . ' ' . $contact->c_lname != $contact->u_fname . ' ' . $contact->u_lname)) {
+            if (
+                $contact->c_type == 'technical'
+                || ($contact->c_fname . ' ' . $contact->c_lname != $contact->u_fname . ' ' . $contact->u_lname)
+            ) {
                 $numbers = [];
                 foreach (['phone' => $contact->c_phone, 'fax' => $contact->c_fax] as $type => $number) {
                     if ($number != '') {
@@ -925,7 +928,7 @@ class Blesta2_5 extends BlestaMigrator
                     ];
                     try {
                         $module_id = $this->ModuleManager->add($vars);
-                    } catch (Exception $e) {
+                    } catch (\Throwable $e) {
                         continue;
                     }
                     $this->mappings['modules'][$package->module] = $module_id;
@@ -939,7 +942,7 @@ class Blesta2_5 extends BlestaMigrator
                 }
 
                 try {
-                    $empty = !(boolean)$this->remote->select()->from('m_' . $package->module)->fetch();
+                    $empty = !(bool)$this->remote->select()->from('m_' . $package->module)->fetch();
 
                     if ($empty) {
                         $this->local->insert('module_rows', ['module_id' => $module_id]);
@@ -1022,7 +1025,7 @@ class Blesta2_5 extends BlestaMigrator
                             }
                         }
                     }
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Module is no longer installed remotely...
                     $this->logException($e);
                 }
@@ -1140,8 +1143,10 @@ class Blesta2_5 extends BlestaMigrator
         if (isset($this->mappings['clients'])) {
             $package_control = $this->remote->select()->from('package_control')->getStatement();
             foreach ($package_control as $control) {
-                if (!isset($this->mappings['packages'][$control->p_pid])
-                    || !isset($this->mappings['clients'][$control->p_uid])) {
+                if (
+                    !isset($this->mappings['packages'][$control->p_pid])
+                    || !isset($this->mappings['clients'][$control->p_uid])
+                ) {
                     continue;
                 }
 
@@ -1199,7 +1204,7 @@ class Blesta2_5 extends BlestaMigrator
                     : $this->Companies->dateToUtc($coupon->c_end, 'c'),
                 'status' => $coupon->c_active == 1 ? 'active' : 'inactive',
                 'type' => 'exclusive',
-                'packages' => isset($package_ids[$coupon->c_id]) ? $package_ids[$coupon->c_id] : null,
+                'packages' => $package_ids[$coupon->c_id] ?? null,
                 'amounts' => $amounts
             ];
             $this->addCoupon($vars, $coupon->c_id);
@@ -1219,7 +1224,7 @@ class Blesta2_5 extends BlestaMigrator
         $inv_days = 0;
         $temp = $this->remote->select()->from('settings')->where('settings.s_name', '=', 'invdatesec')->fetch();
         if ($temp) {
-            $inv_days = (int)($temp->s_value/(60*60*24));
+            $inv_days = (int)($temp->s_value / (60 * 60 * 24));
         }
 
         if (!isset($this->Services)) {
@@ -1229,12 +1234,12 @@ class Blesta2_5 extends BlestaMigrator
         // Fetch all packages
         $remote_packages = [];
         $all_packages = $this->remote->select(
-                [
+            [
                     'p_id' => 'id',
                     'p_instantact' => 'instantact',
                     'p_modrow' => 'module_row'
                 ]
-            )
+        )
             ->from('packages')
             ->getStatement();
         foreach ($all_packages as $remote_package) {
@@ -1283,16 +1288,12 @@ class Blesta2_5 extends BlestaMigrator
                     continue;
                 }
 
-                if ($local_package->module_row > 0) {
-                    $module_row_id = $local_package->module_row;
-                } else {
-                    $module_row_id = $this->getModuleRowId(
-                        $remote_service,
-                        isset($mapping['module_row_key']) ? $mapping['module_row_key'] : null,
-                        $local_package->module_id,
-                        $remote_packages[$remote_id]->module
-                    );
-                }
+                $module_row_id = $local_package->module_row > 0 ? $local_package->module_row : $this->getModuleRowId(
+                    $remote_service,
+                    $mapping['module_row_key'] ?? null,
+                    $local_package->module_id,
+                    $remote_packages[$remote_id]->module
+                );
                 $pricing_id = null;
                 $term = null;
                 $period = null;
@@ -1336,10 +1337,8 @@ class Blesta2_5 extends BlestaMigrator
                     $price = [
                         'term' => $term,
                         'period' => $period,
-                        'price' => isset($terms[$remote_service->s_term]) ? $terms[$remote_service->s_term] : '0.0000',
-                        'setup_fee' => isset($setup[$remote_service->s_term])
-                            ? $setup[$remote_service->s_term]
-                            : '0.0000',
+                        'price' => $terms[$remote_service->s_term] ?? '0.0000',
+                        'setup_fee' => $setup[$remote_service->s_term] ?? '0.0000',
                         'currency' => $this->default_currency
                     ];
                     if (version_compare(BLESTA_VERSION, '3.1.0-b1', '>=')) {
@@ -1373,8 +1372,10 @@ class Blesta2_5 extends BlestaMigrator
                 // Adjust renew date as versions < 3 do not bump renew dates when invoiced,
                 // but when the renew date lapses
                 $renew_date = $this->Companies->dateToUtc($remote_service->s_dater . ' 00:00:00');
-                if ($status != 'canceled' && $remote_service->s_dater != '0000-00-00'
-                    && $renew_date <= $this->Companies->dateToUtc(strtotime('+' . $inv_days . ' days'))) {
+                if (
+                    $status != 'canceled' && $remote_service->s_dater != '0000-00-00'
+                    && $renew_date <= $this->Companies->dateToUtc(strtotime('+' . $inv_days . ' days'))
+                ) {
                     $renew_date = $this->Services->getNextRenewDate($renew_date, $term, $period, 'Y-m-d H:i:s');
                 }
 
@@ -1521,7 +1522,7 @@ class Blesta2_5 extends BlestaMigrator
                 ];
                 try {
                     $this->local->insert('support_staff_schedules', $vars);
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     $this->logException($e);
                 }
             }
@@ -1545,7 +1546,7 @@ class Blesta2_5 extends BlestaMigrator
                 ];
                 try {
                     $this->local->insert('support_staff_settings', $vars);
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     $this->logException($e);
                 }
             }
@@ -1607,9 +1608,7 @@ class Blesta2_5 extends BlestaMigrator
         foreach ($tickets as $ticket) {
             $vars = [
                 'code' => $ticket->t_id,
-                'department_id' => isset($this->mappings['support_departments'][$ticket->t_department])
-                    ? $this->mappings['support_departments'][$ticket->t_department]
-                    : 0,//$this->mappings['support_departments'][$ticket->t_department],
+                'department_id' => $this->mappings['support_departments'][$ticket->t_department] ?? 0,//$this->mappings['support_departments'][$ticket->t_department],
                 'staff_id' => $ticket->l_aid > 0
                     && isset($this->mappings['staff'][$ticket->l_aid])
                     ? $this->mappings['staff'][$ticket->l_aid]
@@ -1754,7 +1753,7 @@ class Blesta2_5 extends BlestaMigrator
                 $key = 'cron_key';
             } elseif ($setting->s_name == 'invdatesec') {
                 $key = 'inv_days_before_renewal';
-                $value = (int)($value/(60*60*24));
+                $value = (int)($value / (60 * 60 * 24));
             } elseif ($setting->s_name == 'invoicemethod') {
                 $key = 'client_set_invoice';
 
@@ -1792,19 +1791,19 @@ class Blesta2_5 extends BlestaMigrator
                 $key = 'ftp_rate';
             } elseif ($setting->s_name == 'invdatesec') {
                 $key = 'autodebit_days_before_due';
-                $value = (int)($value/(60*60*24));
+                $value = (int)($value / (60 * 60 * 24));
             } elseif ($setting->s_name == 'latenotice1') {
                 $key = 'notice1';
-                $value = (int)($value/(60*60*24));
+                $value = (int)($value / (60 * 60 * 24));
             } elseif ($setting->s_name == 'latenotice2') {
                 $key = 'notice2';
-                $value = (int)($value/(60*60*24));
+                $value = (int)($value / (60 * 60 * 24));
             } elseif ($setting->s_name == 'latenotice3') {
                 $key = 'notice3';
-                $value = (int)($value/(60*60*24));
+                $value = (int)($value / (60 * 60 * 24));
             } elseif ($setting->s_name == 'suspendservices') {
                 $key = 'suspend_services_days_after_due';
-                $value = (int)($value/(60*60*24));
+                $value = (int)($value / (60 * 60 * 24));
             } elseif ($setting->s_name == 'autobackoff') {
                 $key = 'autodebit_backoff';
             } elseif ($setting->s_name == 'currency') {
@@ -1994,23 +1993,16 @@ class Blesta2_5 extends BlestaMigrator
     private function getModuleRowId($remote_service, $field, $local_module_id, $remote_module)
     {
         $module_row = false;
-        if ($field) {
-            $module_row = $this->local->select(['module_rows.*'])->from('module_rows')->
+        $module_row = $field ? $this->local->select(['module_rows.*'])->from('module_rows')->
                 innerJoin('module_row_meta', 'module_row_meta.module_row_id', '=', 'module_rows.id', false)->
                 where('module_row_meta.value', '=', $remote_service->{'m_' . $field})->
-                where('module_rows.module_id', '=', $local_module_id)->fetch();
-        }
-        // If no field, attempt to look up module row based on module name, since
-        // the universal module uses the module name to create module rows
-        else {
-            $module_row = $this->local->select(['module_rows.*'])->from('module_rows')->
+                where('module_rows.module_id', '=', $local_module_id)->fetch() : $this->local->select(['module_rows.*'])->from('module_rows')->
                 innerJoin('modules', 'modules.id', '=', 'module_rows.module_id', false)->
                 on('module_row_meta.module_row_id', '=', 'module_rows.id', false)->
                 innerJoin('module_row_meta', 'module_row_meta.key', '=', 'name')->
                 where('modules.class', '=', 'universal_module')->
                 where('module_row_meta.value', '=', $remote_module)->
                 where('module_rows.module_id', '=', $local_module_id)->fetch();
-        }
         if ($module_row) {
             return $module_row->id;
         } else {
@@ -2082,7 +2074,7 @@ class Blesta2_5 extends BlestaMigrator
                 'term' => $term,
                 'period' => $term == 0 ? 'onetime' : 'month',
                 'price' => $price,
-                'setup_fee' => isset($setup[$term]) ? $setup[$term] : '0.0000',
+                'setup_fee' => $setup[$term] ?? '0.0000',
                 'currency' => $this->default_currency
             ];
         }

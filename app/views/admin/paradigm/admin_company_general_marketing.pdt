@@ -1,0 +1,44 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyGeneral.marketing.boxtitle_marketing', true), ['id' => 'admin_company_general_marketing']);
+    ?>
+            <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+
+            <!-- Show Receive Email Marketing Checkbox -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'show_receive_email_marketing',
+                        'true',
+                        (isset($vars->show_receive_email_marketing) ? $vars->show_receive_email_marketing : 'true') == 'true',
+                        ['id' => 'show_receive_email_marketing', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <?php
+                    $this->Form->label(
+                        $this->_('AdminCompanyGeneral.marketing.field_show_receive_email_marketing', true),
+                        'show_receive_email_marketing',
+                        ['class' => 'form-check-label']
+                    );
+                    ?>
+                </div>
+            </div>
+
+        </div>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyGeneral.marketing.field_submit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+        <?php $this->Form->end(); ?>
+<?php
+$this->Widget->end();
+?>
+</div>

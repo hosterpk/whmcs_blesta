@@ -11,7 +11,9 @@
 
 // Index
 $lang['AdminLogin.index.page_title'] = 'Log in';
-$lang['AdminLogin.index.title_adminarea'] = '%1$s | Staff Area'; // %1$s is the company name
+$lang['AdminLogin.index.page_subtitle'] = 'Welcome back! If you don\'t have a login, contact your administrator.';
+$lang['AdminLogin.index.title_adminarea'] = 'Staff Area';
+$lang['AdminLogin.index.subtitle_adminarea'] = 'Enter your credentials to access the admin panel.';
 $lang['AdminLogin.index.field_username'] = 'Username';
 $lang['AdminLogin.index.field_password'] = 'Password';
 $lang['AdminLogin.index.field_rememberme'] = 'Remember me on this computer.';
@@ -20,8 +22,10 @@ $lang['AdminLogin.index.link_resetpassword'] = 'Reset My Password';
 
 
 // OTP
-$lang['AdminLogin.otp.page_title'] = 'OTP Login';
-$lang['AdminLogin.otp.title_adminarea'] = '%1$s | Staff Area'; // %1$s is the company name
+$lang['AdminLogin.otp.page_title'] = 'Two-Factor Authentication';
+$lang['AdminLogin.otp.page_subtitle'] = 'Enter your one-time password to complete the login process.';
+$lang['AdminLogin.otp.title_adminarea'] = 'Two-Factor Authentication';
+$lang['AdminLogin.otp.subtitle_adminarea'] = 'Enter your one-time password to verify your identity.';
 $lang['AdminLogin.otp.field_password'] = 'One-time Password';
 $lang['AdminLogin.otp.field_loginsubmit'] = 'Log In';
 $lang['AdminLogin.otp.link_login'] = 'Cancel, Log In';
@@ -29,7 +33,9 @@ $lang['AdminLogin.otp.link_login'] = 'Cancel, Log In';
 
 // Step Up
 $lang['AdminLogin.up.page_title'] = 'Access Verification';
-$lang['AdminLogin.up.title_adminarea'] = '%1$s | Access Verification'; // %1$s is the company name
+$lang['AdminLogin.up.page_subtitle'] = 'Welcome back! If you don\'t have a login, contact your administrator.';
+$lang['AdminLogin.up.title_adminarea'] = 'Access Verification';
+$lang['AdminLogin.up.subtitle_adminarea'] = 'Verify your access to continue.';
 $lang['AdminLogin.up.field_password'] = 'Password';
 $lang['AdminLogin.up.field_password_otp'] = 'One-time Password';
 $lang['AdminLogin.up.field_loginsubmit'] = 'Verify Access';
@@ -38,7 +44,9 @@ $lang['AdminLogin.up.link_cancel'] = 'Cancel';
 
 // Reset
 $lang['AdminLogin.reset.page_title'] = 'Reset Password';
-$lang['AdminLogin.reset.title_adminarea'] = '%1$s | Reset Password'; // %1$s is the company name
+$lang['AdminLogin.reset.page_subtitle'] = 'Forgotten your password? Enter your username to begin the reset process.';
+$lang['AdminLogin.reset.title_adminarea'] = 'Reset Password';
+$lang['AdminLogin.reset.subtitle_adminarea'] = 'Enter your username to begin the reset process.';
 $lang['AdminLogin.reset.field_username'] = 'Username';
 $lang['AdminLogin.reset.field_resetsubmit'] = 'Reset Password';
 $lang['AdminLogin.reset.link_login'] = 'Cancel, Log In';
@@ -46,7 +54,9 @@ $lang['AdminLogin.reset.link_login'] = 'Cancel, Log In';
 
 // Confirm Reset
 $lang['AdminLogin.confirmreset.page_title'] = 'Confirm Password Reset';
-$lang['AdminLogin.confirmreset.title_adminarea'] = '%1$s | Confirm Password Reset'; // %1$s is the company name
+$lang['AdminLogin.confirmreset.page_subtitle'] = 'Create a new password for your account.';
+$lang['AdminLogin.confirmreset.title_adminarea'] = 'Confirm Password Reset';
+$lang['AdminLogin.confirmreset.subtitle_adminarea'] = 'Enter your new password below.';
 $lang['AdminLogin.confirmreset.field_new_password'] = 'New Password';
 $lang['AdminLogin.confirmreset.field_confirm_password'] = 'Confirm New Password';
 $lang['AdminLogin.confirmreset.field_resetsubmit'] = 'Set Password';
@@ -55,7 +65,9 @@ $lang['AdminLogin.confirmreset.link_login'] = 'Cancel, Log In';
 
 // Setup
 $lang['AdminLogin.setup.page_title'] = 'Initial Setup';
-$lang['AdminLogin.setup.title_adminarea'] = 'Initial Setup'; // %1$s is the company name
+$lang['AdminLogin.setup.page_subtitle'] = 'Configure your Blesta installation and create your administrator account.';
+$lang['AdminLogin.setup.title_adminarea'] = 'Get Started with Blesta';
+$lang['AdminLogin.setup.subtitle_adminarea'] = 'Complete the initial setup to begin managing your billing system. This will only take a few moments.';
 $lang['AdminLogin.setup.field_license_key'] = 'License Key';
 $lang['AdminLogin.setup.trial_newsletter'] = 'By signing up for a trial, you agree to receive emails from us during your trial. You can opt-out at any time.';
 $lang['AdminLogin.setup.field_newsletter'] = 'Sign-up for our newsletter. You can opt-out at any time.';
@@ -74,10 +86,12 @@ $lang['AdminLogin.setup.field_submit'] = 'Finish';
 // Error
 $lang['AdminLogin.!error.unknown_user'] = 'That username is not recognized or the password is not capable of being reset.';
 $lang['AdminLogin.!error.captcha.invalid'] = 'The captcha entered was invalid. Please try again.';
+$lang['AdminLogin.!error.step_up_expired'] = 'Step up session has expired.';
 
 
 // Success
 $lang['AdminLogin.!success.reset_sent'] = 'A confirmation email has been sent to the address on record.';
+$lang['AdminLogin.!success.step_up_extended'] = 'Step up session has been extended.';
 
 
 // Info

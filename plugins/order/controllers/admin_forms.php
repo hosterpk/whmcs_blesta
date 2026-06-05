@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Input\Fields\Html as FieldsHtml;
 
 /**
@@ -46,8 +47,8 @@ class AdminForms extends OrderController
     public function index()
     {
         $page = (isset($this->get[0]) ? (int)$this->get[0] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'order');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'asc');
+        $sort = ($this->get['sort'] ?? 'order');
+        $order = ($this->get['order'] ?? 'asc');
 
         $this->set('sort', $sort);
         $this->set('order', $order);
@@ -87,7 +88,8 @@ class AdminForms extends OrderController
             // Handle checkboxes that are unchecked
             $checkbox_fields = [
                 'allow_coupons', 'manual_review', 'require_ssl', 'require_captcha',
-                'monthly_breakdown', 'require_tos', 'inactive_after_cancellation'
+                'monthly_breakdown', 'require_recurring_consent', 'require_tos',
+                'inactive_after_cancellation'
             ];
             foreach ($checkbox_fields as $checkbox_field) {
                 if (!array_key_exists($checkbox_field, $this->post)) {
@@ -123,6 +125,9 @@ class AdminForms extends OrderController
         $this->set('first_reminder_template', $this->EmailGroups->getByAction('Order.abandoned_cart_first'));
         $this->set('second_reminder_template', $this->EmailGroups->getByAction('Order.abandoned_cart_second'));
         $this->set('third_reminder_template', $this->EmailGroups->getByAction('Order.abandoned_cart_third'));
+        $this->set('embed_codes', $this->getEmbedCodeContext());
+
+        $this->Javascript->setFile('ace/src-min/ace.js', 'head', VENDORWEBDIR);
     }
 
     /**
@@ -131,9 +136,11 @@ class AdminForms extends OrderController
     public function edit()
     {
         // Ensure order form exists
-        if (!isset($this->get[0])
+        if (
+            !isset($this->get[0])
             || !($order_form = $this->OrderForms->get($this->get[0], ['restrict_groups' => false]))
-            || $order_form->company_id != $this->company_id) {
+            || $order_form->company_id != $this->company_id
+        ) {
             $this->redirect($this->base_uri . 'plugin/order/admin_forms/');
         }
 
@@ -143,7 +150,8 @@ class AdminForms extends OrderController
             // Handle checkboxes that are unchecked
             $checkbox_fields = [
                 'allow_coupons', 'manual_review', 'require_ssl', 'require_captcha',
-                'monthly_breakdown', 'require_tos', 'inactive_after_cancellation'
+                'monthly_breakdown', 'require_recurring_consent', 'require_tos',
+                'inactive_after_cancellation'
             ];
             foreach ($checkbox_fields as $checkbox_field) {
                 if (!array_key_exists($checkbox_field, $this->post)) {
@@ -192,6 +200,24 @@ class AdminForms extends OrderController
         $this->set('first_reminder_template', $this->EmailGroups->getByAction('Order.abandoned_cart_first'));
         $this->set('second_reminder_template', $this->EmailGroups->getByAction('Order.abandoned_cart_second'));
         $this->set('third_reminder_template', $this->EmailGroups->getByAction('Order.abandoned_cart_third'));
+        $this->set('embed_codes', $this->getEmbedCodeContext());
+
+        $this->Javascript->setFile('ace/src-min/ace.js', 'head', VENDORWEBDIR);
+    }
+
+    /**
+     * Builds the context passed to the embed-codes partial.
+     *
+     * @return array
+     */
+    private function getEmbedCodeContext()
+    {
+        $csrf_bypass = (array) (Configure::get('Blesta.csrf_bypass') ?? []);
+
+        return [
+            'csrf_bypassed' => in_array('config::preconfig', $csrf_bypass),
+            'base_url' => str_replace('main/index/', 'config/preconfig/', $this->base_order_url),
+        ];
     }
 
     /**
@@ -219,7 +245,7 @@ class AdminForms extends OrderController
     {
         $vars = (object)$this->post;
 
-        $order_type = $this->OrderForms->loadOrderType(isset($this->post['type']) ? $this->post['type'] : 'general');
+        $order_type = $this->OrderForms->loadOrderType($this->post['type'] ?? 'general');
         $multi_group = $order_type->supportsMultipleGroups();
         $meta_fields = $order_type->getSettings($this->post);
         $gateways = null;
@@ -396,11 +422,13 @@ class AdminForms extends OrderController
         );
 
         try {
-            if (!$this->isAjax() || !isset($this->get[0])
-                || !($antifraud = $this->Antifraud->create($this->get[0], [$settings]))) {
+            if (
+                !$this->isAjax() || !isset($this->get[0])
+                || !($antifraud = $this->Antifraud->create($this->get[0], [$settings]))
+            ) {
                 return false;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Enom Module
  *
@@ -60,10 +61,10 @@ class Enom extends RegistrarModule
         $row = $this->getModuleRow($module_row_id);
         $api = $this->getApi($row->meta->user, $row->meta->key, $row->meta->sandbox == 'true');
         $command = new EnomAll($api);
-        
+
         $tld = trim($this->getTld($domain), '.');
         $sld = trim(substr($domain, 0, -strlen($tld)), '.');
-        
+
         $response = $command->getDns(['sld' => $sld, 'tld' => $tld]);
         $this->processResponse($api, $response);
 
@@ -94,15 +95,15 @@ class Enom extends RegistrarModule
         $row = $this->getModuleRow($module_row_id);
         $api = $this->getApi($row->meta->user, $row->meta->key, $row->meta->sandbox == 'true');
         $command = new EnomAll($api);
-        
+
         $tld = trim($this->getTld($domain), '.');
         $sld = trim(substr($domain, 0, -strlen($tld)), '.');
-        
+
         // Default to using default nameservers
         $nameservers = ['usedns' => 'Default'];
         foreach ($vars as $i => $ns) {
             if ($ns != '') {
-                $nameservers['ns' . ($i+1)] = $ns;
+                $nameservers['ns' . ($i + 1)] = $ns;
                 unset($nameservers['usedns']);
             }
         }
@@ -110,7 +111,7 @@ class Enom extends RegistrarModule
 
         $response = $command->modifyNs(array_merge(['sld' => $sld, 'tld' => $tld], $nameservers));
         $this->processResponse($api, $response);
-        
+
         return ($response->status() == 'OK');
     }
 
@@ -161,11 +162,7 @@ class Enom extends RegistrarModule
             Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'enom' . DS
         );
 
-        if ($cache) {
-            $pricing = unserialize(base64_decode($cache));
-        } else {
-            $pricing = [];
-        }
+        $pricing = $cache ? safe_unserialize(base64_decode($cache)) : [];
 
 
         // Fetch pricing from the registrar
@@ -213,7 +210,7 @@ class Enom extends RegistrarModule
                     strtotime(Configure::get('Blesta.cache_length')) - time(),
                     Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'enom' . DS
                 );
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Write to cache failed, so disable caching
                 Configure::set('Caching.on', false);
             }
@@ -434,7 +431,7 @@ class Enom extends RegistrarModule
                     }
 
                     $vars['UseDNS'] = 'default';
-                    for ($i=1; $i<=5; $i++) {
+                    for ($i = 1; $i <= 5; $i++) {
                         if (!isset($vars['ns' . $i]) || $vars['ns' . $i] == '') {
                             unset($vars['ns' . $i]);
                         } else {
@@ -775,6 +772,14 @@ class Enom extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -806,6 +811,14 @@ class Enom extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -905,7 +918,7 @@ class Enom extends RegistrarModule
             $fields->fieldSelect(
                 'meta[type]',
                 $types,
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null),
+                ($vars->meta['type'] ?? null),
                 ['id' => 'enom_type']
             )
         );
@@ -931,12 +944,12 @@ class Enom extends RegistrarModule
         $fields->setField($tld_options);
 
         // Set nameservers
-        for ($i=1; $i<=5; $i++) {
+        for ($i = 1; $i <= 5; $i++) {
             $type = $fields->label(Language::_('Enom.package_fields.ns' . $i, true), 'enom_ns' . $i);
             $type->attach(
                 $fields->fieldText(
                     'meta[ns][]',
-                    (isset($vars->meta['ns'][$i-1]) ? $vars->meta['ns'][$i-1] : null),
+                    ($vars->meta['ns'][$i - 1] ?? null),
                     ['id' => 'enom_ns' . $i]
                 )
             );
@@ -979,7 +992,7 @@ class Enom extends RegistrarModule
         if ($package->meta->type == 'domain') {
             // Set default name servers
             if (!isset($vars->ns1) && isset($package->meta->ns)) {
-                $i=1;
+                $i = 1;
                 foreach ($package->meta->ns as $ns) {
                     $vars->{'ns' . $i++} = $ns;
                 }
@@ -1035,7 +1048,7 @@ class Enom extends RegistrarModule
         if ($package->meta->type == 'domain') {
             // Set default name servers
             if (!isset($vars->ns) && isset($package->meta->ns)) {
-                $i=1;
+                $i = 1;
                 foreach ($package->meta->ns as $ns) {
                     $vars->{'ns' . $i++} = $ns;
                 }
@@ -1086,11 +1099,7 @@ class Enom extends RegistrarModule
      */
     public function getAdminEditFields($package, $vars = null)
     {
-        if ($package->meta->type == 'domain') {
-            return new ModuleFields();
-        } else {
-            return new ModuleFields();
-        }
+        return $package->meta->type == 'domain' ? new ModuleFields() : new ModuleFields();
     }
 
     /**
@@ -1355,7 +1364,7 @@ class Enom extends RegistrarModule
             $vars['usedns'] = 'Default';
             foreach ($vars['ns'] as $i => $ns) {
                 if ($ns != '') {
-                    $vars['ns' . ($i+1)] = $ns;
+                    $vars['ns' . ($i + 1)] = $ns;
                     unset($vars['usedns']);
                 }
             }
@@ -1470,6 +1479,7 @@ class Enom extends RegistrarModule
         $sld = trim(substr($domain, 0, -strlen($tld)), '.');
 
         $response = $all->check(['sld' => $sld, 'tld' => $tld]);
+        $this->logRequest($api, $response);
 
         if ($response->status() != 'OK') {
             return false;
@@ -1576,7 +1586,7 @@ class Enom extends RegistrarModule
                     'rule' => [
                         [$this, 'validateConnection'],
                         $vars['user'],
-                        isset($vars['sandbox']) ? $vars['sandbox'] : 'false'
+                        $vars['sandbox'] ?? 'false'
                     ],
                     'message' => Language::_('Enom.!error.key.valid_connection', true)
                 ]

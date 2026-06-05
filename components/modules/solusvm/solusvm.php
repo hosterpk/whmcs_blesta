@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * SolusVM Module
  *
@@ -72,7 +74,7 @@ class Solusvm extends Module
         $rules = [
             'solusvm_hostname' => [
                 'format' => [
-                    'pre_format' => [[$this, 'replaceText'], '', "/^\s*www\./i"],
+                    'pre_format' => [[$this, 'replaceText'], '', '/^\s*www\./i'],
                     'rule' => [[$this, 'validateHostName'], true],
                     'message' => Language::_('Solusvm.!error.solusvm_hostname.format', true)
                 ]
@@ -87,8 +89,10 @@ class Solusvm extends Module
         ];
 
         // Template must be given if it can be set by the client
-        if (isset($package->meta->set_template) && $package->meta->set_template == 'client' &&
-            isset($package->meta->type)) {
+        if (
+            isset($package->meta->set_template) && $package->meta->set_template == 'client' &&
+            isset($package->meta->type)
+        ) {
             $rules['solusvm_template'] = [
                 'valid' => [
                     'rule' => [
@@ -125,7 +129,7 @@ class Solusvm extends Module
             'solusvm_hostname' => [
                 'format' => [
                     'if_set' => true,
-                    'pre_format' => [[$this, 'replaceText'], '', "/^\s*www\./i"],
+                    'pre_format' => [[$this, 'replaceText'], '', '/^\s*www\./i'],
                     'rule' => [[$this, 'validateHostName'], true],
                     'message' => Language::_('Solusvm.!error.solusvm_hostname.format', true)
                 ]
@@ -143,7 +147,8 @@ class Solusvm extends Module
         $service_fields = $this->serviceFieldsToObject($service->fields);
 
         // Template must be given if it can be set by the client
-        if (isset($service_fields->solusvm_template)
+        if (
+            isset($service_fields->solusvm_template)
             && isset($vars['solusvm_template'])
             && $service_fields->solusvm_template != $vars['solusvm_template']
             && isset($service_fields->solusvm_type)
@@ -232,13 +237,13 @@ class Solusvm extends Module
         // Since validating the service rules does not update data in pre/post formatting,
         // re-apply the formatting changes manually
         if (isset($vars['solusvm_hostname'])) {
-            $vars['solusvm_hostname'] = strtolower($this->replaceText($vars['solusvm_hostname'], '', "/^\s*www\./i"));
+            $vars['solusvm_hostname'] = strtolower($this->replaceText($vars['solusvm_hostname'], '', '/^\s*www\./i'));
             $params['hostname'] = $vars['solusvm_hostname'];
         }
 
         // Only provision the service if 'use_module' is true
         if ($vars['use_module'] == 'true') {
-            $client_id = (isset($vars['client_id']) ? $vars['client_id'] : '');
+            $client_id = ($vars['client_id'] ?? '');
 
             // Create a new client (if one does not already exist)
             $client = $this->createClient($client_id, $params['username'], $row);
@@ -263,7 +268,7 @@ class Solusvm extends Module
                 // Create the Virtual Server
                 $this->log($row->meta->host . '|vserver-create', serialize($masked_params), 'input', true);
                 $response = $this->parseResponse($vserver_api->create($filtered_params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Internal Error
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Solusvm.!error.api.internal', true)]]);
             }
@@ -274,7 +279,7 @@ class Solusvm extends Module
         }
 
         // Retrieve the extra IPs to use as extra base IPs
-        $extra_ips = isset($response->extraipaddress) ? $response->extraipaddress : null;
+        $extra_ips = $response->extraipaddress ?? null;
         // Subtract the 1 used as the main IP address
         $ips = $this->splitExtraIps($extra_ips, ($params['ips'] - 1));
 
@@ -282,15 +287,13 @@ class Solusvm extends Module
         $fields = [
             [
                 'key' => 'solusvm_vserver_id',
-                'value' => (isset($response->vserverid)
-                    ? $response->vserverid
-                    : (!empty($vars['solusvm_vserver_id']) ? $vars['solusvm_vserver_id'] : null)
+                'value' => ($response->vserverid ?? (!empty($vars['solusvm_vserver_id']) ? $vars['solusvm_vserver_id'] : null)
                 ),
                 'encrypted' => 0
             ],
             [
                 'key' => 'solusvm_main_ip_address',
-                'value' => isset($response->mainipaddress) ? $response->mainipaddress : null,
+                'value' => $response->mainipaddress ?? null,
                 'encrypted' => 0
             ],
             [
@@ -305,42 +308,42 @@ class Solusvm extends Module
             ],
             [
                 'key' => 'solusvm_console_user',
-                'value' => isset($response->consoleuser) ? $response->consoleuser : null,
+                'value' => $response->consoleuser ?? null,
                 'encrypted' => 0
             ],
             [
                 'key' => 'solusvm_console_password',
-                'value' => isset($response->consolepassword) ? $response->consolepassword : null,
+                'value' => $response->consolepassword ?? null,
                 'encrypted' => 1
             ],
             [
                 'key' => 'solusvm_virt_id',
-                'value' => isset($response->virtid) ? $response->virtid : null,
+                'value' => $response->virtid ?? null,
                 'encrypted' => 0
             ],
             [
                 'key' => 'solusvm_internal_ip',
-                'value' => isset($response->internalip) ? $response->internalip : null,
+                'value' => $response->internalip ?? null,
                 'encrypted' => 0
             ],
             [
                 'key' => 'solusvm_vnc_ip',
-                'value' => isset($response->vncip) ? $response->vncip : null,
+                'value' => $response->vncip ?? null,
                 'encrypted' => 0
             ],
             [
                 'key' => 'solusvm_vnc_port',
-                'value' => isset($response->vncport) ? $response->vncport : null,
+                'value' => $response->vncport ?? null,
                 'encrypted' => 0
             ],
             [
                 'key' => 'solusvm_vnc_password',
-                'value' => isset($response->vncpassword) ? $response->vncpassword : null,
+                'value' => $response->vncpassword ?? null,
                 'encrypted' => 1
             ],
             [
                 'key' => 'solusvm_root_password',
-                'value' => isset($response->rootpassword) ? $response->rootpassword : $params['password'],
+                'value' => $response->rootpassword ?? $params['password'],
                 'encrypted' => 1
             ],
             [
@@ -350,7 +353,7 @@ class Solusvm extends Module
             ],
             [
                 'key' => 'solusvm_node',
-                'value' => (isset($response->nodeid) ? $response->nodeid : null),
+                'value' => ($response->nodeid ?? null),
                 'encrypted' => 0
             ],
             [
@@ -365,7 +368,7 @@ class Solusvm extends Module
             ],
             [
                 'key' => 'solusvm_password',
-                'value' => (isset($client['password']) ? $client['password'] : null),
+                'value' => ($client['password'] ?? null),
                 'encrypted' => 1
             ],
             [
@@ -419,7 +422,7 @@ class Solusvm extends Module
 
         // Fetch the current service plan
         $plan = null;
-        $type = (isset($service_fields->solusvm_type) ? $service_fields->solusvm_type : '');
+        $type = ($service_fields->solusvm_type ?? '');
         if (isset($service_fields->solusvm_plan)) {
             $plan = $this->getPlan($type, $service_fields->solusvm_plan, $row);
         }
@@ -442,7 +445,7 @@ class Solusvm extends Module
         // Since validating the service rules does not update data in pre/post formatting,
         // re-apply the formatting changes manually
         if (isset($vars['solusvm_hostname'])) {
-            $vars['solusvm_hostname'] = strtolower($this->replaceText($vars['solusvm_hostname'], '', "/^\s*www\./i"));
+            $vars['solusvm_hostname'] = strtolower($this->replaceText($vars['solusvm_hostname'], '', '/^\s*www\./i'));
         }
 
         // Check for fields that changed
@@ -658,13 +661,15 @@ class Solusvm extends Module
             $num_extra_ips = count($extra_ips);
             $num_selected_extra_ips = (int)$vars['configoptions']['customextraip'];
 
-            for ($i=0; $i<($num_selected_extra_ips - $num_extra_ips); $i++) {
+            for ($i = 0; $i < ($num_selected_extra_ips - $num_extra_ips); $i++) {
                 $this->addExtraIp($service_fields->solusvm_vserver_id, $module_row);
             }
 
             // Remove any IPs set to be removed
-            if (!empty($vars['solusvm_remove_extra_ips']) && is_array($vars['solusvm_remove_extra_ips']) &&
-                !empty($extra_ips)) {
+            if (
+                !empty($vars['solusvm_remove_extra_ips']) && is_array($vars['solusvm_remove_extra_ips']) &&
+                !empty($extra_ips)
+            ) {
                 // Filter out the IPs being removed
                 foreach ($extra_ips as $index => $ip) {
                     if (in_array($ip, $vars['solusvm_remove_extra_ips'])) {
@@ -738,7 +743,7 @@ class Solusvm extends Module
                 // Terminate the Virtual Server
                 $this->log($row->meta->host . '|vserver-terminate', serialize($params), 'input', true);
                 $response = $this->parseResponse($vserver_api->terminate($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Internal Error
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Solusvm.!error.api.internal', true)]]);
                 return;
@@ -785,7 +790,7 @@ class Solusvm extends Module
 
                 $this->log($row->meta->host . '|vserver-suspend', serialize($params), 'input', true);
                 $response = $this->parseResponse($server_api->suspend($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
@@ -832,7 +837,7 @@ class Solusvm extends Module
 
                 $this->log($row->meta->host . '|vserver-unsuspend', serialize($params), 'input', true);
                 $response = $this->parseResponse($server_api->unsuspend($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
@@ -916,7 +921,7 @@ class Solusvm extends Module
                     if ($response && $response->status == 'success') {
                         $new_plan = $plan;
                     }
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Internal Error
                     $this->Input->setErrors(
                         ['api' => ['internal' => Language::_('Solusvm.!error.api.internal', true)]]
@@ -1087,6 +1092,14 @@ class Solusvm extends Module
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -1113,6 +1126,14 @@ class Solusvm extends Module
             $vars = $module_row->meta;
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -1194,7 +1215,7 @@ class Solusvm extends Module
      */
     public function getGroupOrderOptions()
     {
-        return ['first'=>Language::_('Solusvm.order_options.first', true)];
+        return ['first' => Language::_('Solusvm.order_options.first', true)];
     }
 
     /**
@@ -1216,7 +1237,6 @@ class Solusvm extends Module
             switch ($group->add_order) {
                 default:
                 case 'first':
-
                     foreach ($group->rows as $row) {
                         return $row->id;
                     }
@@ -1241,8 +1261,8 @@ class Solusvm extends Module
 
         // Fetch all packages available for the given server or server group
         $module_row = $this->getModuleRowByServer(
-            (isset($vars->module_row) ? $vars->module_row : 0),
-            (isset($vars->module_group) ? $vars->module_group : '')
+            ($vars->module_row ?? 0),
+            ($vars->module_group ?? '')
         );
 
         $templates = [];
@@ -1297,7 +1317,7 @@ class Solusvm extends Module
 						'
                     . $this->Form->fieldMultiSelect(
                         'meta[nodes][]',
-                        (isset($vars->meta['nodes']) ? $vars->meta['nodes'] : []),
+                        ($vars->meta['nodes'] ?? []),
                         [],
                         ['id' => 'assigned_nodes']
                     )
@@ -1308,7 +1328,7 @@ class Solusvm extends Module
 						'
                     . $this->Form->fieldMultiSelect(
                         'available_nodes[]',
-                        (isset($nodes) ? $nodes : []),
+                        ($nodes ?? []),
                         [],
                         ['id' => 'available_nodes']
                     )
@@ -1401,7 +1421,7 @@ class Solusvm extends Module
         $total_base_ip_addresses->attach(
             $fields->fieldText(
                 'meta[total_base_ip_addresses]',
-                (isset($vars->meta['total_base_ip_addresses']) ? $vars->meta['total_base_ip_addresses'] : 1),
+                ($vars->meta['total_base_ip_addresses'] ?? 1),
                 ['id' => 'solusvm_total_base_ip_addresses']
             )
         );
@@ -1417,7 +1437,7 @@ class Solusvm extends Module
             $fields->fieldSelect(
                 'meta[type]',
                 $types,
-                (isset($vars->meta['type']) ? $vars->meta['type'] : null),
+                ($vars->meta['type'] ?? null),
                 ['id' => 'solusvm_type']
             )
         );
@@ -1441,7 +1461,7 @@ class Solusvm extends Module
             $fields->fieldRadio(
                 'meta[set_template]',
                 'client',
-                (isset($vars->meta['set_template']) ? $vars->meta['set_template'] : 'client') == 'client',
+                ($vars->meta['set_template'] ?? 'client') == 'client',
                 ['id' => 'solusvm_client_set_template', 'class' => 'solusvm_chosen_template'],
                 $client_set_template
             )
@@ -1450,7 +1470,7 @@ class Solusvm extends Module
             $fields->fieldRadio(
                 'meta[set_template]',
                 'admin',
-                (isset($vars->meta['set_template']) ? $vars->meta['set_template'] : null) == 'admin',
+                ($vars->meta['set_template'] ?? null) == 'admin',
                 ['id' => 'solusvm_admin_set_template', 'class' => 'solusvm_chosen_template'],
                 $admin_set_template
             )
@@ -1463,7 +1483,7 @@ class Solusvm extends Module
             $fields->fieldSelect(
                 'meta[template]',
                 $templates,
-                (isset($vars->meta['template']) ? $vars->meta['template'] : null),
+                ($vars->meta['template'] ?? null),
                 ['id' => 'solusvm_template']
             )
         );
@@ -1475,7 +1495,7 @@ class Solusvm extends Module
             $fields->fieldSelect(
                 'meta[plan]',
                 $plans,
-                (isset($vars->meta['plan']) ? $vars->meta['plan'] : null),
+                ($vars->meta['plan'] ?? null),
                 ['id' => 'solusvm_plan']
             )
         );
@@ -1489,7 +1509,7 @@ class Solusvm extends Module
             $fields->fieldRadio(
                 'meta[set_node]',
                 '0',
-                (isset($vars->meta['set_node']) ? $vars->meta['set_node'] : '0') == '0',
+                ($vars->meta['set_node'] ?? '0') == '0',
                 ['id' => 'set_node_group', 'class' => 'solusvm_set_node'],
                 $node_group
             )
@@ -1498,7 +1518,7 @@ class Solusvm extends Module
             $fields->fieldRadio(
                 'meta[set_node]',
                 '1',
-                (isset($vars->meta['set_node']) ? $vars->meta['set_node'] : null) == '1',
+                ($vars->meta['set_node'] ?? null) == '1',
                 ['id' => 'set_node', 'class' => 'solusvm_set_node'],
                 $node
             )
@@ -1512,7 +1532,7 @@ class Solusvm extends Module
             $fields->fieldSelect(
                 'meta[node_group]',
                 $groups,
-                (isset($vars->meta['node_group']) ? $vars->meta['node_group'] : null),
+                ($vars->meta['node_group'] ?? null),
                 ['id' => 'solusvm_node_group']
             )
         );
@@ -1535,8 +1555,8 @@ class Solusvm extends Module
 
         // Fetch the module row available for this package
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
 
         $fields = new ModuleFields();
@@ -1547,7 +1567,7 @@ class Solusvm extends Module
         $host_name->attach(
             $fields->fieldText(
                 'solusvm_hostname',
-                (isset($vars->solusvm_hostname) ? $vars->solusvm_hostname : null),
+                ($vars->solusvm_hostname ?? null),
                 ['id' => 'solusvm_hostname']
             )
         );
@@ -1555,8 +1575,10 @@ class Solusvm extends Module
         $fields->setField($host_name);
 
         // Set the template if it can be set by the client
-        if (isset($package->meta->set_template) && isset($package->meta->type)
-            && $package->meta->set_template == 'client') {
+        if (
+            isset($package->meta->set_template) && isset($package->meta->type)
+            && $package->meta->set_template == 'client'
+        ) {
             // Fetch the templates available
             $templates = $this->getTemplates($package->meta->type, $module_row);
 
@@ -1567,7 +1589,7 @@ class Solusvm extends Module
                 $fields->fieldSelect(
                     'solusvm_template',
                     $templates,
-                    (isset($vars->solusvm_template) ? $vars->solusvm_template : null),
+                    ($vars->solusvm_template ?? null),
                     ['id' => 'solusvm_template']
                 )
             );
@@ -1584,7 +1606,7 @@ class Solusvm extends Module
         $vserver_id->attach(
             $fields->fieldText(
                 'solusvm_vserver_id',
-                (isset($vars->solusvm_vserver_id) ? $vars->solusvm_vserver_id : null),
+                ($vars->solusvm_vserver_id ?? null),
                 ['id' => 'solusvm_vserver_id']
             )
         );
@@ -1611,8 +1633,8 @@ class Solusvm extends Module
 
         // Fetch the module row available for this package
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
 
         $fields = new ModuleFields();
@@ -1623,7 +1645,7 @@ class Solusvm extends Module
         $host_name->attach(
             $fields->fieldText(
                 'solusvm_hostname',
-                (isset($vars->solusvm_hostname) ? $vars->solusvm_hostname : ($vars->domain ?? null)),
+                ($vars->solusvm_hostname ?? ($vars->domain ?? null)),
                 ['id' => 'solusvm_hostname']
             )
         );
@@ -1631,8 +1653,10 @@ class Solusvm extends Module
         $fields->setField($host_name);
 
         // Set the template if it can be set by the client
-        if (isset($package->meta->set_template) && isset($package->meta->type)
-            && $package->meta->set_template == 'client') {
+        if (
+            isset($package->meta->set_template) && isset($package->meta->type)
+            && $package->meta->set_template == 'client'
+        ) {
             // Fetch the templates available
             $templates = $this->getTemplates($package->meta->type, $module_row);
 
@@ -1643,7 +1667,7 @@ class Solusvm extends Module
                 $fields->fieldSelect(
                     'solusvm_template',
                     $templates,
-                    (isset($vars->solusvm_template) ? $vars->solusvm_template : null),
+                    ($vars->solusvm_template ?? null),
                     ['id' => 'solusvm_template']
                 )
             );
@@ -1677,7 +1701,7 @@ class Solusvm extends Module
         $vserver_id->attach(
             $fields->fieldText(
                 'solusvm_vserver_id',
-                (isset($vars->solusvm_vserver_id) ? $vars->solusvm_vserver_id : null),
+                ($vars->solusvm_vserver_id ?? null),
                 ['id' => 'solusvm_vserver_id']
             )
         );
@@ -2124,7 +2148,7 @@ class Solusvm extends Module
                                     'rule' => [
                                         'compares',
                                         '==',
-                                        (isset($post['confirm_password']) ? $post['confirm_password'] : null)
+                                        ($post['confirm_password'] ?? null)
                                     ],
                                     'message' => Language::_('Solusvm.!error.solusvm_root_password.matches', true)
                                 ]
@@ -2159,7 +2183,7 @@ class Solusvm extends Module
                         $rules = [
                             'hostname' => [
                                 'format' => [
-                                    'pre_format' => [[$this, 'replaceText'], '', "/^\s*www\./i"],
+                                    'pre_format' => [[$this, 'replaceText'], '', '/^\s*www\./i'],
                                     'rule' => [[$this, 'validateHostName'], true],
                                     'message' => Language::_('Solusvm.!error.solusvm_hostname.format', true)
                                 ]
@@ -2277,7 +2301,7 @@ class Solusvm extends Module
             if ($response && $response->status == 'success') {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2441,11 +2465,11 @@ class Solusvm extends Module
         $unit = 'B';
 
         $bytes = (int) $bytes;
-        if (($value = number_format($bytes/($step*$step*$step), 2)) >= 1) {
+        if (($value = number_format($bytes / ($step * $step * $step), 2)) >= 1) {
             $unit = 'GB';
-        } elseif (($value = number_format($bytes/($step*$step), 2)) >= 1) {
+        } elseif (($value = number_format($bytes / ($step * $step), 2)) >= 1) {
             $unit = 'MB';
-        } elseif (($value = number_format($bytes/($step), 2)) >= 1) {
+        } elseif (($value = number_format($bytes / ($step), 2)) >= 1) {
             $unit = 'KB';
         } else {
             $value = $bytes;
@@ -2501,7 +2525,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|vserver-vnc', serialize($params), 'input', true);
             $response = $this->parseResponse($server_api->vnc($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2559,7 +2583,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|vserver-console', serialize($params), 'input', true);
             $response = $this->parseResponse($server_api->console($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2590,9 +2614,7 @@ class Solusvm extends Module
 
         $ips = $this->csvToArray($service_fields->solusvm_extra_ip_addresses);
         $base_ips = $this->csvToArray(
-            isset($service_fields->solusvm_base_ip_addresses)
-            ? $service_fields->solusvm_base_ip_addresses
-            : ''
+            $service_fields->solusvm_base_ip_addresses ?? ''
         );
 
         if (isset($state->ipaddresses)) {
@@ -2689,7 +2711,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|vserver-infoall', serialize($params), 'input', true);
             $response = $this->parseResponse($server_api->infoAll($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2709,23 +2731,23 @@ class Solusvm extends Module
                 }
 
                 $response->{$field} = [
-                    'total_' . $name => (isset($values[0]) ? $values[0] : ''),
-                    'used_' . $name => (isset($values[1]) ? $values[1] : ''),
-                    'free_' . $name => (isset($values[2]) ? $values[2] : ''),
-                    'percent_used_' . $name => (isset($values[3]) ? $values[3] : ''),
+                    'total_' . $name => ($values[0] ?? ''),
+                    'used_' . $name => ($values[1] ?? ''),
+                    'free_' . $name => ($values[2] ?? ''),
+                    'percent_used_' . $name => ($values[3] ?? ''),
                     'total_' . $name . '_formatted' => $this->convertBytesToString(
-                        (isset($values[0]) ? $values[0] : '')
+                        ($values[0] ?? '')
                     ),
                     'used_' . $name . '_formatted' => $this->convertBytesToString(
-                        (isset($values[1]) ? $values[1] : '')
+                        ($values[1] ?? '')
                     ),
                     'free_' . $name . '_formatted' => $this->convertBytesToString(
-                        (isset($values[2]) ? $values[2] : '')
+                        ($values[2] ?? '')
                     ),
                     'percent_used_' . $name . '_formatted' => Language::_(
                         'Solusvm.!percent.used',
                         true,
-                        (isset($values[3]) ? $values[3] : '')
+                        ($values[3] ?? '')
                     ),
                 ];
             }
@@ -2759,7 +2781,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|node-statistics', serialize($params), 'input', true);
             $response = $this->parseResponse($nodes_api->statistics($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2797,7 +2819,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|listnodes', serialize($params), 'input', true);
             $response = $this->parseResponse($nodes_api->getList($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -2836,7 +2858,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|listnodegroups', serialize($params), 'input', true);
             $response = $this->parseResponse($nodes_api->listGroups($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -2887,7 +2909,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|list-plans', serialize($params), 'input', true);
             $response = $this->parseResponse($plans_api->getDetails($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -2930,7 +2952,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|listplans', serialize($params), 'input', true);
             $response = $this->parseResponse($plans_api->getList($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -2969,7 +2991,7 @@ class Solusvm extends Module
 
             $this->log($module_row->meta->host . '|listtemplates', serialize($params), 'input', true);
             $response = $this->parseResponse($templates_api->getList($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -3034,7 +3056,7 @@ class Solusvm extends Module
         // Set the template, either from the package or client level
         $template = $package->meta->set_template == 'admin'
             ? $package->meta->template
-            : (isset($vars['solusvm_template']) ? $vars['solusvm_template'] : null);
+            : ($vars['solusvm_template'] ?? null);
 
         $fields = [
             'type' => $package->meta->type,
@@ -3181,7 +3203,7 @@ class Solusvm extends Module
             // Provision the Virtual Server
             $this->log($module_row->meta->host . '|client-checkexists', serialize($params), 'input', true);
             $response = $this->parseResponse($client_api->checkExists($params), $module_row, true);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Internal Error
             $this->Input->setErrors(['api' => ['internal' => Language::_('Solusvm.!error.api.internal', true)]]);
             return $client_fields;
@@ -3214,7 +3236,7 @@ class Solusvm extends Module
                 // Create a client
                 $this->log($module_row->meta->host . '|client-create', serialize($masked_params), 'input', true);
                 $response = $this->parseResponse($client_api->create($params), $module_row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Internal Error
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Solusvm.!error.api.internal', true)]]);
             }
@@ -3265,7 +3287,7 @@ class Solusvm extends Module
                 }
 
                 $errors = $response->errors();
-                $error = isset($errors->statusmsg) ? $errors->statusmsg : '';
+                $error = $errors->statusmsg ?? '';
                 $this->Input->setErrors(['api' => ['response' => $this->Html->safe($error)]]);
                 break;
             default:
@@ -3289,7 +3311,7 @@ class Solusvm extends Module
         foreach ($masked_params as $masked_param) {
             if (property_exists($output, $masked_param)) {
                 $raw_output = preg_replace(
-                    '/<' . $masked_param . ">(.*)<\/" . $masked_param . '>/',
+                    '/<' . $masked_param . '>(.*)<\/' . $masked_param . '>/',
                     '<' . $masked_param . '>***</' . $masked_param . '>',
                     $raw_output
                 );
@@ -3459,8 +3481,8 @@ class Solusvm extends Module
         $pool_size = strlen($pool);
         $length = (int)abs($min_chars == $max_chars ? $min_chars : mt_rand($min_chars, $max_chars));
 
-        for ($i=0; $i<$length; $i++) {
-            $password .= substr($pool, mt_rand(0, $pool_size-1), 1);
+        for ($i = 0; $i < $length; $i++) {
+            $password .= substr($pool, mt_rand(0, $pool_size - 1), 1);
         }
 
         return $password;
@@ -3530,7 +3552,7 @@ class Solusvm extends Module
                 'empty' => [
                     'rule' => [
                         [$this, 'validateNodeSet'],
-                        (isset($vars['meta']['node_group']) ? $vars['meta']['node_group'] : null)
+                        ($vars['meta']['node_group'] ?? null)
                     ],
                     'message' => Language::_('Solusvm.!error.meta[nodes].empty', true),
                 ]
@@ -3551,7 +3573,7 @@ class Solusvm extends Module
             'meta[total_base_ip_addresses]' => [
                 'format' => [
                     'pre_format' => ['trim'],
-                    'rule' => function($qty) {
+                    'rule' => function ($qty) {
                         // Only digits, and a total of 1 or more is required
                         return ((bool)preg_match('/^[0-9]+$/', $qty) && $qty > 0);
                     },
@@ -3607,8 +3629,8 @@ class Solusvm extends Module
                 return false;
             }
 
-            $octet = "([a-z0-9]|[a-z0-9][a-z0-9\-]{0,61}[a-z0-9])";
-            $nested_octet = "(\." . $octet . ')';
+            $octet = '([a-z0-9]|[a-z0-9][a-z0-9\-]{0,61}[a-z0-9])';
+            $nested_octet = '(\.' . $octet . ')';
             $hostname_regex = '/^' . $octet . $nested_octet . $nested_octet . '+$/i';
 
             $valid = $this->Input->matches($host_name, $hostname_regex);

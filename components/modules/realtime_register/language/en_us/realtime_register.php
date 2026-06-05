@@ -9,6 +9,7 @@ $lang['RealtimeRegister.module_row'] = 'Account';
 $lang['RealtimeRegister.module_row_plural'] = 'Accounts';
 $lang['RealtimeRegister.module_group'] = 'Account Group';
 
+$lang['RealtimeRegister.back_to_manage'] = 'Back';
 
 // Module management
 $lang['RealtimeRegister.add_module_row'] = 'Add Account';

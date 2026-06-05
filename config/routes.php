@@ -13,6 +13,9 @@
  * the second parameter by calling the $[numeric value] of that statement. For
  * example: $1, $2, ... $n.
  *
+ * @copyright Copyright (c) 2010, Phillips Data, Inc.
+ * @license http://www.blesta.com/license/ The Blesta License Agreement
+ * @link http://www.blesta.com/ Blesta
  */
 
 /**
@@ -55,6 +58,8 @@ Router::route('^' . $client_loc . '/(.+)', 'client_$1');
 Router::route('^' . $client_loc . '/?$', 'client_main'); // Default client controller
 
 // Send all API requests to Api::index
+Router::route('^api/notifications', 'api/notifications');
+Router::route('^api/notifications/(.+)', 'api/notifications/$1');
 Router::route('^api/(.+)', 'api/index/$1');
 
 // Send all Data Feed requests to Feed::index

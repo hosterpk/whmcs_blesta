@@ -1,5 +1,5 @@
 {
-    "version": "3.17.2",
+    "version": "4.0.0",
     "name": "Solusvm.name",
     "description": "Solusvm.description",
     "authors": [
@@ -21,9 +21,13 @@
         "group": "Solusvm.module_group"
     },
     "email_tags": {
-        "module": ["host", "port"],
+        "module": [
+            "host",
+            "port"
+        ],
         "package": [],
-        "service": ["solusvm_vserver_id",
+        "service": [
+            "solusvm_vserver_id",
             "solusvm_console_user",
             "solusvm_console_password",
             "solusvm_hostname",
@@ -42,5 +46,6 @@
             "solusvm_vnc_port",
             "solusvm_vnc_password"
         ]
-    }
+    },
+    "icon": "bi-cloud"
 }

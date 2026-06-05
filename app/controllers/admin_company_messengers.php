@@ -1,5 +1,6 @@
 <?php
 use Blesta\Core\Util\Input\Fields\Html as FieldsHtml;
+use Blesta\Core\Util\Filters\ExtensionFilters;
 
 /**
  * Admin Company Messenger Settings
@@ -19,13 +20,7 @@ class AdminCompanyMessengers extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['MessengerManager', 'Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
+        $this->uses(['MessengerManager']);
     }
 
     /**
@@ -41,6 +36,14 @@ class AdminCompanyMessengers extends AdminController
      */
     public function installed()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyMessengers.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('messengers', $this->MessengerManager->getAll($this->company_id));
@@ -52,6 +55,14 @@ class AdminCompanyMessengers extends AdminController
      */
     public function available()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyMessengers.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('messengers', $this->MessengerManager->getAvailable($this->company_id));
@@ -219,11 +230,11 @@ class AdminCompanyMessengers extends AdminController
         $messenger_configuration = $this->Companies->getSetting($this->company_id, 'messenger_configuration');
         $messenger_configuration = isset($messenger_configuration->value) ? $messenger_configuration->value : '';
 
-        $vars = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($messenger_configuration));
+        $vars = safe_unserialize(base64_decode($messenger_configuration));
 
         // Save messenger configuration
         if (!empty($this->post)) {
-            $messenger_configuration = base64_encode(json_encode($this->post['messenger_configuration']));
+            $messenger_configuration = base64_encode(serialize($this->post['messenger_configuration']));
 
             $this->Companies->setSetting($this->company_id, 'messenger_configuration', $messenger_configuration);
 

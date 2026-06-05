@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs Domain URL Forwarding Management
  *
@@ -34,7 +35,7 @@ class InternetbsDomainUrlforward
      *  - redirect301 Redirect user to destination page using HTTP 301 redirection code. Possible values are YES NO.
      * @return InternetbsResponse The response object
      */
-    public function add(array $vars) : InternetbsResponse
+    public function add(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/UrlForward/Add', $vars, 'POST');
     }
@@ -50,7 +51,7 @@ class InternetbsDomainUrlforward
      *  - redirect301 Redirect user to destination page using HTTP 301 redirection code. Possible values are YES NO.
      * @return InternetbsResponse The response object
      */
-    public function update(array $vars) : InternetbsResponse
+    public function update(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/UrlForward/Update', $vars, 'POST');
     }
@@ -62,7 +63,7 @@ class InternetbsDomainUrlforward
      *  - Source The URL Forwarding rule source.
      * @return InternetbsResponse The response object
      */
-    public function remove(array $vars) : InternetbsResponse
+    public function remove(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/UrlForward/Remove', $vars, 'POST');
     }
@@ -74,7 +75,7 @@ class InternetbsDomainUrlforward
      *  - Domain The domain name for which the URL Forwarding rules have to be retrieved.
      * @return InternetbsResponse The response object
      */
-    public function list(array $vars) : InternetbsResponse
+    public function list(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/UrlForward/List', $vars);
     }

@@ -1,0 +1,70 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "contact_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "number",
+            "type": "varchar(64)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 64
+        },
+        {
+            "name": "type",
+            "type": "enum('phone','fax')",
+            "nullable": false,
+            "key": null,
+            "default": "phone",
+            "extra": null,
+            "max_length": 5
+        },
+        {
+            "name": "location",
+            "type": "enum('home','work','mobile')",
+            "nullable": false,
+            "key": null,
+            "default": "home",
+            "extra": null,
+            "max_length": 6
+        }
+    ],
+    "indexes": [
+        {
+            "name": "contact_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "contact_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

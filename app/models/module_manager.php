@@ -1,6 +1,15 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Core\Util\Common\Traits\Container;
+use Exception;
+use Language;
+use Loader;
+use ReflectionClass;
+use Router;
+use stdClass;
 
 /**
  * Module manager. Handles installing/uninstalling and configuring modules.
@@ -54,9 +63,14 @@ class ModuleManager extends AppModel
         }
 
         // Trigger the ModuleManager.get event
-        extract($this->executeAndParseEvent('ModuleManager.get', [
+        $event = $this->executeAndParseEvent('ModuleManager.get', [
             'module' => $module
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $module;
     }
@@ -100,7 +114,7 @@ class ModuleManager extends AppModel
 
                 // Set the installed version of the plugin
                 $modules[$i]->installed_version = $modules[$i]->version;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Module could not be loaded
                 continue;
             }
@@ -289,7 +303,7 @@ class ModuleManager extends AppModel
             if (substr($module, 0, 1) != '.' && is_dir(COMPONENTDIR . 'modules' . DS . $module)) {
                 try {
                     $mod = $this->loadModule($module);
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // The module could not be loaded, try the next
                     continue;
                 }
@@ -322,7 +336,7 @@ class ModuleManager extends AppModel
             $this->Record->where('company_id', '=', $company_id);
         }
 
-        return (boolean) $this->Record->fetch();
+        return (bool) $this->Record->fetch();
     }
 
     /**
@@ -337,10 +351,15 @@ class ModuleManager extends AppModel
     public function add(array $vars)
     {
         // Trigger the ModuleManager.addBefore event
-        extract($this->executeAndParseEvent('ModuleManager.addBefore', ['vars' => $vars]));
+        $event = $this->executeAndParseEvent('ModuleManager.addBefore', ['vars' => $vars]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         // Retrieve the module
-        $module = $this->loadModule(isset($vars['class']) ? $vars['class'] : null);
+        $module = $this->loadModule($vars['class'] ?? null);
         $vars['name'] = $module->getName();
         $vars['version'] = $module->getVersion();
 
@@ -481,7 +500,7 @@ class ModuleManager extends AppModel
             $serialize = !is_scalar($vars[$i]['value']);
             $vars[$i]['module_id'] = $module_id;
             $vars[$i]['serialized'] = (int) $serialize;
-            $vars[$i]['value'] = $serialize ? json_encode($vars[$i]['value']) : $vars[$i]['value'];
+            $vars[$i]['value'] = $serialize ? serialize($vars[$i]['value']) : $vars[$i]['value'];
 
             if (isset($vars[$i]['encrypted']) && $vars[$i]['encrypted'] == '1') {
                 $vars[$i]['value'] = $this->systemEncrypt($vars[$i]['value']);
@@ -500,7 +519,12 @@ class ModuleManager extends AppModel
     public function delete($module_id)
     {
         // Trigger the ModuleManager.deleteBefore event
-        extract($this->executeAndParseEvent('ModuleManager.deleteBefore', ['module_id' => $module_id]));
+        $event = $this->executeAndParseEvent('ModuleManager.deleteBefore', ['module_id' => $module_id]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return;
+        }
+        extract($event);
 
         $installed_module = $this->get($module_id, false, false);
 
@@ -586,7 +610,7 @@ class ModuleManager extends AppModel
                     $serialize = !is_scalar($meta[$i]['value']);
                     $meta[$i]['module_row_id'] = $module_row_id;
                     $meta[$i]['serialized'] = (int) $serialize;
-                    $meta[$i]['value'] = $serialize ? json_encode($meta[$i]['value']) : $meta[$i]['value'];
+                    $meta[$i]['value'] = $serialize ? serialize($meta[$i]['value']) : $meta[$i]['value'];
 
                     if (isset($meta[$i]['encrypted']) && $meta[$i]['encrypted']) {
                         $meta[$i]['value'] = $this->systemEncrypt($meta[$i]['value']);
@@ -632,7 +656,7 @@ class ModuleManager extends AppModel
                     $serialize = !is_scalar($meta[$i]['value']);
                     $meta[$i]['module_row_id'] = $module_row_id;
                     $meta[$i]['serialized'] = (int) $serialize;
-                    $meta[$i]['value'] = $serialize ? json_encode($meta[$i]['value']) : $meta[$i]['value'];
+                    $meta[$i]['value'] = $serialize ? serialize($meta[$i]['value']) : $meta[$i]['value'];
 
                     if (isset($meta[$i]['encrypted']) && $meta[$i]['encrypted']) {
                         $meta[$i]['value'] = $this->systemEncrypt($meta[$i]['value']);
@@ -757,7 +781,7 @@ class ModuleManager extends AppModel
     {
         $group = $this->getGroup($module_group_id);
 
-        $vars['module_id'] = isset($group->module_id) ? $group->module_id : null;
+        $vars['module_id'] = $group->module_id ?? null;
         if (!isset($vars['module_rows'])) {
             $vars['module_rows'] = [];
         }
@@ -824,7 +848,7 @@ class ModuleManager extends AppModel
      * @return mixed The value returned from the module for the requested method
      * @see ModuleManager::errors()
      */
-    public function moduleRpc($module_id, $method, array $params = null, $module_row_id = null)
+    public function moduleRpc($module_id, $method, ?array $params = null, $module_row_id = null)
     {
         $result = null;
 
@@ -844,7 +868,7 @@ class ModuleManager extends AppModel
             if (($errors = $module->errors())) {
                 $this->Input->setErrors($errors);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Module RPC failed, log why
             Loader::loadModels($this, ['Logs']);
 
@@ -911,7 +935,7 @@ class ModuleManager extends AppModel
             return true;
         }
 
-        return (boolean) $this->Record->select('id')->from('module_rows')->
+        return (bool) $this->Record->select('id')->from('module_rows')->
             where('id', '=', $module_row_id)->
             where('module_id', '=', $module_id)->fetch();
     }
@@ -941,7 +965,7 @@ class ModuleManager extends AppModel
             $this->Record->where('packages.status', $op, $status);
         }
 
-        return !(boolean) $this->Record->fetch();
+        return !(bool) $this->Record->fetch();
     }
 
     /**
@@ -977,7 +1001,7 @@ class ModuleManager extends AppModel
             $this->Record->where('services.status', $op, $status);
         }
 
-        return !(boolean) $this->Record->fetch();
+        return !(bool) $this->Record->fetch();
     }
 
     /**
@@ -1126,6 +1150,7 @@ class ModuleManager extends AppModel
                     COMPONENTDIR . 'modules' . DS . $class . DS . $module->getLogo()
                 )
             ),
+            'icon' => $module->getIcon(),
             'installed' => $this->isInstalled($class, $company_id),
             'description' => $module->getDescription()
         ];
@@ -1152,7 +1177,7 @@ class ModuleManager extends AppModel
             }
 
             if ($data->serialized > 0) {
-                $data->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($data->value);
+                $data->value = safe_unserialize($data->value);
             }
 
             $meta->{$data->key} = $data->value;

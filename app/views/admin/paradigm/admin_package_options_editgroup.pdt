@@ -1,0 +1,199 @@
+<?php
+echo ($message ?? null);
+
+if (!($in_modal ?? false)) {
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminPackageOptions.editgroup.boxtitle_editgroup', true));
+}
+
+$this->Form->create(null, ['id' => 'edit_package_option_group', 'class' => 'disable-on-submit']);
+?>
+
+<div class="<?php echo ($in_modal ?? false) ? '' : 'card-body'; ?>">
+    <h6 class="fw-bold mb-3"><?php $this->_('AdminPackageOptions.editgroup.heading_basic'); ?></h6>
+    <div class="mb-3">
+        <?php $this->Form->label($this->_('AdminPackageOptions.editgroup.field_name', true), 'name', ['class' => 'form-label']); ?>
+        <?php $this->Form->fieldText('name', ($vars->name ?? null), ['id' => 'name', 'class' => 'form-control']); ?>
+    </div>
+    <div class="mb-3">
+        <?php $this->Form->label($this->_('AdminPackageOptions.editgroup.field_description', true), 'description', ['class' => 'form-label']); ?>
+        <?php $this->Form->fieldTextarea('description', ($vars->description ?? null), ['id' => 'description', 'class' => 'form-control', 'rows' => '3']); ?>
+    </div>
+
+    <h6 class="fw-bold mb-3"><?php $this->_('AdminPackageOptions.editgroup.heading_packages'); ?></h6>
+    <div class="dual-select-container">
+        <div class="dual-select-panel">
+            <label class="form-label"><?php $this->_('AdminPackageOptions.editgroup.text_memberpackages'); ?></label>
+            <div class="dual-select-dropzone">
+                <div class="drag-list" id="assigned_packages">
+                    <?php
+                    if (!empty($vars->packages)) {
+                        foreach ($vars->packages as $id => $name) {
+                    ?>
+                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($name);?></div>
+                    <?php
+                        }
+                    }
+                    ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="dual-select-controls">
+            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left" title="<?php $this->_('AdminPackageOptions.editgroup.text_memberpackages');?>">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right" title="<?php $this->_('AdminPackageOptions.editgroup.text_availablepackages');?>">
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+
+        <div class="dual-select-panel">
+            <label class="form-label"><?php $this->_('AdminPackageOptions.editgroup.text_availablepackages'); ?></label>
+            <div class="dual-select-dropzone">
+                <div class="drag-list" id="available_packages">
+                    <?php
+                    if (!empty($packages)) {
+                        foreach ($packages as $id => $name) {
+                    ?>
+                    <div class="drag-item" data-value="<?php echo $this->Html->safe($id);?>" draggable="true"><?php echo $this->Html->safe($name);?></div>
+                    <?php
+                    }
+                    }
+                    ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="<?php echo ($in_modal ?? false) ? 'modal-submit-area' : 'card-footer text-end'; ?>">
+    <?php if ($in_modal ?? false) { ?>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminPackageOptions.modal.btn_cancel');?></button>
+    <?php } ?>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminPackageOptions.editgroup.field_editgroupsubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+if (!($in_modal ?? false)) {
+    $this->Widget->end();
+}
+?>
+
+<?php if (!($in_modal ?? false)) { ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Dual-select drag and drop functionality
+    (function() {
+        let draggedItem = null;
+
+        function setupDualSelect(container) {
+            const leftList = container.querySelector('.dual-select-panel:first-child .drag-list');
+            const rightList = container.querySelector('.dual-select-panel:last-child .drag-list');
+            const moveLeftBtn = container.querySelector('.move-left');
+            const moveRightBtn = container.querySelector('.move-right');
+
+            if (!leftList || !rightList) return;
+
+            function setupDragItems() {
+                container.querySelectorAll('.drag-item').forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (e.ctrlKey || e.metaKey) {
+                            this.classList.toggle('selected');
+                        } else {
+                            container.querySelectorAll('.drag-item').forEach(i => i.classList.remove('selected'));
+                            this.classList.add('selected');
+                        }
+                    });
+
+                    item.addEventListener('dblclick', function(e) {
+                        e.stopPropagation();
+                        const currentList = this.closest('.drag-list');
+                        const targetList = currentList === leftList ? rightList : leftList;
+                        targetList.appendChild(this);
+                        this.classList.remove('selected');
+                    });
+
+                    item.addEventListener('dragstart', function(e) {
+                        draggedItem = this;
+                        this.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', this.textContent);
+                    });
+
+                    item.addEventListener('dragend', function() {
+                        this.classList.remove('dragging');
+                        container.querySelectorAll('.drag-list').forEach(l => l.classList.remove('drag-over'));
+                    });
+                });
+            }
+
+            [leftList, rightList].forEach(list => {
+                list.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+
+                list.addEventListener('dragleave', function(e) {
+                    if (!this.contains(e.relatedTarget)) {
+                        this.classList.remove('drag-over');
+                    }
+                });
+
+                list.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    if (draggedItem && draggedItem.parentNode !== this) {
+                        this.appendChild(draggedItem);
+                        draggedItem.classList.remove('selected');
+                        draggedItem = null;
+                    }
+                });
+            });
+
+            moveLeftBtn?.addEventListener('click', function() {
+                rightList.querySelectorAll('.drag-item.selected').forEach(item => {
+                    leftList.appendChild(item);
+                    item.classList.remove('selected');
+                });
+            });
+
+            moveRightBtn?.addEventListener('click', function() {
+                leftList.querySelectorAll('.drag-item.selected').forEach(item => {
+                    rightList.appendChild(item);
+                    item.classList.remove('selected');
+                });
+            });
+
+            setupDragItems();
+        }
+
+        document.querySelectorAll('.dual-select-container').forEach(setupDualSelect);
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.drag-item')) {
+                document.querySelectorAll('.drag-item.selected').forEach(item => item.classList.remove('selected'));
+            }
+        });
+
+        // Before form submit, create hidden inputs for assigned packages
+        document.getElementById('edit_package_option_group')?.addEventListener('submit', function() {
+            const assignedList = document.getElementById('assigned_packages');
+            if (assignedList) {
+                assignedList.querySelectorAll('input[name="packages[]"]').forEach(i => i.remove());
+                assignedList.querySelectorAll('.drag-item').forEach(item => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'packages[]';
+                    input.value = item.dataset.value;
+                    assignedList.appendChild(input);
+                });
+            }
+        });
+    })();
+});
+</script>
+<?php } ?>

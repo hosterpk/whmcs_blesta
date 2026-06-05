@@ -13,7 +13,32 @@ class SupportManagerTickets extends SupportManagerModel
     /**
      * The system-level staff ID
      */
-    private $system_staff_id = 0;
+    private $system_staff_id;
+
+    /**
+     * Maximum file size for inline images in bytes (5MB)
+     */
+    private static $inline_image_max_size = 5242880;
+
+    /**
+     * Allowed MIME types for inline images
+     */
+    private static $inline_image_allowed_mimes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp'
+    ];
+
+    /**
+     * Magic byte signatures for image type verification
+     */
+    private static $inline_image_signatures = [
+        'image/jpeg' => ["\xFF\xD8\xFF"],
+        'image/png' => ["\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"],
+        'image/gif' => ["GIF87a", "GIF89a"],
+        'image/webp' => ["RIFF"]
+    ];
 
     /**
      * Constructor
@@ -24,6 +49,9 @@ class SupportManagerTickets extends SupportManagerModel
 
         Configure::load('mime', dirname(__FILE__) . DS . '..' . DS . 'config' . DS);
         Language::loadLang('support_manager_tickets', null, PLUGINDIR . 'support_manager' . DS . 'language' . DS);
+
+        // Load system staff ID from config
+        $this->system_staff_id = Configure::get('SupportManager.system_staff_id');
     }
 
     /**
@@ -99,6 +127,9 @@ class SupportManagerTickets extends SupportManagerModel
                 $this->addCustomFields($ticket_id, $vars['custom_fields'] ?? []);
                 $this->setRecipients($ticket_id, $vars['recipients'] ?? []);
                 $this->setContacts($ticket_id, $vars['contacts'] ?? []);
+
+                // Queue ticket for AI analysis if enabled
+                $this->queueReplyForAnalysis($ticket_id, $vars['department_id'] ?? null);
             }
 
             // Trigger the SupportManager.addTicketAfter event
@@ -268,7 +299,18 @@ class SupportManagerTickets extends SupportManagerModel
                 $this->setContacts($ticket_id, $vars['contacts']);
             }
 
-            if ($vars['status'] == 'closed') {
+            if (isset($vars['status']) && $vars['status'] == 'closed') {
+                // De-queue pending AI replies for this ticket
+                $this->Record->where('ticket_id', '=', $ticket_id)
+                    ->where('ai_queued', '=', 1)
+                    ->update('support_replies', ['ai_queued' => 0]);
+
+                // Expire any pending AI response analyses
+                if (!isset($this->SupportManagerAiResponseAnalyses)) {
+                    Loader::loadModels($this, ['SupportManager.SupportManagerAiResponseAnalyses']);
+                }
+                $this->SupportManagerAiResponseAnalyses->expirePendingForTicket($ticket_id);
+
                 // Delete fields marked as auto-delete after closing the ticket
                 $this->Record->from('support_ticket_fields')
                     ->innerJoin('support_department_fields', 'support_department_fields.id', '=', 'support_ticket_fields.field_id', false)
@@ -1121,7 +1163,7 @@ class SupportManagerTickets extends SupportManagerModel
 
             if ($this->Input->validates($vars)) {
                 // Create the reply
-                $fields = ['ticket_id', 'staff_id', 'contact_id', 'type', 'details', 'date_added'];
+                $fields = ['ticket_id', 'staff_id', 'contact_id', 'type', 'details', 'date_added', 'is_ai_generated'];
                 $this->Record->insert('support_replies', $vars, $fields);
                 $reply_id = $this->Record->lastInsertId();
 
@@ -1273,6 +1315,29 @@ class SupportManagerTickets extends SupportManagerModel
             }
         }
 
+        // Queue client reply for AI analysis if enabled
+        if (!empty($reply_id) && empty($vars['staff_id']) && ($vars['type'] ?? 'reply') == 'reply') {
+            // This is a client reply, check if AI should analyze it
+            $ticket = $this->get($ticket_id, false);
+            if ($ticket) {
+                $this->queueReplyForAnalysis($ticket_id, $ticket->department_id, $reply_id);
+            }
+        }
+
+        // De-queue pending AI replies when a staff member replies to the ticket
+        if (!empty($reply_id) && !empty($vars['staff_id']) && ($vars['type'] ?? 'reply') == 'reply') {
+            // Clear ai_queued flag on any pending client replies for this ticket
+            $this->Record->where('ticket_id', '=', $ticket_id)
+                ->where('ai_queued', '=', 1)
+                ->update('support_replies', ['ai_queued' => 0]);
+
+            // Expire any pending AI response analyses for this ticket
+            if (!isset($this->SupportManagerAiResponseAnalyses)) {
+                Loader::loadModels($this, ['SupportManager.SupportManagerAiResponseAnalyses']);
+            }
+            $this->SupportManagerAiResponseAnalyses->expirePendingForTicket($ticket_id);
+        }
+
         // Trigger the SupportManager.addReplyAfter event
         extract($this->triggerEvent(
             'addReplyAfter',
@@ -1336,7 +1401,8 @@ class SupportManagerTickets extends SupportManagerModel
 
         // Update rating
         if ($ticket) {
-            $fields = ['rating', 'rating_comment'];
+            $vars['date_rated'] = date('Y-m-d H:i:s');
+            $fields = ['rating', 'rating_comment', 'date_rated'];
             $this->Record->where('id', '=', $ticket->id)->
                 update('support_tickets', $vars, $fields);
         }
@@ -1880,6 +1946,26 @@ class SupportManagerTickets extends SupportManagerModel
     }
 
     /**
+     * Gets all unprocessed client replies for a ticket
+     *
+     * Returns client replies that have not yet been processed by AI
+     * (where staff_id is null and ai_response_id is null)
+     *
+     * @param int $ticket_id The ticket ID
+     * @return array An array of unprocessed reply objects, ordered by date_added ascending
+     */
+    public function getUnprocessedClientReplies($ticket_id)
+    {
+        return $this->Record->select()
+            ->from('support_replies')
+            ->where('ticket_id', '=', $ticket_id)
+            ->where('staff_id', '=', null)
+            ->where('ai_response_id', '=', null)
+            ->order(['date_added' => 'asc'])
+            ->fetchAll();
+    }
+
+    /**
      * Returns a Record object for fetching tickets
      *
      * @param array $filters A list of parameters to filter by, including:
@@ -2419,7 +2505,11 @@ class SupportManagerTickets extends SupportManagerModel
 
             // Parse details into HTML for HTML templates
             Loader::loadHelpers($this, ['TextParser']);
-            $ticket->details_html = $this->TextParser->encode('markdown', $ticket->details);
+
+            // Replace inline attachment image references with text placeholders for email
+            $email_details = $this->stripInlineAttachmentImagesForEmail($ticket->details);
+            $ticket->details = $email_details;
+            $ticket->details_html = $this->TextParser->encode('markdown', $email_details);
 
             // Send the ticket emails
             $this->sendTicketEmail($ticket, ($total_replies == 1), $additional_tags);
@@ -2433,7 +2523,7 @@ class SupportManagerTickets extends SupportManagerModel
      */
     public function sendTicketAssignedEmail($ticket_id)
     {
-        Loader::loadModels($this, ['Emails', 'Staff', 'MessengerManager']);
+        Loader::loadModels($this, ['Emails', 'Staff', 'MessengerManager', 'Notifications']);
 
         // Notify the assigned staff in regards to this ticket
         if (($ticket = $this->get($ticket_id, false)) && !empty($ticket->staff_id)
@@ -2457,6 +2547,40 @@ class SupportManagerTickets extends SupportManagerModel
             );
 
             $this->MessengerManager->send($email_action, $tags, [$staff->user_id]);
+
+            // Send bell notification to the assigned staff member
+            $bell_action = $this->Notifications->getAction(
+                'SupportManager.staff_ticket_assigned',
+                'staff',
+                'plugin',
+                'support_manager'
+            );
+
+            if ($bell_action) {
+                $bell_title = Language::_(
+                    'SupportManagerTickets.bell.ticket_assigned.title',
+                    true,
+                    $ticket->code
+                );
+                $bell_message = Language::_(
+                    'SupportManagerTickets.bell.ticket_assigned.message',
+                    true,
+                    $ticket->code,
+                    $ticket->summary
+                );
+                $bell_url = AppController::baseUrl() . AppController::adminUri()
+                    . 'plugin/support_manager/admin_tickets/reply/' . $ticket->id . '/';
+
+                $this->Notifications->add([
+                    'action_id' => $bell_action->id,
+                    'user_id' => $staff->user_id,
+                    'title' => $bell_title,
+                    'message' => $bell_message,
+                    'url' => $bell_url,
+                    'icon' => 'bi-person-check-fill',
+                    'type' => 'info'
+                ]);
+            }
         }
     }
 
@@ -2612,7 +2736,7 @@ class SupportManagerTickets extends SupportManagerModel
         Loader::loadModels(
             $this,
             [
-                'Emails', 'Staff', 'MessengerManager',
+                'Emails', 'Staff', 'MessengerManager', 'Notifications',
                 'SupportManager.SupportManagerStaff', 'SupportManager.SupportManagerDepartments'
             ]
         );
@@ -2647,6 +2771,7 @@ class SupportManagerTickets extends SupportManagerModel
         $to_addresses = [];
         $to_mobile_addresses = [];
         $to_staff_user_ids = [];
+        $to_bell_user_ids = [];
 
         // Check each staff member is set to receive the notice
         foreach ($staff as $member) {
@@ -2659,6 +2784,7 @@ class SupportManagerTickets extends SupportManagerModel
                             'email' => $member->email,
                             'language' => $language ? $language->value : Configure::get('Blesta.language')
                         ];
+                        $to_bell_user_ids[] = $member->user_id;
                         break;
                     }
                 }
@@ -2674,6 +2800,11 @@ class SupportManagerTickets extends SupportManagerModel
                             'email' => $member->email_mobile,
                             'language' => $language ? $language->value : Configure::get('Blesta.language')
                         ];
+
+                        // Also collect for bell notifications if not already added via ticket_emails
+                        if (!in_array($member->user_id, $to_bell_user_ids)) {
+                            $to_bell_user_ids[] = $member->user_id;
+                        }
                         break;
                     }
                 }
@@ -2766,6 +2897,68 @@ class SupportManagerTickets extends SupportManagerModel
         }
 
         $this->MessengerManager->send('SupportManager.staff_ticket_updated', $tags, $to_staff_user_ids);
+
+        // Send bell notifications to staff who qualify for email notifications
+        if (!empty($to_bell_user_ids)) {
+            $bell_action = $this->Notifications->getAction(
+                'SupportManager.staff_ticket_updated',
+                'staff',
+                'plugin',
+                'support_manager'
+            );
+
+            if ($bell_action) {
+                // Build the client name for the notification message
+                $client_name = $ticket->email ?? '';
+                if ($client !== null) {
+                    $client_name = ($client->first_name ?? '') . ' ' . ($client->last_name ?? '');
+                    $client_name = trim($client_name);
+                }
+
+                if ($new_ticket) {
+                    $bell_title = Language::_(
+                        'SupportManagerTickets.bell.new_ticket.title',
+                        true,
+                        $ticket->code
+                    );
+                    $bell_message = Language::_(
+                        'SupportManagerTickets.bell.new_ticket.message',
+                        true,
+                        $client_name,
+                        $ticket->code,
+                        $ticket->summary
+                    );
+                } else {
+                    $bell_title = Language::_(
+                        'SupportManagerTickets.bell.ticket_updated.title',
+                        true,
+                        $ticket->code
+                    );
+                    $bell_message = Language::_(
+                        'SupportManagerTickets.bell.ticket_updated.message',
+                        true,
+                        $client_name,
+                        $ticket->code,
+                        $ticket->summary
+                    );
+                }
+
+                $bell_url = AppController::baseUrl() . AppController::adminUri()
+                    . 'plugin/support_manager/admin_tickets/reply/' . $ticket->id . '/';
+
+                foreach ($to_bell_user_ids as $user_id) {
+                    $this->Notifications->add([
+                        'action_id' => $bell_action->id,
+                        'user_id' => $user_id,
+                        'title' => $bell_title,
+                        'message' => $bell_message,
+                        'url' => $bell_url,
+                        'icon' => 'bi-chat-dots-fill',
+                        'type' => 'info'
+                    ]);
+                }
+            }
+        }
     }
 
     /**
@@ -3699,5 +3892,601 @@ class SupportManagerTickets extends SupportManagerModel
         }
 
         return $tags;
+    }
+
+    /**
+     * Uploads an inline image to a temporary directory and returns a temp ID
+     *
+     * @param array $file A single file entry from $_FILES (with keys: name, type, tmp_name, error, size)
+     * @return array An array with temp_id and alt on success, or sets Input errors on failure
+     */
+    public function uploadInlineImageTemp(array $file)
+    {
+        // Validate the upload
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) {
+            $this->Input->setErrors([
+                'file' => ['upload' => Language::_('SupportManagerTickets.!error.inline_image.upload', true)]
+            ]);
+            return [];
+        }
+
+        // Validate file size
+        if ($file['size'] > self::$inline_image_max_size) {
+            $this->Input->setErrors([
+                'file' => ['size' => Language::_(
+                    'SupportManagerTickets.!error.inline_image.size',
+                    true,
+                    round(self::$inline_image_max_size / 1048576)
+                )]
+            ]);
+            return [];
+        }
+
+        // Detect MIME from file contents (not from the untrusted upload header)
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $detected_mime = $finfo->file($file['tmp_name']);
+
+        if (!in_array($detected_mime, self::$inline_image_allowed_mimes, true)) {
+            $this->Input->setErrors([
+                'file' => ['type' => Language::_('SupportManagerTickets.!error.inline_image.type', true)]
+            ]);
+            return [];
+        }
+
+        // Verify magic bytes match the detected MIME
+        if (!$this->validateImageSignature($file['tmp_name'], $detected_mime)) {
+            $this->Input->setErrors([
+                'file' => ['type' => Language::_('SupportManagerTickets.!error.inline_image.type', true)]
+            ]);
+            return [];
+        }
+
+        // Determine the file extension from the verified MIME
+        $mime_to_ext = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp'
+        ];
+        $ext = $mime_to_ext[$detected_mime] ?? 'bin';
+
+        // Generate an opaque temp ID
+        $temp_id = bin2hex(random_bytes(16));
+
+        // Get the temp upload path
+        $temp_path = $this->getInlineImageTempPath();
+        if (!$temp_path) {
+            $this->Input->setErrors([
+                'file' => ['path' => Language::_('SupportManagerTickets.!error.inline_image.path', true)]
+            ]);
+            return [];
+        }
+
+        // Move the uploaded file
+        $dest_file = $temp_path . $temp_id . '.' . $ext;
+        if (!move_uploaded_file($file['tmp_name'], $dest_file)) {
+            $this->Input->setErrors([
+                'file' => ['write' => Language::_('SupportManagerTickets.!error.inline_image.write', true)]
+            ]);
+            return [];
+        }
+
+        // Write sidecar metadata for verification and cleanup
+        $meta = [
+            'session_hash' => $this->systemHash(session_id()),
+            'company_id' => Configure::get('Blesta.company_id'),
+            'name' => $file['name'],
+            'mime' => $detected_mime,
+            'ext' => $ext,
+            'created_at' => time()
+        ];
+        file_put_contents($temp_path . $temp_id . '.json', json_encode($meta));
+
+        // Alt text is the original filename without extension
+        $alt = pathinfo($file['name'], PATHINFO_FILENAME);
+
+        return ['temp_id' => $temp_id, 'alt' => $alt];
+    }
+
+    /**
+     * Retrieves a temp inline image file for preview, verifying session ownership.
+     *
+     * @param string $temp_id The temp image identifier
+     * @return array|false An array with 'file_path' and 'mime' keys, or false if invalid/unauthorized
+     */
+    public function getInlineImageTempFile($temp_id)
+    {
+        // Validate temp_id format (hex string)
+        if (!preg_match('/^[a-f0-9]{32}$/', $temp_id)) {
+            return false;
+        }
+
+        $temp_path = $this->getInlineImageTempPath();
+        if (!$temp_path) {
+            return false;
+        }
+
+        // Read sidecar metadata
+        $meta_file = $temp_path . $temp_id . '.json';
+        if (!file_exists($meta_file)) {
+            return false;
+        }
+
+        $meta = json_decode(file_get_contents($meta_file), true);
+        if (!$meta) {
+            return false;
+        }
+
+        // Verify session ownership
+        $current_session_hash = $this->systemHash(session_id());
+        if (!isset($meta['session_hash']) || $meta['session_hash'] !== $current_session_hash) {
+            return false;
+        }
+
+        // Verify company
+        if (!isset($meta['company_id']) || $meta['company_id'] != Configure::get('Blesta.company_id')) {
+            return false;
+        }
+
+        // Verify the image file exists
+        $ext = $meta['ext'] ?? 'bin';
+        $file_path = $temp_path . $temp_id . '.' . $ext;
+        if (!file_exists($file_path)) {
+            return false;
+        }
+
+        return [
+            'file_path' => $file_path,
+            'mime' => $meta['mime'] ?? 'application/octet-stream'
+        ];
+    }
+
+    /**
+     * Finalizes inline images by creating attachment records and rewriting
+     * placeholder URLs in the reply details. Must be called BEFORE inserting
+     * the reply so that the stored text contains real attachment URLs.
+     *
+     * @param string $details The reply details containing blesta-temp-image:// placeholders
+     * @param array $temp_ids An array of temp IDs to finalize
+     * @return array With keys 'details' (rewritten text) and 'attachment_ids' (array of new attachment IDs)
+     */
+    public function finalizeInlineImages($details, array $temp_ids)
+    {
+        $result = ['details' => $details, 'attachment_ids' => []];
+
+        if (empty($temp_ids)) {
+            return $result;
+        }
+
+        Loader::loadComponents($this, ['SettingsCollection']);
+
+        $temp = $this->SettingsCollection->fetchSetting(
+            null,
+            Configure::get('Blesta.company_id'),
+            'uploads_dir'
+        );
+        $upload_path = $temp['value'] . Configure::get('Blesta.company_id')
+            . DS . 'support_manager_files' . DS;
+
+        // Ensure the permanent upload path exists
+        if (!is_dir($upload_path)) {
+            @mkdir($upload_path, 0755, true);
+        }
+
+        $temp_path = $this->getInlineImageTempPath();
+        if (!$temp_path) {
+            return $result;
+        }
+
+        $current_session_hash = $this->systemHash(session_id());
+        $current_company_id = Configure::get('Blesta.company_id');
+
+        foreach ($temp_ids as $temp_id) {
+            // Sanitize temp_id to hex characters only
+            $temp_id = preg_replace('/[^a-f0-9]/', '', $temp_id);
+            if (strlen($temp_id) !== 32) {
+                continue;
+            }
+
+            // Read and validate sidecar metadata
+            $meta_file = $temp_path . $temp_id . '.json';
+            if (!file_exists($meta_file)) {
+                continue;
+            }
+
+            $meta = json_decode(file_get_contents($meta_file), true);
+            if (!$meta) {
+                continue;
+            }
+
+            // Verify session and company ownership
+            if ($meta['session_hash'] !== $current_session_hash
+                || $meta['company_id'] != $current_company_id
+            ) {
+                continue;
+            }
+
+            // Locate the temp image file
+            $temp_file = $temp_path . $temp_id . '.' . $meta['ext'];
+            if (!file_exists($temp_file)) {
+                continue;
+            }
+
+            // Generate a permanent filename using the existing convention
+            $perm_name = $this->makeFileName($meta['name']);
+            $perm_file = $upload_path . $perm_name;
+
+            // Move the temp file to the permanent location
+            if (!rename($temp_file, $perm_file)) {
+                continue;
+            }
+
+            // Insert an attachment record with reply_id=0 (to be linked after reply creation)
+            $this->Record->insert('support_attachments', [
+                'reply_id' => 0,
+                'name' => $meta['name'],
+                'file_name' => $perm_file
+            ], ['reply_id', 'name', 'file_name']);
+
+            $attachment_id = $this->Record->lastInsertId();
+            $result['attachment_ids'][] = $attachment_id;
+
+            // Replace the placeholder in the details text
+            $result['details'] = str_replace(
+                'blesta-temp-image://' . $temp_id,
+                'blesta-attachment://' . $attachment_id,
+                $result['details']
+            );
+
+            // Clean up sidecar file
+            @unlink($meta_file);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Links pre-created inline attachment records to a reply after insertion
+     *
+     * @param array $attachment_ids An array of attachment IDs to update
+     * @param int $reply_id The reply ID to associate the attachments with
+     */
+    public function linkInlineAttachmentsToReply(array $attachment_ids, $reply_id)
+    {
+        if (empty($attachment_ids) || empty($reply_id)) {
+            return;
+        }
+
+        foreach ($attachment_ids as $attachment_id) {
+            $this->Record->where('id', '=', $attachment_id)
+                ->where('reply_id', '=', 0)
+                ->update('support_attachments', ['reply_id' => $reply_id]);
+        }
+    }
+
+    /**
+     * Removes pre-created inline attachments that were never linked to a reply
+     * (used when reply creation fails)
+     *
+     * @param array $attachment_ids An array of attachment IDs to remove
+     */
+    public function rollbackInlineAttachments(array $attachment_ids)
+    {
+        if (empty($attachment_ids)) {
+            return;
+        }
+
+        foreach ($attachment_ids as $attachment_id) {
+            $attachment = $this->Record->select()
+                ->from('support_attachments')
+                ->where('id', '=', $attachment_id)
+                ->where('reply_id', '=', 0)
+                ->fetch();
+
+            if ($attachment) {
+                @unlink($attachment->file_name);
+                $this->Record->from('support_attachments')
+                    ->where('id', '=', $attachment_id)
+                    ->where('reply_id', '=', 0)
+                    ->delete();
+            }
+        }
+    }
+
+    /**
+     * Cleans up orphaned temporary inline image files that were never finalized
+     *
+     * @param int $hours The number of hours after which temp files are considered expired (default 24)
+     */
+    public function cleanupOrphanedInlineImageTemps($hours = 24)
+    {
+        $temp_path = $this->getInlineImageTempPath();
+        if (!$temp_path || !is_dir($temp_path)) {
+            return;
+        }
+
+        $cutoff = time() - ($hours * 3600);
+        $files = glob($temp_path . '*.json');
+
+        if (!is_array($files)) {
+            return;
+        }
+
+        foreach ($files as $meta_file) {
+            $meta = @json_decode(@file_get_contents($meta_file), true);
+            if (!$meta || !isset($meta['created_at'])) {
+                // Malformed metadata — find and remove the matching image file by glob
+                $temp_id = basename($meta_file, '.json');
+                $orphans = glob($temp_path . $temp_id . '.*');
+                if (is_array($orphans)) {
+                    foreach ($orphans as $orphan) {
+                        @unlink($orphan);
+                    }
+                }
+                continue;
+            }
+
+            if ($meta['created_at'] < $cutoff) {
+                $temp_id = basename($meta_file, '.json');
+
+                // Remove the image file — use glob if ext is missing/corrupt
+                if (!empty($meta['ext'])) {
+                    @unlink($temp_path . $temp_id . '.' . $meta['ext']);
+                } else {
+                    $orphans = glob($temp_path . $temp_id . '.*');
+                    if (is_array($orphans)) {
+                        foreach ($orphans as $orphan) {
+                            @unlink($orphan);
+                        }
+                    }
+                }
+
+                // Remove the metadata file
+                @unlink($meta_file);
+            }
+        }
+
+        // Clean up stale attachment records with reply_id=0. These are from
+        // failed or abandoned reply submissions. The support_attachments table
+        // has no timestamp column, so use the file's mtime as the age proxy.
+        // Only delete records whose files are older than the cutoff to avoid
+        // removing in-flight records from active compositions.
+        $stale_attachments = $this->Record->select(['id', 'file_name'])
+            ->from('support_attachments')
+            ->where('reply_id', '=', 0)
+            ->fetchAll();
+
+        foreach ($stale_attachments as $attachment) {
+            // Check file age — skip if the file is recent or missing (missing = safe to delete record)
+            $file_exists = !empty($attachment->file_name) && file_exists($attachment->file_name);
+            if ($file_exists && filemtime($attachment->file_name) >= $cutoff) {
+                continue; // File is recent, likely in-flight — skip
+            }
+
+            if ($file_exists) {
+                @unlink($attachment->file_name);
+            }
+            $this->Record->from('support_attachments')
+                ->where('id', '=', $attachment->id)
+                ->delete();
+        }
+    }
+
+    /**
+     * Checks whether the given details text contains base64 data URI images
+     *
+     * @param string $details The reply details to check
+     * @return bool True if base64 data URI images are found
+     */
+    public function containsBase64Images($details)
+    {
+        return (bool) preg_match('/data:image\/[a-z+]+;base64,/i', $details ?? '');
+    }
+
+    /**
+     * Resolves blesta-attachment:// URIs in reply details to context-appropriate URLs
+     *
+     * @param string $details The reply details containing blesta-attachment:// URIs
+     * @param string $context The context for URL generation: 'admin' or 'client'
+     * @return string The details with resolved URLs
+     */
+    public function resolveInlineAttachmentUrls($details, $context = 'client')
+    {
+        if (strpos($details ?? '', 'blesta-attachment://') === false) {
+            return $details;
+        }
+
+        $controller = ($context === 'admin') ? 'admin_tickets' : 'client_tickets';
+        $webdir = $this->getWebDirectory();
+        $base_url = $webdir . 'plugin/support_manager/' . $controller . '/getattachment/';
+
+        return preg_replace(
+            '/blesta-attachment:\/\/(\d+)/',
+            $base_url . '$1/',
+            $details
+        );
+    }
+
+    /**
+     * Gets the temporary directory path for inline image uploads,
+     * creating it if necessary
+     *
+     * @return string|false The temp directory path, or false on failure
+     */
+    private function getInlineImageTempPath()
+    {
+        Loader::loadComponents($this, ['SettingsCollection']);
+
+        $temp = $this->SettingsCollection->fetchSetting(
+            null,
+            Configure::get('Blesta.company_id'),
+            'uploads_dir'
+        );
+
+        if (empty($temp['value'])) {
+            return false;
+        }
+
+        $path = $temp['value'] . Configure::get('Blesta.company_id')
+            . DS . 'support_manager_files' . DS . 'tmp_inline' . DS;
+
+        if (!is_dir($path)) {
+            if (!@mkdir($path, 0755, true)) {
+                return false;
+            }
+        }
+
+        return $path;
+    }
+
+    /**
+     * Replaces inline attachment image references in markdown with text
+     * placeholders for use in email notifications. This strips
+     * blesta-attachment:// URLs that cannot render in email clients.
+     *
+     * @param string $details The markdown text containing blesta-attachment:// references
+     * @return string The text with image references replaced by placeholders
+     */
+    private function stripInlineAttachmentImagesForEmail($details)
+    {
+        if (empty($details) || strpos($details, 'blesta-attachment://') === false) {
+            return $details;
+        }
+
+        // Replace markdown image syntax: ![alt](blesta-attachment://id)
+        return preg_replace(
+            '/!\[([^\]]*)\]\(blesta-attachment:\/\/\d+\)/',
+            '[Image: $1]',
+            $details
+        );
+    }
+
+    /**
+     * Validates that a file's magic bytes match the expected MIME type
+     *
+     * @param string $file_path The path to the file to validate
+     * @param string $mime The expected MIME type
+     * @return bool True if the magic bytes match
+     */
+    private function validateImageSignature($file_path, $mime)
+    {
+        if (!isset(self::$inline_image_signatures[$mime])) {
+            return false;
+        }
+
+        $handle = fopen($file_path, 'rb');
+        if (!$handle) {
+            return false;
+        }
+
+        // Read enough bytes for the longest signature
+        $header = fread($handle, 12);
+        fclose($handle);
+
+        if ($header === false) {
+            return false;
+        }
+
+        foreach (self::$inline_image_signatures[$mime] as $signature) {
+            if (strncmp($header, $signature, strlen($signature)) === 0) {
+                // Additional check for WebP: bytes 8-11 must be "WEBP"
+                if ($mime === 'image/webp' && substr($header, 8, 4) !== 'WEBP') {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Queues a reply for AI analysis if AI is enabled and conditions are met
+     *
+     * Checks AI settings, department restrictions, and trigger settings before
+     * queueing a client reply for automated AI processing. Also expires any
+     * pending responses for the ticket.
+     *
+     * @param int $ticket_id The ticket ID
+     * @param int|null $department_id The department ID (for restriction checks)
+     * @param int|null $reply_id The reply ID to queue (if provided)
+     * @return void
+     */
+    private function queueReplyForAnalysis($ticket_id, $department_id = null, $reply_id = null)
+    {
+        // Load required models if not already loaded
+        if (!isset($this->SupportManagerSettings)) {
+            Loader::loadModels($this, ['SupportManager.SupportManagerSettings']);
+        }
+        if (!isset($this->SupportManagerAiResponseAnalyses)) {
+            Loader::loadModels($this, ['SupportManager.SupportManagerAiResponseAnalyses']);
+        }
+
+        $company_id = Configure::get('Blesta.company_id');
+
+        // Check if AI is enabled globally
+        $ai_enabled = $this->SupportManagerSettings->getSetting('sm_ai_enabled', $company_id);
+        if (empty($ai_enabled->value) || $ai_enabled->value !== 'true') {
+            return; // AI not enabled
+        }
+
+        // Check if either auto-reply or tool use is enabled (efficiency check)
+        $auto_reply = $this->SupportManagerSettings->getSetting('sm_ai_auto_reply_enabled', $company_id);
+        $tools_enabled = $this->SupportManagerSettings->getSetting('sm_ai_tools_enabled', $company_id);
+
+        if ((empty($auto_reply->value) || $auto_reply->value !== 'true')
+            && (empty($tools_enabled->value) || $tools_enabled->value !== 'true')) {
+            return; // Neither auto-reply nor tools enabled, no point analyzing
+        }
+
+        // Don't queue if ticket is closed
+        $ticket = $this->Record->select(['status'])
+            ->from('support_tickets')
+            ->where('id', '=', $ticket_id)
+            ->fetch();
+        if ($ticket && $ticket->status === 'closed') {
+            return;
+        }
+
+        // Check if department restrictions exist
+        if ($department_id) {
+            $ai_departments = $this->SupportManagerSettings->getSetting('sm_ai_auto_reply_departments', $company_id);
+            if ($ai_departments && $ai_departments->value) {
+                $allowed_departments = json_decode($ai_departments->value, true);
+                if (is_array($allowed_departments) && !empty($allowed_departments)) {
+                    if (!in_array($department_id, $allowed_departments)) {
+                        return; // Department not enabled for AI
+                    }
+                }
+            }
+        }
+
+        // Check analyze trigger setting
+        $trigger = $this->SupportManagerSettings->getSetting('sm_ai_analyze_trigger', $company_id);
+        if ($trigger && $trigger->value === 'ticket_opened') {
+            // Check if we've already analyzed any client reply for this ticket
+            $analyzed_reply = $this->Record->select()
+                ->from('support_replies')
+                ->where('ticket_id', '=', $ticket_id)
+                ->where('staff_id', '=', null)
+                ->open()
+                    ->where('ai_response_id', 'IS NOT', null)
+                    ->orWhere('ai_tool_analysis_id', 'IS NOT', null)
+                ->close()
+                ->fetch();
+
+            if ($analyzed_reply) {
+                return; // Skip: already analyzed this ticket
+            }
+        }
+
+        // Expire old pending responses for this ticket
+        $this->SupportManagerAiResponseAnalyses->expirePendingForTicket($ticket_id);
+
+        // Queue the reply for AI processing
+        if ($reply_id) {
+            $this->Record->where('id', '=', $reply_id)
+                ->update('support_replies', ['ai_queued' => 1]);
+        }
     }
 }

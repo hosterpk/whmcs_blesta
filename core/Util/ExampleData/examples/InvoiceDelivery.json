@@ -1,0 +1,14 @@
+[
+    {
+        "id": 120,
+        "invoice_id": 121,
+        "method": "email",
+        "date_sent": "2026-02-20 15:00:05"
+    },
+    {
+        "id": 121,
+        "invoice_id": 121,
+        "method": "email",
+        "date_sent": "2026-02-21 10:30:12"
+    }
+]

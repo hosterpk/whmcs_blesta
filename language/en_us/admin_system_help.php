@@ -23,3 +23,7 @@ $lang['AdminSystemHelp.index.text_forums'] = 'The Blesta forums are a community 
 
 $lang['AdminSystemHelp.index.heading_discord'] = 'Discord Chat';
 $lang['AdminSystemHelp.index.text_discord'] = 'Join us on Discord to discuss and hang out with other community members.';
+
+// Credits
+$lang['AdminSystemHelp.credits.page_title'] = 'Settings > System > Help > About Blesta';
+$lang['AdminSystemHelp.credits.boxtitle_credits'] = 'About Blesta';

@@ -2,6 +2,8 @@
 // Errors
 $lang['MulticraftModule.!error.json.unavailable'] = 'The JSON extension is required by this module.';
 
+$lang['Multicraft.back_to_manage'] = 'Back';
+
 $lang['MulticraftModule.!error.server_name.empty'] = 'Please enter a label for this server.';
 $lang['MulticraftModule.!error.panel_url.empty'] = 'Please enter the URL to your Multicraft panel.';
 $lang['MulticraftModule.!error.panel_api_url.empty'] = 'Please enter the URL to your Multicraft panel API.';

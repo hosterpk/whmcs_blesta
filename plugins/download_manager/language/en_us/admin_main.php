@@ -3,6 +3,10 @@
  * Download Manager manage plugin language
  */
 
+// Sidebar navigation
+$lang['AdminMain.sidebar.files'] = 'Files';
+$lang['AdminMain.sidebar.urls'] = 'Static URLs';
+
 // Success messages
 $lang['AdminMain.!success.category_added'] = "The category has been successfully created.";
 $lang['AdminMain.!success.category_updated'] = "The category has been successfully updated.";
@@ -13,6 +17,10 @@ $lang['AdminMain.!success.file_deleted'] = "The file has been successfully delet
 $lang['AdminMain.!success.url_deleted'] = "The static URL has been successfully deleted.";
 $lang['AdminMain.!success.url_added'] = 'The static URL has been successfully added.';
 $lang['AdminMain.!success.url_updated'] = 'The static URL has been successfully updated.';
+
+
+// Performance alerts
+$lang['AdminMain.!performance.xsendfile'] = "Apache's mod_http2 is enabled, but mod_xsendfile is not. We recommend enabling or installing mod_xsendfile for better performance and faster downloads.";
 
 
 // Tooltips
@@ -31,6 +39,10 @@ $lang['AdminMain.!text.closed_parenthesis'] = ")";
 $lang['AdminMain.modal.delete_file'] = "Are you sure you want to delete this file?";
 $lang['AdminMain.modal.delete_category'] = "Are you sure you want to delete this category? All subcategories and files within this category will be moved to the parent category.";
 $lang['AdminMain.modal.delete_url'] = 'Are you sure you want to delete this static URL?';
+$lang['AdminMain.modal.confirm_delete'] = 'Confirm Delete';
+$lang['AdminMain.modal.delete'] = 'Delete';
+$lang['AdminMain.modal.cancel'] = 'Cancel';
+$lang['AdminMain.modal.save'] = 'Save';
 
 
 // Files
@@ -41,9 +53,9 @@ $lang['AdminMain.files.tab_files'] = 'Files';
 $lang['AdminMain.files.tab_urls'] = 'Static URLs';
 
 $lang['AdminMain.files.add_download'] = "Add Download Here";
-$lang['AdminMain.files.add_category'] = "Add Category Here";
+$lang['AdminMain.files.add_category'] = "Add Category";
 
-$lang['AdminMain.files.go_back'] = "Go up a level";
+$lang['AdminMain.files.go_back'] = "Back";
 
 $lang['AdminMain.files.edit'] = "Edit";
 $lang['AdminMain.files.delete'] = "Delete";
@@ -63,7 +75,7 @@ $lang['AdminMain.urls.tab_urls'] = 'Static URLs';
 $lang['AdminMain.urls.heading_url'] = 'URL';
 $lang['AdminMain.urls.heading_file'] = 'File';
 $lang['AdminMain.urls.heading_link'] = 'Link';
-$lang['AdminMain.urls.heading_options'] = 'Options';
+$lang['AdminMain.urls.heading_options'] = 'Actions';
 
 $lang['AdminMain.urls.edit'] = 'Edit';
 $lang['AdminMain.urls.delete'] = 'Delete';
@@ -78,6 +90,8 @@ $lang['AdminMain.add.boxtitle_add'] = "Add Download to Category [%1\$s]"; // %1$
 
 $lang['AdminMain.add.field_public'] = "Publicly Available";
 $lang['AdminMain.add.field_logged_in'] = "Must be logged in";
+$lang['AdminMain.add.public'] = "Publicly Available";
+$lang['AdminMain.add.logged_in'] = "Must be logged in";
 $lang['AdminMain.add.field_name'] = "Name";
 $lang['AdminMain.add.field_available_to_client_groups'] = "Available to Client Groups";
 $lang['AdminMain.add.field_available_to_packages'] = "Available to Packages";
@@ -85,9 +99,13 @@ $lang['AdminMain.add.text_clientgroups'] = "Selected Client Groups";
 $lang['AdminMain.add.text_packagegroups'] = "Selected Packages";
 $lang['AdminMain.add.text_availableclientgroups'] = "Available Client Groups";
 $lang['AdminMain.add.text_availablepackages'] = "Available Packages";
-$lang['AdminMain.add.text_full_path'] = 'NOTE: Files must be located somewhere within your uploads directory: <strong>%1$s</strong>.'; // %1$s is the path to the uploads directory
+$lang['AdminMain.add.text_full_path'] = 'NOTE: Files must be located somewhere within your uploads directory: <strong class="d-inline-block m-0">%1$s</strong>.'; // %1$s is the path to the uploads directory
+$lang['AdminMain.add.text_fileinfo'] = 'NOTE: Files must be located somewhere within your uploads directory.';
+$lang['AdminMain.add.field_file_type'] = "File Source";
 $lang['AdminMain.add.field_upload'] = "Upload File";
+$lang['AdminMain.add.upload'] = "Upload File";
 $lang['AdminMain.add.field_path'] = "Specify Path to File";
+$lang['AdminMain.add.path'] = "Specify Path to File";
 $lang['AdminMain.add.field_file'] = "File";
 $lang['AdminMain.add.field_file_name'] = "Path to File";
 
@@ -120,7 +138,7 @@ $lang['AdminMain.edit.text_clientgroups'] = "Selected Client Groups";
 $lang['AdminMain.edit.text_packagegroups'] = "Selected Packages";
 $lang['AdminMain.edit.text_availableclientgroups'] = "Available Client Groups";
 $lang['AdminMain.edit.text_availablepackages'] = "Available Packages";
-$lang['AdminMain.edit.text_full_path'] = 'NOTE: Files must be located somewhere within your uploads directory: <strong>%1$s</strong>.'; // %1$s is the path to the uploads directory
+$lang['AdminMain.edit.text_full_path'] = 'NOTE: Files must be located somewhere within your uploads directory: <strong class="d-inline-block m-0">%1$s</strong>.'; // %1$s is the path to the uploads directory
 $lang['AdminMain.edit.field_upload'] = "Upload File";
 $lang['AdminMain.edit.field_path'] = "Specify Path to File";
 $lang['AdminMain.edit.field_file'] = "File";

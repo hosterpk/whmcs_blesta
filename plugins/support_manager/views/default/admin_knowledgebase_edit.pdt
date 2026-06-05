@@ -3,58 +3,85 @@
         echo (isset($message) ? $message : null);
 
         $this->Widget->clear();
+        $this->Widget->setStyleSheet($this->view_dir . 'css/support.css', ['id' => 'support_manager_styles']);
         $this->Widget->create($this->_('AdminKnowledgebase.edit.boxtitle_edit', true));
 
-        $this->Form->create(null, ['class' => 'disable-on-submit']);
+        $this->Form->create(null, ['id' => 'edit_article_form', 'class' => 'disable-on-submit']);
         ?>
-        <div id="edit_article" class="inner">
-            <div class="pad">
                 <?php echo (isset($article_content) ? $article_content : null);?>
-            </div>
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php $this->Form->label($this->_('AdminKnowledgebase.edit.field_access', true));?>
-                        <?php $this->Form->fieldSelect('access', (isset($access_types) ? $access_types : null), (isset($vars->access) ? $vars->access : null), ['id'=>'access', 'class'=>'small']);?>
-                        <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminKnowledgebase.!tooltip.access_article');?></div></span>
-                    </li>
+
+                <div class="mb-3">
+                    <label class="form-label" for="access">
+                        <?php $this->_('AdminKnowledgebase.edit.field_access');?>
+                        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo $this->Html->safe($this->_('AdminKnowledgebase.!tooltip.access_article', true));?>"></i>
+                    </label>
+                    <?php $this->Form->fieldSelect('access', (isset($access_types) ? $access_types : null), (isset($vars->access) ? $vars->access : null), ['id'=>'access', 'class'=>'form-select']);?>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><?php $this->_('AdminKnowledgebase.edit.field_categories');?></label>
+                    <div id="categories_container">
                     <?php
                     $num_categories = (!empty($vars->categories) ? count($vars->categories) : 1);
-                    for ($i = 0; $i<$num_categories; $i++) {
+                    for ($i = 0; $i < $num_categories; $i++) {
                     ?>
-                    <li class="category">
-                        <?php
-                        $this->Form->label($this->_('AdminKnowledgebase.edit.field_categories', true));
-                        $this->Form->fieldSelect('categories[]', (isset($categories) ? $categories : null), (isset($vars->categories[$i]) ? $vars->categories[$i] : null), ['class'=>'categories']);
-                        ?>
-                        <a href="#" class="add_category">
-                            <i class="fas fa-plus"></i>
-                            <?php $this->_('AdminKnowledgebase.!text.add_category');?>
-                        </a>
-                    </li>
+                        <div class="category d-flex align-items-center mb-2 gap-2">
+                            <?php $this->Form->fieldSelect('categories[]', (isset($categories) ? $categories : null), (isset($vars->categories[$i]) ? $vars->categories[$i] : null), ['class'=>'form-select categories']);?>
+                            <a href="#" class="remove_category text-danger"><i class="bi bi-x-lg"></i></a>
+                        </div>
                     <?php
                     }
                     ?>
-                </ul>
+                    </div>
+                    <a href="#" class="add_category small fw-bold">
+                        <i class="bi bi-plus-circle me-1"></i><?php $this->_('AdminKnowledgebase.!text.add_category');?>
+                    </a>
+                </div>
             </div>
-
-            <div class="button_row">
+            <div class="card-footer d-flex justify-content-end gap-2">
+                <a class="btn btn-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_knowledgebase/index/' . ((isset($category) ? $category : null) ? (isset($category->id) ? $category->id : null) . '/' : ''));?>"><?php $this->_('AdminKnowledgebase.edit.submit_cancel');?></a>
                 <?php
-                $this->Form->fieldSubmit('save', $this->_('AdminKnowledgebase.edit.submit_edit', true), ['class' => 'btn btn-primary float-right']);
+                $this->Form->fieldSubmit('save', $this->_('AdminKnowledgebase.edit.submit_edit', true), ['class' => 'btn btn-primary']);
                 ?>
-                <a class="btn btn-default float-right" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_knowledgebase/index/' . ((isset($category) ? $category : null) ? (isset($category->id) ? $category->id : null) . '/' : ''));?>"><?php $this->_('AdminKnowledgebase.edit.submit_cancel');?></a>
             </div>
-        </div>
         <?php
         $this->Form->end();
         $this->Widget->end();
+        ?>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
-        $this->Javascript->setInline("
-$(document).ready(function() {
-    $('body').on('click', 'a.add_category', function(e) {
-        e.preventDefault();
-        $('#edit_article li.category:last').after('<li class=\"category\">' + $(this).parents('li').html() + '</li>');
-        return false;
+    // Add/remove category using event delegation
+    document.addEventListener('click', function(e) {
+        // Add category
+        if (e.target.closest('.add_category')) {
+            e.preventDefault();
+            var container = document.getElementById('categories_container');
+            if (container) {
+                var lastCategory = container.querySelector('.category:last-child');
+                if (lastCategory) {
+                    var clone = lastCategory.cloneNode(true);
+                    var select = clone.querySelector('select');
+                    if (select) select.value = '';
+                    container.appendChild(clone);
+                }
+            }
+        }
+
+        // Remove category
+        if (e.target.closest('.remove_category')) {
+            e.preventDefault();
+            var container = document.getElementById('categories_container');
+            if (container) {
+                var categories = container.querySelectorAll('.category');
+                if (categories.length <= 1) return;
+                e.target.closest('.category').remove();
+            }
+        }
     });
 });
-");
+</script>

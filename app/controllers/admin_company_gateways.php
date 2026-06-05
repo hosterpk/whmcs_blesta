@@ -1,5 +1,7 @@
 <?php
 
+use Blesta\Core\Util\Filters\ExtensionFilters;
+
 /**
  * Admin Company Gateway Settings
  *
@@ -18,13 +20,7 @@ class AdminCompanyGateways extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['GatewayManager', 'Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
+        $this->uses(['GatewayManager']);
     }
 
     /**
@@ -105,6 +101,14 @@ class AdminCompanyGateways extends AdminController
         );
         $default_gateways = isset($default_gateways->value) ? json_decode($default_gateways->value, true) : [];
 
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyGateways.text_filter_placeholder', true)
+            ])
+        );
+
         $this->set('gateway_types', ['merchant', 'nonmerchant']);
         $this->set('gateways', $gateways);
         $this->set('gateway_currencies', $gateway_currencies);
@@ -118,6 +122,14 @@ class AdminCompanyGateways extends AdminController
      */
     public function available()
     {
+        $filters = new ExtensionFilters();
+        $this->set(
+            'filters',
+            $filters->getFilters([
+                'placeholder' => Language::_('AdminCompanyGateways.text_filter_placeholder', true)
+            ])
+        );
+
         $this->setTabs();
         $this->set('show_left_nav', !$this->isAjax());
         $this->set('gateways', $this->GatewayManager->getAvailable(null, $this->company_id));

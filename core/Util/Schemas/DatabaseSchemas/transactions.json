@@ -1,0 +1,194 @@
+{
+    "columns": [
+        {
+            "name": "id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": "auto_increment",
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "client_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "amount",
+            "type": "decimal(19,4)",
+            "nullable": false,
+            "key": null,
+            "default": "0.0000",
+            "extra": null,
+            "precision": 19,
+            "scale": 4
+        },
+        {
+            "name": "currency",
+            "type": "char(3)",
+            "nullable": false,
+            "key": null,
+            "default": "USD",
+            "extra": null,
+            "max_length": 3
+        },
+        {
+            "name": "type",
+            "type": "enum('cc','ach','other')",
+            "nullable": false,
+            "key": null,
+            "default": "other",
+            "extra": null,
+            "max_length": 5
+        },
+        {
+            "name": "transaction_type_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "account_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "gateway_id",
+            "type": "int unsigned",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "transaction_id",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "parent_transaction_id",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "reference_id",
+            "type": "varchar(128)",
+            "nullable": true,
+            "key": "MUL",
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "message",
+            "type": "varchar(255)",
+            "nullable": true,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 255
+        },
+        {
+            "name": "status",
+            "type": "enum('approved','declined','void','error','pending','refunded','returned')",
+            "nullable": false,
+            "key": "MUL",
+            "default": "approved",
+            "extra": null,
+            "max_length": 8
+        },
+        {
+            "name": "date_added",
+            "type": "datetime",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null
+        }
+    ],
+    "indexes": [
+        {
+            "name": "account_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "account_id"
+            ]
+        },
+        {
+            "name": "client_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "client_id"
+            ]
+        },
+        {
+            "name": "gateway_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "gateway_id"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "id"
+            ]
+        },
+        {
+            "name": "reference_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "reference_id"
+            ]
+        },
+        {
+            "name": "status",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "status"
+            ]
+        },
+        {
+            "name": "transaction_id",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "transaction_id"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

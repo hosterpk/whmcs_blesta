@@ -837,7 +837,7 @@ class Logicboxes extends RegistrarModule
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'logicboxes' . DS);
 
         // Load the helpers required for this view
-        Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
+        Loader::loadHelpers($this, ['Form', 'Html', 'Javascript', 'Widget']);
 
         // Set unspecified checkboxes
         if (!empty($vars)) {
@@ -846,6 +846,13 @@ class Logicboxes extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $this->view->set('module', (object) ($module[0] ?? []));
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -866,7 +873,7 @@ class Logicboxes extends RegistrarModule
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'logicboxes' . DS);
 
         // Load the helpers required for this view
-        Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
+        Loader::loadHelpers($this, ['Form', 'Html', 'Javascript', 'Widget']);
 
         if (empty($vars)) {
             $vars = $module_row->meta;
@@ -877,6 +884,13 @@ class Logicboxes extends RegistrarModule
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $this->view->set('module', (object) ($module[0] ?? []));
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -2401,7 +2415,8 @@ class Logicboxes extends RegistrarModule
 
         $response = $result->response();
 
-        return in_array($response->{$domain}->status, ['unknown', 'available']);
+        return isset($response->{$domain}->status)
+            && in_array($response->{$domain}->status, ['unknown', 'available']);
     }
 
     /**
@@ -2552,7 +2567,7 @@ class Logicboxes extends RegistrarModule
             Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'logicboxes' . DS
         );
         if ($maping_cache) {
-            $tld_mapping = unserialize(base64_decode($maping_cache));
+            $tld_mapping = safe_unserialize(base64_decode($maping_cache));
         } else {
             $tld_mapping = $this->getTldProductMapping($api);
             $this->writeCache('tlds_mapping', $tld_mapping);
@@ -2564,7 +2579,7 @@ class Logicboxes extends RegistrarModule
             Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'logicboxes' . DS
         );
         if ($pricing_cache) {
-            $product_pricings = unserialize(base64_decode($pricing_cache));
+            $product_pricings = safe_unserialize(base64_decode($pricing_cache));
         } else {
             $product_pricings = $this->getTldProductPricings($api);
             $this->writeCache('tlds_prices', $product_pricings);
@@ -2576,7 +2591,7 @@ class Logicboxes extends RegistrarModule
             Configure::get('Blesta.company_id') . DS . 'modules' . DS . 'logicboxes' . DS
         );
         if ($reseller_cache) {
-            $details = unserialize(base64_decode($reseller_cache));
+            $details = safe_unserialize(base64_decode($reseller_cache));
         }
         if (!isset($details)) {
             $api->loadCommand('logicboxes_reseller');

@@ -1,7 +1,8 @@
 {
-	"version": "2.40.3",
+	"version": "3.3.2",
 	"name": "SupportManagerPlugin.name",
 	"description": "SupportManagerPlugin.description",
+	"icon": "bi bi-headset",
 	"authors": [
 		{
 			"name": "Phillips Data, Inc.",

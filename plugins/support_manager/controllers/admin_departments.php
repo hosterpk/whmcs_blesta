@@ -588,6 +588,42 @@ class AdminDepartments extends SupportManagerController
     }
 
     /**
+     * AJAX searches predefined responses by name/details
+     */
+    public function searchResponses()
+    {
+        // Ensure this is an AJAX request
+        if (!$this->isAjax()) {
+            header($this->server_protocol . ' 401 Unauthorized');
+            exit();
+        }
+
+        $query = isset($this->get['q']) ? trim($this->get['q']) : '';
+
+        // Require minimum 2 characters
+        if (strlen($query) < 2) {
+            echo json_encode(['results' => [], 'error' => 'min_chars']);
+            return false;
+        }
+
+        // Search for matching responses
+        $results = $this->SupportManagerResponses->search($this->company_id, $query, 20);
+
+        // Format results for JSON output
+        $formatted_results = [];
+        foreach ($results as $response) {
+            $formatted_results[] = [
+                'id' => $response->id,
+                'name' => $response->name,
+                'category_path' => $response->category_path
+            ];
+        }
+
+        echo json_encode(['results' => $formatted_results]);
+        return false;
+    }
+
+    /**
      * AJAX retrieves a specific predefined response
      */
     public function getResponse()

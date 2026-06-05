@@ -736,7 +736,7 @@ class ClientMain extends ClientController
                 $setting = $this->ClientGroups->getSetting($this->client->client_group_id, $group_name);
 
                 if ($setting) {
-                    $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
+                    $unserialized = safe_unserialize(
                         base64_decode($setting->value)
                     );
                     if (is_array($unserialized)) {
@@ -777,7 +777,7 @@ class ClientMain extends ClientController
                 $setting = $this->ClientGroups->getSetting($this->client->client_group_id, $group_name);
 
                 if ($setting) {
-                    $unserialized = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(
+                    $unserialized = safe_unserialize(
                         base64_decode($setting->value)
                     );
                     if (is_array($unserialized)) {

@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Items\Service;
 
 use Blesta\Items\Item\ItemInterface;
@@ -43,11 +44,11 @@ class ServiceItems extends AbstractServiceItems
         $this->setServiceOptions($service->getFields()->options ?? null);
 
         $packageFields = $package->getFields();
-        $packageId = (isset($packageFields->id) ? $packageFields->id : null);
+        $packageId = ($packageFields->id ?? null);
 
         $pricingFields = $pricing->getFields();
-        $term = (isset($pricingFields->term) ? $pricingFields->term : null);
-        $period = (isset($pricingFields->period) ? $pricingFields->period : null);
+        $term = ($pricingFields->term ?? null);
+        $period = ($pricingFields->period ?? null);
 
         $serviceItems = $this->setDiscounts($serviceItems, [$packageId => [$period => [$term]]]);
 
@@ -81,12 +82,12 @@ class ServiceItems extends AbstractServiceItems
         // Determine item price info
         $price = (empty($serviceFields->price) ? 0 : $serviceFields->price);
         $overridePrice = (empty($serviceFields->override_price) ? 0 : $serviceFields->override_price);
-        $priceRenews = (isset($serviceFields->price_renews) ? $serviceFields->price_renews : null);
-        $priceTransfer = (isset($serviceFields->price_transfer) ? $serviceFields->price_transfer : null);
+        $priceRenews = ($serviceFields->price_renews ?? null);
+        $priceTransfer = ($serviceFields->price_transfer ?? null);
         $qty = (empty($serviceFields->qty) ? 0 : $serviceFields->qty);
         $currency = (empty($serviceFields->currency) ? null : $serviceFields->currency);
         $serviceId = (empty($serviceFields->id) ? null : $serviceFields->id);
-        $packageId = (isset($packageFields->id) ? $packageFields->id : null);
+        $packageId = ($packageFields->id ?? null);
 
         $setupFee = (empty($pricingFields->setup_fee) ? 0 : $pricingFields->setup_fee);
         $cancelFee = (empty($pricingFields->cancel_fee) ? 0 : $pricingFields->cancel_fee);
@@ -136,7 +137,8 @@ class ServiceItems extends AbstractServiceItems
         }
 
         // Convert the service price to the configured currency
-        if ($currency
+        if (
+            $currency
             && isset($settings->service_currency)
             && $currency != $settings->service_currency
         ) {
@@ -210,8 +212,8 @@ class ServiceItems extends AbstractServiceItems
             }
 
             $price = (empty($optionFields->price) ? 0 : $optionFields->price);
-            $priceRenews = (isset($optionFields->price_renews) ? $optionFields->price_renews : null);
-            $priceTransfer = (isset($optionFields->price_transfer) ? $optionFields->price_transfer : null);
+            $priceRenews = ($optionFields->price_renews ?? null);
+            $priceTransfer = ($optionFields->price_transfer ?? null);
             $qty = (empty($optionFields->qty) ? 0 : $optionFields->qty);
             $serviceId = (empty($optionFields->service_id) ? null : $optionFields->service_id);
             $optionId = (empty($optionFields->id) ? null : $optionFields->id);
@@ -267,7 +269,8 @@ class ServiceItems extends AbstractServiceItems
             }
 
             // Convert the option price to the configured currency
-            if (isset($settings->option_currency)
+            if (
+                isset($settings->option_currency)
                 && isset($optionFields->currency)
                 && $settings->option_currency != $optionFields->currency
             ) {

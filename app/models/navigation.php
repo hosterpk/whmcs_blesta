@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+
 /**
  * Handles navigation.
  *
@@ -46,7 +53,8 @@ class Navigation extends AppModel
         // Insert the navigation item
         if ($this->Input->validates($vars)) {
             // Get the parent ID based on the given parent URL
-            if (isset($vars['parent_url'])
+            if (
+                isset($vars['parent_url'])
                 && ($action = $this->Actions->get($vars['action_id']))
                 && ($parent_nav = $this->getNavRecord([
                     'url' => $vars['parent_url'],
@@ -267,7 +275,7 @@ class Navigation extends AppModel
             foreach ($nav_items as $nav_item) {
                 // Prepend the base_uri for internal links
                 if (!str_contains($nav_item->url, '://')) {
-                    $options = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($nav_item->options ?? '');
+                    $options = safe_unserialize($nav_item->options ?? '');
                     if (
                         $nav_item->plugin_id
                         && isset($this->base_uris['public'])
@@ -285,7 +293,8 @@ class Navigation extends AppModel
                 }
 
                 // Load the language file for the plugin associated with this navigation item
-                if (isset($nav_item->plugin_id)
+                if (
+                    isset($nav_item->plugin_id)
                     && !in_array($nav_item->plugin_id, $loaded_plugins)
                     && ($plugin = $this->PluginManager->get($nav_item->plugin_id))
                 ) {
@@ -303,7 +312,7 @@ class Navigation extends AppModel
                 $language = Language::_($nav_item->name, true);
                 $nav_item->name = empty($language) ? $nav_item->name : $language;
                 if (!empty($nav_item->options)) {
-                    $nav_item->options = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($nav_item->options);
+                    $nav_item->options = safe_unserialize($nav_item->options);
                     foreach ($nav_item->options as $key => $option) {
                         if (!property_exists($nav_item, $key)) {
                             $nav_item->{$key} = $option;
@@ -496,10 +505,6 @@ class Navigation extends AppModel
                     [
                         'name' => $this->_('Navigation.getcompany.nav_lookandfeel_navigation'),
                         'uri' => $base_uri . 'settings/company/lookandfeel/navigation/'
-                    ],
-                    [
-                        'name' => $this->_('Navigation.getcompany.nav_lookandfeel_actions'),
-                        'uri' => $base_uri . 'settings/company/lookandfeel/actions/'
                     ]
                 ]
             ],
@@ -795,6 +800,12 @@ class Navigation extends AppModel
                 'uri' => $base_uri . 'settings/system/api/'
             ],
             [
+                'name' => $this->_('Navigation.getsystem.nav_ai'),
+                'class' => '',
+                'icon' => 'robot',
+                'uri' => $base_uri . 'settings/system/ai/'
+            ],
+            [
                 'name' => $this->_('Navigation.getsystem.nav_upgrade'),
                 'class' => '',
                 'icon' => 'cloud-download-alt',
@@ -812,15 +823,14 @@ class Navigation extends AppModel
                     ],
                     [
                         'name' => $this->_('Navigation.getsystem.nav_help_notes'),
-                        'uri' => 'https://docs.blesta.com/display/support/Releases',
+                        'uri' => 'https://docs.blesta.com/category/releases',
                         'attributes' => [
                             'target' => 'blank'
                         ]
                     ],
                     [
                         'name' => $this->_('Navigation.getsystem.nav_help_about'),
-                        'uri' => $base_uri . 'settings/system/help/credits/',
-                        'attributes' => ['rel' => 'modal']
+                        'uri' => $base_uri . 'settings/system/help/credits/'
                     ]
                 ]
             ],
@@ -845,12 +855,12 @@ class Navigation extends AppModel
     public function getSearchOptions($base_uri = null)
     {
         $options = [
-            'smart' => $this->_('Navigation.getsearchoptions.smart'),
-            'clients' => $this->_('Navigation.getsearchoptions.clients'),
-            'invoices' => $this->_('Navigation.getsearchoptions.invoices'),
-            'transactions' => $this->_('Navigation.getsearchoptions.transactions'),
-            'services' => $this->_('Navigation.getsearchoptions.services'),
-            'packages' => $this->_('Navigation.getsearchoptions.packages')
+            'smart' => $this->getSearchOption('smart'),
+            'clients' => $this->getSearchOption('clients'),
+            'invoices' => $this->getSearchOption('invoices'),
+            'transactions' => $this->getSearchOption('transactions'),
+            'services' => $this->getSearchOption('services'),
+            'packages' => $this->getSearchOption('packages')
         ];
 
         // Allow custom search options to be appended to the list of search options
@@ -865,9 +875,65 @@ class Navigation extends AppModel
 
         if (isset($params['options'])) {
             $options = $params['options'];
+            foreach ($options as &$option) {
+                if (!is_object($option)) {
+                    $option = $this->getSearchOption($option);
+                }
+            }
         }
 
         return $options;
+    }
+
+    /**
+     * Converts a search option to a standardized object with name and icon properties.
+     *
+     * This method provides backwards compatibility with older templates where search options
+     * were expected to be simple strings without icons. It accepts either a string (legacy format)
+     * or an array with 'name' and 'icon' keys (new format).
+     *
+     * @param string|array $option The search option as a string name or array with 'name' and 'icon' keys
+     * @return object An anonymous object with public $name and $icon properties
+     */
+    private function getSearchOption(string|array $option): object
+    {
+        if (is_string($option)) {
+            $icon = match ($option) {
+                'clients' => 'bi bi-person',
+                'invoices' => 'bi bi-receipt',
+                'transactions' => 'bi bi-credit-card',
+                'services' => 'bi bi-server',
+                'packages' => 'bi bi-box-seam',
+                default => 'bi bi-search'
+            };
+        }
+
+        if (is_array($option)) {
+            $option = $option['name'];
+            $icon = $option['icon'] ?? 'bi bi-search';
+        }
+
+        return new class ($option, $icon) {
+            public string $name;
+            public string $icon;
+
+            public function __construct(string $option, string $icon)
+            {
+                $this->name = $option;
+                $this->icon = $icon;
+
+                // Set name translation, if available
+                $key = 'Navigation.getsearchoptions.' . $this->name;
+                $translation = Language::_('Navigation.getsearchoptions.' . $this->name, true);
+
+                $this->name = (empty($translation) || $translation == $key) ? $this->name : $translation;
+            }
+
+            public function __toString(): string
+            {
+                return $this->name;
+            }
+        };
     }
 
     /**

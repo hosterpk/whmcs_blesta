@@ -1,0 +1,662 @@
+<?php echo (isset($left_nav) ? $left_nav : null);?>
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <!-- Usage Statistics Card -->
+    <?php if ($connection_status == 'connected' && $balance !== null): ?>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-muted small mb-1"><?php $this->_('AdminSystemAi.index.text_api_status');?></div>
+                    <span class="badge bg-success"><?php $this->_('AdminSystemAi.index.text_status_active');?></span>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small mb-1"><?php $this->_('AdminSystemAi.index.text_remaining_credits');?></div>
+                    <strong id="credits-remaining">
+                        <?php
+                        $remaining = $balance->remaining ?? 0;
+                        echo $this->Html->safe(number_format($remaining, 2));
+                        ?>
+                    </strong>
+                </div>
+                <?php
+                // Credits Used is temporarily hidden until streaming token counts are available.
+                // Once the AI proxy returns usage data in stream responses, uncomment this block
+                // and the token counts in ai_messages will be populated for chatbot usage.
+                /*
+                <div class="col-md-3">
+                    <div class="text-muted small mb-1"><?php $this->_('AdminSystemAi.index.text_credits_used');?></div>
+                    <strong id="credits-used"><?php echo $this->Html->safe(number_format($balance->used ?? 0, 2));?></strong>
+                </div>
+                */
+                ?>
+                <div class="col-md-4">
+                    <div class="text-muted small mb-1"><?php $this->_('AdminSystemAi.index.text_last_api_call');?></div>
+                    <strong id="last-api-call">
+                        <?php
+                        if (!empty($balance->last_call)) {
+                            echo $this->Html->safe($balance->last_call);
+                        } else {
+                            $this->_('AdminSystemAi.index.text_no_calls_yet');
+                        }
+                        ?>
+                    </strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php elseif ($connection_status == 'error'): ?>
+    <div class="alert alert-danger mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <?php $this->_('AdminSystemAi.index.text_connection_error');?>
+    </div>
+    <?php endif; ?>
+
+    <!-- AI Settings Card -->
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemAi.index.boxtitle_ai', true), ['id' => 'admin_system_ai']);
+    ?>
+
+            <!-- Beta Notice -->
+            <div class="alert alert-warning mb-3">
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-1"></i><?php $this->_('AdminSystemAi.index.heading_beta');?></h6>
+                <p class="mb-0"><?php $this->_('AdminSystemAi.index.text_beta_notice');?></p>
+            </div>
+
+            <!-- API Configuration Section -->
+            <h6 class="form-section-header"><?php $this->_('AdminSystemAi.index.heading_api');?></h6>
+
+            <!-- API Key -->
+            <div class="mb-3">
+                <label for="ai_api_key" class="form-label">
+                    <?php $this->_('AdminSystemAi.index.field.ai_api_key');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_api_key', true));?>"></i>
+                </label>
+                <div class="input-group">
+                    <?php
+                    $this->Form->fieldText('ai_api_key', (isset($vars['ai_api_key']) ? $vars['ai_api_key'] : null), [
+                        'id' => 'ai_api_key',
+                        'class' => 'form-control',
+                        'type' => 'password',
+                        'autocomplete' => 'off'
+                    ]);
+                    ?>
+                    <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <span class="input-group-text d-none" id="apiKeyStatus">
+                        <span class="spinner-border spinner-border-sm text-primary" id="apiKeySpinner"></span>
+                        <i class="bi bi-check-circle-fill text-success d-none" id="apiKeySuccess"></i>
+                        <i class="bi bi-x-circle-fill text-danger d-none" id="apiKeyError"></i>
+                    </span>
+                </div>
+                <div id="apiKeyFeedback" class="small mt-1"></div>
+                <small class="form-text text-muted"><?php $this->_('AdminSystemAi.index.text_manual_entry');?></small>
+                <div class="mt-2">
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'settings/system/ai/fetchmodal/');?>"
+                       class="btn btn-primary"
+                       id="fetchApiKeyBtn">
+                        <i class="bi bi-key me-1"></i><?php $this->_('AdminSystemAi.index.text_fetch_key');?>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Model Parameters Section -->
+            <?php $has_models = !empty($models); ?>
+            <div id="modelParametersSection"<?php echo $has_models ? '' : ' style="display: none;"'; ?>>
+                <h6 class="form-section-header mt-4"><?php $this->_('AdminSystemAi.index.heading_parameters');?></h6>
+
+                <!-- Default Model -->
+                <div class="mb-3">
+                    <label for="ai_default_model" class="form-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_default_model');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_default_model', true));?>"></i>
+                    </label>
+                    <select id="ai_default_model" name="ai_default_model" class="form-select">
+                        <?php if (!$has_models && !empty($vars['ai_default_model'])): ?>
+                            <option value="<?php echo $this->Html->safe($vars['ai_default_model']); ?>"><?php echo $this->Html->safe($vars['ai_default_model']); ?></option>
+                        <?php else: ?>
+                            <?php foreach ($models as $model):
+                                $model_id = $model->id;
+                                $model_name = $model->name;
+                                $label = ($model_name !== $model_id) ? $model_name : $model_id;
+                                if ($model->promptPrice !== null && $model->completionPrice !== null) {
+                                    $label .= ' (' . number_format($model->promptPrice, 6) . ' / ' . number_format($model->completionPrice, 6) . ')';
+                                }
+                                $selected = (isset($vars['ai_default_model']) && $vars['ai_default_model'] == $model_id) ? ' selected' : '';
+                            ?>
+                                <option value="<?php echo $this->Html->safe($model_id); ?>"<?php echo $selected; ?>><?php echo $this->Html->safe($label); ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+
+                <!-- Temperature -->
+                <div class="mb-3">
+                    <label for="ai_temperature" class="form-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_temperature');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_temperature', true));?>"></i>
+                    </label>
+                    <?php
+                    $this->Form->fieldText('ai_temperature', (isset($vars['ai_temperature']) ? $vars['ai_temperature'] : '0.7'), [
+                        'id' => 'ai_temperature',
+                        'class' => 'form-control',
+                        'style' => 'max-width: 150px;'
+                    ]);
+                    ?>
+                    <small class="text-muted"><?php $this->_('AdminSystemAi.index.text_temperature_range');?></small>
+                </div>
+
+                <!-- Max Tokens -->
+                <div class="mb-3">
+                    <label for="ai_max_tokens" class="form-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_max_tokens');?>
+                        <i class="bi bi-info-circle ms-1"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_max_tokens', true));?>"></i>
+                    </label>
+                    <?php
+                    $this->Form->fieldText('ai_max_tokens', (isset($vars['ai_max_tokens']) ? $vars['ai_max_tokens'] : '2000'), [
+                        'id' => 'ai_max_tokens',
+                        'class' => 'form-control',
+                        'style' => 'max-width: 150px;'
+                    ]);
+                    ?>
+                </div>
+            </div>
+
+            <!-- System Prompts Section -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminSystemAi.index.heading_prompts');?></h6>
+
+            <!-- Global Prompt -->
+            <div class="mb-3">
+                <label for="ai_global_prompt" class="form-label">
+                    <?php $this->_('AdminSystemAi.index.field.ai_global_prompt');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_global_prompt', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldTextarea('ai_global_prompt', (isset($vars['ai_global_prompt']) ? $vars['ai_global_prompt'] : null), [
+                    'id' => 'ai_global_prompt',
+                    'class' => 'form-control',
+                    'rows' => 6
+                ]);
+                ?>
+                <small class="text-muted"><?php $this->_('AdminSystemAi.index.text_global_prompt_help');?></small>
+            </div>
+
+            <!-- Enabled Features Section -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminSystemAi.index.heading_features');?></h6>
+            <p class="text-muted"><?php $this->_('AdminSystemAi.index.text_features_intro');?></p>
+
+            <!-- Package Descriptions -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'ai_feature_package_descriptions',
+                        'true',
+                        (isset($vars['ai_feature_package_descriptions']) ? $vars['ai_feature_package_descriptions'] : 'false') == 'true',
+                        ['id' => 'ai_feature_package_descriptions', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="ai_feature_package_descriptions" class="form-check-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_feature_package_descriptions');?>
+                    </label>
+                    <small class="text-muted d-block ms-4"><?php $this->_('AdminSystemAi.index.text_feature_package_descriptions');?></small>
+                </div>
+            </div>
+
+            <!-- Email Templates -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'ai_feature_email_templates',
+                        'true',
+                        (isset($vars['ai_feature_email_templates']) ? $vars['ai_feature_email_templates'] : 'false') == 'true',
+                        ['id' => 'ai_feature_email_templates', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="ai_feature_email_templates" class="form-check-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_feature_email_templates');?>
+                    </label>
+                    <small class="text-muted d-block ms-4"><?php $this->_('AdminSystemAi.index.text_feature_email_templates');?></small>
+                </div>
+            </div>
+
+            <!-- Chatbot -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'ai_feature_chatbot',
+                        'true',
+                        (isset($vars['ai_feature_chatbot']) ? $vars['ai_feature_chatbot'] : 'false') == 'true',
+                        ['id' => 'ai_feature_chatbot', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="ai_feature_chatbot" class="form-check-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_feature_chatbot');?>
+                    </label>
+                    <small class="text-muted d-block ms-4"><?php $this->_('AdminSystemAi.index.text_feature_chatbot');?></small>
+                </div>
+            </div>
+
+            <!-- Staff Group Access (shown when chatbot is enabled) -->
+            <div id="chatbot_staff_groups_container" class="mb-3 ms-4" style="display: none;">
+                <label for="ai_chatbot_staff_groups" class="form-label">
+                    <?php $this->_('AdminSystemAi.index.field.ai_chatbot_staff_groups');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_chatbot_staff_groups', true));?>"></i>
+                </label>
+                <?php
+                $staff_group_options = [];
+                foreach ($staff_groups as $group) {
+                    $staff_group_options[$group->id] = $group->name;
+                }
+
+                $selected_groups = [];
+                if (isset($vars['ai_chatbot_staff_groups']) && !empty($vars['ai_chatbot_staff_groups'])) {
+                    if (is_array($vars['ai_chatbot_staff_groups'])) {
+                        $selected_groups = $vars['ai_chatbot_staff_groups'];
+                    } else {
+                        $decoded = json_decode($vars['ai_chatbot_staff_groups'], true);
+                        $selected_groups = is_array($decoded) ? $decoded : [];
+                    }
+                }
+
+                $this->Form->fieldMultiSelect('ai_chatbot_staff_groups[]', $staff_group_options, $selected_groups, [
+                    'id' => 'ai_chatbot_staff_groups',
+                    'class' => 'form-select',
+                    'size' => 5
+                ]);
+                ?>
+                <small class="text-muted"><?php $this->_('AdminSystemAi.index.text_staff_groups_help');?></small>
+            </div>
+
+            <!-- Email Template Context Settings -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminSystemAi.index.heading_email_context');?></h6>
+
+            <div class="mb-3">
+                <label for="ai_email_context_depth" class="form-label">
+                    <?php $this->_('AdminSystemAi.index.field.ai_email_context_depth');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemAi.index.tooltip.ai_email_context_depth', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText('ai_email_context_depth', (isset($vars['ai_email_context_depth']) ? $vars['ai_email_context_depth'] : '2'), [
+                    'id' => 'ai_email_context_depth',
+                    'class' => 'form-control',
+                    'type' => 'number',
+                    'min' => '1',
+                    'max' => '5',
+                    'style' => 'max-width: 150px;'
+                ]);
+                ?>
+                <small class="text-muted d-block"><?php $this->_('AdminSystemAi.index.text_email_context_depth');?></small>
+            </div>
+
+            <div class="form-check mb-3">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'ai_email_context_schemas',
+                    'true',
+                    (isset($vars['ai_email_context_schemas']) ? $vars['ai_email_context_schemas'] : 'true') == 'true',
+                    ['id' => 'ai_email_context_schemas', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="ai_email_context_schemas" class="form-check-label">
+                    <?php $this->_('AdminSystemAi.index.field.ai_email_context_schemas');?>
+                </label>
+                <small class="text-muted d-block ms-4"><?php $this->_('AdminSystemAi.index.text_email_context_schemas');?></small>
+            </div>
+
+            <div class="form-check mb-3">
+                <?php
+                $this->Form->fieldCheckbox(
+                    'ai_email_context_examples',
+                    'true',
+                    (isset($vars['ai_email_context_examples']) ? $vars['ai_email_context_examples'] : 'true') == 'true',
+                    ['id' => 'ai_email_context_examples', 'class' => 'form-check-input']
+                );
+                ?>
+                <label for="ai_email_context_examples" class="form-check-label">
+                    <?php $this->_('AdminSystemAi.index.field.ai_email_context_examples');?>
+                </label>
+                <small class="text-muted d-block ms-4"><?php $this->_('AdminSystemAi.index.text_email_context_examples');?></small>
+            </div>
+
+            <!-- Privacy Acknowledgment Section -->
+            <h6 class="form-section-header mt-4"><?php $this->_('AdminSystemAi.index.heading_privacy_acknowledgment');?></h6>
+
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-shield-lock me-1"></i>
+                <?php $this->_('AdminSystemAi.index.text_privacy_notice');?>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox(
+                        'ai_privacy_acknowledged',
+                        'true',
+                        false,
+                        ['id' => 'ai_privacy_acknowledged', 'class' => 'form-check-input']
+                    );
+                    ?>
+                    <label for="ai_privacy_acknowledged" class="form-check-label">
+                        <?php $this->_('AdminSystemAi.index.field.ai_privacy_acknowledged');?>
+                    </label>
+                    <?php if (!empty($privacy_last_acknowledged)): ?>
+                    <small class="text-muted d-block">
+                        <?php $this->_('AdminSystemAi.index.text_privacy_last_acknowledged', false, $this->Date->cast($privacy_last_acknowledged, 'date_time'));?>
+                    </small>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end">
+        <?php $this->Form->fieldSubmit('save', $this->_('AdminSystemAi.index.field.submit', true), ['class' => 'btn btn-primary']);?>
+    </div>
+    <?php
+    $this->Widget->end();
+    $this->Form->end();
+    ?>
+</div>
+
+<!-- Fetch API Key Modal -->
+<div class="modal fade" id="fetchApiKeyModal" tabindex="-1" aria-labelledby="fetchApiKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fetchApiKeyModalLabel"><?php $this->_('AdminSystemAi.modal.heading_fetch');?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php $this->_('AppController.modal.text_close');?>"></button>
+            </div>
+            <div class="modal-body" id="fetchApiKeyModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // API Key elements
+    const apiKeyInput = document.getElementById('ai_api_key');
+    const toggleApiKeyBtn = document.getElementById('toggleApiKey');
+    const apiKeyStatus = document.getElementById('apiKeyStatus');
+    const apiKeySpinner = document.getElementById('apiKeySpinner');
+    const apiKeySuccess = document.getElementById('apiKeySuccess');
+    const apiKeyError = document.getElementById('apiKeyError');
+    const apiKeyFeedback = document.getElementById('apiKeyFeedback');
+    const modelSection = document.getElementById('modelParametersSection');
+    const modelSelect = document.getElementById('ai_default_model');
+
+    let validateTimeout = null;
+    let lastValidatedKey = null; // Track what we've successfully validated
+    let validatedKeys = {}; // Cache of validated keys and their results
+    const initialKey = '<?php echo $this->Html->safe($vars['ai_api_key'] ?? ''); ?>';
+
+    // If we have models loaded, the initial key is already validated
+    if (initialKey && modelSection && modelSection.style.display !== 'none') {
+        lastValidatedKey = initialKey;
+        validatedKeys[initialKey] = true;
+    }
+
+    // Toggle API Key visibility
+    if (toggleApiKeyBtn && apiKeyInput) {
+        toggleApiKeyBtn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                apiKeyInput.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+    }
+
+    // Show validation status
+    function showValidationStatus(status, message) {
+        apiKeyStatus.classList.remove('d-none');
+        apiKeySpinner.classList.add('d-none');
+        apiKeySuccess.classList.add('d-none');
+        apiKeyError.classList.add('d-none');
+
+        if (status === 'loading') {
+            apiKeySpinner.classList.remove('d-none');
+            apiKeyFeedback.innerHTML = '<span class="text-muted"><?php echo $this->Html->safe($this->_('AdminSystemAi.index.text_validating', true)); ?></span>';
+        } else if (status === 'success') {
+            apiKeySuccess.classList.remove('d-none');
+            apiKeyFeedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i><?php echo $this->Html->safe($this->_('AdminSystemAi.index.text_key_valid', true)); ?></span>';
+        } else if (status === 'error') {
+            apiKeyError.classList.remove('d-none');
+            apiKeyFeedback.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>' + message + '</span>';
+        } else {
+            apiKeyStatus.classList.add('d-none');
+            apiKeyFeedback.innerHTML = '';
+        }
+    }
+
+    // Populate models dropdown
+    function populateModels(models, currentModel) {
+        modelSelect.innerHTML = '';
+        models.forEach(function(model) {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.label;
+            if (currentModel && model.id === currentModel) {
+                option.selected = true;
+            }
+            modelSelect.appendChild(option);
+        });
+    }
+
+    // Validate and save API key
+    function validateApiKey(key, force) {
+        if (!key || key.trim() === '') {
+            showValidationStatus('hide');
+            modelSection.style.display = 'none';
+            return;
+        }
+
+        // Check cache - don't re-validate keys we've already validated
+        if (!force && validatedKeys[key] !== undefined) {
+            if (validatedKeys[key] === true) {
+                // Already validated successfully
+                lastValidatedKey = key;
+                showValidationStatus('success');
+                modelSection.style.display = 'block';
+            } else {
+                // Previously failed
+                showValidationStatus('error', validatedKeys[key]);
+                modelSection.style.display = 'none';
+            }
+            return;
+        }
+
+        showValidationStatus('loading');
+
+        fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/system/ai/validateapikey/'); ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'api_key=' + encodeURIComponent(key) + '&_csrf_token=<?php echo $this->Form->getCsrfToken(); ?>'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                lastValidatedKey = key;
+                validatedKeys[key] = true; // Cache success
+                showValidationStatus('success');
+                populateModels(data.models, modelSelect.value || '<?php echo $this->Html->safe($vars['ai_default_model'] ?? ''); ?>');
+                modelSection.style.display = 'block';
+
+                // Update balance display if available
+                if (data.balance) {
+                    updateBalanceDisplay(data.balance);
+                }
+            } else {
+                validatedKeys[key] = data.error || 'Invalid API key'; // Cache error message
+                showValidationStatus('error', validatedKeys[key]);
+                modelSection.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            // Don't cache network errors - allow retry
+            showValidationStatus('error', 'Failed to validate key. Please try again.');
+            modelSection.style.display = 'none';
+        });
+    }
+
+    // Update balance display (if the card exists)
+    function updateBalanceDisplay(balance) {
+        const creditsRemaining = document.getElementById('credits-remaining');
+        const creditsUsed = document.getElementById('credits-used');
+        const creditsProgressBar = document.getElementById('credits-progress-bar');
+
+        if (creditsRemaining) {
+            const remaining = parseFloat(balance.remaining || 0).toFixed(2);
+            const limit = parseFloat(balance.limit || 1000).toFixed(2);
+            creditsRemaining.textContent = remaining + ' / ' + limit;
+        }
+        if (creditsUsed) {
+            creditsUsed.textContent = parseFloat(balance.used || 0).toFixed(2);
+        }
+        if (creditsProgressBar) {
+            const percentage = balance.limit > 0 ? (balance.remaining / balance.limit) * 100 : 0;
+            creditsProgressBar.style.width = percentage + '%';
+            creditsProgressBar.classList.remove('bg-success', 'bg-warning', 'bg-danger');
+            creditsProgressBar.classList.add(percentage > 50 ? 'bg-success' : (percentage > 25 ? 'bg-warning' : 'bg-danger'));
+        }
+    }
+
+    // Auto-validate on input change (debounced)
+    if (apiKeyInput) {
+        let pendingValidation = false;
+
+        apiKeyInput.addEventListener('input', function() {
+            clearTimeout(validateTimeout);
+            const key = this.value.trim();
+
+            if (!key) {
+                pendingValidation = false;
+                showValidationStatus('hide');
+                modelSection.style.display = 'none';
+                return;
+            }
+
+            // Mark that we have a pending validation
+            pendingValidation = true;
+
+            // Debounce - wait 800ms after user stops typing
+            validateTimeout = setTimeout(function() {
+                pendingValidation = false;
+                validateApiKey(key);
+            }, 800);
+        });
+
+        // On blur: only validate immediately if there's a pending debounced validation
+        apiKeyInput.addEventListener('blur', function() {
+            if (pendingValidation) {
+                clearTimeout(validateTimeout);
+                pendingValidation = false;
+                const key = this.value.trim();
+                if (key) {
+                    validateApiKey(key);
+                }
+            }
+        });
+    }
+
+    // Toggle staff groups visibility based on chatbot checkbox
+    const chatbotCheckbox = document.getElementById('ai_feature_chatbot');
+    const staffGroupsContainer = document.getElementById('chatbot_staff_groups_container');
+
+    function toggleChatbotStaffGroups() {
+        if (chatbotCheckbox && staffGroupsContainer) {
+            staffGroupsContainer.style.display = chatbotCheckbox.checked ? 'block' : 'none';
+        }
+    }
+
+    // Initial state
+    toggleChatbotStaffGroups();
+
+    // On change
+    if (chatbotCheckbox) {
+        chatbotCheckbox.addEventListener('change', toggleChatbotStaffGroups);
+    }
+
+    // Fetch API Key Modal
+    const fetchBtn = document.getElementById('fetchApiKeyBtn');
+    const modalElement = document.getElementById('fetchApiKeyModal');
+    const modalBody = document.getElementById('fetchApiKeyModalBody');
+
+    if (fetchBtn && modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+
+        fetchBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Show loading spinner
+            modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+            // Show modal
+            modal.show();
+
+            // Load content via AJAX
+            fetch('<?php echo $this->Html->safe($this->base_uri . 'settings/system/ai/fetchmodal/');?>')
+                .then(response => response.text())
+                .then(html => {
+                    modalBody.innerHTML = html;
+                })
+                .catch(error => {
+                    modalBody.innerHTML = '<div class="alert alert-danger">Failed to load content. Please try again.</div>';
+                });
+        });
+
+        // Listen for successful API key fetch from modal
+        modalElement.addEventListener('apiKeyFetched', function(e) {
+            if (e.detail && e.detail.api_key) {
+                apiKeyInput.value = e.detail.api_key;
+                validateApiKey(e.detail.api_key);
+                modal.hide();
+            }
+        });
+    }
+});
+</script>

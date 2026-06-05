@@ -52,11 +52,7 @@ class Uploads extends AppController
 
         $image = $this->Companies->getSetting($this->company_id, $type);
 
-        if ($image && file_exists($image->value)) {
-            $this->Download->streamFile($image->value);
-            exit;
-        }
-        $this->redirect('404');
+        $this->streamImage($image->value);
     }
 
     /**
@@ -64,36 +60,45 @@ class Uploads extends AppController
      */
     public function themes()
     {
-        if (!isset($this->get[0]) && !isset($this->get[1])) {
+        if (!isset($this->get[0]) || !isset($this->get[1])) {
             $this->redirect('404');
         }
 
         $type = strtolower($this->get[0]);
-        $asset = strtolower($this->get[1]);
+        $asset = basename(strtolower($this->get[1]));
         $uploads_dir = $this->SettingsCollection->fetchSetting($this->Companies, $this->company_id, 'uploads_dir');
         $upload_path = $uploads_dir['value'] . $this->company_id . DS . 'themes' . DS;
 
         if ($type == 'asset' && $asset && file_exists($upload_path . $asset)) {
-            $mime_type = 'application/octet-stream';
-            if (function_exists('mime_content_type')) {
-                $mime_type = mime_content_type($upload_path . $asset);
-            } else {
-                $asset_parts = explode('.', $asset);
-                if (strtolower(array_pop($asset_parts)) == 'svg') {
-                    $mime_type = 'image/svg+xml';
-                }
-            }
+            $this->streamImage($upload_path . $asset);
+        }
 
-            // Add security headers for image assets to prevent XSS in directly-accessed SVGs
-            if (in_array($mime_type, ['image/svg+xml', 'image/gif', 'image/jpeg', 'image/png'])) {
-                header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none';");
-                header('X-Content-Type-Options: nosniff');
-                header('X-Frame-Options: DENY');
-            }
+        $this->redirect('404');
+    }
 
-            $this->Download->setContentType($mime_type);
-            $this->Download->streamFile($upload_path . $asset);
-            exit;
+    /**
+     * Handle package option value images
+     */
+    public function options()
+    {
+        $asset = $this->get[0] ?? null;
+
+        if (!$asset) {
+            $this->redirect('404');
+        }
+
+        // Sanitize: only allow a bare filename (no directory traversal)
+        $asset = basename($asset);
+
+        $uploads_dir = $this->SettingsCollection->fetchSetting(
+            $this->Companies,
+            $this->company_id,
+            'uploads_dir'
+        );
+        $upload_path = $uploads_dir['value'] . $this->company_id . DS . 'package_options' . DS;
+
+        if ($asset && file_exists($upload_path . $asset)) {
+            $this->streamImage($upload_path . $asset);
         }
 
         $this->redirect('404');
@@ -141,14 +146,60 @@ class Uploads extends AppController
             if (!$contact) {
                 $contact = $this->Staff->getByUserId($user_id);
             }
+
+            if (!$contact) {
+                $this->getDefaultAvatar();
+            }
+
             $gravatar_url = 'https://www.gravatar.com/avatar/'
                 . hash('sha256', strtolower(trim($contact->email))) . '?d=mp&s=512';
 
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none';");
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: DENY');
             header('Content-type: image/jpeg');
-            echo file_get_contents($gravatar_url);
+
+            $ch = curl_init($gravatar_url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 2,
+                CURLOPT_SSL_VERIFYPEER => true,
+            ]);
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if ($response !== false) {
+                echo $response;
+            }
         }
 
         exit;
+    }
+
+    /**
+     * Maps a whitelisted image file extension to its canonical response Content-Type.
+     * Using the validated extension rather than mime_content_type() prevents libmagic
+     * misdetection (e.g. an SVG containing inline script being reported as text/html)
+     * from steering the browser into HTML parsing of the response.
+     *
+     * @param string $file_ext The lowercase file extension including the leading dot
+     * @return string The Content-Type to send, or application/octet-stream if unrecognized
+     */
+    private function mimeTypeForImageExtension($file_ext)
+    {
+        $map = [
+            '.gif' => 'image/gif',
+            '.jpg' => 'image/jpeg',
+            '.jpeg' => 'image/jpeg',
+            '.png' => 'image/png',
+            '.svg' => 'image/svg+xml',
+            '.webp' => 'image/webp',
+        ];
+
+        return $map[$file_ext] ?? 'application/octet-stream';
     }
 
     /**
@@ -174,8 +225,85 @@ class Uploads extends AppController
             $default_avatar = VIEWDIR . 'default' . DS . 'images' . DS . 'avatar.jpg';
         }
 
-        $this->Download->streamFile($default_avatar);
+        // Validate the avatar path resides within one of the expected directories:
+        // the stock images directory, or the company's uploaded avatars directory.
+        // The realpath comparison prevents traversal outside these bases via a
+        // crafted default_avatar setting value.
+        $uploads_dir = $this->SettingsCollection->fetchSetting($this->Companies, $this->company_id, 'uploads_dir');
+        $allowed_dirs = [
+            realpath(VIEWDIR . 'default' . DS . 'images'),
+            realpath(($uploads_dir['value'] ?? '') . $this->company_id . DS . 'avatars')
+        ];
+        $avatar_realpath = realpath($default_avatar);
 
+        $is_allowed = false;
+        if ($avatar_realpath !== false) {
+            foreach ($allowed_dirs as $allowed_dir) {
+                if ($allowed_dir !== false
+                    && str_starts_with($avatar_realpath . DIRECTORY_SEPARATOR, $allowed_dir . DIRECTORY_SEPARATOR)
+                ) {
+                    $is_allowed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$is_allowed) {
+            $default_avatar = VIEWDIR . 'default' . DS . 'images' . DS . 'avatar.jpg';
+        }
+
+        $this->streamImage($default_avatar);
+    }
+
+    /**
+     * Streams an image file with security validation
+     *
+     * @param string $image_path The file path to the image
+     */
+    private function streamImage($image_path)
+    {
+        if (!$image_path || !file_exists($image_path)) {
+            $this->redirect('404');
+            exit;
+        }
+
+        // Validate file extension (skip for extensionless files, MIME check below will validate)
+        Configure::load('mime');
+        $allowed_extensions = Configure::get('Blesta.allowed_file_extensions');
+        $allowed_extensions = $allowed_extensions['image'] ?? [];
+        $extension = strtolower(pathinfo($image_path, PATHINFO_EXTENSION));
+
+        if ($extension !== '' && !in_array('.' . $extension, $allowed_extensions)) {
+            $this->redirect('404');
+            exit;
+        }
+
+        // Validate mime type
+        $mime_type = null;
+        if (function_exists('mime_content_type')) {
+            $mime_type = mime_content_type($image_path);
+        } elseif ($extension !== '') {
+            // Fall back to extension-based mime detection when the fileinfo extension is unavailable.
+            // Safe because the extension was already validated against the allow-list above.
+            $mime_type = $this->mimeTypeForImageExtension('.' . $extension);
+        }
+
+        $allowed_mimes = Configure::get('Blesta.allowed_mime_types');
+        $allowed_mimes = $allowed_mimes['image'] ?? [];
+        if (!$mime_type || !in_array($mime_type, $allowed_mimes)) {
+            $this->redirect('404');
+            exit;
+        }
+
+        // Security headers for image assets
+        if (in_array($mime_type, $allowed_mimes)) {
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none';");
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: DENY');
+        }
+
+        $this->Download->setContentType($mime_type);
+        $this->Download->streamFile($image_path);
         exit;
     }
 }

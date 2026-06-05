@@ -10,6 +10,10 @@ $lang['OrderAffiliatePayouts.!error.paid_amount.format'] = 'Paid amount must be 
 $lang['OrderAffiliatePayouts.!error.paid_amount.valid'] = 'The paid amount is outside the payout limits.';
 $lang['OrderAffiliatePayouts.!error.paid_currency.length'] = 'The paid currency code must be 3 characters in length.';
 
+$lang['OrderAffiliatePayouts.bell.payout_requested.title'] = 'Payout Requested';
+$lang['OrderAffiliatePayouts.bell.payout_requested.message'] = '%1$s requested a payout of %2$s';
+// %1$s = client name, %2$s = amount + currency
+
 $lang['OrderAffiliatePayouts.getStatuses.pending'] = 'Pending';
 $lang['OrderAffiliatePayouts.getStatuses.approved'] = 'Approved';
 $lang['OrderAffiliatePayouts.getStatuses.declined'] = 'Declined';

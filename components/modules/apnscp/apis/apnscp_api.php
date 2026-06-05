@@ -1,4 +1,5 @@
 <?php
+
 /**
  * APNSCP API.
  *
@@ -68,10 +69,10 @@ class ApnscpApi
         // Create SOAP connection
         ini_set('default_socket_timeout', 5000);
 
-	$headers = [
+        $headers = [
             'Abort-On: error',
             'X-Forwarded-For: ' . $this->getFromContainer('requestor')->ip_address
-	];
+        ];
 
         $client = new SoapClient($soap_location . '/apnscp.wsdl', [
             'location' => $soap_location . '/soap?authkey=' . $this->api_key,
@@ -81,8 +82,8 @@ class ApnscpApi
                 'ssl' => [
                     'verify_peer' => false,
                     'verify_peer_name' => false
-	        ],
-		'http' => [
+                ],
+                'http' => [
                     'header' => implode("\r\n", $headers) . "\r\n"
                 ]
             ])

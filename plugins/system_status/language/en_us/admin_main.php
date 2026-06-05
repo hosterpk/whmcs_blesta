@@ -50,3 +50,13 @@ $lang['AdminMain.index.sql_mariadb_version_requirements'] = 'See minimum require
 
 $lang['AdminMain.index.upload_dir'] = 'The upload directory path in your settings is within the root web directory.  It should be placed above the root web directory to ensure there is never an issue with it being publicly accessible.';
 $lang['AdminMain.index.upload_dir_configure'] = 'Configure?';
+
+$lang['AdminMain.index.text_info'] = 'Information';
+$lang['AdminMain.index.text_warning'] = 'Warning';
+$lang['AdminMain.index.text_error'] = 'Error';
+$lang['AdminMain.index.text_success'] = 'Success';
+
+$lang['AdminMain.index.category_cron'] = 'Cron';
+$lang['AdminMain.index.category_system'] = 'System';
+$lang['AdminMain.index.category_database'] = 'Database';
+$lang['AdminMain.index.category_security'] = 'Security';

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Management
  *
@@ -54,11 +55,11 @@ class OrderOrders extends OrderModel
      *  - client_id The client ID on which to filter orders (optional)
      * @return mixed An array of objects or false if no results.
      */
-    public function getList($status = null, $page = 1, array $order_by = ['order_number'=>'ASC'], $filters = [])
+    public function getList($status = null, $page = 1, array $order_by = ['order_number' => 'ASC'], $filters = [])
     {
         $this->Record = $this->getOrders($status, $filters);
         $this->Record->order($order_by)->
-            limit($this->getPerPage(), (max(1, $page) - 1)*$this->getPerPage());
+            limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage());
 
         return $this->Record->fetchAll();
     }
@@ -96,7 +97,7 @@ class OrderOrders extends OrderModel
     {
         $this->Record = $this->searchOrders($query);
         return $this->Record->order($order_by)->
-            limit($this->getPerPage(), (max(1, $page) - 1)*$this->getPerPage())->
+            limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())->
             fetchAll();
     }
 
@@ -247,11 +248,11 @@ class OrderOrders extends OrderModel
             'invoices.paid', 'invoices.currency', 'invoices.date_closed',
             'REPLACE(invoices.id_format, ?, invoices.id_value)' => 'invoice_id_code',
             'REPLACE(clients.id_format, ?, clients.id_value)' => 'client_id_code',
-            'contacts.first_name'=>'client_first_name',
-            'contacts.last_name'=>'client_last_name',
-            'contacts.company'=>'client_company',
-            'contacts.address1'=>'client_address1',
-            'contacts.email'=>'client_email'
+            'contacts.first_name' => 'client_first_name',
+            'contacts.last_name' => 'client_last_name',
+            'contacts.company' => 'client_company',
+            'contacts.address1' => 'client_address1',
+            'contacts.email' => 'client_email'
         ];
 
         $this->Record->select($fields)->
@@ -437,11 +438,13 @@ class OrderOrders extends OrderModel
             }
 
             // Update domain service
-            if ($this->eligibleFreeDomain(
-                $items[$items_ids[$service_ids[$domain]]],
-                $items[$items_ids[$domain_ids[$domain]]],
-                $order_form
-            )) {
+            if (
+                $this->eligibleFreeDomain(
+                    $items[$items_ids[$service_ids[$domain]]],
+                    $items[$items_ids[$domain_ids[$domain]]],
+                    $order_form
+                )
+            ) {
                 $service_edit = [
                     'override_price' => 0,
                     'override_currency' => $details['currency'],
@@ -513,6 +516,9 @@ class OrderOrders extends OrderModel
             'fraud_status' => $details['fraud_status'] ?? null,
             'status' => $details['status'],
             'ip_address' => $details['ip_address'] ?? null,
+            'recurring_consent_date' => isset($details['recurring_consent_date'])
+                ? $this->dateToUtc($details['recurring_consent_date'])
+                : null,
             'abandoned_notice' => $abandoned_order_handling ? 'unsent' : 'none',
             'date_added' => $this->dateToUtc(date('c'))
         ];
@@ -644,6 +650,82 @@ class OrderOrders extends OrderModel
             }
 
             $this->MessengerManager->send('Order.received_staff', $tags, $staff_user_ids);
+
+            // Send bell notifications to staff who are subscribed to any order notification type
+            Loader::loadModels($this, ['Notifications']);
+
+            $bell_action = $this->Notifications->getAction(
+                'Order.staff_order_received',
+                'staff',
+                'plugin',
+                'order'
+            );
+
+            if ($bell_action) {
+                // Collect all unique staff user_ids from email, mobile, and messenger notification lists
+                $bell_user_ids = [];
+                foreach ($staff_email as $staff) {
+                    $bell_user_ids[$staff->user_id] = true;
+                }
+                foreach ($staff_message as $staff) {
+                    $bell_user_ids[$staff->user_id] = true;
+                }
+
+                // Re-fetch email_notice staff to include them too (the $staff_email var
+                // was last overwritten by mobile_notice)
+                $email_staff = $this->OrderStaffSettings->getStaffWithSetting(
+                    Configure::get('Blesta.company_id'),
+                    'email_notice',
+                    'always'
+                );
+                if ($order->fraud_status == 'review') {
+                    $email_staff = array_merge(
+                        $email_staff,
+                        $this->OrderStaffSettings->getStaffWithSetting(
+                            Configure::get('Blesta.company_id'),
+                            'email_notice',
+                            'manual'
+                        )
+                    );
+                }
+                foreach ($email_staff as $staff) {
+                    $bell_user_ids[$staff->user_id] = true;
+                }
+
+                $client = $tags['client'];
+                $client_name = trim(($client->first_name ?? '') . ' ' . ($client->last_name ?? ''));
+                $order_status = Language::_(
+                    'OrderOrders.getstatuses.' . $order->status,
+                    true
+                );
+
+                $bell_title = Language::_(
+                    'OrderOrders.bell.order_received.title',
+                    true,
+                    $order->order_number
+                );
+                $bell_message = Language::_(
+                    'OrderOrders.bell.order_received.message',
+                    true,
+                    $client_name,
+                    $order->order_number,
+                    $order_status
+                );
+                $bell_url = AppController::baseUrl() . AppController::adminUri()
+                    . 'clients/view/' . $client->id . '/';
+
+                foreach (array_keys($bell_user_ids) as $user_id) {
+                    $this->Notifications->add([
+                        'action_id' => $bell_action->id,
+                        'user_id' => $user_id,
+                        'title' => $bell_title,
+                        'message' => $bell_message,
+                        'url' => $bell_url,
+                        'icon' => 'bi-cart-check-fill',
+                        'type' => 'info'
+                    ]);
+                }
+            }
         }
 
         return $order;
@@ -702,7 +784,7 @@ class OrderOrders extends OrderModel
                 innerJoin('pricings', 'pricings.id', '=', 'package_pricing.pricing_id', false)->
                 where('package_pricing.package_id', '=', $domain_item['package']->id)->
                 where('pricings.currency', '=', $domain_pricing->currency)->
-                where('pricings.period', '=', ($order_form->meta['period'] ?? 'year'))->
+                where('pricings.period', '=', 'year')->
                 order(['pricings.term' => 'ASC'])->
                 fetch();
 
@@ -756,10 +838,17 @@ class OrderOrders extends OrderModel
     private function addService(array $details, array $item, array $packages, $coupon_id = null)
     {
         // Unset any fields that may adversely affect the Services::add() call
-        unset($item['status'], $item['date_added'], $item['date_renews'],
-            $item['date_last_renewed'], $item['date_suspended'],
-            $item['date_canceled'], $item['use_module'],
-            $item['override_price'], $item['override_currency']);
+        unset(
+            $item['status'],
+            $item['date_added'],
+            $item['date_renews'],
+            $item['date_last_renewed'],
+            $item['date_suspended'],
+            $item['date_canceled'],
+            $item['use_module'],
+            $item['override_price'],
+            $item['override_currency']
+        );
 
         // If it is a transfer, validate if a transfer price is set
         if (($item['transfer'] ?? 'false') == 'true') {
@@ -970,7 +1059,7 @@ class OrderOrders extends OrderModel
      * @param int $elapsed_time The amount of time in hours that elapsed since the cart was abandoned
      * @return array A list of abandoned orders
      */
-    public function getAbandoned(int $order_form_id, int $elapsed_time = 24) : array
+    public function getAbandoned(int $order_form_id, int $elapsed_time = 24): array
     {
         $date = $this->dateToUtc(date('c', strtotime('-' . $elapsed_time . ' hours')), 'Y-m-d H:i:s');
 
@@ -995,7 +1084,7 @@ class OrderOrders extends OrderModel
      * @param int $order_id The ID of the order for which to send the reminder
      * @param string $notice Whether is the 'first', 'second' or 'third' notice
      */
-    public function sendAbandonedReminder(int $order_id, string $notice) : void
+    public function sendAbandonedReminder(int $order_id, string $notice): void
     {
         if (!isset($this->Html)) {
             Loader::loadHelpers($this, ['Html']);
@@ -1054,7 +1143,7 @@ class OrderOrders extends OrderModel
             $client_uri = $webdir . Configure::get('Route.client') . '/';
 
             // Get the company hostname
-            $hostname = isset(Configure::get('Blesta.company')->hostname) ? Configure::get('Blesta.company')->hostname : '';
+            $hostname = Configure::get('Blesta.company')->hostname ?? '';
 
             $payment_url = $this->Html->safe(
                 $hostname . $client_uri . 'pay/method/' . $invoice->id . '/?sid='

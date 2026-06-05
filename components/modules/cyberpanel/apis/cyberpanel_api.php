@@ -36,6 +36,11 @@ class CyberpanelApi
     private $use_ssl;
 
     /**
+     * @var mixed The logger instance
+     */
+    private $logger;
+
+    /**
      * Initializes the class.
      *
      * @param string $hostname The CyberPanel server hostname

@@ -1,8 +1,10 @@
 <?php
+
 namespace Blesta\Core\Util\Filters;
+
 use Blesta\Core\Util\Filters\Common\Filter;
 use Blesta\Core\Util\Input\Fields\InputFields;
-use \Language;
+use Language;
 
 /**
  * Logs Filters
@@ -47,7 +49,7 @@ class LogFilters extends Filter
             $string->attach(
                 $fields->fieldText(
                     'filters[string]',
-                    isset($vars['string']) ? $vars['string'] : null,
+                    $vars['string'] ?? null,
                     [
                         'id' => 'string',
                         'class' => 'form-control stretch',
@@ -57,7 +59,7 @@ class LogFilters extends Filter
             );
             $fields->setField($string);
         }
-        
+
         // Set start date filter
         $start_date = $fields->label(
             Language::_('Util.filters.log_filters.field_start_date', true),
@@ -66,7 +68,7 @@ class LogFilters extends Filter
         $start_date->attach(
             $fields->fieldText(
                 'filters[start_date]',
-                isset($vars['start_date']) ? $vars['start_date'] : null,
+                $vars['start_date'] ?? null,
                 [
                     'id' => 'start_date',
                     'class' => 'date form-control',
@@ -84,7 +86,7 @@ class LogFilters extends Filter
         $end_date->attach(
             $fields->fieldText(
                 'filters[end_date]',
-                isset($vars['end_date']) ? $vars['end_date'] : null,
+                $vars['end_date'] ?? null,
                 [
                     'id' => 'end_date',
                     'class' => 'date form-control',
@@ -96,9 +98,18 @@ class LogFilters extends Filter
 
         $fields->setHtml('
             <script type="text/javascript">
-                $(document).ready(function () {
-                    $(this).blestaBindDatePicker();
-                });
+                (function() {
+                    function bindDates() {
+                        if (typeof blestaBindDatePicker === "function") {
+                            blestaBindDatePicker();
+                        }
+                    }
+                    if (document.readyState === "loading") {
+                        document.addEventListener("DOMContentLoaded", bindDates);
+                    } else {
+                        bindDates();
+                    }
+                })();
             </script>
         ');
 

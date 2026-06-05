@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Description\Type;
 
 use Blesta\Items\Collection\ItemCollection;
@@ -72,7 +73,7 @@ abstract class AbstractDescription implements DescriptionInterface
      */
     protected function getProrateFields(array $meta)
     {
-        $prorated = isset($meta['_data']['prorated']) ? $meta['_data']['prorated'] : false;
+        $prorated = $meta['_data']['prorated'] ?? false;
         $prorateStartDate = '';
         $prorateEndDate = '';
 

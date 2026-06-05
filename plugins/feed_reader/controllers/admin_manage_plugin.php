@@ -20,11 +20,14 @@ class AdminManagePlugin extends AppController
 
         Language::loadLang('feed_reader_manage_plugin', null, PLUGINDIR . 'feed_reader' . DS . 'language' . DS);
 
-        $this->uses(['FeedReader.FeedReaderFeeds']);
-        // Use the parent data helper, it's already configured properly
-        $this->Date = $this->parent->Date;
+        $this->uses(['Companies', 'FeedReader.FeedReaderFeeds']);
 
-        $this->plugin_id = isset($this->get[0]) ? $this->get[0] : null;
+        $this->Date->setFormats([
+            'date' => $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'date_format')->value,
+            'date_time' => $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'datetime_format')->value
+        ]);
+
+        $this->plugin_id = $this->get[0] ?? null;
 
         // Set the page title
         $this->parent->structure->set(

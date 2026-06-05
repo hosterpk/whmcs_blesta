@@ -86,4 +86,4 @@ $lang['AdminCompanyGroups.edit.field_delivery_methods'] = 'Invoice Delivery Meth
 $lang['AdminCompanyGroups.edit.field_company_settings'] = 'Use Company Settings (uncheck to specify below)';
 $lang['AdminCompanyGroups.edit.field_force_email_usernames'] = 'Enforce Email Addresses as Usernames';
 
-$lang['AdminCompanyGroups.edit.text_editsubmit'] = 'Edit Group';
+$lang['AdminCompanyGroups.edit.text_editsubmit'] = 'Update Group';

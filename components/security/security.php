@@ -1,5 +1,11 @@
 <?php
+
+namespace Blesta\Components\Security;
+
 use Blesta\Core\Util\Components\Component;
+use Exception;
+use ReflectionClass;
+use Throwable;
 
 /**
  * Security factory that wraps PHPSecLib.

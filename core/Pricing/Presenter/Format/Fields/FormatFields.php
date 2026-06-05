@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Format\Fields;
 
 /**
@@ -12,5 +13,4 @@ namespace Blesta\Core\Pricing\Presenter\Format\Fields;
  */
 class FormatFields extends AbstractFormatFields
 {
-
 }

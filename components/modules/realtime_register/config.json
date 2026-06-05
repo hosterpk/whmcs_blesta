@@ -1,5 +1,5 @@
 {
-    "version": "1.0.2",
+    "version": "2.0.0",
     "type": "registrar",
     "name": "RealtimeRegister.name",
     "description": "RealtimeRegister.description",
@@ -22,14 +22,21 @@
         "name_key": "domain"
     },
     "email_tags": {
-        "module": ["customer"],
-        "package": ["epp_code"],
-        "service": ["domain"]
+        "module": [
+            "customer"
+        ],
+        "package": [
+            "epp_code"
+        ],
+        "service": [
+            "domain"
+        ]
     },
     "features": {
         "dns_management": 1,
         "email_forwarding": 0,
         "id_protection": 1,
         "epp_code": 1
-    }
+    },
+    "icon": "bi-globe"
 }

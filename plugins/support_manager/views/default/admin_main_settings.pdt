@@ -2,79 +2,119 @@
         echo ($message ?? null);
 
         $this->Widget->clear();
-        $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css', ['id' => 'support_manager_styles']);
+        $this->Widget->setStyleSheet($this->view_dir . 'css/support.css', ['id' => 'support_manager_styles']);
         $this->Widget->create($this->_('AdminMain.settings.boxtitle_settings', true), ['id'=>'admin_main_settings']);
         ?>
-        <div class="inner">
             <?php
             $this->Form->create(null, ['id'=>'settings', 'class' => 'disable-on-submit', 'enctype' => 'multipart/form-data']);
             ?>
-            <div class="title_row first">
-                <h3><?php $this->_('AdminMain.settings.heading_avatar_settings');?></h3>
-            </div>
-            <div class="pad">
-                <ul>
-                    <li>
+                <h6 class="form-section-header"><?php $this->_('AdminMain.settings.heading_avatar_settings');?></h6>
+                <div class="mb-3">
+                    <label class="form-label" for="avatar"><?php $this->_('AdminMain.settings.field_avatar');?></label>
+                    <?php
+                    $this->Form->fieldSelect(
+                        'avatar',
+                        $avatar_options ?? [],
+                        ($vars->avatar ?? 'default'),
+                        ['id' => 'avatar', 'class' => 'form-select']
+                    );
+                    ?>
+                </div>
+                <div class="mb-3" id="default_avatar_section">
+                    <label class="form-label"><?php $this->_('AdminMain.settings.field_default_avatar');?></label>
+                    <div class="d-flex align-items-start gap-3">
                         <?php
-                        $this->Form->label($this->_('AdminMain.settings.field_avatar', true), 'avatar');
-                        $this->Form->fieldSelect(
-                            'avatar',
-                            $avatar_options ?? [],
-                            ($vars->avatar ?? 'default'),
-                            ['id' => 'avatar']
-                        );
+                        $has_avatar = !empty($settings['default_avatar'] ?? '');
                         ?>
-                    </li>
-                    <li id="default_avatar_section">
-                        <?php
-                        $this->Form->label($this->_('AdminMain.settings.field_default_avatar', true), 'default_avatar');
-                        ?>
-                        <img src="<?php echo WEBDIR . 'uploads/avatar/0/?support_manager=true';?>" class="img-thumbnail mb-1" style="width: 120px; height: 120px"/>
-                        <?php
-                        if (!empty($settings['default_avatar'] ?? '')) {
-                        ?>
-                            <label>
-                                <?php
-                                $this->Form->fieldCheckbox('remove_default_avatar', '1', false, ['id' => 'remove_default_avatar']);
-                                echo $this->_('AdminMain.settings.text_remove_avatar', true);
-                                ?>
-                            </label>
-                        <?php
-                        }
-                        ?>
-                        <div class="d-block mt-1">
+                        <div class="file-preview-container<?php echo $has_avatar ? ' has-image' : ' file-preview-empty';?>" id="avatarPreviewContainer">
+                            <i class="bi bi-person-circle"></i>
+                            <img id="avatarPreview" src="<?php echo $has_avatar ? WEBDIR . 'uploads/avatar/0/?support_manager=true&t=' . time() : '';?>" alt="Preview" class="file-preview-image"<?php echo $has_avatar ? '' : ' style="display: none;"';?>>
+                        </div>
+                        <div class="flex-grow-1">
                             <?php
-                            $this->Form->fieldFile('default_avatar', ['id' => 'default_avatar', 'accept' => 'image/*']);
+                            $this->Form->fieldFile('default_avatar', ['id' => 'default_avatar', 'accept' => 'image/*', 'class' => 'form-control mb-2']);
+                            ?>
+                            <div class="form-text mb-2">
+                                <i class="bi bi-info-circle"></i> <?php $this->_('AdminMain.settings.text_avatar_recommendation');?>
+                            </div>
+                            <?php
+                            if ($has_avatar) {
+                            ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="removeAvatarBtn">
+                                <i class="bi bi-trash"></i> <?php $this->_('AdminMain.settings.text_remove_avatar');?>
+                            </button>
+                            <?php
+                                $this->Form->fieldHidden('remove_default_avatar', '0', ['id' => 'remove_default_avatar']);
+                            }
                             ?>
                         </div>
-                    </li>
-                </ul>
-            </div>
-            
-            <div class="button_row">
+                    </div>
+                </div>
+            </div><!-- end card-body -->
+            <div class="card-footer d-flex justify-content-end">
                 <?php
-                $this->Form->fieldSubmit('save', $this->_('AdminMain.settings.field_submit', true), ['class'=>'btn btn-primary pull-right']);
+                $this->Form->fieldSubmit('save', $this->_('AdminMain.settings.field_submit', true), ['class'=>'btn btn-primary']);
                 ?>
             </div>
-            <?php
-            $this->Form->end();
-            ?>
-        </div>
+        </div><!-- end card-content -->
         <?php
-        $this->Widget->end();
-        ?>
+        $this->Form->end();
+        ?></section>
         <script>
-            $(document).ready(function() {
-                function toggleDefaultAvatarSection() {
-                    var avatar = $('#avatar').val();
-                    if (avatar === 'default' || avatar === 'fallback') {
-                        $('#default_avatar_section').show();
-                    } else {
-                        $('#default_avatar_section').hide();
-                    }
-                }
+        document.addEventListener('DOMContentLoaded', function() {
+            var avatarSelect = document.getElementById('avatar');
+            var defaultAvatarSection = document.getElementById('default_avatar_section');
+            var avatarInput = document.getElementById('default_avatar');
+            var avatarPreview = document.getElementById('avatarPreview');
+            var previewContainer = document.getElementById('avatarPreviewContainer');
+            var removeBtn = document.getElementById('removeAvatarBtn');
+            var removeField = document.getElementById('remove_default_avatar');
 
-                toggleDefaultAvatarSection();
-                $('#avatar').on('change', toggleDefaultAvatarSection);
-            });
+            function toggleDefaultAvatarSection() {
+                var avatar = avatarSelect.value;
+                if (avatar === 'default' || avatar === 'fallback') {
+                    defaultAvatarSection.style.display = '';
+                } else {
+                    defaultAvatarSection.style.display = 'none';
+                }
+            }
+
+            toggleDefaultAvatarSection();
+            avatarSelect.addEventListener('change', toggleDefaultAvatarSection);
+
+            // Image preview on file selection
+            if (avatarInput) {
+                avatarInput.addEventListener('change', function(e) {
+                    var file = e.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        var reader = new FileReader();
+                        reader.onload = function(e) {
+                            avatarPreview.src = e.target.result;
+                            avatarPreview.style.display = 'block';
+                            previewContainer.classList.remove('file-preview-empty');
+                            previewContainer.classList.add('has-image');
+                            // Reset remove flag when new image is selected
+                            if (removeField) {
+                                removeField.value = '0';
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            // Remove image functionality
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    avatarInput.value = '';
+                    avatarPreview.src = '';
+                    avatarPreview.style.display = 'none';
+                    previewContainer.classList.add('file-preview-empty');
+                    previewContainer.classList.remove('has-image');
+                    if (removeField) {
+                        removeField.value = '1';
+                    }
+                });
+            }
+        });
         </script>

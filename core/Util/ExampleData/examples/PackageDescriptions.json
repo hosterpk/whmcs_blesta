@@ -1,0 +1,14 @@
+[
+    {
+        "package_id": 76,
+        "lang": "en_us",
+        "html": "<p>Basic monthly hosting with 10GB storage and unlimited bandwidth.</p>",
+        "text": "Basic monthly hosting with 10GB storage and unlimited bandwidth."
+    },
+    {
+        "package_id": 76,
+        "lang": "es_es",
+        "html": "<p>Alojamiento mensual básico con 10GB de almacenamiento y ancho de banda ilimitado.</p>",
+        "text": "Alojamiento mensual básico con 10GB de almacenamiento y ancho de banda ilimitado."
+    }
+]

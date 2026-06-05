@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plesk Site management
  *
@@ -107,7 +108,7 @@ class PleskSites extends PleskPacket
 
         // Build hosting section
         if (isset($vars['htype'])) {
-            $hosting = array_merge((isset($vars['hosting']) ? $vars['hosting'] : []), ['htype' => $vars['htype']]);
+            $hosting = array_merge(($vars['hosting'] ?? []), ['htype' => $vars['htype']]);
             $this->buildHosting($hosting, $this->getContainer());
         }
 
@@ -156,7 +157,7 @@ class PleskSites extends PleskPacket
         } elseif (in_array($vars['htype'], ['std_fwd', 'frm_fwd'])) {
             // Set the type and dest_url
             $this->insert(
-                [$vars['htype'] => ['dest_url' => (isset($vars['dest_url']) ? $vars['dest_url'] : '')]],
+                [$vars['htype'] => ['dest_url' => ($vars['dest_url'] ?? '')]],
                 $container . '/hosting'
             );
 
@@ -206,7 +207,7 @@ class PleskSites extends PleskPacket
         if ($type == 'add') {
             // Set the gen_setup section
             $gen_setup['gen_setup'] = [
-                'name' => (isset($vars['domain']) ? $vars['domain'] : null),
+                'name' => ($vars['domain'] ?? null),
                 'htype' => 'vrt_hst',
                 'status' => '0'
             ];

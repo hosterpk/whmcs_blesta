@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events;
 
 use Blesta\Core\Util\Events\Common\AbstractEvent;
@@ -14,5 +15,4 @@ use Blesta\Core\Util\Events\Common\AbstractEvent;
  */
 class Event extends AbstractEvent
 {
-
 }

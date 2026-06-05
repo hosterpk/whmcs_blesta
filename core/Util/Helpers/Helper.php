@@ -15,10 +15,4 @@ use Blesta\Core\Util\Helpers\Common\AbstractHelper;
  */
 class Helper extends AbstractHelper
 {
-    public function __construct()
-    {
-        $this->models = new \stdClass();
-        $this->components = new \stdClass();
-        $this->helpers = new \stdClass();
-    }
 }

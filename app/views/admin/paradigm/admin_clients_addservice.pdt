@@ -1,0 +1,44 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.addservice.boxtitle_addservice', true, (isset($package->name) ? $package->name : null)));
+?>
+    <?php
+    if (isset($package_options)) {
+        $this->Form->create(null, ['method' => 'get', 'class' => 'disable-on-submit', 'id' => 'addservice_package_form']);
+        ?>
+        <div class="row g-3 mb-3">
+            <div class="col-12">
+                <?php
+                $this->Form->label($this->_('AdminClients.addservice.field_package', true), 'group_package', ['class' => 'form-label']);
+                $this->Form->fieldSelect('group_package', $package_options, (isset($vars->package_id) ? $vars->package_id : null), ['id' => 'group_package', 'class' => 'form-select'], (isset($package_attributes) ? $package_attributes : []));
+                ?>
+            </div>
+        </div>
+        <?php
+        $this->Form->end();
+        $this->Widget->footer();
+        ?>
+    <div class="d-flex justify-content-end gap-2">
+        <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+            <?php $this->_('AppController.modal.btn_cancel');?>
+        </a>
+        <?php
+        $this->Form->fieldSubmit('save', $this->_('AdminClients.addservice.field_continue', true), ['class' => 'btn btn-primary', 'form' => 'addservice_package_form']);
+        ?>
+    </div>
+        <?php
+    } else {
+        $form_content = (isset($form) ? $form : null);
+        $form_parts = explode('<!-- WIDGET_FOOTER -->', $form_content, 2);
+        echo $form_parts[0];
+        if (isset($form_parts[1])) {
+            $this->Widget->footer();
+            echo $form_parts[1];
+        }
+    }
+    ?>
+<?php
+$this->Widget->end();
+?>

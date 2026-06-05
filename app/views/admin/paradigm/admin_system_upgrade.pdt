@@ -1,0 +1,886 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null); ?>
+
+    <?php
+    $link_buttons = [
+        [
+            'icon' => 'bi bi-arrow-clockwise',
+            'name' => $this->_('AdminSystemUpgrade.index.btn_check', true),
+            'attributes' => [
+                'href' => '#',
+                'id' => 'btn_check_updates',
+            ]
+        ]
+    ];
+
+    $this->Widget->clear();
+    $this->Widget->setLinkButtons($link_buttons);
+    $this->Widget->create($this->_('AdminSystemUpgrade.index.boxtitle_upgrade', true), ['id' => 'admin_system_upgrade']);
+    ?>
+
+    <!-- Current Status -->
+    <p class="mb-2 fw-bold"><?php $this->_('AdminSystemUpgrade.index.heading_current'); ?></p>
+
+    <div class="mb-3">
+        <p class="mb-1 fw-semibold"><?php $this->_('AdminSystemUpgrade.index.current_version', false, (isset($current_version) ? $this->Html->safe($current_version) : '')); ?></p>
+        <small class="text-muted">
+            <?php
+            if (!empty($last_check)) {
+                $this->_('AdminSystemUpgrade.index.last_checked', false, $this->Date->cast($last_check, 'date_time'));
+            } else {
+                $this->_('AdminSystemUpgrade.index.never_checked');
+            }
+            ?>
+        </small>
+    </div>
+
+    <!-- Environment Status (collapsible) -->
+    <p class="mb-2">
+        <a class="collapse-trigger" data-bs-toggle="collapse" href="#environment_panel" role="button" aria-expanded="false">
+            <i class="bi bi-chevron-down"></i>
+            <?php $this->_('AdminSystemUpgrade.index.heading_environment'); ?>
+            <?php if (!empty($env_fail_count)) { ?>
+                <span class="badge bg-danger ms-2">
+                    <i class="bi bi-x-circle-fill me-1"></i><?php $this->_('AdminSystemUpgrade.index.environment_badge_fail', false, (int) $env_fail_count); ?>
+                </span>
+            <?php } ?>
+            <?php if (!empty($env_warn_count)) { ?>
+                <span class="badge bg-warning text-dark ms-2">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i><?php $this->_('AdminSystemUpgrade.index.environment_badge_warn', false, (int) $env_warn_count); ?>
+                </span>
+            <?php } ?>
+        </a>
+    </p>
+
+    <div class="collapse" id="environment_panel">
+        <?php if (!empty($env_all_pass)) { ?>
+            <div class="alert alert-success mb-3" role="alert">
+                <i class="bi bi-check-circle me-2"></i>
+                <?php $this->_('AdminSystemUpgrade.index.environment_pass'); ?>
+            </div>
+        <?php } elseif (!empty($env_has_fail)) { ?>
+            <div class="alert alert-warning mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <?php $this->_('AdminSystemUpgrade.index.environment_fail'); ?>
+            </div>
+        <?php } ?>
+
+        <div class="table-responsive mb-3">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    <?php foreach ((isset($environment_status) ? $environment_status : []) as $check) { ?>
+                    <tr>
+                        <td style="width: 30px;">
+                            <?php if ($check['status'] === 'pass') { ?>
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            <?php } elseif ($check['status'] === 'fail') { ?>
+                                <i class="bi bi-x-circle-fill text-danger"></i>
+                            <?php } else { ?>
+                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                            <?php } ?>
+                        </td>
+                        <td><?php echo $this->Html->safe($check['message']); ?></td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Available Updates / Upgrade Progress -->
+    <div id="upgrade_section">
+        <?php if (!empty($lock_status) && empty($lock_status['stale'])) { ?>
+            <!-- Active upgrade in progress -->
+            <div class="alert alert-info" role="alert" id="lock_active_alert">
+                <div class="d-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    <?php $this->_('AdminSystemUpgrade.index.lock_active', false, (isset($lock_status['started_at']) ? $this->Html->safe($lock_status['started_at']) : '')); ?>
+                </div>
+            </div>
+            <div id="progress_panel">
+                <div id="progress_steps" class="mb-3"></div>
+                <div class="progress mb-3" style="height: 8px;">
+                    <div id="progress_bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div id="progress_log" class="collapse">
+                    <pre class="p-3 rounded mb-3" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; background-color: var(--bg-tertiary); border: 1px solid var(--border-color);"><code id="progress_log_content"></code></pre>
+                </div>
+                <div id="progress_result" class="d-none"></div>
+            </div>
+
+        <?php } elseif (!empty($lock_status) && !empty($lock_status['stale'])) { ?>
+            <!-- Stale lock -->
+            <?php if (!empty($launch_failed_command)) { ?>
+                <!-- Launch-failure recovery: preserve the manual command
+                     across page reloads so the admin never loses it -->
+                <div class="alert alert-warning mb-3" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-terminal me-1"></i>
+                        <?php $this->_('AdminSystemUpgrade.index.launch_failed_title'); ?>
+                    </h6>
+                    <p class="mb-2"><?php $this->_('SystemUpgrade.!error.launch_not_detected'); ?></p>
+                    <p class="small mb-2"><?php $this->_('AdminSystemUpgrade.index.launch_failed_instruction'); ?></p>
+                    <div class="d-flex align-items-start gap-2 mb-3">
+                        <pre class="mb-0 p-2 rounded flex-grow-1" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color); font-size: 0.85rem; white-space: pre-wrap; word-break: break-all;"><code id="persisted_launch_command"><?php echo $this->Html->safe($launch_failed_command); ?></code></pre>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_copy_persisted_command">
+                            <i class="bi bi-clipboard me-1"></i><span><?php $this->_('AdminSystemUpgrade.index.btn_copy_command'); ?></span>
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-warning" id="btn_clear_lock">
+                        <?php $this->_('AdminSystemUpgrade.index.btn_clear_lock'); ?>
+                    </button>
+                </div>
+            <?php } else { ?>
+                <div class="alert alert-warning" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <?php $this->_('AdminSystemUpgrade.index.lock_stale'); ?>
+                    <button type="button" class="btn btn-sm btn-outline-warning ms-2" id="btn_clear_lock">
+                        <?php $this->_('AdminSystemUpgrade.index.btn_clear_lock'); ?>
+                    </button>
+                </div>
+            <?php } ?>
+
+        <?php } elseif (!empty($upgrade_status) && ($upgrade_status['status'] ?? '') === 'running') { ?>
+            <!-- Upgrade in progress (status file exists) -->
+            <div id="progress_panel">
+                <div id="progress_steps" class="mb-3"></div>
+                <div class="progress mb-3" style="height: 8px;">
+                    <div id="progress_bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div id="progress_log" class="collapse">
+                    <pre class="p-3 rounded mb-3" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; background-color: var(--bg-tertiary); border: 1px solid var(--border-color);"><code id="progress_log_content"></code></pre>
+                </div>
+                <div id="progress_result" class="d-none"></div>
+            </div>
+
+        <?php } elseif (!empty($available_upgrades)) { ?>
+            <!-- Available updates -->
+            <p class="mb-2 fw-bold"><?php $this->_('AdminSystemUpgrade.index.heading_available'); ?></p>
+
+            <div class="alert alert-info mb-3" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <?php $this->_('AdminSystemUpgrade.index.upgrade_warning'); ?>
+            </div>
+
+            <p class="mb-2"><?php $this->_('AdminSystemUpgrade.index.select_version'); ?></p>
+
+            <div class="mb-3">
+                <?php foreach ($available_upgrades as $type => $upgrade) { ?>
+                <div class="form-check mb-2">
+                    <input class="form-check-input upgrade-version-radio" type="radio" name="target_version"
+                        id="upgrade_<?php echo $this->Html->safe($type); ?>"
+                        value="<?php echo $this->Html->safe($upgrade['version']); ?>"
+                        <?php echo $type === 'patch' ? 'checked' : ''; ?>
+                        <?php echo (!empty($upgrade['requires_support']) && !empty($no_support)) ? 'disabled' : ''; ?>>
+                    <label class="form-check-label" for="upgrade_<?php echo $this->Html->safe($type); ?>">
+                        <?php
+                        if ($type === 'patch') {
+                            $this->_('AdminSystemUpgrade.index.upgrade_patch', false, (isset($current_version) ? $this->Html->safe($current_version) : ''), $this->Html->safe($upgrade['version']));
+                        } else {
+                            $this->_('AdminSystemUpgrade.index.upgrade_latest', false, (isset($current_version) ? $this->Html->safe($current_version) : ''), $this->Html->safe($upgrade['version']));
+                        }
+                        ?>
+                        <?php if (!empty($upgrade['requires_support'])) { ?>
+                            <span class="badge bg-secondary ms-1"><?php $this->_('AdminSystemUpgrade.index.requires_support'); ?></span>
+                        <?php } ?>
+                    </label>
+                    <div class="text-muted small">
+                        <?php if (!empty($upgrade['release_date'])) { ?>
+                            <?php $this->_('AdminSystemUpgrade.index.release_date', false, $this->Html->safe($upgrade['release_date'])); ?>
+                        <?php } ?>
+                        <?php if (!empty($upgrade['changelog_url'])) { ?>
+                            &mdash; <a href="<?php echo $this->Html->safe($upgrade['changelog_url']); ?>" target="_blank" rel="noopener"><?php $this->_('AdminSystemUpgrade.index.changelog_link'); ?></a>
+                        <?php } ?>
+                    </div>
+                </div>
+                <?php } ?>
+            </div>
+
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="skip_integrity_check" value="1">
+                <label class="form-check-label" for="skip_integrity_check">
+                    <?php $this->_('AdminSystemUpgrade.index.skip_integrity_check'); ?>
+                </label>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="clean_stale_files" value="1">
+                <label class="form-check-label" for="clean_stale_files">
+                    <?php $this->_('AdminSystemUpgrade.index.clean_stale_files'); ?>
+                </label>
+                <div class="form-text"><?php $this->_('AdminSystemUpgrade.index.clean_stale_files_note'); ?></div>
+            </div>
+
+            <!-- Progress panel (hidden until upgrade starts) -->
+            <div id="progress_panel" class="d-none">
+                <p class="mb-2 fw-bold"><?php $this->_('AdminSystemUpgrade.index.heading_progress'); ?></p>
+                <div id="progress_steps" class="mb-3"></div>
+                <div class="progress mb-3" style="height: 8px;">
+                    <div id="progress_bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div id="progress_log" class="collapse">
+                    <pre class="p-3 rounded mb-3" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; background-color: var(--bg-tertiary); border: 1px solid var(--border-color);"><code id="progress_log_content"></code></pre>
+                </div>
+                <div id="progress_result" class="d-none"></div>
+            </div>
+
+        <?php } else { ?>
+            <!-- Up to date -->
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-check-circle" style="font-size: 2rem; opacity: 0.4;"></i>
+                <p class="mt-2 mb-0"><?php $this->_('AdminSystemUpgrade.index.up_to_date'); ?></p>
+            </div>
+        <?php } ?>
+    </div>
+
+    <?php
+    // Show footer with Upgrade button when updates are available and no lock at all
+    if (
+        !empty($available_upgrades)
+        && empty($lock_status)
+        && (empty($upgrade_status) || ($upgrade_status['status'] ?? '') !== 'running')
+    ) {
+        $this->Widget->footer();
+    ?>
+    <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-primary" id="btn_upgrade"
+            data-confirm-message="<?php echo $this->Html->safe($this->_('AdminSystemUpgrade.index.upgrade_warning', true)); ?>"
+            <?php echo !empty($env_has_fail) ? 'disabled' : ''; ?>>
+            <i class="bi bi-cloud-arrow-down me-1"></i>
+            <?php $this->_('AdminSystemUpgrade.index.btn_upgrade'); ?>
+        </button>
+    </div>
+    <?php } ?>
+
+    <?php $this->Widget->end(); ?>
+
+    <!-- Backup History Widget -->
+    <?php
+    $this->Widget->clear();
+    $this->Widget->setBodyWrapper(false);
+    $this->Widget->create($this->_('AdminSystemUpgrade.index.heading_backups', true), ['id' => 'admin_system_upgrade_backups']);
+    ?>
+
+    <?php if (!empty($backups)) { ?>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th><?php $this->_('AdminSystemUpgrade.index.backup_col_file'); ?></th>
+                    <th><?php $this->_('AdminSystemUpgrade.index.backup_col_type'); ?></th>
+                    <th><?php $this->_('AdminSystemUpgrade.index.backup_col_size'); ?></th>
+                    <th><?php $this->_('AdminSystemUpgrade.index.backup_col_date'); ?></th>
+                    <th style="width: 110px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($backups as $backup) { ?>
+                <tr>
+                    <td><?php echo $this->Html->safe($backup['filename']); ?></td>
+                    <td>
+                        <?php if ($backup['type'] === 'database') { ?>
+                            <span class="badge bg-secondary"><?php $this->_('AdminSystemUpgrade.index.backup_database'); ?></span>
+                        <?php } else { ?>
+                            <span class="badge bg-secondary"><?php $this->_('AdminSystemUpgrade.index.backup_files'); ?></span>
+                        <?php } ?>
+                    </td>
+                    <td><?php echo $this->Html->safe(number_format($backup['size'] / 1048576, 1) . ' MB'); ?></td>
+                    <td><?php echo $this->Date->cast($backup['date'], 'date_time'); ?></td>
+                    <td class="text-end text-nowrap">
+                        <a href="<?php echo $this->base_uri; ?>settings/system/upgrade/backups/<?php echo $this->Html->safe(urlencode($backup['filename'])); ?>/"
+                           class="btn btn-sm btn-outline-secondary" title="<?php $this->_('AdminSystemUpgrade.index.btn_download'); ?>">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-backup ms-1"
+                            data-filename="<?php echo $this->Html->safe($backup['filename']); ?>"
+                            title="<?php $this->_('AdminSystemUpgrade.index.btn_delete'); ?>">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+    <?php } else { ?>
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="mt-3 mb-0"><?php $this->_('AdminSystemUpgrade.index.no_backups'); ?></p>
+    </div>
+    <?php } ?>
+
+    <?php $this->Widget->end(); ?>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var baseUri = '<?php echo $this->base_uri; ?>';
+    var csrfToken = '<?php echo $this->Form->getCsrfToken(); ?>';
+    var pollingInterval = null;
+
+    var stepNames = [
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_preflight", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_maintenance", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_backup_db", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_backup_files", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_download", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_verify", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_extract", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_replace", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_migrate", true)); ?>',
+        '<?php echo addslashes($this->_("AdminSystemUpgrade.index.step_finalize", true)); ?>'
+    ];
+
+    // Check for Updates button (link button in card-filter-bar)
+    var checkBtn = document.getElementById('btn_check_updates');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            checkBtn.classList.add('disabled');
+            var originalHtml = checkBtn.innerHTML;
+            checkBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Checking...';
+
+            fetch(baseUri + 'settings/system/upgrade/check/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: '_csrf_token=' + encodeURIComponent(csrfToken)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function() {
+                window.location.reload();
+            })
+            .catch(function() {
+                checkBtn.classList.remove('disabled');
+                checkBtn.innerHTML = originalHtml;
+            });
+        });
+    }
+
+    // Copy button on the persisted launch-failure recovery panel
+    var persistedCopyBtn = document.getElementById('btn_copy_persisted_command');
+    if (persistedCopyBtn) {
+        persistedCopyBtn.addEventListener('click', function() {
+            var code = document.getElementById('persisted_launch_command');
+            if (!code) return;
+            var span = persistedCopyBtn.querySelector('span');
+            var originalLabel = span ? span.textContent : '';
+            var copiedLabel = '<?php echo addslashes($this->_("AdminSystemUpgrade.index.command_copied", true)); ?>';
+            navigator.clipboard.writeText(code.textContent).then(function() {
+                if (span) {
+                    span.textContent = copiedLabel;
+                    setTimeout(function() { span.textContent = originalLabel; }, 1500);
+                }
+            });
+        });
+    }
+
+    // Clear Lock button
+    var clearLockBtn = document.getElementById('btn_clear_lock');
+    if (clearLockBtn) {
+        clearLockBtn.addEventListener('click', function() {
+            clearLockBtn.disabled = true;
+
+            fetch(baseUri + 'settings/system/upgrade/clearlock/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: '_csrf_token=' + encodeURIComponent(csrfToken)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function() {
+                window.location.reload();
+            });
+        });
+    }
+
+    // Delete Backup buttons
+    document.querySelectorAll('.btn-delete-backup').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var filename = this.getAttribute('data-filename');
+            var row = this.closest('tr');
+
+            if (!confirm('<?php echo addslashes($this->_("AdminSystemUpgrade.index.confirm_delete_backup", true)); ?>')) {
+                return;
+            }
+
+            btn.disabled = true;
+
+            fetch(baseUri + 'settings/system/upgrade/deletebackup/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: '_csrf_token=' + encodeURIComponent(csrfToken)
+                    + '&filename=' + encodeURIComponent(filename)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success && row) {
+                    row.remove();
+                } else {
+                    btn.disabled = false;
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+            });
+        });
+    });
+
+    // Upgrade button — show warning-style confirmation modal matching Paradigm patterns
+    var upgradeBtn = document.getElementById('btn_upgrade');
+    if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', function() {
+            var selectedRadio = document.querySelector('input[name="target_version"]:checked');
+            if (!selectedRadio) return;
+
+            var targetVersion = selectedRadio.value;
+            var message = upgradeBtn.getAttribute('data-confirm-message') || '';
+
+            var modalEl = document.createElement('div');
+            modalEl.className = 'modal fade';
+            modalEl.setAttribute('tabindex', '-1');
+            modalEl.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered">' +
+                '<div class="modal-content">' +
+                '<div class="modal-header border-0 pb-0">' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                '</div>' +
+                '<div class="modal-body text-center py-4">' +
+                '<div class="mb-3"><i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 4rem;"></i></div>' +
+                '<h5 class="modal-title mb-3">Warning</h5>' +
+                '<p class="text-secondary">' + message + '</p>' +
+                '</div>' +
+                '<div class="modal-footer border-0 justify-content-center">' +
+                '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>' +
+                '<button type="button" class="btn btn-warning btn-confirm">Confirm</button>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+
+            document.body.appendChild(modalEl);
+            var modal = new bootstrap.Modal(modalEl);
+            var confirmed = false;
+
+            modalEl.querySelector('.btn-confirm').addEventListener('click', function() {
+                confirmed = true;
+                this.blur();
+                modal.hide();
+            });
+
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                modalEl.remove();
+                if (confirmed) {
+                    var skipCheck = document.getElementById('skip_integrity_check');
+                    var cleanStale = document.getElementById('clean_stale_files');
+                    startUpgrade(targetVersion, skipCheck && skipCheck.checked, cleanStale && cleanStale.checked);
+                }
+            });
+
+            modal.show();
+        });
+    }
+
+    function startUpgrade(targetVersion, confirmOverwrite, cleanStaleFiles) {
+        var upgradeBtn = document.getElementById('btn_upgrade');
+        upgradeBtn.disabled = true;
+
+        // Show spinner on button while request is in flight
+        var originalBtnHtml = upgradeBtn.innerHTML;
+        upgradeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> <?php echo addslashes($this->_("AdminSystemUpgrade.index.step_preflight", true)); ?>';
+
+        var body = '_csrf_token=' + encodeURIComponent(csrfToken)
+            + '&target_version=' + encodeURIComponent(targetVersion);
+        if (confirmOverwrite) {
+            body += '&confirm_overwrite=1';
+        }
+        if (cleanStaleFiles) {
+            body += '&clean_stale_files=1';
+        }
+
+        function restoreBtn() {
+            upgradeBtn.innerHTML = originalBtnHtml;
+            upgradeBtn.disabled = false;
+        }
+
+        fetch(baseUri + 'settings/system/upgrade/upgrade/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: body
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success && data.launch_failed) {
+                upgradeBtn.innerHTML = originalBtnHtml;
+                var progressPanel = document.getElementById('progress_panel');
+                progressPanel.classList.remove('d-none');
+                renderSteps(7, stepNames.length);
+                showManualLaunchRecovery(data.manual_command, data.error);
+                startPolling();
+            } else if (data.success) {
+                upgradeBtn.innerHTML = originalBtnHtml;
+                var progressPanel = document.getElementById('progress_panel');
+                progressPanel.classList.remove('d-none');
+                renderSteps(7, stepNames.length);
+                startPolling();
+            } else if (data.needs_confirm) {
+                showConfirmDialog(targetVersion, data);
+                restoreBtn();
+            } else {
+                restoreBtn();
+                var progressPanel = document.getElementById('progress_panel');
+                progressPanel.classList.remove('d-none');
+                renderSteps(0, stepNames.length);
+                showResult(false, data.error || '<?php echo addslashes($this->_("AdminSystemUpgrade.index.upgrade_failed", true)); ?>');
+            }
+        })
+        .catch(function(err) {
+            restoreBtn();
+            var progressPanel = document.getElementById('progress_panel');
+            progressPanel.classList.remove('d-none');
+            renderSteps(0, stepNames.length);
+            showResult(false, err.message || '<?php echo addslashes($this->_("AdminSystemUpgrade.index.upgrade_failed", true)); ?>');
+        });
+    }
+
+    function showConfirmDialog(targetVersion, data) {
+        // Remove any existing dialog
+        var existing = document.getElementById('modified_files_modal');
+        if (existing) existing.remove();
+
+        var fileListHtml = '';
+        if (data.modified_files && data.modified_files.length > 0) {
+            fileListHtml += '<p class="fw-semibold mb-1 mt-3"><?php echo addslashes($this->_("AdminSystemUpgrade.upgrade.label_modified", true)); ?></p>'
+                + '<div style="max-height: 200px; overflow-y: auto;">'
+                + '<table class="table table-sm mb-0"><tbody>';
+            for (var i = 0; i < data.modified_files.length; i++) {
+                fileListHtml += '<tr><td><i class="bi bi-pencil-fill text-warning me-1"></i><code>' + escapeHtml(data.modified_files[i]) + '</code></td></tr>';
+            }
+            fileListHtml += '</tbody></table></div>';
+        }
+        if (data.missing_files && data.missing_files.length > 0) {
+            fileListHtml += '<p class="fw-semibold mb-1 mt-3"><?php echo addslashes($this->_("AdminSystemUpgrade.upgrade.label_missing", true)); ?></p>'
+                + '<div style="max-height: 200px; overflow-y: auto;">'
+                + '<table class="table table-sm mb-0"><tbody>';
+            for (var i = 0; i < data.missing_files.length; i++) {
+                fileListHtml += '<tr><td><i class="bi bi-x-circle-fill text-danger me-1"></i><code>' + escapeHtml(data.missing_files[i]) + '</code></td></tr>';
+            }
+            fileListHtml += '</tbody></table></div>';
+        }
+
+        var modalHtml = '<div class="modal fade" id="modified_files_modal" tabindex="-1">'
+            + '<div class="modal-dialog modal-lg">'
+            + '<div class="modal-content">'
+            + '<div class="modal-header">'
+            + '<h5 class="modal-title">'
+            + '<?php echo addslashes($this->_("AdminSystemUpgrade.upgrade.modified_files_title", true)); ?>'
+            + '</h5>'
+            + '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>'
+            + '</div>'
+            + '<div class="modal-body">'
+            + '<p>' + escapeHtml(data.message) + '</p>'
+            + fileListHtml
+            + '</div>'
+            + '<div class="modal-footer">'
+            + '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">'
+            + '<?php echo addslashes($this->_("AdminSystemUpgrade.upgrade.btn_abort", true)); ?>'
+            + '</button>'
+            + '<button type="button" class="btn btn-primary" id="btn_confirm_overwrite">'
+            + '<?php echo addslashes($this->_("AdminSystemUpgrade.upgrade.btn_continue", true)); ?>'
+            + '</button>'
+            + '</div>'
+            + '</div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        var modal = new bootstrap.Modal(document.getElementById('modified_files_modal'));
+        modal.show();
+
+        document.getElementById('btn_confirm_overwrite').addEventListener('click', function() {
+            modal.hide();
+            var cleanStale = document.getElementById('clean_stale_files');
+            startUpgrade(targetVersion, true, cleanStale && cleanStale.checked);
+        });
+
+        // Clean up modal element after hidden
+        document.getElementById('modified_files_modal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
+    function dismissLockAlert() {
+        var lockAlert = document.getElementById('lock_active_alert');
+        if (lockAlert) {
+            lockAlert.remove();
+        }
+    }
+
+    function hideManualLaunchRecovery() {
+        var existing = document.getElementById('manual_launch_recovery');
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    function showManualLaunchRecovery(command, message) {
+        hideManualLaunchRecovery();
+        var progressPanel = document.getElementById('progress_panel');
+        if (!progressPanel) return;
+
+        var copyLabel = '<?php echo addslashes($this->_("AdminSystemUpgrade.index.btn_copy_command", true)); ?>';
+        var copiedLabel = '<?php echo addslashes($this->_("AdminSystemUpgrade.index.command_copied", true)); ?>';
+        var title = '<?php echo addslashes($this->_("AdminSystemUpgrade.index.launch_failed_title", true)); ?>';
+        var instruction = '<?php echo addslashes($this->_("AdminSystemUpgrade.index.launch_failed_instruction", true)); ?>';
+
+        var alert = document.createElement('div');
+        alert.id = 'manual_launch_recovery';
+        alert.className = 'alert alert-warning mb-3';
+        alert.setAttribute('role', 'alert');
+        alert.innerHTML =
+            '<h6 class="alert-heading"><i class="bi bi-terminal me-1"></i>' + escapeHtml(title) + '</h6>' +
+            '<p class="mb-2">' + escapeHtml(message || instruction) + '</p>' +
+            '<p class="small mb-2">' + escapeHtml(instruction) + '</p>' +
+            '<div class="d-flex align-items-start gap-2">' +
+                '<pre class="mb-0 p-2 rounded flex-grow-1" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color); font-size: 0.85rem; white-space: pre-wrap; word-break: break-all;"><code id="manual_launch_command"></code></pre>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" id="btn_copy_launch_command">' +
+                    '<i class="bi bi-clipboard me-1"></i><span>' + escapeHtml(copyLabel) + '</span>' +
+                '</button>' +
+            '</div>';
+
+        progressPanel.parentNode.insertBefore(alert, progressPanel);
+        document.getElementById('manual_launch_command').textContent = command;
+
+        document.getElementById('btn_copy_launch_command').addEventListener('click', function() {
+            var btn = this;
+            var span = btn.querySelector('span');
+            navigator.clipboard.writeText(command).then(function() {
+                span.textContent = copiedLabel;
+                setTimeout(function() { span.textContent = copyLabel; }, 1500);
+            });
+        });
+    }
+
+    function startPolling() {
+        pollingInterval = setInterval(function() {
+            fetch(baseUri + 'settings/system/upgrade/status/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: '_csrf_token=' + encodeURIComponent(csrfToken)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (!data.success || !data.status) return;
+
+                var status = data.status;
+
+                // Update progress bar
+                var progressBar = document.getElementById('progress_bar');
+                if (progressBar) {
+                    var pct = status.progress || 0;
+                    pct = Math.min(70 + (pct * 0.3), 100);
+                    progressBar.style.width = pct + '%';
+                    progressBar.setAttribute('aria-valuenow', pct);
+                }
+
+                // Update log
+                if (status.messages && status.messages.length > 0) {
+                    var logContent = document.getElementById('progress_log_content');
+                    if (logContent) {
+                        logContent.textContent = status.messages.join('\n');
+                    }
+                    var logPanel = document.getElementById('progress_log');
+                    if (logPanel) {
+                        logPanel.classList.add('show');
+                    }
+                }
+
+                // Map upgrader step to UI step
+                var uiStep = 7 + (status.step || 0);
+                renderSteps(Math.min(uiStep, stepNames.length), stepNames.length);
+
+                if (status.status === 'complete') {
+                    clearInterval(pollingInterval);
+                    renderSteps(stepNames.length, stepNames.length);
+                    dismissLockAlert();
+                    hideManualLaunchRecovery();
+                    showResult(true, '<?php echo addslashes($this->_("AdminSystemUpgrade.index.upgrade_complete", true)); ?>');
+                } else if (status.status === 'failed' || status.status === 'stale') {
+                    clearInterval(pollingInterval);
+                    dismissLockAlert();
+                    showResult(false, status.error || '<?php echo addslashes($this->_("AdminSystemUpgrade.index.upgrade_failed", true)); ?>', {
+                        backup_db_path: status.backup_db_path || null,
+                        backup_files_path: status.backup_files_path || null,
+                        db_version_before: status.db_version_before || null,
+                        db_version_expected: status.db_version_expected || null,
+                        db_version_after: status.db_version_after || null,
+                        db_version_mismatch: !!status.db_version_mismatch
+                    });
+                }
+            })
+            .catch(function() {
+                // Network error during polling - keep trying
+            });
+        }, 3000);
+    }
+
+    function renderSteps(completedCount, total) {
+        var container = document.getElementById('progress_steps');
+        if (!container) return;
+
+        var html = '';
+        for (var i = 0; i < total; i++) {
+            var icon, textClass;
+            if (i < completedCount) {
+                icon = '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+                textClass = '';
+            } else if (i === completedCount) {
+                icon = '<span class="spinner-border spinner-border-sm text-primary me-2"></span>';
+                textClass = 'fw-semibold';
+            } else {
+                icon = '<i class="bi bi-circle text-muted me-2"></i>';
+                textClass = 'text-muted';
+            }
+            html += '<div class="mb-1 ' + textClass + '">' + icon + stepNames[i] + '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function showResult(success, message, extras) {
+        var resultDiv = document.getElementById('progress_result');
+        if (!resultDiv) return;
+
+        resultDiv.classList.remove('d-none');
+
+        var progressBar = document.getElementById('progress_bar');
+
+        if (success) {
+            resultDiv.innerHTML =
+                '<div class="alert alert-success" role="alert">' +
+                    '<i class="bi bi-check-circle me-2"></i>' + message +
+                '</div>' +
+                '<a href="' + baseUri + '" class="btn btn-primary">' +
+                    '<?php echo addslashes($this->_("AdminSystemUpgrade.index.btn_dashboard", true)); ?>' +
+                '</a>';
+
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.classList.add('bg-success');
+            }
+        } else {
+            var failureHtml =
+                '<div class="alert alert-danger" role="alert">' +
+                    '<i class="bi bi-x-circle me-2"></i>' + message +
+                '</div>';
+
+            // If we know which backups were taken before the upgrade started,
+            // surface them so the user has something concrete to act on.
+            var dbBackup = extras && extras.backup_db_path;
+            var filesBackup = extras && extras.backup_files_path;
+            var dbVersionBefore = extras && extras.db_version_before;
+            var dbVersionExpected = extras && extras.db_version_expected;
+            var dbVersionAfter = extras && extras.db_version_after;
+            var dbVersionMismatch = extras && extras.db_version_mismatch;
+
+            if (dbBackup || filesBackup || dbVersionBefore || dbVersionExpected || dbVersionAfter) {
+                failureHtml +=
+                    '<div class="card mb-3">' +
+                        '<div class="card-body">' +
+                            '<h6 class="card-title mb-2">' +
+                                '<i class="bi bi-life-preserver me-1"></i>' +
+                                '<?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_heading", true)); ?>' +
+                            '</h6>' +
+                            '<p class="mb-2"><?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_explanation", true)); ?></p>';
+
+                // Database version block — shown when we have any version info,
+                // with an extra warning when the version did not advance as expected.
+                if (dbVersionBefore || dbVersionExpected || dbVersionAfter) {
+                    failureHtml +=
+                        '<p class="mb-1 fw-semibold"><?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_db_version_label", true)); ?></p>' +
+                        '<ul class="mb-2 small font-monospace">';
+                    if (dbVersionBefore) {
+                        failureHtml += '<li><?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_db_version_before", true, "%VERSION%")); ?></li>'.replace('%VERSION%', escapeHtml(dbVersionBefore));
+                    }
+                    if (dbVersionExpected) {
+                        failureHtml += '<li><?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_db_version_expected", true, "%VERSION%")); ?></li>'.replace('%VERSION%', escapeHtml(dbVersionExpected));
+                    }
+                    if (dbVersionAfter) {
+                        failureHtml += '<li><?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_db_version_after", true, "%VERSION%")); ?></li>'.replace('%VERSION%', escapeHtml(dbVersionAfter));
+                    }
+                    failureHtml += '</ul>';
+
+                    if (dbVersionMismatch) {
+                        failureHtml +=
+                            '<div class="alert alert-warning py-2 mb-2 small" role="alert">' +
+                                '<i class="bi bi-exclamation-triangle me-1"></i>' +
+                                '<?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_db_version_mismatch", true)); ?>' +
+                            '</div>';
+                    }
+                }
+
+                if (dbBackup || filesBackup) {
+                    failureHtml +=
+                        '<p class="mb-1 fw-semibold"><?php echo addslashes($this->_("AdminSystemUpgrade.index.failure_backup_label", true)); ?></p>' +
+                        '<ul class="mb-0 small font-monospace">';
+                    if (dbBackup) {
+                        failureHtml += '<li>' + escapeHtml(dbBackup) + '</li>';
+                    }
+                    if (filesBackup) {
+                        failureHtml += '<li>' + escapeHtml(filesBackup) + '</li>';
+                    }
+                    failureHtml += '</ul>';
+                }
+
+                failureHtml +=
+                        '</div>' +
+                    '</div>';
+            }
+
+            failureHtml +=
+                '<button type="button" class="btn btn-outline-primary" onclick="window.location.reload();">' +
+                    '<?php echo addslashes($this->_("AdminSystemUpgrade.index.btn_retry", true)); ?>' +
+                '</button>';
+
+            resultDiv.innerHTML = failureHtml;
+
+            if (progressBar) {
+                progressBar.classList.add('bg-danger');
+            }
+        }
+    }
+
+    // Start polling on page load when:
+    // - there's an active (non-stale) lock,
+    // - a currently-running status file exists, OR
+    // - the lock is stale *because* of a launch failure with a persisted
+    //   recovery command. In that last case nonce validation guarantees
+    //   a stale status file from a prior run won't be picked up, so it's
+    //   safe to poll while the admin runs the SSH recovery command.
+    <?php if (
+        (!empty($lock_status) && empty($lock_status['stale']))
+        || (!empty($upgrade_status) && ($upgrade_status['status'] ?? '') === 'running')
+        || !empty($launch_failed_command)
+    ) { ?>
+    startPolling();
+    <?php } ?>
+});
+</script>

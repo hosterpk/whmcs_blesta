@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin Affiliates Settings controller
  *

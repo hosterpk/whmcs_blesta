@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Events\EventFactory;
 
 /**
@@ -33,7 +34,8 @@ class OrderModel extends AppModel
         $type = Loader::fromCamelCase($type);
         $type_class = Loader::toCamelCase('order_type_' . $type);
 
-        if (!Loader::load(PLUGINDIR . 'order' . DS . 'lib' . DS . 'order_types'
+        if (
+            !Loader::load(PLUGINDIR . 'order' . DS . 'lib' . DS . 'order_types'
             . DS . $type . DS . 'order_type_' . $type . '.php')
         ) {
             throw new Exception("Order Type '" . $type_class . "' does not exist.");

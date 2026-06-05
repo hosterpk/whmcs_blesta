@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Order Form Parent Controller
  *
@@ -87,7 +88,8 @@ class OrderFormController extends OrderController
 
         // If the order form doesn't exist, is inactive, or restricted to clients
         // and not logged in as client show form listing
-        if (!$this->order_form
+        if (
+            !$this->order_form
             || $this->order_form->status != 'active'
             || ($this->order_form->visibility === 'client' && !$this->client)
         ) {
@@ -254,9 +256,11 @@ class OrderFormController extends OrderController
         } elseif (!isset($this->get['currency']) && $this->SessionCart->isEmptyCart()) {
             // If a queued item for the cart exists, verify and set its pricing currency for the order form
             $cart = $this->SessionCart->get();
-            if ($this->SessionCart->isEmptyCart() && !$this->SessionCart->isEmptyQueue()
+            if (
+                $this->SessionCart->isEmptyCart() && !$this->SessionCart->isEmptyQueue()
                 && !$this->SessionCart->getData('currency')
-                && ($queue_item = $this->SessionCart->checkQueue()) && count($cart['queue']) == 1) {
+                && ($queue_item = $this->SessionCart->checkQueue()) && count($cart['queue']) == 1
+            ) {
                 $pricing_id = $queue_item['pricing_id'];
 
                 // Fetch the package info for the selected pricing ID
@@ -336,8 +340,8 @@ class OrderFormController extends OrderController
             $client_id = $this->client->id;
         } else {
             $user = $this->SessionCart->getItem('user');
-            $country = isset($user['country']) ? $user['country'] : null;
-            $state = isset($user['state']) ? $user['state'] : null;
+            $country = $user['country'] ?? null;
+            $state = $user['state'] ?? null;
         }
 
         $data['cart'] = $this->SessionCart->get();
@@ -393,11 +397,13 @@ class OrderFormController extends OrderController
             }
 
             // Set the domain as free
-            if ($this->OrderOrders->eligibleFreeDomain(
-                (array) $data['cart']['items'][$services[$domain]],
-                (array) $data['cart']['items'][$domains[$domain]],
-                $this->order_form
-            )) {
+            if (
+                $this->OrderOrders->eligibleFreeDomain(
+                    (array) $data['cart']['items'][$services[$domain]],
+                    (array) $data['cart']['items'][$domains[$domain]],
+                    $this->order_form
+                )
+            ) {
                 $data['cart']['items'][$index]['override_price'] = 0;
                 $data['cart']['items'][$index]['override_currency'] = $data['cart']['currency'];
             }
@@ -411,7 +417,7 @@ class OrderFormController extends OrderController
             }
 
             unset($queued_item);
-        } else if (!empty($data['cart']['items'])) {
+        } elseif (!empty($data['cart']['items'])) {
             $current_cart = $this->SessionCart->get();
             foreach ($current_cart['items'] as $cart_item) {
                 $cart_items[$cart_item['pricing_id']] = $cart_item;
@@ -474,7 +480,7 @@ class OrderFormController extends OrderController
             $limit_reached = false;
             if ($client_id && $package->client_qty !== null) {
                 $limit_reached = $package->client_qty
-                    <= (isset($package_counts[$package->id]) ? $package_counts[$package->id] : 0);
+                    <= ($package_counts[$package->id] ?? 0);
 
                 if (!isset($package_counts[$package->id])) {
                     $package_counts[$package->id] = 0;
@@ -541,7 +547,7 @@ class OrderFormController extends OrderController
             }
 
             // Fetch the addons for this item and separate them out from the item
-            $addons = isset($item['addons']) ? $item['addons'] : [];
+            $addons = $item['addons'] ?? [];
             unset($item['addons']);
             $grouped_items[$key]['items'][] = $item;
 
@@ -665,7 +671,8 @@ class OrderFormController extends OrderController
                     // Synchronize this addon with the parent service if set to do so and it is not
                     // already being prorated
                     $addon_pricing = $this->Services->getPackagePricing($addon_item['pricing_id']);
-                    if ($pricing
+                    if (
+                        $pricing
                         && !$recurring
                         && $addon_pricing
                         && ($sync_date = $this->Services->getChildRenewDate(
@@ -713,7 +720,8 @@ class OrderFormController extends OrderController
      * @param array $item A list of item details
      * @return boolean True if the domain is eligible for bundling, false otherwise
      */
-    protected function isItemBundlableDomain($item) {
+    protected function isItemBundlableDomain($item)
+    {
         $bundlable_domain = false;
         if (!empty($item['domain']) && !empty($this->order_form->meta['tlds'])) {
             $package = $this->Packages->getByPricingId($item['pricing_id'] ?? null);
@@ -730,7 +738,8 @@ class OrderFormController extends OrderController
      * @param array $item A list of item details
      * @return boolean True if the item is eligible for bundling, false otherwise
      */
-    protected function isItemBundlablePackage($item) {
+    protected function isItemBundlablePackage($item)
+    {
         return !empty($this->order_form->meta['package_groups'])
             && in_array($item['group_id'], $this->order_form->meta['package_groups']);
     }
@@ -766,11 +775,7 @@ class OrderFormController extends OrderController
         $coupon_code = trim($coupon_code ?? '');
 
         if ($coupon_code !== '') {
-            if (($coupon = $this->Coupons->getByCode($coupon_code))) {
-                $coupon_id = $coupon->id;
-            } else {
-                $coupon_id = 0;
-            }
+            $coupon_id = ($coupon = $this->Coupons->getByCode($coupon_code)) ? $coupon->id : 0;
         }
 
         return $coupon_id;
@@ -804,7 +809,7 @@ class OrderFormController extends OrderController
                     }
                 }
                 $option->price = $this->getOptionPrice($pricing, $option->id, $item['configoptions'][$option->id]);
-                $option->selected_value_name = isset($option->values[0]->name) ? $option->values[0]->name : null;
+                $option->selected_value_name = $option->values[0]->name ?? null;
 
                 if (isset($option->values)) {
                     foreach ($option->values as $value) {
@@ -981,7 +986,8 @@ class OrderFormController extends OrderController
      */
     protected function isValidItem($item)
     {
-        if (!isset($item['pricing_id'])
+        if (
+            !isset($item['pricing_id'])
             || !isset($item['group_id'])
             || !($item_group = $this->PackageGroups->get($item['group_id']))
         ) {
@@ -1035,8 +1041,10 @@ class OrderFormController extends OrderController
 
                 foreach ($packages as $package) {
                     foreach ($package->pricing as $pricing) {
-                        if ($pricing->id == $item['pricing_id']
-                            && $this->Packages->convertPricing($pricing, $currency, $allow_conversion)) {
+                        if (
+                            $pricing->id == $item['pricing_id']
+                            && $this->Packages->convertPricing($pricing, $currency, $allow_conversion)
+                        ) {
                             return true;
                         }
                     }
@@ -1057,11 +1065,13 @@ class OrderFormController extends OrderController
         $base_dir = PLUGINDIR . 'order' . DS . 'views' . DS;
 
         if ($structure) {
-            if (file_exists($base_dir . 'templates' . DS . $this->order_form->template . DS
+            if (
+                file_exists($base_dir . 'templates' . DS . $this->order_form->template . DS
                 . 'types' . DS . $this->order_form->type . DS . $this->structure_view . '.pdt')
             ) {
                 return 'templates' . DS . $this->order_form->template . DS . 'types' . DS . $this->order_form->type;
-            } elseif (file_exists($base_dir . 'templates' . DS . $this->order_form->template
+            } elseif (
+                file_exists($base_dir . 'templates' . DS . $this->order_form->template
                 . DS . $this->structure_view . '.pdt')
             ) {
                 return 'templates' . DS . $this->order_form->template;
@@ -1156,14 +1166,18 @@ class OrderFormController extends OrderController
         $transaction_types = $this->Transactions->transactionTypeNames();
         $payment_types = [];
         if ($merchant_gateway) {
-            if ((in_array('MerchantAch', $merchant_gateway->info['interfaces'])
+            if (
+                (in_array('MerchantAch', $merchant_gateway->info['interfaces'])
                 || in_array('MerchantAchOffsite', $merchant_gateway->info['interfaces']))
-                && (!$settings || $settings['payments_allowed_ach'] == 'true')) {
+                && (!$settings || $settings['payments_allowed_ach'] == 'true')
+            ) {
                 $payment_types['ach'] = $transaction_types['ach'];
             }
-            if ((in_array('MerchantCc', $merchant_gateway->info['interfaces'])
+            if (
+                (in_array('MerchantCc', $merchant_gateway->info['interfaces'])
                 || in_array('MerchantCcOffsite', $merchant_gateway->info['interfaces']))
-                && (!$settings || $settings['payments_allowed_cc'] == 'true')) {
+                && (!$settings || $settings['payments_allowed_cc'] == 'true')
+            ) {
                 $payment_types['cc'] = $transaction_types['cc'];
             }
         }
@@ -1240,19 +1254,19 @@ class OrderFormController extends OrderController
         try {
             $fraud_detect = $this->Antifraud->create($antifraud, [$order_settings]);
             $status = $fraud_detect->verify([
-                'ip' => (isset($requestor->ip_address) ? $requestor->ip_address : null),
-                'first_name' => (isset($client->first_name) ? $client->first_name : null),
-                'last_name' => (isset($client->last_name) ? $client->last_name : null),
-                'email' => (isset($client->email) ? $client->email : null),
-                'address1' => (isset($client->address1) ? $client->address1 : null),
-                'address2' => (isset($client->address2) ? $client->address2 : null),
-                'city' => (isset($client->city) ? $client->city : null),
-                'state' => (isset($client->state) ? $client->state : null),
-                'country' => (isset($client->country) ? $client->country : null),
-                'zip' => (isset($client->zip) ? $client->zip : null),
+                'ip' => ($requestor->ip_address ?? null),
+                'first_name' => ($client->first_name ?? null),
+                'last_name' => ($client->last_name ?? null),
+                'email' => ($client->email ?? null),
+                'address1' => ($client->address1 ?? null),
+                'address2' => ($client->address2 ?? null),
+                'city' => ($client->city ?? null),
+                'state' => ($client->state ?? null),
+                'country' => ($client->country ?? null),
+                'zip' => ($client->zip ?? null),
                 'phone' => $this->Contacts->intlNumber(
-                    (isset($client->numbers[0]['number']) ? $client->numbers[0]['number'] : null),
-                    (isset($client->country) ? $client->country : null)
+                    ($client->numbers[0]['number'] ?? null),
+                    ($client->country ?? null)
                 )
             ]);
 
@@ -1266,7 +1280,7 @@ class OrderFormController extends OrderController
                     'report' => $fraud_detect->fraudDetails()
                 ]
             ));
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Log the antifraud module could not be loaded or performed
             if (isset($this->logger)) {
                 // Remove settings from the client, as they may contain sensitive information

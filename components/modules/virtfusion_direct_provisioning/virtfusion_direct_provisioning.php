@@ -7,7 +7,6 @@
  */
 class VirtfusionDirectProvisioning extends Module
 {
-
     /**
      * Initializes the module
      */
@@ -21,7 +20,6 @@ class VirtfusionDirectProvisioning extends Module
 
         // Load module config
         $this->loadConfig(dirname(__FILE__) . DS . 'config.json');
-
     }
 
     private function getApi($api_token, $hostname)
@@ -101,13 +99,13 @@ class VirtfusionDirectProvisioning extends Module
                 $server_data = json_decode($server_info['response']);
                 if (isset($server_data->data->network->interfaces[0]->ipv6[0])) {
                     $ipv6_data = $server_data->data->network->interfaces[0]->ipv6[0];
-                    $virtfusion_ipv6 = $ipv6_data->subnet."/".$ipv6_data->cidr;
+                    $virtfusion_ipv6 = $ipv6_data->subnet . '/' . $ipv6_data->cidr;
                 }
 
-                $insert = array(
+                $insert = [
                     'key' => 'virtfusion_ipv6_cidr',
                     'value' => $virtfusion_ipv6
-                );
+                ];
 
                 $this->Services->editField($service->id, $insert);
                 unset($virtfusion_ipv6);
@@ -194,6 +192,14 @@ class VirtfusionDirectProvisioning extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
 
         return $this->view->fetch();
@@ -230,6 +236,14 @@ class VirtfusionDirectProvisioning extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
 
         return $this->view->fetch();
@@ -339,27 +353,27 @@ class VirtfusionDirectProvisioning extends Module
         $rules = [
             'name' => [
                 'empty' => [
-                    'rule' => "isEmpty",
+                    'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('VirtfusionDirectProvisioning.!error.name.empty', true)
                 ]
             ],
             'hostname' => [
                 'empty' => [
-                    'rule' => "isEmpty",
+                    'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('VirtfusionDirectProvisioning.!error.hostname.empty', true)
                 ],
             ],
             'api_token' => [
                 'empty' => [
-                    'rule' => "isEmpty",
+                    'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('VirtfusionDirectProvisioning.!error.api_token.empty', true)
                 ],
                 'valid' => [
-                    'rule' => array(array($this, "validateApiCredentials"), $vars),
-                    'message' => Language::_("VirtfusionDirectProvisioning.!error.api_token.valid", true)
+                    'rule' => [[$this, 'validateApiCredentials'], $vars],
+                    'message' => Language::_('VirtfusionDirectProvisioning.!error.api_token.valid', true)
                 ]
             ]
         ];
@@ -376,13 +390,12 @@ class VirtfusionDirectProvisioning extends Module
 
             if ($request['info']['http_code'] != 200) {
                 $msg =  ($request['response']) ? json_decode($request['response']) : 'Invalid API Token';
-                $this->log($vars['hostname'], serialize($msg), "output", false);
+                $this->log($vars['hostname'], serialize($msg), 'output', false);
                 return false;
             }
 
             return true;
-        }
-        catch (Exception $e) {
+        } catch (\Throwable $e) {
             return false;
             // Trap any errors encountered, could not validate connection
         }
@@ -400,39 +413,41 @@ class VirtfusionDirectProvisioning extends Module
      *  is the type to be stored for the group and value is the name for that option
      * @see Module::selectModuleRow()
      */
-    public function getGroupOrderOptions() {
-        return array(
-            'first' => Language::_("VirtfusionDirectProvisioning.order_options.first", true)
-        );
+    public function getGroupOrderOptions()
+    {
+        return [
+            'first' => Language::_('VirtfusionDirectProvisioning.order_options.first', true)
+        ];
     }
 
     /**
-	 * Determines which module row should be attempted when a service is provisioned
-	 * for the given group based upon the order method set for that group.
-	 *
-	 * @return int The module row ID to attempt to add the service with
-	 * @see Module::getGroupOrderOptions()
-	 */
-	public function selectModuleRow($module_group_id) {
-		if (!isset($this->ModuleManager))
-			Loader::loadModels($this, array("ModuleManager"));
+     * Determines which module row should be attempted when a service is provisioned
+     * for the given group based upon the order method set for that group.
+     *
+     * @return int The module row ID to attempt to add the service with
+     * @see Module::getGroupOrderOptions()
+     */
+    public function selectModuleRow($module_group_id)
+    {
+        if (!isset($this->ModuleManager)) {
+            Loader::loadModels($this, ['ModuleManager']);
+        }
 
-		$group = $this->ModuleManager->getGroup($module_group_id);
+        $group = $this->ModuleManager->getGroup($module_group_id);
 
-		if ($group) {
-			switch ($group->add_order) {
-				default:
-				case "first":
+        if ($group) {
+            switch ($group->add_order) {
+                default:
+                case 'first':
+                    foreach ($group->rows as $row) {
+                        return $row->id;
+                    }
 
-					foreach ($group->rows as $row) {
-						return $row->id;
-					}
-
-					break;
-			}
-		}
-		return 0;
-	}
+                    break;
+            }
+        }
+        return 0;
+    }
 
     /**
      * Validates input data when attempting to add a package, returns the meta
@@ -483,13 +498,14 @@ class VirtfusionDirectProvisioning extends Module
      * @param stdClass $package A stdClass object representing the selected package
      * @param array An array of key/value pairs used to edit the package
      * @return array A numerically indexed array of meta fields to be stored for this package containing:
-     * 	- key The key for this meta field
-     * 	- value The value for this key
-     * 	- encrypted Whether or not this field should be encrypted (default 0, not encrypted)
+     *  - key The key for this meta field
+     *  - value The value for this key
+     *  - encrypted Whether or not this field should be encrypted (default 0, not encrypted)
      * @see Module::getModule()
      * @see Module::getModuleRow()
      */
-    public function editPackage($package, array $vars=null) {
+    public function editPackage($package, array $vars = null)
+    {
         // Set rules to validate input data
         $this->Input->setRules($this->getPackageRules($vars));
 
@@ -537,21 +553,21 @@ class VirtfusionDirectProvisioning extends Module
         $rules = [
             'meta[hypervisor_group_id]' => [
                 'empty' => [
-                    'rule' => "isEmpty",
+                    'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('VirtfusionDirectProvisioning.!error.meta[hypervisor_group_id].valid', true)
                 ]
             ],
             'meta[default_ipv4]' => [
                 'empty' => [
-                    'rule' => "isEmpty",
+                    'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('VirtfusionDirectProvisioning.!error.meta[default_ipv4].valid', true)
                 ]
             ],
             'meta[package_id]' => [
                 'empty' => [
-                    'rule' => "isEmpty",
+                    'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => Language::_('VirtfusionDirectProvisioning.!error.meta[package_id].valid', true)
                 ]
@@ -580,7 +596,7 @@ class VirtfusionDirectProvisioning extends Module
         $hypervisor_group_id->attach(
             $fields->fieldText(
                 'meta[hypervisor_group_id]',
-                (isset($vars->meta['hypervisor_group_id']) ? $vars->meta['hypervisor_group_id'] : null),
+                ($vars->meta['hypervisor_group_id'] ?? null),
                 ['id' => 'virtfusion_direct_provisioning_hypervisor_group_id']
             )
         );
@@ -591,7 +607,7 @@ class VirtfusionDirectProvisioning extends Module
         $default_ipv4->attach(
             $fields->fieldText(
                 'meta[default_ipv4]',
-                (isset($vars->meta['default_ipv4']) ? $vars->meta['default_ipv4'] : null),
+                ($vars->meta['default_ipv4'] ?? null),
                 ['id' => 'virtfusion_direct_provisioning_default_ipv4']
             )
         );
@@ -602,7 +618,7 @@ class VirtfusionDirectProvisioning extends Module
         $package_id->attach(
             $fields->fieldText(
                 'meta[package_id]',
-                (isset($vars->meta['package_id']) ? $vars->meta['package_id'] : null),
+                ($vars->meta['package_id'] ?? null),
                 ['id' => 'virtfusion_direct_provisioning_package_id']
             )
         );
@@ -613,7 +629,7 @@ class VirtfusionDirectProvisioning extends Module
         $os_id->attach(
             $fields->fieldText(
                 'meta[virtfusion-default_os_template]',
-                (isset($vars->meta['virtfusion-default_os_template']) ? $vars->meta['virtfusion-default_os_template'] : null),
+                ($vars->meta['virtfusion-default_os_template'] ?? null),
                 [
                     'id' => 'virtfusion_direct_provisioning_os_id',
                     'requred' => 'required'
@@ -656,8 +672,7 @@ class VirtfusionDirectProvisioning extends Module
         $parent_package = null,
         $parent_service = null,
         $status = 'pending'
-    )
-    {
+    ) {
         // $this->Input->setErrors(['api' => ['response' => print_r($client, true)]]);
         // return;
         // Set unset checkboxes
@@ -706,19 +721,16 @@ class VirtfusionDirectProvisioning extends Module
             $api->loadCommand('virtfusion_client');
 
             try {
-
                 $server_api = new VirtfusionClient($api);
 
-                $this->log($row->meta->hostname . '| client check', $vars['client_id'], "input", true);
+                $this->log($row->meta->hostname . '| client check', $vars['client_id'], 'input', true);
                 $request = $server_api->check($vars['client_id'], []);
 
 
                 if (isset($request['info'])) {
-
-                    $this->log($row->meta->hostname . '| client check result', serialize($request), "output", $request['info']['http_code'] == 200);
+                    $this->log($row->meta->hostname . '| client check result', serialize($request), 'output', $request['info']['http_code'] == 200);
                     switch ($request['info']['http_code']) {
                         case 200:
-
                             $data = json_decode($request['response']);
                             /**
                              *
@@ -728,19 +740,18 @@ class VirtfusionDirectProvisioning extends Module
                             break;
 
                         case 404:
-
                             Loader::loadModels($this, ['Clients']);
 
-                            $this->log($row->meta->hostname . '| get client', $vars['client_id'], "input", true);
+                            $this->log($row->meta->hostname . '| get client', $vars['client_id'], 'input', true);
                             $client = $this->Clients->get($vars['client_id'], false);
 
                             $request = $server_api->create([
-                                "name" => $client->first_name . ' ' . $client->last_name,
-                                "email" => $client->email,
+                                'name' => $client->first_name . ' ' . $client->last_name,
+                                'email' => $client->email,
                                 'extRelationId' => $vars['client_id']
                             ]);
 
-                            $this->log($row->meta->hostname . '| client info', serialize($request), "output", $request['info']['http_code'] == 201);
+                            $this->log($row->meta->hostname . '| client info', serialize($request), 'output', $request['info']['http_code'] == 201);
 
                             if (isset($request['info'])) {
                                 if ($request['info']['http_code'] !== 201) {
@@ -781,19 +792,19 @@ class VirtfusionDirectProvisioning extends Module
                     $virtfusion_extra_ips = 0;
                     if (isset($vars['configoptions']['additional_num_ips'])) {
                         $virtfusion_extra_ips = $vars['configoptions']['additional_num_ips'];
-                        $this->log($row->meta->hostname . '| number of extra IPs', $virtfusion_extra_ips, "input", true);
+                        $this->log($row->meta->hostname . '| number of extra IPs', $virtfusion_extra_ips, 'input', true);
                     }
 
                     $ipv4_count = (int)$package->meta->default_ipv4 + (int)$virtfusion_extra_ips;
 
                     $request = $server_api->create([
-                        "packageId" => $package->meta->package_id,
-                        "userId" => $data->data->id,
-                        "hypervisorId" => $hypervisor_group_id,
-                        "ipv4" => $ipv4_count,
+                        'packageId' => $package->meta->package_id,
+                        'userId' => $data->data->id,
+                        'hypervisorId' => $hypervisor_group_id,
+                        'ipv4' => $ipv4_count,
                     ]);
 
-                    $this->log($row->meta->hostname . '| create server', serialize($request), "input", $request['info']['http_code'] !== 201);
+                    $this->log($row->meta->hostname . '| create server', serialize($request), 'input', $request['info']['http_code'] !== 201);
 
                     if ($request['info']['http_code'] !== 201) {
                         $this->Input->setErrors(['api' => ['response' => 'Received  a ' . $request['info']['http_code'] . ' http code from the API. The action was unsuccessful.']]);
@@ -813,13 +824,13 @@ class VirtfusionDirectProvisioning extends Module
                     if (isset($vars['configoptions']['virtfusion-os_template'])) {
                         $virtfusion_os_id = $vars['configoptions']['virtfusion-os_template'];
                     }
-                    $this->log($row->meta->hostname . '| build os id', $virtfusion_os_id, "input", true);
+                    $this->log($row->meta->hostname . '| build os id', $virtfusion_os_id, 'input', true);
 
                     $hasError = true;
 
                     // check that is int no hiccups in extraction
                     if (is_numeric($virtfusion_os_id) && !empty($domain)) {
-                        $server_name = substr($domain, 0, strrpos($domain, "."));
+                        $server_name = substr($domain, 0, strrpos($domain, '.'));
 
                         $build_request = $server_api->build(
                             $server_id,
@@ -831,12 +842,11 @@ class VirtfusionDirectProvisioning extends Module
                                 // 'sshKeys' => [ 1 ], // not sure if needed
                                 // 'email' => true // not sure if needed (default false)
                                 ]
-                            );
+                        );
 
                         $build_data = json_decode($build_request['response']);
 
                         if ($build_request['info']['http_code'] == 200) {
-
                             $hasError = false;
 
                             $virtfusion_password = $build_data->data->settings->decryptedPassword;
@@ -858,52 +868,49 @@ class VirtfusionDirectProvisioning extends Module
 
                             if ($virtfusion_extra_ips > 0) {
                                 // get #3 - end
-                                $virtfusion_additional_ips_arr = array_slice($ip_addresses, $base_num+1, count($ip_addresses)-1);
+                                $virtfusion_additional_ips_arr = array_slice($ip_addresses, $base_num + 1, count($ip_addresses) - 1);
                                 $virtfusion_additional_ips = implode(',', $virtfusion_additional_ips_arr);
                             }
 
-                            for($i = 0; $i <= 10; $i++) {
+                            for ($i = 0; $i <= 10; $i++) {
                                 sleep(5);
                                 $server_info = $api->get_query("servers/$server_id");
                                 $server_data = json_decode($server_info['response']);
                                 if (isset($server_data->data->network->interfaces[0]->ipv6[0])) {
                                     $ipv6_data = $server_data->data->network->interfaces[0]->ipv6[0];
-                                    $virtfusion_ipv6_cidr = $ipv6_data->subnet."/".$ipv6_data->cidr;
-                                    $this->log($row->meta->hostname . '| get ipv6', serialize($ipv6_data), "output", $server_info['info']['http_code'] == 200);
+                                    $virtfusion_ipv6_cidr = $ipv6_data->subnet . '/' . $ipv6_data->cidr;
+                                    $this->log($row->meta->hostname . '| get ipv6', serialize($ipv6_data), 'output', $server_info['info']['http_code'] == 200);
                                     break;
                                 }
                             }
                         }
 
-                        $this->log($row->meta->hostname . '| build server', serialize($build_request), "output", $build_request['info']['http_code'] == 200);
+                        $this->log($row->meta->hostname . '| build server', serialize($build_request), 'output', $build_request['info']['http_code'] == 200);
                     }
 
                     if ($hasError) {
-
-                        $cleanup_request = $server_api->cancel($server_id,[]);
+                        $cleanup_request = $server_api->cancel($server_id, []);
 
                         // log clean up
                         // should we email admin?
-                        $this->log($row->meta->hostname . '| error services cleanup', serialize($cleanup_request), "output", $cleanup_request['info']['http_code'] == 200);
+                        $this->log($row->meta->hostname . '| error services cleanup', serialize($cleanup_request), 'output', $cleanup_request['info']['http_code'] == 200);
 
                         // generic error, will be improved
                         $this->Input->setErrors(['api' => ['response' => 'Could not build the server.']]);
                         // do server cleanup
                         return;
                     }
-
                 } else {
                     $this->Input->setErrors(['api' => ['response' => 'Failed to get a response from the API. The action was unsuccessful.']]);
                     return;
                 }
-
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->Input->setErrors(['api' => ['response' => print_r($e->getMessage(), true)]]);
                 return;
             }
         }
 
-        return array(
+        return [
             [
                 'key' => 'virtfusion-os_template',
                 'value' => $virtfusion_os_id,
@@ -944,7 +951,7 @@ class VirtfusionDirectProvisioning extends Module
                 'value' => $virtfusion_additional_ips,
                 'encrypted' => 0
             ]
-        );
+        ];
 
         // Return service fields
     }
@@ -996,7 +1003,7 @@ class VirtfusionDirectProvisioning extends Module
                     // if not staff override error
                     // since removing is not possible from this page
                     // give user some guidance
-                    if ( !isset($vars['staff_id']) ) {
+                    if (!isset($vars['staff_id'])) {
                         $this->Input->setErrors(['Internal' => [ 'Error' => 'You cannot remove IPs from this tab, please try again from IP Addresses tab' ] ]);
                     } else {
                         $this->Input->setErrors(['api' => ['response' => $data['errors']['err_msg']]]);
@@ -1048,14 +1055,12 @@ class VirtfusionDirectProvisioning extends Module
     public function suspendService($package, $service, $parent_package = null, $parent_service = null)
     {
         if (($row = $this->getModuleRow())) {
-
             $api = $this->getApi($row->meta->api_token, $row->meta->hostname);
             $service_fields = $this->serviceFieldsToObject($service->fields);
 
             $api->loadCommand('virtfusion_server');
 
             try {
-
                 $server_api = new VirtfusionServer($api);
                 $request = $server_api->suspend($service_fields->virtfusion_server_id, []);
 
@@ -1067,18 +1072,17 @@ class VirtfusionDirectProvisioning extends Module
                     } else {
                         $this->Input->setErrors(['api' => ['response' => 'Received  a ' . $request['info']['http_code'] . ' http code from the API. The action was unsuccessful.']]);
                     }
-
                 } else {
                     $this->Input->setErrors(['api' => ['response' => 'Failed to get a response from the API. The action was unsuccessful.']]);
                 }
 
-                $this->log($row->meta->hostname . '| suspend', serialize($request), "output", $success);
+                $this->log($row->meta->hostname . '| suspend', serialize($request), 'output', $success);
 
                 if (!$success) {
                     return;
                 }
                 return true;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
@@ -1108,14 +1112,12 @@ class VirtfusionDirectProvisioning extends Module
     public function unsuspendService($package, $service, $parent_package = null, $parent_service = null)
     {
         if (($row = $this->getModuleRow())) {
-
             $api = $this->getApi($row->meta->api_token, $row->meta->hostname);
             $service_fields = $this->serviceFieldsToObject($service->fields);
 
             $api->loadCommand('virtfusion_server');
 
             try {
-
                 $server_api = new VirtfusionServer($api);
                 $request = $server_api->unsuspend($service_fields->virtfusion_server_id, []);
 
@@ -1127,22 +1129,20 @@ class VirtfusionDirectProvisioning extends Module
                     } else {
                         $this->Input->setErrors(['api' => ['response' => 'Received  a ' . $request['info']['http_code'] . ' http code from the API. The action was unsuccessful.']]);
                     }
-
                 } else {
                     $this->Input->setErrors(['api' => ['response' => 'Failed to get a response from the API. The action was unsuccessful.']]);
                 }
 
-                $this->log($row->meta->hostname . '| unsuspend', serialize($request), "output", $success);
+                $this->log($row->meta->hostname . '| unsuspend', serialize($request), 'output', $success);
 
                 if (!$success) {
                     return;
                 }
                 return true;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
-
         }
 
         return null;
@@ -1175,7 +1175,6 @@ class VirtfusionDirectProvisioning extends Module
             $api->loadCommand('virtfusion_server');
 
             try {
-
                 $server_api = new VirtfusionServer($api);
                 $request = $server_api->cancel($service_fields->virtfusion_server_id, []);
 
@@ -1187,18 +1186,17 @@ class VirtfusionDirectProvisioning extends Module
                     } else {
                         $this->Input->setErrors(['api' => ['response' => 'Received  a ' . $request['info']['http_code'] . ' http code from the API. The action was unsuccessful.']]);
                     }
-
                 } else {
                     $this->Input->setErrors(['api' => ['response' => 'Failed to get a response from the API. The action was unsuccessful.']]);
                 }
 
-                $this->log($row->meta->hostname . '| cancel', serialize($request), "output", $success);
+                $this->log($row->meta->hostname . '| cancel', serialize($request), 'output', $success);
 
                 if (!$success) {
                     return;
                 }
                 return true;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
@@ -1293,8 +1291,7 @@ class VirtfusionDirectProvisioning extends Module
         $service,
         $parent_package = null,
         $parent_service = null
-    )
-    {
+    ) {
         $service_fields = $this->serviceFieldsToObject($service->fields);
 
         if (($row = $this->getModuleRow()) && isset($service_fields->virtfusion_server_id)) {
@@ -1306,7 +1303,7 @@ class VirtfusionDirectProvisioning extends Module
                 $server_api = new VirtfusionServer($api);
 
                 $server_info = $api->get_query("servers/$server_id");
-                $this->log($row->meta->hostname . '| client get server', serialize($server_info), "output", $server_info['info']['http_code'] == 200);
+                $this->log($row->meta->hostname . '| client get server', serialize($server_info), 'output', $server_info['info']['http_code'] == 200);
 
                 if (isset($server_info['info']) && $server_info['info']['http_code'] == '200') {
                     $server_data = json_decode($server_info['response']);
@@ -1315,7 +1312,7 @@ class VirtfusionDirectProvisioning extends Module
                     $primary_storage = null;
                     $new_primary_storage = null;
 
-                    foreach($server_data->data->storage as $storage) {
+                    foreach ($server_data->data->storage as $storage) {
                         if ($storage->primary) {
                             $primary_storage = $storage->capacity;
                         }
@@ -1323,11 +1320,11 @@ class VirtfusionDirectProvisioning extends Module
 
                     $new_pkg_id = $package_to->meta->package_id;
                     $pkg_response = $api->get_query("packages/$new_pkg_id");
-                    $this->log($row->meta->hostname . '| client get pkg', serialize($pkg_response), "output", $pkg_response['info']['http_code'] == 200);
+                    $this->log($row->meta->hostname . '| client get pkg', serialize($pkg_response), 'output', $pkg_response['info']['http_code'] == 200);
 
                     // issue geting pkg data, log and exit
                     if (isset($pkg_response['info']) && $pkg_response['info']['http_code'] != 200) {
-                        $this->Input->setErrors(['api' => ['response' => 'Error:'. $pkg_response['info']['http_code'] . ' Could not upgrade server.']]);
+                        $this->Input->setErrors(['api' => ['response' => 'Error:' . $pkg_response['info']['http_code'] . ' Could not upgrade server.']]);
                         return null;
                     }
 
@@ -1336,7 +1333,7 @@ class VirtfusionDirectProvisioning extends Module
 
                     // cannot downgrade
                     if (is_null($primary_storage) || $primary_storage > $new_primary_storage) {
-                        $this->log($row->meta->hostname . '| client upgrade storage', "possible downgrade attempt", "output", false);
+                        $this->log($row->meta->hostname . '| client upgrade storage', 'possible downgrade attempt', 'output', false);
                         $this->Input->setErrors(['api' => ['response' => 'Error:Storage Could not upgrade server.']]);
                         return null;
                     }
@@ -1346,10 +1343,10 @@ class VirtfusionDirectProvisioning extends Module
 
                     $server_pkg_data = $server_api->changePkg($server_id, $new_pkg_id);
                     $server_response = json_decode($server_pkg_data['response']);
-                    $this->log($row->meta->hostname . '| client upgrade server', serialize($server_pkg_data), "output", $server_pkg_data['info']['http_code'] == 200);
+                    $this->log($row->meta->hostname . '| client upgrade server', serialize($server_pkg_data), 'output', $server_pkg_data['info']['http_code'] == 200);
 
                     if ($server_pkg_data['info']['http_code'] != '200') {
-                        $msg = isset($server_response->errors) ? implode('<br />', $server_response->errors) : 'Error:'. $server_pkg_data['info']['http_code'] . ' Could not upgrade server.';
+                        $msg = isset($server_response->errors) ? implode('<br />', $server_response->errors) : 'Error:' . $server_pkg_data['info']['http_code'] . ' Could not upgrade server.';
 
                         $this->Input->setErrors(['api' => ['response' => $msg]]);
                         return null;
@@ -1357,15 +1354,13 @@ class VirtfusionDirectProvisioning extends Module
 
                     // auto reboot
                     $restart_data = $server_api->powerAction($server_id, 'restart');
-                    $this->log($row->meta->hostname . '| client restart server', serialize($restart_data), "output", $restart_data['info']['http_code'] == 200);
-
+                    $this->log($row->meta->hostname . '| client restart server', serialize($restart_data), 'output', $restart_data['info']['http_code'] == 200);
                 } else {
-                    $this->log($row->meta->hostname . '| client get server', serialize($server_info), "output", $server_info['info']['http_code'] == 200);
+                    $this->log($row->meta->hostname . '| client get server', serialize($server_info), 'output', $server_info['info']['http_code'] == 200);
                     $this->Input->setErrors(['api' => ['response' => $server_info['info']['http_code']]]);
                     return null;
                 }
-
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->Input->setErrors(['api' => ['response' => print_r($e->getMessage(), true)]]);
                 return null;
             }
@@ -1443,8 +1438,7 @@ class VirtfusionDirectProvisioning extends Module
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $this->view = new View('tabManage', 'default');
         $this->view->base_uri = $this->base_uri;
 
@@ -1464,14 +1458,12 @@ class VirtfusionDirectProvisioning extends Module
                         $request = $server_api->fetchToken($service_fields->virtfusion_server_id, $service->client_id, []);
 
                         if (isset($request['info'])) {
-
-                            $this->log($row->meta->hostname . '| client api token', serialize($request), "output", $request['info']['http_code'] == 200);
+                            $this->log($row->meta->hostname . '| client api token', serialize($request), 'output', $request['info']['http_code'] == 200);
                             if ($request['info']['http_code'] === 200) {
                                 $data = json_decode($request['response']);
 
-                                header("Location: https://" . $row->meta->hostname . $data->data->authentication->endpoint_complete);
+                                header('Location: https://' . $row->meta->hostname . $data->data->authentication->endpoint_complete);
                                 die();
-
                             }
                         }
                     }
@@ -1483,7 +1475,7 @@ class VirtfusionDirectProvisioning extends Module
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
         $this->view->set('client_id', $service->client_id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'virtfusion_direct_provisioning' . DS);
         return $this->view->fetch();
@@ -1495,8 +1487,7 @@ class VirtfusionDirectProvisioning extends Module
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $this->view = new View('tabAdminManage', 'default');
 
         $this->view->base_uri = $this->base_uri;
@@ -1517,12 +1508,11 @@ class VirtfusionDirectProvisioning extends Module
                         $request = $server_api->fetchToken($service_fields->virtfusion_server_id, $service->client_id, []);
 
                         if (isset($request['info'])) {
-
-                            $this->log($row->meta->hostname . '| admin api token', serialize($request), "output", $request['info']['http_code'] == 200);
+                            $this->log($row->meta->hostname . '| admin api token', serialize($request), 'output', $request['info']['http_code'] == 200);
                             if ($request['info']['http_code'] === 200) {
                                 $data = json_decode($request['response']);
 
-                                header("Location: https://" . $row->meta->hostname . $data->data->authentication->endpoint_complete);
+                                header('Location: https://' . $row->meta->hostname . $data->data->authentication->endpoint_complete);
                                 die();
                             }
                         }
@@ -1535,7 +1525,7 @@ class VirtfusionDirectProvisioning extends Module
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
         $this->view->set('client_id', $service->client_id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'virtfusion_direct_provisioning' . DS);
         return $this->view->fetch();
@@ -1557,8 +1547,7 @@ class VirtfusionDirectProvisioning extends Module
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $this->view = new View('tab_ips', 'default');
         $this->view->base_uri = $this->base_uri;
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'virtfusion_direct_provisioning' . DS);
@@ -1584,7 +1573,7 @@ class VirtfusionDirectProvisioning extends Module
         $ip_address_data = $this->getClientIpAddresses($package, $service, $get, $post, $client = true);
         $formated_ips = $this->formatIPToView($ip_address_data);
 
-        $submit_uri = $this->base_uri . "services/manage/".$service->id."/tabClientIPAddresses/";
+        $submit_uri = $this->base_uri . 'services/manage/' . $service->id . '/tabClientIPAddresses/';
         $this->view->set('submit_uri', $submit_uri);
         $this->view->set('ip_addresses', $formated_ips);
         $this->view->set('client_id', $service->client_id);
@@ -1611,8 +1600,7 @@ class VirtfusionDirectProvisioning extends Module
         array $get = null,
         array $post = null,
         array $files = null
-    )
-    {
+    ) {
         $this->view = new View('tab_ips', 'default');
         $this->view->base_uri = $this->base_uri;
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'virtfusion_direct_provisioning' . DS);
@@ -1641,13 +1629,13 @@ class VirtfusionDirectProvisioning extends Module
             $server_data = json_decode($server_info['response']);
             if (isset($server_data->data->network->interfaces[0]->ipv6[0])) {
                 $ipv6_data = $server_data->data->network->interfaces[0]->ipv6[0];
-                $virtfusion_ipv6 = $ipv6_data->subnet."/".$ipv6_data->cidr;
+                $virtfusion_ipv6 = $ipv6_data->subnet . '/' . $ipv6_data->cidr;
             }
 
-            $insert = array(
+            $insert = [
                 'key' => 'virtfusion_ipv6_cidr',
                 'value' => $virtfusion_ipv6
-            );
+            ];
 
             $this->Services->editField($service->id, $insert);
             unset($virtfusion_ipv6);
@@ -1670,7 +1658,8 @@ class VirtfusionDirectProvisioning extends Module
         return $this->view->fetch();
     }
 
-    private function removeIPAddress($package, $service, $post) {
+    private function removeIPAddress($package, $service, $post)
+    {
         Loader::loadHelpers($this, [
             'Invoices',
             'Services',
@@ -1682,7 +1671,7 @@ class VirtfusionDirectProvisioning extends Module
         $module_row = $this->getModuleRow();
 
         // Get current extra IP stuff
-        $extra_ips_arr = array();
+        $extra_ips_arr = [];
         $extra_ips = $service_fields->{'virtfusion-extra_ips'};
         if (!empty($extra_ips) && $module_row) {
             $extra_ips_arr = explode(',', $extra_ips);
@@ -1691,14 +1680,13 @@ class VirtfusionDirectProvisioning extends Module
         $ip_to_remove = $post['ip_address'];
 
         if (in_array($ip_to_remove, $extra_ips_arr)) {
-
             // Get and load api
             $api = $this->getApi($module_row->meta->api_token, $module_row->meta->hostname);
             $api->loadCommand('virtfusion_server');
             $server_api = new VirtfusionServer($api);
 
             $request = $server_api->removeIpv4($service_fields->virtfusion_server_id, [ $ip_to_remove ]);
-            $this->log($module_row->meta->hostname, serialize($request), "output", $request['info']['http_code'] == '204');
+            $this->log($module_row->meta->hostname, serialize($request), 'output', $request['info']['http_code'] == '204');
             $new_extra_ips = implode(',', array_diff($extra_ips_arr, [ $ip_to_remove ]));
 
             if ($request['info']['http_code'] == '204') {
@@ -1709,9 +1697,9 @@ class VirtfusionDirectProvisioning extends Module
                 $this->Services->editField(
                     $service->id,
                     [
-                        "key" => "virtfusion-extra_ips",
-                        "value" => implode(',', $new_extra_ips),
-                        "encrypted" => false
+                        'key' => 'virtfusion-extra_ips',
+                        'value' => implode(',', $new_extra_ips),
+                        'encrypted' => false
                     ]
                 );
 
@@ -1821,19 +1809,20 @@ class VirtfusionDirectProvisioning extends Module
      * @param object $ip_address_data An object representing all ips
      * @return array An array of ip for the template
      */
-    private function formatIPToView($ip_address_data) {
-        $view_ready = array();
+    private function formatIPToView($ip_address_data)
+    {
+        $view_ready = [];
 
         if (isset($ip_address_data->ip_addresses) && isset($ip_address_data->editable_options)) {
             $ip_addresses = $ip_address_data->ip_addresses;
             $editable_options = $ip_address_data->editable_options;
 
-            foreach($ip_addresses as $title => $address) {
-                $view_ready[] = (object) array(
-                    'header' => Language::_('VirtfusionDirectProvisioning.ipAddresses.'.$title, true),
+            foreach ($ip_addresses as $title => $address) {
+                $view_ready[] = (object) [
+                    'header' => Language::_('VirtfusionDirectProvisioning.ipAddresses.' . $title, true),
                     'editable' => $editable_options[$title], // 1/0 for yes no
                     'ip_addresses' => $address // needs to be array
-                );
+                ];
             }
         }
 
@@ -1847,12 +1836,13 @@ class VirtfusionDirectProvisioning extends Module
      * @param array $vars An array of user supplied info to satisfy the request
      * @return null
      */
-    private function adjustIpAddresses($module_row, $service_fields, $vars) {
+    private function adjustIpAddresses($module_row, $service_fields, $vars)
+    {
         $edit_qty = 0;
         $current_qty = 0;
-        $extra_ips = array();
-        $ips_to_remove = array();
-        $new_extra_ips = array();
+        $extra_ips = [];
+        $ips_to_remove = [];
+        $new_extra_ips = [];
         $err_msg = '';
 
 
@@ -1881,7 +1871,7 @@ class VirtfusionDirectProvisioning extends Module
             $diff_qty = $edit_qty - $current_qty;
 
             $request = $server_api->addIpv4Qty($service_fields->virtfusion_server_id, $diff_qty);
-            $this->log($module_row->meta->hostname, serialize($request), "output", $request['info']['http_code'] == '200');
+            $this->log($module_row->meta->hostname, serialize($request), 'output', $request['info']['http_code'] == '200');
             $response = json_decode($request['response'], true);
 
             if ($request['info']['http_code'] != '200') {
@@ -1889,8 +1879,7 @@ class VirtfusionDirectProvisioning extends Module
             } else {
                 $new_extra_ips = array_merge($extra_ips, $response['data']);
             }
-
-        } else if ($current_qty > $edit_qty) {
+        } elseif ($current_qty > $edit_qty) {
             // REMOVE
             $diff_qty = $current_qty - $edit_qty;
 
@@ -1900,13 +1889,12 @@ class VirtfusionDirectProvisioning extends Module
                 $new_extra_ips = array_diff($extra_ips, $ips_to_remove);
 
                 $request = $server_api->removeIpv4($service_fields->virtfusion_server_id, $ips_to_remove);
-                $this->log($module_row->meta->hostname, serialize($request), "output", $request['info']['http_code'] == '204');
+                $this->log($module_row->meta->hostname, serialize($request), 'output', $request['info']['http_code'] == '204');
                 if ($request['info']['http_code'] != '204') {
                     $err_msg = 'There was an error while removing IP Addresses';
                 }
-
             } else {
-                $err_msg = "Extra IP addresses to be removed did not match number of IPs being removed!";
+                $err_msg = 'Extra IP addresses to be removed did not match number of IPs being removed!';
             }
         }
 
@@ -1915,12 +1903,12 @@ class VirtfusionDirectProvisioning extends Module
             $service_fields->{'additional_num_ips'} = implode(',', $new_extra_ips);
         }
 
-        return array(
+        return [
             'service_fields' => $service_fields,
             'errors' => [
                 'err_msg' => $err_msg
             ]
-        );
+        ];
     }
 
     /**
@@ -1934,7 +1922,8 @@ class VirtfusionDirectProvisioning extends Module
      * @param bool $client True if the action is being performed by the client, false otherwise
      * @return array An array of vars for the template
      */
-    private function getClientIpAddresses($package, $service, array $get = null, array $post = null, $client = false) {
+    private function getClientIpAddresses($package, $service, array $get = null, array $post = null, $client = false)
+    {
         Loader::loadModels($this, ['Services']);
 
         // Get the service fields
@@ -1942,13 +1931,13 @@ class VirtfusionDirectProvisioning extends Module
         $module_row = $this->getModuleRow($package->module_row);
 
         // define items we will return
-        $main_ip = array();
-        $base_ips = array();
-        $additional_ips = array();
+        $main_ip = [];
+        $base_ips = [];
+        $additional_ips = [];
         $option_addable = false;
 
         // determine if we can add more IPs
-        foreach($service->options as $option) {
+        foreach ($service->options as $option) {
             if ($option->option_name == 'additional_num_ips') {
                 $option_addable = $option->option_addable;
             }
@@ -1983,21 +1972,21 @@ class VirtfusionDirectProvisioning extends Module
         }
 
         // for consistency make it an opject
-        return (object) array(
-            'ip_addresses' => array(
+        return (object) [
+            'ip_addresses' => [
                 'main' => $main_ip,
                 'base' => $base_ips,
                 'extra' => array_values($additional_ips ?? []),
                 'ipv6' => array_values($ipv6 ?? []),
-            ),
-            'editable_options' => array(
+            ],
+            'editable_options' => [
                 'main' => false,
                 'base' => false,
                 'extra' => $option_editable,
                 'ipv6' => false
-            ),
+            ],
             'addable' => $option_addable
-        );
+        ];
     }
 
     /**
@@ -2030,13 +2019,14 @@ class VirtfusionDirectProvisioning extends Module
 
 
     /** Simple function to get user add/edit avail actions */
-    private function getServiceOption($package_id, $service_name) {
-        $options = array();
+    private function getServiceOption($package_id, $service_name)
+    {
+        $options = [];
 
         Loader::loadModels($this, ['PackageOptions']);
-    	$package_options = $this->PackageOptions->getByPackageId($package_id);
+        $package_options = $this->PackageOptions->getByPackageId($package_id);
 
-        foreach($package_options as $option) {
+        foreach ($package_options as $option) {
             if ($option->name == $service_name) {
                 $options['addable'] = $option->addable;
                 $options['editable'] = $option->editable;
@@ -2062,12 +2052,12 @@ class VirtfusionDirectProvisioning extends Module
         $fields = new ModuleFields();
 
 
-        $hostname_field = $fields->label(Language::_("VirtfusionDirectProvisioning.option_fields.hostname.label", true), "hostname");
+        $hostname_field = $fields->label(Language::_('VirtfusionDirectProvisioning.option_fields.hostname.label', true), 'hostname');
         $hostname_field->attach(
             $fields->fieldText(
-                "virtfusion_hostname",
+                'virtfusion_hostname',
                 $this->Html->ifSet($vars->virtfusion_hostname),
-                array('id'=>'virtfusion_hostname', 'required'=>'required')
+                ['id' => 'virtfusion_hostname', 'required' => 'required']
             )
         );
         // Set the field
@@ -2076,8 +2066,8 @@ class VirtfusionDirectProvisioning extends Module
 
         $fields->setHtml("
             <style>.cst_error {border:2px solid red}</style>
-            <script type='text/javascript'>".$this->getHostnameValidationJS()."</script>
-        ");
+            <script type='text/javascript'>" . $this->getHostnameValidationJS() . '</script>
+        ');
 
         return $fields;
     }
@@ -2096,12 +2086,12 @@ class VirtfusionDirectProvisioning extends Module
 
         $fields = new ModuleFields();
 
-        $hostname_field = $fields->label(Language::_("VirtfusionDirectProvisioning.option_fields.hostname.label", true), "hostname");
+        $hostname_field = $fields->label(Language::_('VirtfusionDirectProvisioning.option_fields.hostname.label', true), 'hostname');
         $hostname_field->attach(
             $fields->fieldText(
-                "virtfusion_hostname",
+                'virtfusion_hostname',
                 $this->Html->ifSet($vars->virtfusion_hostname),
-                array('id'=>'virtfusion_hostname', 'required'=>'required')
+                ['id' => 'virtfusion_hostname', 'required' => 'required']
             )
         );
         // Set the field
@@ -2113,13 +2103,13 @@ class VirtfusionDirectProvisioning extends Module
         $server_id->attach(
             $fields->fieldText(
                 'virtfusion_server_id',
-                (isset($vars->virtfusion_server_id) ? $vars->virtfusion_server_id : null),
+                ($vars->virtfusion_server_id ?? null),
                 ['id' => 'virtfusion_direct_provisioning_server_id']
             )
         );
         $fields->setField($server_id);
 
-        $extra_ips = array();
+        $extra_ips = [];
         // explode will add blank item to array if its empty
         if (isset($vars->{'additional_num_ips'}) && !empty($vars->{'additional_num_ips'})) {
             $ip_options = explode(',', $vars->{'additional_num_ips'});
@@ -2143,8 +2133,8 @@ class VirtfusionDirectProvisioning extends Module
 
         $fields->setHtml("
             <style>.cst_error {border:2px solid red}</style>
-            <script type='text/javascript'>".$this->getHostnameValidationJS()."</script>
-        ");
+            <script type='text/javascript'>" . $this->getHostnameValidationJS() . '</script>
+        ');
 
         return $fields;
     }
@@ -2157,23 +2147,24 @@ class VirtfusionDirectProvisioning extends Module
      * @return ModuleFields A ModuleFields object, containg the fields to render
      *  as well as any additional HTML markup to include
      */
-    public function getClientAddFields($package, $vars = null) {
-        Loader::loadHelpers($this, array("Html"));
+    public function getClientAddFields($package, $vars = null)
+    {
+        Loader::loadHelpers($this, ['Html']);
 
         $fields = new ModuleFields();
 
         // Create field label
-        $hostname_field = $fields->label(Language::_("VirtfusionDirectProvisioning.option_fields.hostname.label", true), "hostname");
+        $hostname_field = $fields->label(Language::_('VirtfusionDirectProvisioning.option_fields.hostname.label', true), 'hostname');
         // Create field and attach to label
         // Add a tooltip next to this field
-        $tooltip = $fields->tooltip(Language::_("VirtfusionDirectProvisioning.option_fields.hostname.tooltip", true));
+        $tooltip = $fields->tooltip(Language::_('VirtfusionDirectProvisioning.option_fields.hostname.tooltip', true));
         $hostname_field->attach($tooltip);
 
         $hostname_field->attach(
             $fields->fieldText(
-                "virtfusion_hostname",
+                'virtfusion_hostname',
                 $this->Html->ifSet($vars->virtfusion_hostname),
-                array('id'=>'virtfusion_hostname', 'required'=>'required')
+                ['id' => 'virtfusion_hostname', 'required' => 'required']
             )
         );
         // Set the field
@@ -2181,18 +2172,18 @@ class VirtfusionDirectProvisioning extends Module
 
         $service_options = $this->getServiceOption($package->id, 'additional_num_ips');
         if (!empty($service_options) && $service_options['addable'] == '1') {
-
         }
 
         $fields->setHtml("
             <style>.cst_error {border:2px solid red}</style>
-            <script type='text/javascript'>".$this->getHostnameValidationJS()."</script>
-        ");
+            <script type='text/javascript'>" . $this->getHostnameValidationJS() . '</script>
+        ');
 
         return $fields;
     }
 
-    public function getClientEditFields($package, $vars = null) {
+    public function getClientEditFields($package, $vars = null)
+    {
         die('why you no work');
     }
 
@@ -2232,13 +2223,14 @@ class VirtfusionDirectProvisioning extends Module
      * @param string $host_name The host name to validate
      * @return bool True if the hostname is valid, false otherwise
      */
-    public function validateHostname($host_name) {
+    public function validateHostname($host_name)
+    {
         if (strlen($host_name) > 255) {
             return false;
         }
 
-        $octet = "([a-z0-9]|[a-z0-9][a-z0-9\-]{0,61}[a-z0-9])";
-        $nested_octet = "(\." . $octet . ')';
+        $octet = '([a-z0-9]|[a-z0-9][a-z0-9\-]{0,61}[a-z0-9])';
+        $nested_octet = '(\.' . $octet . ')';
         $hostname_regex = '/^' . $octet . $nested_octet . $nested_octet . '+$/i';
 
         $valid = $this->Input->matches($host_name, $hostname_regex);
@@ -2250,7 +2242,8 @@ class VirtfusionDirectProvisioning extends Module
      * Similar to @VirtfusionDirectProvisioning:validateHostname
      * but for validating on the front end
      */
-    private function getHostnameValidationJS() {
+    private function getHostnameValidationJS()
+    {
         $str = "
             $(document).ready(function() {
                 $('#virtfusion_hostname').focusout(function() {

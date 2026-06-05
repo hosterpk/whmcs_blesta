@@ -41,6 +41,13 @@ class AdminMain extends ClientDocumentsController
         $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'date_added');
         $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
 
+        // Set sidebar client button
+        $this->structure->set('icon_bar', [
+            'bottom' => [
+                ['href' => $this->base_uri . 'clients/view/' . ($client->id ?? null), 'icon' => 'bi bi-person']
+            ]
+        ]);
+
         $this->set('client', $client);
         $this->set('documents', $this->ClientDocumentsFiles->getAll($client->id, [$sort => $order]));
         $this->set('sort', $sort);
@@ -60,6 +67,13 @@ class AdminMain extends ClientDocumentsController
             $this->redirect($this->base_uri . 'clients/');
         }
 
+        // Set sidebar client button
+        $this->structure->set('icon_bar', [
+            'bottom' => [
+                ['href' => $this->base_uri . 'clients/view/' . ($client->id ?? null), 'icon' => 'bi bi-person']
+            ]
+        ]);
+
         $vars = [];
 
         if (!empty($this->post)) {
@@ -78,6 +92,7 @@ class AdminMain extends ClientDocumentsController
         }
 
         $this->set('vars', (object)$vars);
+        $this->set('client', $client);
     }
 
     /**

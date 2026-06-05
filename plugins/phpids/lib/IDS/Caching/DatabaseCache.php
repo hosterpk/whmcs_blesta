@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PHPIDS
  *
@@ -146,14 +147,16 @@ class DatabaseCache implements CacheInterface
     {
         $handle = $this->handle;
 
-        $rows = $handle->query('SELECT created FROM `' . $this->config['table'].'`');
+        $rows = $handle->query('SELECT created FROM `' . $this->config['table'] . '`');
 
         if (!$rows || $rows->rowCount() === 0) {
             $this->write($handle, $data);
         } else {
             foreach ($rows as $row) {
-                if ((time()-strtotime($row['created'])) >
-                    $this->config['expiration_time']) {
+                if (
+                    (time() - strtotime($row['created'])) >
+                    $this->config['expiration_time']
+                ) {
                     $this->write($handle, $data);
                 }
             }
@@ -180,10 +183,10 @@ class DatabaseCache implements CacheInterface
                 $this->config['table'] .
                 '` where type=?'
             );
-            $result->execute(array($this->type));
+            $result->execute([$this->type]);
 
             foreach ($result as $row) {
-                return unserialize($row['data']);
+                return safe_unserialize($row['data']);
             }
         } catch (\PDOException $e) {
             throw new \PDOException('PDOException: ' . $e->getMessage());
@@ -202,10 +205,12 @@ class DatabaseCache implements CacheInterface
     private function connect()
     {
         // validate connection parameters
-        if (!$this->config['wrapper']
+        if (
+            !$this->config['wrapper']
             || !$this->config['user']
                 || !$this->config['password']
-                    || !$this->config['table']) {
+                    || !$this->config['table']
+        ) {
             throw new \Exception('Insufficient connection parameters');
         }
 
@@ -236,10 +241,10 @@ class DatabaseCache implements CacheInterface
     private function write($handle, $data)
     {
         try {
-            $handle->query('TRUNCATE ' . $this->config['table'].'');
+            $handle->query('TRUNCATE ' . $this->config['table'] . '');
             $statement = $handle->prepare(
                 'INSERT INTO `' .
-                $this->config['table'].'` (
+                $this->config['table'] . '` (
                     type,
                     data,
                     created,

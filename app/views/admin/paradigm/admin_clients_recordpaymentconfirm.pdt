@@ -1,0 +1,50 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.recordpaymentconfirm.boxtitle_recordconfirm', true), ['id' => 'admin_clients_recordpaymentconfirm'], (isset($render_section) ? $render_section : null));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+$this->Form->fieldHidden('vars', base64_encode(serialize($vars)));
+$this->Form->fieldHidden('step', (isset($step) ? $step : null));
+?>
+    <div class="mb-4">
+        <h6 class="form-section-header"><?php $this->_('AdminClients.recordpaymentconfirm.payment_details');?></h6>
+        <p>
+            <?php
+            if ((isset($vars->payment_type) ? $vars->payment_type : null) == 'credit') {
+                $this->_('AdminClients.recordpaymentconfirm.trans_info_credit');
+            } elseif ((isset($vars->transaction_id) ? $vars->transaction_id : null) != '') {
+                $this->_('AdminClients.recordpaymentconfirm.trans_info_detailed', false, (isset($transaction_types[$vars->transaction_type]) ? $transaction_types[$vars->transaction_type] : null), (isset($vars->transaction_id) ? $vars->transaction_id : null));
+            } else {
+                $this->_('AdminClients.recordpaymentconfirm.trans_info', false, (isset($transaction_types[$vars->transaction_type]) ? $transaction_types[$vars->transaction_type] : null));
+            }
+            ?>
+        </p>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="form-section-header"><?php $this->_('AdminClients.recordpaymentconfirm.email_receipt');?></h6>
+        <p>
+            <?php $this->_((isset($vars->email_receipt) ? $vars->email_receipt : null) == 'true' ? 'AdminClients.recordpaymentconfirm.email_receipt_yes' : 'AdminClients.recordpaymentconfirm.email_receipt_no');?>
+        </p>
+    </div>
+
+    <div class="pricing-summary-box" style="max-width: none;">
+        <div class="pricing-line pricing-total">
+            <span class="pricing-label"><?php $this->_('AdminClients.recordpaymentconfirm.total');?></span>
+            <span class="pricing-amount"><?php echo $this->CurrencyFormat->format((isset($total) ? $total : null), $currency);?></span>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <?php
+    $this->Form->fieldSubmit('submit_edit', $this->_('AdminClients.recordpaymentconfirm.field_edit', true), ['class' => 'btn btn-outline-secondary']);
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.recordpaymentconfirm.field_submit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>

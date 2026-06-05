@@ -1,0 +1,62 @@
+{
+    "columns": [
+        {
+            "name": "plugin_id",
+            "type": "int unsigned",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "precision": 10,
+            "scale": 0
+        },
+        {
+            "name": "event",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": "PRI",
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "callback",
+            "type": "varchar(128)",
+            "nullable": false,
+            "key": null,
+            "default": null,
+            "extra": null,
+            "max_length": 128
+        },
+        {
+            "name": "enabled",
+            "type": "tinyint unsigned",
+            "nullable": false,
+            "key": "MUL",
+            "default": "1",
+            "extra": null,
+            "precision": 3,
+            "scale": 0
+        }
+    ],
+    "indexes": [
+        {
+            "name": "enabled",
+            "unique": false,
+            "type": "BTREE",
+            "columns": [
+                "enabled"
+            ]
+        },
+        {
+            "name": "PRIMARY",
+            "unique": true,
+            "type": "BTREE",
+            "columns": [
+                "plugin_id",
+                "event"
+            ]
+        }
+    ],
+    "foreign_keys": []
+}

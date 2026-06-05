@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -195,7 +196,7 @@ class DeliverInvoices extends AbstractTask
         }
 
         // Get the company hostname
-        $hostname = isset(Configure::get('Blesta.company')->hostname) ? Configure::get('Blesta.company')->hostname : '';
+        $hostname = Configure::get('Blesta.company')->hostname ?? '';
 
         // Set the email template to use
         $email_template = 'invoice_delivery_unpaid';
@@ -231,9 +232,7 @@ class DeliverInvoices extends AbstractTask
                 $account_types = $debit_account->type == 'cc'
                     ? $this->Accounts->getCcTypes()
                     : $this->Accounts->getAchTypes();
-                $autodebit_account->type_name = isset($account_types[$autodebit_account->type])
-                    ? $account_types[$autodebit_account->type]
-                    : $autodebit_account->type;
+                $autodebit_account->type_name = $account_types[$autodebit_account->type] ?? $autodebit_account->type;
 
                 $autodebit_account->account_type = $debit_account->type;
             }

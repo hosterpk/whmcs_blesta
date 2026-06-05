@@ -44,7 +44,7 @@ $lang['AdminSearch.invoice.heading_date_billed'] = 'Date Billed';
 $lang['AdminSearch.invoice.heading_date_due'] = 'Date Due';
 $lang['AdminSearch.invoice.heading_sent'] = 'Sent';
 $lang['AdminSearch.invoice.heading_status'] = 'Status';
-$lang['AdminSearch.invoice.heading_amount'] = 'Options';
+$lang['AdminSearch.invoice.heading_options'] = 'Actions';
 
 $lang['AdminSearch.invoice.option_view'] = 'View';
 $lang['AdminSearch.invoices.status_open'] = 'Open';
@@ -68,7 +68,7 @@ $lang['AdminSearch.transactions.heading_applied'] = 'Applied';
 $lang['AdminSearch.transactions.heading_number'] = 'Number';
 $lang['AdminSearch.transactions.heading_status'] = 'Status';
 $lang['AdminSearch.transactions.heading_date'] = 'Date';
-$lang['AdminSearch.transactions.heading_options'] = 'Options';
+$lang['AdminSearch.transactions.heading_options'] = 'Actions';
 
 $lang['AdminSearch.transactions.option_edit'] = 'Edit';
 

@@ -1,0 +1,81 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminClients.packages.boxtitle_packages', true));
+
+$this->Form->create(null, ['id' => 'packages', 'class' => 'disable-on-submit']);
+$this->Form->fieldHidden('post_data', '1');
+
+if ((isset($packages) ? $packages : false) && ($num_packages = count($packages)) > 0) {
+?>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 40px;" class="text-center"><?php $this->Form->fieldCheckbox('package_id[]', 'all', ((isset($vars->package_id[0]) ? $this->Html->safe($vars->package_id[0]) : null) == 'all'), ['class' => 'form-check-input']);?></th>
+                    <th><?php $this->_('AdminClients.packages.text_name');?></th>
+                    <th><?php $this->_('AdminClients.packages.text_module');?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php for ($i = 0; $i < $num_packages; $i++) { ?>
+                <tr>
+                    <td class="text-center"><?php $this->Form->fieldCheckbox('package_ids[' . (isset($packages[$i]->id) ? $packages[$i]->id : null) . ']', (isset($packages[$i]->id) ? $packages[$i]->id : null), ((isset($vars->package_ids[$packages[$i]->id]) ? $vars->package_ids[$packages[$i]->id] : false) == $packages[$i]->id), ['class' => 'form-check-input']);?></td>
+                    <td><a href="<?php echo $this->Html->safe($this->base_uri . 'packages/edit/' . (isset($packages[$i]->id) ? $packages[$i]->id : null));?>"><?php (print (isset($packages[$i]->name) ? $this->Html->safe($packages[$i]->name) : null));?></a></td>
+                    <td><?php (print (isset($packages[$i]->module_name) ? $this->Html->safe($packages[$i]->module_name) : null));?></td>
+                </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end">
+            <?php $this->Form->fieldSubmit('save', $this->_('AdminClients.packages.field_packagesubmit', true), ['class' => 'btn btn-primary']);?>
+        </div>
+    </div>
+<?php
+} else {
+?>
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="mt-3 mb-0"><?php $this->_('AdminClients.packages.no_results');?></p>
+    </div>
+<?php
+}
+?>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Check/uncheck packages
+    var packageCheckboxes = document.querySelectorAll('#packages input');
+    packageCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('click', function() {
+            var checkedCount = document.querySelectorAll('#packages input:checked').length;
+
+            if (checkedCount > 0) {
+                // Check all checkboxes
+                if (this.value === 'all') {
+                    packageCheckboxes.forEach(function(cb) {
+                        cb.checked = this.checked;
+                    }, this);
+                } else {
+                    // Check individual checkboxes
+                    if (!this.checked) {
+                        // Uncheck 'all'
+                        var allCheckbox = document.querySelector('#packages input[value="all"]');
+                        if (allCheckbox) {
+                            allCheckbox.checked = false;
+                        }
+                    }
+                }
+            }
+        });
+    });
+});
+</script>

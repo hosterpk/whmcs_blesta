@@ -1,0 +1,717 @@
+<script>
+(function () {
+    var container_selector = '<?php echo ($container_selector ?? null);?>';
+    var triggers = <?php echo ($triggers ?? json_encode([]));?>;
+    var evaluations = <?php echo ($evaluations ?? json_encode([]));?>;
+    var defaults = <?php echo ($defaults ?? json_encode([]));?>;
+    var pre_logic_element_states = {};
+    var pre_logic_values = {};
+    var is_edit = <?php echo $is_edit ? 'true' : 'false';?>;
+    var is_initial_evaluation = true;
+
+    // Utility helpers
+    function qs(sel, ctx) {
+        return (ctx || document).querySelector(sel);
+    }
+    function qsa(sel, ctx) {
+        return (ctx || document).querySelectorAll(sel);
+    }
+    function isNumeric(v) {
+        return !isNaN(parseFloat(v)) && isFinite(v);
+    }
+
+    var container = qs(container_selector);
+    if (!container) {
+        return;
+    }
+
+    // Add delegated change listener for all trigger selectors
+    container.addEventListener('change', function (e) {
+        for (var trigger_element in triggers) {
+            if (e.target.matches(trigger_element) || e.target.closest(trigger_element)) {
+                evaluateOptions(trigger_element);
+            }
+        }
+    });
+
+    // Trigger initial option evaluations
+    qsa('input,textarea,select', container).forEach(function (el) {
+        el.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+    is_initial_evaluation = false;
+
+    function evaluateOptions(trigger_element)
+    {
+        // Make a list of elements affected by the trigger element
+        var options_to_evaluate = [triggers[trigger_element]];
+
+        // Determine whether elements are disabled at the beginning of logic evaluations
+        for (var option_id in evaluations) {
+            var selector = "*[name='configoptions[" + option_id + "]";
+            pre_logic_element_states[selector] = evaluateDisabledStatus(selector);
+            var el = qs(selector);
+            pre_logic_values[selector] = el ? el.value : '';
+        }
+
+        // Loop over the affected fields, evaluating the logic for each
+        var options_evaluated = 0;
+        for (var i = 0; true;) {
+            for (var option_id in options_to_evaluate[i]) {
+                var value_ids = options_to_evaluate[i][option_id];
+                var changed = false;
+
+                // Evaluate each option/value pair to see if it is enabled based on the new value of this
+                // field, keeping track of whether the evaluated option was changed due to the option or current
+                // value being disabled
+                for (var value_id in value_ids) {
+                    changed = evaluateOption(option_id, value_id) || changed;
+                }
+
+                // If a change was made to the affected field, search for triggers associated with it,
+                // and add affected fields to the evaluation list
+                var option_selecter = "*[name='configoptions[" + option_id + "]']";
+                if (changed && (option_selecter in triggers)) {
+                    options_to_evaluate[options_to_evaluate.length] = triggers[option_selecter];
+                }
+
+                // Continue looping over the list until all evaluations are resolved.  It is likely possible to
+                // set up an infinite loop in this way, so perhaps we have a cap on evaluations
+                // and log or output an notice when the limit is reached
+                options_evaluated++;
+                if (options_evaluated > <?php echo ($maximum_evaluations ?? null);?>) {
+                    console.log('Option logic evaluation limit exceeded');
+                    break;
+                }
+            }
+
+            i++;
+            if (i >= options_to_evaluate.length) {
+                break;
+            }
+        }
+
+        // This is a small concession to the Order plugin which triggers a summary fetch after all evaluations are complete
+        if (typeof fetchSummary === "function") {
+            fetchSummary();
+        }
+
+        // Reset the list of pre-logic element states (disabled or enabled) and values
+        pre_logic_element_states = {};
+        pre_logic_values = {};
+    }
+
+    /**
+     * Evaluates the given option/value to see if it should be displayed or hidden
+     */
+    function evaluateOption(option_id, value_id)
+    {
+        var changed = false;
+        var condition_sets = evaluations[option_id][value_id];
+        for (var condition_set_id in condition_sets) {
+            var conditions = condition_sets[condition_set_id];
+            var target_element = conditions.target_element;
+
+            // Show fields by default and only hide them if they have display condition sets and fail them all
+            var show_field = true;
+
+            for (var condition_id in conditions) {
+                if (condition_id === 'target_element') {
+                    continue;
+                }
+
+                var evaluation = evaluateCondition(conditions[condition_id]);
+
+                // One condition in the set has failed, and thus the set evaluates as false
+                if (!evaluation) {
+                    show_field = false;
+                    break;
+                }
+            }
+
+            if (show_field) {
+                changed = enablePackageOptionField(target_element);
+
+                // One show condition set has been fulfilled, show field and bypass other checks
+                break;
+            } else {
+                changed = disablePackageOptionField(target_element, conditions[condition_id].hide_on_disable);
+            }
+        }
+
+        return changed;
+    }
+
+    /**
+     * Determines whether the field associated with the target element is disabled or enabled
+     *
+     * @param {String} target_element
+     */
+    function evaluateDisabledStatus(target_element)
+    {
+        var disabled = true;
+        var el = qs(target_element);
+
+        if (!el) {
+            return 'disabled';
+        }
+
+        if (el.tagName === 'OPTION') {
+            disabled = isFieldDisabled(el.closest('select'));
+        } else if (el.matches('input[type=radio]')) {
+            disabled = isFieldDisabled(el);
+            var radios = el.parentElement.querySelectorAll('input[type=radio]');
+            radios.forEach(function (radio) {
+                if (radio !== el && !isFieldDisabled(radio)) {
+                    disabled = false;
+                }
+            });
+        } else {
+            if (!el.disabled) {
+                disabled = false;
+            }
+        }
+
+        return disabled ? 'disabled' : 'enabled';
+    }
+
+    /**
+     * Evaluates a condition
+     *
+     * @param {Object} condition
+     */
+    function evaluateCondition(condition)
+    {
+        var evaluation = true;
+
+        var condition_value = condition.values[0];
+        // Convert numeric strings to integers for proper condition evaluations
+        if (typeof condition_value !== 'number' && isNumeric(condition_value)) {
+            condition_value = parseInt(condition_value);
+        }
+
+        // Convert numeric strings to integers for proper condition evaluations
+        var triggerEl = qs(condition.trigger_selectors[0]);
+        var field_value = triggerEl ? triggerEl.value : '';
+        if (typeof field_value !== 'number' && isNumeric(field_value)) {
+            field_value = parseInt(field_value);
+        }
+
+        if (condition.operator === 'notin') {
+            evaluation = evaluateNotIn(condition);
+        } else if (condition.operator === 'in') {
+            evaluation = evaluateIn(condition);
+        } else if (condition.operator === '!=') {
+            evaluation = evaluateNotEqual(condition, field_value);
+        } else if (condition.operator === '=') {
+            evaluation = evaluateEqual(condition, field_value);
+        } else if (condition.operator === '>') {
+            evaluation = field_value > condition_value;
+        } else if (condition.operator === '<') {
+            evaluation = field_value < condition_value;
+        }
+
+        return evaluation;
+    }
+
+    /**
+     * Evaluate an "in" condition
+     *
+     * @param {Object} condition
+     */
+    function evaluateIn(condition)
+    {
+        var evaluation = false;
+
+        // Check each trigger to see if they are select or match a condition value
+        condition.trigger_selectors.every(function (trigger_selector) {
+            var trigger_field = qs(trigger_selector);
+            if (!trigger_field) {
+                return true;
+            }
+
+            if (trigger_field.tagName === 'OPTION') {
+                // Handle 'select' trigger fields
+                evaluation = trigger_field.selected === true;
+            } else if (trigger_field.type === 'checkbox' || trigger_field.type === 'radio') {
+                // Handle 'checkbox' and 'radio' trigger fields
+                evaluation = trigger_field.checked === true;
+            } else {
+                // Handle 'text', 'textarea', and 'password' trigger fields
+                var field_value = trigger_field.value;
+
+                // Convert numeric strings to integers for proper condition evaluations
+                if (typeof field_value !== 'number' && isNumeric(field_value)) {
+                    field_value = parseInt(field_value);
+                }
+
+                evaluation = field_value !== '' && condition.values.includes(field_value);
+            }
+
+            // Condition fulfilled, stop evaluations
+            return !evaluation;
+        });
+
+        return evaluation;
+    }
+
+    /**
+     * Evaluate a "not in" condition
+     *
+     * @param {Object} condition
+     */
+    function evaluateNotIn(condition)
+    {
+        var evaluation = true;
+
+        // Check each trigger to see if they are select or match a condition value
+        condition.trigger_selectors.every(function (trigger_selector) {
+            var trigger_field = qs(trigger_selector);
+            if (!trigger_field) {
+                return true;
+            }
+
+            if (trigger_field.tagName === 'OPTION') {
+                // Handle 'select' trigger fields
+                evaluation = trigger_field.selected === false;
+            } else if (trigger_field.type === 'checkbox' || trigger_field.type === 'radio') {
+                // Handle 'checkbox' and 'radio' trigger fields
+                evaluation = trigger_field.checked === false;
+            } else {
+                // Handle 'text', 'textarea', and 'password' trigger fields
+                var field_value = trigger_field.value;
+
+                // Convert numeric strings to integers for proper condition evaluations
+                if (typeof field_value !== 'number' && isNumeric(field_value)) {
+                    field_value = parseInt(field_value);
+                }
+
+                evaluation = !condition.values.includes(field_value);
+            }
+
+            // Condition not fulfilled, stop evaluations
+            return evaluation;
+        });
+
+        return evaluation;
+    }
+
+    /**
+     * Evaluate a "not equal" condition
+     *
+     * @param {Object} condition
+     * @param {String} field_value
+     */
+    function evaluateNotEqual(condition, field_value)
+    {
+        var trigger_field = qs(condition.trigger_selectors[0]);
+        if (!trigger_field) {
+            return true;
+        }
+
+        if (trigger_field.tagName === 'OPTION') {
+            // Handle 'select' trigger fields
+            return trigger_field.selected === false;
+        } else if (trigger_field.type === 'checkbox' || trigger_field.type === 'radio') {
+            // Handle 'checkbox' and 'radio' trigger fields
+            return trigger_field.checked === false;
+        } else {
+            // Handle 'text', 'textarea', 'password', and 'quantity' trigger fields
+            return field_value !== condition.values[0];
+        }
+    }
+
+    /**
+     * Evaluate an "equal" condition
+     *
+     * @param {Object} condition
+     * @param {String} field_value
+     */
+    function evaluateEqual(condition, field_value)
+    {
+        var trigger_field = qs(condition.trigger_selectors[0]);
+        if (!trigger_field) {
+            return false;
+        }
+
+        if (trigger_field.tagName === 'OPTION') {
+            // Handle 'select' trigger fields
+            return trigger_field.selected === true;
+        } else if (trigger_field.type === 'checkbox' || trigger_field.type === 'radio') {
+            // Handle 'checkbox' and 'radio' trigger fields
+            return trigger_field.checked === true;
+        } else {
+            // Handle 'text', 'textarea', 'password', and 'quantity' trigger fields
+            return field_value === condition.values[0];
+        }
+    }
+
+    /**
+     * Show the given package option/value
+     *
+     * @param {String} target_element
+     */
+    function enablePackageOptionField(target_element)
+    {
+        var changed = false;
+        var initial_value_reset = false;
+        var el = qs(target_element);
+
+        if (!el) {
+            return false;
+        }
+
+        // Show the parent wrapper
+        var parent_element = el.closest('.mb-3');
+        if (parent_element) {
+            parent_element.style.display = '';
+        }
+
+        // Show the label for this element and enable it
+        var nextLabel = el.nextElementSibling;
+        if (nextLabel && nextLabel.tagName === 'LABEL') {
+            nextLabel.style.display = '';
+        }
+        el.disabled = false;
+
+        // Show non-quantity fields
+        if (!parent_element || !parent_element.querySelector('input[data-type=quantity]')) {
+            el.style.display = '';
+        }
+
+        // Reset the starting value if this field had one before evaluations began
+        var base_selector = target_element.split(']')[0] + ']';
+        if (pre_logic_values[base_selector] !== ''
+            && pre_logic_values[base_selector] !== null
+            && pre_logic_values[base_selector] !== undefined
+        ) {
+            // Behavior is based on whether this is a select option or not
+            var parentSelect = el.closest('select');
+            if (parentSelect) {
+                var preselected_option = parentSelect.querySelector(
+                    'option[value="' + pre_logic_values[base_selector] + '"]:not([disabled])'
+                );
+                if (preselected_option) {
+                    preselected_option.selected = true;
+
+                    // We have selected the previously selected option and may need to re-evaluate logic
+                    initial_value_reset = true;
+                }
+            } else {
+                // We have selected the previously selected value and may need to re-evaluate logic
+                initial_value_reset = true;
+                var baseEl = qs(base_selector);
+                if (baseEl) {
+                    baseEl.value = pre_logic_values[base_selector];
+                }
+            }
+            changed = initial_value_reset;
+        }
+
+        // Set the default when a field is shown
+        if (!initial_value_reset
+            && pre_logic_element_states[base_selector] === 'disabled'
+            && (target_element in defaults)
+        ) {
+            setDefault(target_element);
+            changed = true;
+        }
+
+        // Handle showing select fields
+        changed = showIfSelectField(target_element) || changed;
+
+        return changed;
+    }
+
+    /**
+     * Defaults the target element
+     *
+     * @param {String} target_element
+     */
+    function setDefault(target_element)
+    {
+        var el = qs(target_element);
+        if (!el) {
+            return;
+        }
+
+        if (el.tagName === 'OPTION') {
+            el.selected = true;
+        } else if (el.matches('input[type=radio]')) {
+            var radios = el.parentElement.querySelectorAll('input[type=radio]');
+            radios.forEach(function (radio) {
+                radio.checked = false;
+            });
+            el.checked = true;
+        } else if (el.matches('input[type=checkbox]')) {
+            el.checked = defaults[target_element] === '1';
+        } else if (el.matches('input[data-type=quantity]')) {
+            el.value = defaults[target_element] ?? 0;
+        } else {
+            el.value = defaults[target_element];
+        }
+    }
+
+    /**
+     * Handle show action for select fields
+     *
+     * @param {String} target_element
+     */
+    function showIfSelectField(target_element)
+    {
+        var changed = false;
+        var el = qs(target_element);
+        if (!el) {
+            return false;
+        }
+
+        var parentSelect = el.closest('select');
+        if (parentSelect) {
+            // Show and enable the parent select field if this element is an option
+            parentSelect.style.display = '';
+            parentSelect.disabled = false;
+
+            // Show the select parent wrapper
+            var selectParent = parentSelect.closest('.mb-3');
+            if (selectParent) {
+                selectParent.style.display = '';
+            }
+
+            // Select the current option if there are none currently selected
+            var select_option = true;
+            parentSelect.querySelectorAll('option').forEach(function (opt) {
+                if (opt.selected && !isFieldDisabled(opt)) {
+                    select_option = false;
+                }
+            });
+
+            if (select_option) {
+                el.selected = true;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    /**
+     * Hide the given package option/value
+     *
+     * @param {String} target_element
+     * @param {Boolean} hide
+     */
+    function disablePackageOptionField(target_element, hide)
+    {
+        var changed = false;
+        var el = qs(target_element);
+
+        if (!el) {
+            return false;
+        }
+
+        var parent_element = el.closest('.mb-3');
+
+        // Use special logic on the initial evaluation for edits to maintain the current values on load
+        if (is_initial_evaluation && is_edit) {
+            var parentSelect = el.closest('select');
+            // Remain unchanged unless this is a radio or select option
+            if (!parentSelect
+                && (!parent_element || parent_element.querySelectorAll('input[type=radio]').length === 0)
+            ) {
+                return false;
+            } else {
+                // In here we only handle radio or select options and decide whether to disable
+                // the option based on whether it is currently selected
+                if (parentSelect) {
+                    // This is a select option. Don't disable this value if it is currently selected
+                    var selected_option = parent_element ? parent_element.querySelector('option:checked') : null;
+                    if (selected_option && selected_option.isSameNode(el)) {
+                        return false;
+                    }
+                } else {
+                    // This is a radio option. Don't disable this value if it is currently checked
+                    var selected_radio = parent_element ? parent_element.querySelector('input[type=radio]:checked') : null;
+                    if (selected_radio && selected_radio.isSameNode(el)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        el.disabled = true;
+        if (hide) {
+            var parentSelect = el.closest('select');
+            // Hide the parent element unless this is a select or radio option
+            if (!parentSelect
+                && (!parent_element || parent_element.querySelectorAll('input[type=radio]').length === 0)
+            ) {
+                if (parent_element) {
+                    parent_element.style.display = 'none';
+                }
+            } else if (!parent_element || parent_element.querySelectorAll('input[data-type=quantity]').length === 0) {
+                el.style.display = 'none';
+            }
+        }
+
+        changed = disableIfCheckboxField(target_element);
+        changed = disableIfSelectField(target_element, hide) || changed;
+        changed = disableIfRadioField(target_element, hide) || changed;
+        changed = disableIfTextField(target_element) || changed;
+
+        return changed;
+    }
+
+    /**
+     * Handle disable action for checkbox fields
+     *
+     * @param {String} target_element
+     */
+    function disableIfCheckboxField(target_element)
+    {
+        var changed = false;
+        var el = qs(target_element);
+        if (!el) {
+            return false;
+        }
+
+        var parent_element = el.closest('.mb-3');
+        // Handle checkbox elements
+        if (parent_element && parent_element.querySelectorAll('input[type=checkbox]').length > 0) {
+            el.checked = false;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /**
+     * Handle disable action for select fields
+     *
+     * @param {String} target_element
+     * @param {Boolean} hide
+     */
+    function disableIfSelectField(target_element, hide)
+    {
+        var changed = false;
+        var el = qs(target_element);
+        if (!el) {
+            return false;
+        }
+
+        var parentSelect = el.closest('select');
+        if (parentSelect) {
+            var disable_select = true;
+            parentSelect.querySelectorAll('option').forEach(function (opt) {
+                if (!isFieldDisabled(opt)) {
+                    disable_select = false;
+                }
+            });
+
+            if (disable_select) {
+                // All options are disabled, disable the parent select
+                parentSelect.disabled = false;
+
+                if (hide) {
+                    // Hide if set to do so
+                    parentSelect.style.display = 'none';
+                    // Hide the select parent wrapper
+                    var selectParent = parentSelect.closest('.mb-3');
+                    if (selectParent) {
+                        selectParent.style.display = 'none';
+                    }
+                }
+            }
+
+            // Unselect this option
+            var selected_option = parentSelect.querySelector('option:checked');
+            el.selected = false;
+
+            // If there are no currently selected options, select the first one available
+            if (selected_option && selected_option.isSameNode(el)) {
+                var options = parentSelect.querySelectorAll('option');
+                for (var i = 0; i < options.length; i++) {
+                    if (!isFieldDisabled(options[i])) {
+                        options[i].selected = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    /**
+     * Handle disable action for radio fields
+     *
+     * @param {String} target_element
+     * @param {Boolean} hide
+     */
+    function disableIfRadioField(target_element, hide)
+    {
+        var changed = false;
+        var el = qs(target_element);
+        if (!el) {
+            return false;
+        }
+
+        var parent_element = el.closest('.mb-3');
+        var hide_parent = true;
+
+        // Handle radio elements
+        if (parent_element && parent_element.querySelectorAll('input[type=radio]').length > 0) {
+            el.checked = false;
+            changed = true;
+
+            if (hide) {
+                var nextLabel = el.nextElementSibling;
+                if (nextLabel && nextLabel.tagName === 'LABEL') {
+                    nextLabel.style.display = 'none';
+                }
+                parent_element.querySelectorAll('input[type=radio]').forEach(function (radio) {
+                    if (!isFieldDisabled(radio)) {
+                        hide_parent = false;
+                    }
+                });
+
+                if (hide_parent) {
+                    parent_element.style.display = 'none';
+                }
+            }
+        }
+
+        return changed;
+    }
+
+    /**
+     * Handle disable action for text fields
+     *
+     * @param {String} target_element
+     */
+    function disableIfTextField(target_element)
+    {
+        var changed = false;
+        var el = qs(target_element);
+        if (!el) {
+            return false;
+        }
+
+        if (el.matches('input[type=text],textarea')) {
+            el.value = '';
+
+            setDefault(target_element);
+
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    function isFieldDisabled(element)
+    {
+        if (!element) {
+            return true;
+        }
+        return element.disabled || element.getAttribute('disabled') === 'disabled';
+    }
+})();
+</script>

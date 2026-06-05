@@ -207,7 +207,6 @@ class Module extends BlestaModule
     public function getPackageFields($vars = null)
     {
         $Package = $this->getComponent('Package');
-        $Package->Html = $this->Html;
 
         return $Package->fields($vars);
     }

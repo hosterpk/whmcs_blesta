@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Captcha\Captchas;
 
 use Blesta\Core\Util\Captcha\Common\AbstractCaptcha;
@@ -63,8 +64,8 @@ class ReCaptcha extends AbstractCaptcha
      */
     public function buildHtml()
     {
-        $key = $this->Html->safe((isset($this->options['site_key']) ? $this->options['site_key'] : null));
-        $lang = $this->Html->safe((isset($this->options['lang']) ? $this->options['lang'] : null));
+        $key = $this->Html->safe(($this->options['site_key'] ?? null));
+        $lang = $this->Html->safe(($this->options['lang'] ?? null));
         $apiUrl = $this->Html->safe($this->apiUrl . (!empty($lang) ? '?hl=' . $lang : ''));
 
         $html = <<< HTML
@@ -104,14 +105,10 @@ HTML;
 
         // Attempt to verify the captcha was accepted
         try {
-            if (in_array(ini_get('allow_url_fopen'), ['Off', '0', 0, ''])) {
-                $recaptcha = new \ReCaptcha\ReCaptcha(
-                    $this->options['shared_key'] ?? null,
-                    new \ReCaptcha\RequestMethod\SocketPost()
-                );
-            } else {
-                $recaptcha = new \ReCaptcha\ReCaptcha($this->options['shared_key'] ?? null);
-            }
+            $recaptcha = in_array(ini_get('allow_url_fopen'), ['Off', '0', 0, '']) ? new \ReCaptcha\ReCaptcha(
+                $this->options['shared_key'] ?? null,
+                new \ReCaptcha\RequestMethod\SocketPost()
+            ) : new \ReCaptcha\ReCaptcha($this->options['shared_key'] ?? null);
 
             $response = $recaptcha->verify(
                 ($data['response'] ?? ($data['g-recaptcha-response'] ?? null)),
@@ -146,7 +143,7 @@ HTML;
         $pub_key->attach(
             $fields->fieldText(
                 'recaptcha_pub_key',
-                isset($vars['recaptcha_pub_key']) ? $vars['recaptcha_pub_key'] : null,
+                $vars['recaptcha_pub_key'] ?? null,
                 [
                     'id' => 'recaptcha_pub_key',
                     'class' => 'form-control'
@@ -163,7 +160,7 @@ HTML;
         $shared_key->attach(
             $fields->fieldText(
                 'recaptcha_shared_key',
-                isset($vars['recaptcha_shared_key']) ? $vars['recaptcha_shared_key'] : null,
+                $vars['recaptcha_shared_key'] ?? null,
                 [
                     'id' => 'recaptcha_shared_key',
                     'class' => 'form-control'

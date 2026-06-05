@@ -1,0 +1,295 @@
+<?php
+// When loaded outside a modal (Default theme fallback), render the full widget
+if (!($in_modal ?? false)) {
+    // Render tabs
+    $tabs = [];
+    foreach (($group_options ?? []) as $id => $name) {
+        $tabs[] = [
+            'name' => $name,
+            'current' => ($id == ($option->id ?? null)),
+            'attributes' => [
+                'href' => $this->base_uri . 'package_options/logic/' . ($group->id ?? null) . '/' . $id . '/',
+                'class' => 'ajax'
+            ]
+        ];
+    }
+    $this->Widget->clear();
+    $this->Widget->setTabs($tabs);
+    $this->Widget->setWidgetButton(['href' => $this->base_uri . 'package_options/logicsettings/' . ($group->id ?? null), 'class' => 'setting']);
+    $this->Widget->create($this->_('AdminPackageOptions.logic.boxtitle', true), ['id' => 'admin_option_group_dependencies'], ($render_section ?? null));
+}
+?>
+
+<?php echo ($message ?? null); ?>
+
+<?php if ($in_modal ?? false) { ?>
+<!-- Option Tabs -->
+<ul class="nav nav-tabs-box border-0 mb-3" role="tablist" id="logicOptionTabs">
+    <?php foreach (($group_options ?? []) as $id => $label) { ?>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link logic-option-tab<?php echo ($id == ($option->id ?? null)) ? ' active' : ''; ?>"
+                data-option-id="<?php echo $this->Html->safe($id); ?>"
+                data-group-id="<?php echo $this->Html->safe($group->id ?? ''); ?>"
+                type="button" role="tab">
+                <?php echo $this->Html->safe($label); ?>
+                <?php
+                $set_count = $option_set_counts[$id] ?? 0;
+                if ($set_count > 0) {
+                ?>
+                    <span class="badge bg-secondary ms-1"><?php echo $set_count; ?></span>
+                <?php } ?>
+            </button>
+        </li>
+    <?php } ?>
+</ul>
+<?php } ?>
+
+<!-- Tab Content (for current option) -->
+<div id="logicTabContent">
+    <?php if ($in_modal ?? false) { ?>
+    <!-- Info banner -->
+    <div class="alert alert-info small mb-3">
+        <i class="bi bi-info-circle me-2"></i><?php $this->_('AdminPackageOptions.modal.text_logic_description'); ?>
+    </div>
+    <?php } else { ?>
+    <div class="inner">
+    <p class="error_box alert"><?php $this->_('AdminPackageOptions.logic.text_description', false, ($option->label ?? ''));?></p>
+    <div class="title_row"><h3><?php $this->_('AdminPackageOptions.logic.title_condition_sets');?></h3></div>
+    <div class="pad">
+    <?php } ?>
+
+    <?php
+    $this->Form->create(null, ['id' => 'logic_form']);
+    ?>
+
+    <?php if ($in_modal ?? false) { ?>
+    <!-- Hidden template selects used by JS when building new condition sets -->
+    <select id="logicTriggerOptionsTemplate" class="d-none" disabled>
+        <?php foreach (($package_options ?? []) as $val => $label) { ?>
+            <option value="<?php echo $this->Html->safe($val); ?>"><?php echo $this->Html->safe($label); ?></option>
+        <?php } ?>
+    </select>
+    <select id="logicOperatorsTemplate" class="d-none" disabled>
+        <?php foreach (($operators ?? []) as $val => $label) { ?>
+            <option value="<?php echo $this->Html->safe($val); ?>"><?php echo $this->Html->safe($label); ?></option>
+        <?php } ?>
+    </select>
+    <?php } ?>
+
+    <!-- Condition Sets Container -->
+    <div id="conditionSetsContainer"
+        data-option-id="<?php echo $this->Html->safe($option->id ?? ''); ?>"
+        data-group-id="<?php echo $this->Html->safe($group->id ?? ''); ?>"
+        data-option-type="<?php echo $this->Html->safe($option->type ?? ''); ?>"
+        data-first-value-id="<?php echo $this->Html->safe($option->values[0]->id ?? ''); ?>"
+        <?php if (($option->type ?? null) == 'radio' || ($option->type ?? null) == 'select') { ?>
+        data-option-values="<?php echo $this->Html->safe(json_encode($this->Form->collapseObjectArray(($option->values ?? []), 'name', 'id'))); ?>"
+        <?php } ?>>
+        <?php
+        $condition_sets = (!empty($vars->condition_sets) ? $vars->condition_sets : []);
+        if (empty($condition_sets) && ($in_modal ?? false)) {
+        ?>
+            <p class="text-secondary" id="noConditionSetsMsg"><em><?php $this->_('AdminPackageOptions.modal.text_no_condition_sets'); ?></em></p>
+        <?php
+        }
+
+        for ($i = 0; $i < count($condition_sets); $i++) {
+            $condition_set = $condition_sets[$i];
+        ?>
+        <div class="condition-set-card" data-set-index="<?php echo $i; ?>">
+            <?php if ($in_modal ?? false) { ?>
+            <!-- OR divider -->
+            <div class="condition-set-divider<?php echo $i === 0 ? ' d-none' : ''; ?>">
+                <span class="badge bg-secondary"><?php $this->_('AdminPackageOptions.modal.text_or'); ?></span>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-semibold small"><?php $this->_('AdminPackageOptions.modal.text_condition_set'); ?></span>
+                    <button type="button" class="btn btn-sm btn-outline-danger condition-set-remove">
+                        <i class="bi bi-trash me-1"></i><?php $this->_('AdminPackageOptions.modal.btn_remove_set'); ?>
+                    </button>
+                </div>
+                <div class="card-body">
+            <?php } else { ?>
+            <h3 class="text_condition_or mt-3 mb-3 text-center"><?php $this->_('AdminPackageOptions.logic.text_or');?></h3>
+            <div class="well p-2">
+            <?php } ?>
+
+                    <?php
+                    // Hidden fields
+                    if (isset($condition_set->id)) {
+                        $this->Form->fieldHidden('condition_sets[' . $i . '][id]', $condition_set->id, ['class' => 'id_field']);
+                    }
+                    $this->Form->fieldHidden('condition_sets[' . $i . '][option_id]', ($option->id ?? null));
+                    $this->Form->fieldHidden('condition_sets[' . $i . '][option_group_id]', ($group->id ?? null));
+                    ?>
+
+                    <!-- Enable Values -->
+                    <?php if (($option->type ?? null) == 'radio' || ($option->type ?? null) == 'select') { ?>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold"><?php $this->_('AdminPackageOptions.modal.field_enable_value'); ?></label>
+                        <?php
+                        $option_values = $this->Form->collapseObjectArray(($option->values ?? []), 'name', 'id');
+                        $this->Form->fieldMultiSelect(
+                            'condition_sets[' . $i . '][option_value_ids][]',
+                            $option_values,
+                            ($condition_set->option_value_ids ?? null),
+                            ['class' => 'form-select', 'size' => '4']
+                        );
+                        ?>
+                    </div>
+                    <?php } else { ?>
+                        <?php $this->Form->fieldHidden('condition_sets[' . $i . '][option_value_ids][]', ($option->values[0]->id ?? null)); ?>
+                    <?php } ?>
+
+                    <!-- Conditions table -->
+                    <div class="table-responsive">
+                    <table class="table table-sm condition-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="condition-if-col"><?php $this->_('AdminPackageOptions.modal.text_if'); ?></th>
+                                <th><?php $this->_('AdminPackageOptions.modal.heading_trigger_option'); ?></th>
+                                <th><?php $this->_('AdminPackageOptions.modal.heading_operator'); ?></th>
+                                <th><?php $this->_('AdminPackageOptions.modal.heading_value'); ?></th>
+                                <th class="text-end"><?php $this->_('AdminPackageOptions.modal.heading_actions'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $conditions = ($condition_set->conditions ?? [(object)[]]);
+                            for ($j = 0; $j < count($conditions); $j++) {
+                                $condition = $conditions[$j];
+                                $name_prefix = 'condition_sets[' . $i . '][conditions][' . $j . ']';
+                                $type = ($condition->triggering_option->type ?? null);
+                            ?>
+                            <tr class="condition-row" data-row-index="<?php echo $j; ?>">
+                                <td class="condition-if-col">
+                                    <span class="condition-and-text"><?php $this->_('AdminPackageOptions.modal.text_and'); ?></span>
+                                </td>
+                                <td>
+                                    <?php
+                                    if (isset($condition->id)) {
+                                        $this->Form->fieldHidden($name_prefix . '[id]', $condition->id, ['class' => 'id_field']);
+                                    }
+                                    $this->Form->fieldSelect(
+                                        $name_prefix . '[trigger_option_id]',
+                                        ($package_options ?? []),
+                                        ($condition->trigger_option_id ?? null),
+                                        ['class' => 'form-select form-select-sm trigger-option-id']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $this->Form->fieldSelect(
+                                        $name_prefix . '[operator]',
+                                        ($operators ?? []),
+                                        ($condition->operator ?? null),
+                                        ['class' => 'form-select form-select-sm comparison-operator']
+                                    );
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    // Get the trigger value
+                                    $trigger_value_id = isset($condition->triggering_option->values[0]->id)
+                                        ? ($condition->triggering_option->values[0]->id)
+                                        : null;
+                                    // Get the select values
+                                    $select_values = $this->Form->collapseObjectArray(($condition->triggering_option->values ?? []), 'name', 'id');
+                                    $selected_value = isset($condition->value_id)
+                                        ? (is_array($condition->value_id) ? $condition->value_id[0] : $condition->value_id)
+                                        : null;
+                                    $selected_values = isset($condition->value_id)
+                                        ? (is_array($condition->value_id) ? $condition->value_id : [$condition->value_id])
+                                        : [];
+
+                                    $disabled_options = ['disabled' => 'disabled', 'style' => 'display:none;'];
+
+                                    // Text value fields
+                                    $this->Form->fieldHidden($name_prefix . '[value_id]', $trigger_value_id, array_merge(['class' => 'value_text value_id'], (!in_array($type, ['radio', 'select', 'checkbox', 'quantity']) ? [] : $disabled_options)));
+                                    $this->Form->fieldText($name_prefix . '[value]', ($condition->value ?? null), array_merge(['class' => 'form-control form-control-sm value_text'], (!in_array($type, ['radio', 'select', 'checkbox', 'quantity']) ? [] : $disabled_options)));
+
+                                    // Quantity value fields
+                                    $this->Form->fieldHidden($name_prefix . '[value_id]', $trigger_value_id, array_merge(['class' => 'value_quantity value_id'], ($type === 'quantity' ? [] : $disabled_options)));
+                                    $this->Form->fieldText($name_prefix . '[value]', ($condition->value ?? null), array_merge(['class' => 'form-control form-control-sm value_quantity', 'type' => 'number'], ($type === 'quantity' ? [] : $disabled_options)));
+
+                                    // Select value fields
+                                    $this->Form->fieldSelect($name_prefix . '[value_id]', $select_values, $selected_value, array_merge(['class' => 'form-select form-select-sm value_select'], (in_array($type, ['radio', 'select']) && !in_array(($condition->operator ?? ''), ['in', 'notin']) ? [] : $disabled_options)));
+                                    $this->Form->fieldMultiSelect($name_prefix . '[value_id][]', $select_values, $selected_values, array_merge(['class' => 'form-select form-select-sm value_multiselect'], (in_array($type, ['radio', 'select']) && in_array(($condition->operator ?? ''), ['in', 'notin']) ? [] : $disabled_options)));
+
+                                    // Checkbox value fields
+                                    $this->Form->fieldHidden($name_prefix . '[value_id]', $trigger_value_id, array_merge(['class' => 'value_checkbox value_id'], (!in_array($type, ['radio', 'select', 'checkbox']) ? [] : $disabled_options)));
+                                    $this->Form->fieldHidden($name_prefix . '[value]', null, array_merge(['class' => 'value_checkbox value'], ($type == 'checkbox' ? [] : $disabled_options)));
+                                    $this->Form->fieldCheckbox(null, $trigger_value_id, true, array_merge(['class' => 'form-check-input value_checkbox disabled', 'disabled' => 'disabled'], ($type == 'checkbox' ? [] : $disabled_options)));
+                                    ?>
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary condition-row-add" title="<?php $this->_('AdminPackageOptions.modal.btn_add_condition'); ?>">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger condition-row-remove" title="<?php $this->_('AdminPackageOptions.modal.btn_remove_condition'); ?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php } ?>
+                        </tbody>
+                    </table>
+                    </div>
+
+            <?php if ($in_modal ?? false) { ?>
+                </div>
+            </div>
+            <?php } else { ?>
+                <div class="mt-1"><a href="#" class="manage condition_set_remove"><?php $this->_('AdminPackageOptions.logic.option_remove_set');?></a></div>
+            </div>
+            <?php } ?>
+        </div>
+        <?php } ?>
+    </div>
+
+    <?php if ($in_modal ?? false) { ?>
+    <!-- Add Condition Set button -->
+    <button type="button" class="btn btn-sm btn-outline-secondary condition-set-add mb-3">
+        <i class="bi bi-plus-circle me-1"></i><?php $this->_('AdminPackageOptions.modal.btn_add_condition_set'); ?>
+    </button>
+
+    <!-- Hide Options checkbox (group-level, saved via separate AJAX) -->
+    <div class="form-check mb-3 pt-3" style="border-top: 1px solid var(--border-color);">
+        <input class="form-check-input" type="checkbox" id="hide_options"
+            data-group-id="<?php echo $this->Html->safe($group->id ?? ''); ?>"
+            <?php echo ($hide_options ?? '0') == '1' ? ' checked' : ''; ?>>
+        <label class="form-check-label" for="hide_options">
+            <?php $this->_('AdminPackageOptions.modal.field_hide_options'); ?>
+        </label>
+    </div>
+
+    <!-- Modal submit area (extracted to footer by setupModalFooter) -->
+    <div class="modal-submit-area">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?php $this->_('AdminPackageOptions.modal.btn_close'); ?></button>
+        <button type="submit" class="btn btn-primary" name="submit" value="Save Logic">
+            <i class="bi bi-check-lg me-1"></i><?php $this->_('AdminPackageOptions.modal.btn_save_logic'); ?>
+        </button>
+    </div>
+    <?php } else { ?>
+    <div class="links_row mt-2">
+        <?php $this->Form->fieldSubmit('submit', $this->_('AdminPackageOptions.logic.field_submit', true), ['class' => 'btn btn-primary btn-sm pull-right']);?>
+    </div>
+    <?php } ?>
+
+    <?php
+    $this->Form->end();
+    ?>
+
+    <?php if (!($in_modal ?? false)) { ?>
+    </div></div>
+    <?php } ?>
+</div>
+
+<?php
+if (!($in_modal ?? false)) {
+    $this->Widget->end();
+}
+?>

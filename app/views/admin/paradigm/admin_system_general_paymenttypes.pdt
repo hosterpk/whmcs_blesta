@@ -1,0 +1,101 @@
+<?php /** @var View $this **/ ?>
+
+        <?php
+        if (!(isset($is_ajax) ? $is_ajax : false)) {
+        ?>
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+        <?php
+        }
+        ?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->setLinkButtons([
+                [
+                    'name' => '',
+                    'icon' => 'bi-plus-lg',
+                    'attributes' => [
+                        'href' => $this->base_uri . 'settings/system/general/addtype/',
+                        'title' => $this->_('AdminSystemGeneral.paymenttypes.categorylink_addtype', true)
+                    ]
+                ]
+            ]);
+            $this->Widget->setBodyWrapper(false);
+            $this->Widget->create($this->_('AdminSystemGeneral.paymenttypes.boxtitle_types', true), ['id' => 'admin_system_general_paymenttypes'], ($render_section ?? null));
+            ?>
+
+                <?php
+                if ((isset($types) ? $types : false) && count($types) > 0) {
+                ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th><?php $this->_('AdminSystemGeneral.paymenttypes.heading_name');?></th>
+                                    <th><?php $this->_('AdminSystemGeneral.paymenttypes.heading_type');?></th>
+                                    <th><?php $this->_('AdminSystemGeneral.paymenttypes.heading_is_lang');?></th>
+                                    <th style="width: 100px;"><?php $this->_('AdminSystemGeneral.paymenttypes.heading_options');?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                foreach ($types as $type) {
+                                ?>
+                                <tr>
+                                    <td><?php echo $this->Html->safe($type->real_name ?? '');?></td>
+                                    <td><?php echo $this->Html->safe($debit_types[$type->type] ?? '');?></td>
+                                    <td>
+                                        <?php echo ($type->is_lang ?? '0') == '1'
+                                            ? $this->_('AdminSystemGeneral.paymenttypes.text_yes', true)
+                                            : $this->_('AdminSystemGeneral.paymenttypes.text_no', true);?>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a href="<?php echo $this->base_uri . 'settings/system/general/edittype/' . $this->Html->safe($type->id ?? '') . '/';?>"
+                                               class="btn btn-sm btn-outline-secondary"
+                                               title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.paymenttypes.option_edit', true));?>">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <?php
+                                            $this->Form->create($this->base_uri . 'settings/system/general/deletetype/', ['class' => 'd-inline']);
+                                            $this->Form->fieldHidden('id', $this->Html->safe($type->id ?? ''));
+                                            ?>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger modal-confirm-delete"
+                                                    data-confirm-message="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.paymenttypes.modal_delete', true));?>"
+                                                    title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.paymenttypes.option_delete', true));?>">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <?php
+                                            $this->Form->end();
+                                            ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php
+                } else {
+                ?>
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p class="mt-3 mb-0"><?php $this->_('AdminSystemGeneral.paymenttypes.no_results');?></p>
+                    </div>
+                <?php
+                }
+                ?>
+
+            <?php $this->Widget->end();?>
+
+        <?php
+        if (!(isset($is_ajax) ? $is_ajax : false)) {
+        ?>
+        </div>
+        <?php
+        }
+        ?>

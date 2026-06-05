@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('multicraft.map', [
     'module' => 'multicraft',
     'module_row_key' => 'server_name',

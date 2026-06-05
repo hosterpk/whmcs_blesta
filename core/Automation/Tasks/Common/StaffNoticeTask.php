@@ -1,7 +1,12 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Common;
 
 use Blesta\Core\Automation\Type\Common\AutomationTypeInterface;
+use Blesta\App\Models\Notifications;
+use Blesta\App\Models\Staff;
+use Configure;
+use H2o;
 use Loader;
 use stdClass;
 
@@ -18,6 +23,9 @@ use stdClass;
 #[\AllowDynamicProperties]
 abstract class StaffNoticeTask extends AbstractTask
 {
+    protected Staff $Staff;
+    protected Notifications $Notifications;
+
     /**
      * {@inheritdoc}
      */
@@ -26,7 +34,10 @@ abstract class StaffNoticeTask extends AbstractTask
         parent::__construct($task, $options);
 
         // Load required dependencies
-        Loader::loadModels($this, ['Clients', 'Contacts', 'Packages', 'Staff']);
+        Loader::loadModels($this, ['Clients', 'Contacts', 'Packages', 'Emails']);
+
+        $this->Staff = new Staff();
+        $this->Notifications = new Notifications();
     }
 
     /**
@@ -37,7 +48,7 @@ abstract class StaffNoticeTask extends AbstractTask
      */
     protected function sendServiceCancelError(stdClass $service, array $errors = [])
     {
-        $this->sendServiceErrorNotice('service_cancel_error', $service, $errors);
+        $this->sendServiceError('service_cancel_error', $service, $errors);
     }
 
     /**
@@ -48,7 +59,7 @@ abstract class StaffNoticeTask extends AbstractTask
      */
     protected function sendServiceCreateError(stdClass $service, array $errors = [])
     {
-        $this->sendServiceErrorNotice('service_creation_error', $service, $errors);
+        $this->sendServiceError('service_creation_error', $service, $errors);
     }
 
     /**
@@ -59,7 +70,7 @@ abstract class StaffNoticeTask extends AbstractTask
      */
     protected function sendServiceRenewalError(stdClass $service, array $errors = [])
     {
-        $this->sendServiceErrorNotice('service_renewal_error', $service, $errors);
+        $this->sendServiceError('service_renewal_error', $service, $errors);
     }
 
     /**
@@ -70,7 +81,7 @@ abstract class StaffNoticeTask extends AbstractTask
      */
     protected function sendServiceSuspendError(stdClass $service, array $errors = [])
     {
-        $this->sendServiceErrorNotice('service_suspension_error', $service, $errors);
+        $this->sendServiceError('service_suspension_error', $service, $errors);
     }
 
     /**
@@ -81,7 +92,7 @@ abstract class StaffNoticeTask extends AbstractTask
      */
     protected function sendServiceUnsuspendError(stdClass $service, array $errors = [])
     {
-        $this->sendServiceErrorNotice('service_unsuspension_error', $service, $errors);
+        $this->sendServiceError('service_unsuspension_error', $service, $errors);
     }
 
     /**
@@ -91,23 +102,37 @@ abstract class StaffNoticeTask extends AbstractTask
      * @param stdClass $service The service object
      * @param array $errors A list of errors returned by the module
      */
-    private function sendServiceErrorNotice($template, stdClass $service, array $errors = [])
+    private function sendServiceError($template, stdClass $service, array $errors = [])
     {
         // Fetch the client
-        if (($package = $this->Packages->getByPricingId($service->pricing_id))
+        if (
+            ($package = $this->Packages->getByPricingId($service->pricing_id))
             && ($client = $this->Clients->get($service->client_id))
         ) {
             // Add each service field as a tag
             $service = $this->setServiceFields($service);
+
             // Add each package meta field as a tag
             $package = $this->setPackageFields($package);
 
-            // Send the notification email
+            // Send the notice email
             $this->Staff->sendNotificationEmail(
                 $template,
                 $package->company_id,
-                $this->getServiceErrorEmailTags($client, $service, $package, $errors)
+                $this->getServiceErrorTags($client, $service, $package, $errors)
             );
+
+            // Sent the notification
+            $email = $this->Emails->getByType($package->company_id, $template);
+            if ($email) {
+                $message = @H2o::parseString($email->text, Configure::get('Blesta.parser_options'))
+                    ->render($this->getServiceErrorTags($client, $service, $package, $errors));
+                $this->Notifications->send(
+                    $template,
+                    'staff',
+                    ['type' => 'warning', 'title' => $email->subject, 'message' => $message]
+                );
+            }
         }
     }
 
@@ -120,7 +145,7 @@ abstract class StaffNoticeTask extends AbstractTask
      * @param array $errors An array of any errors encountered
      * @return array A key/value array of email tags
      */
-    private function getServiceErrorEmailTags(stdClass $client, stdClass $service, stdClass $package, array $errors)
+    private function getServiceErrorTags(stdClass $client, stdClass $service, stdClass $package, array $errors)
     {
         return [
             'contact' => $this->Contacts->get($client->contact_id),

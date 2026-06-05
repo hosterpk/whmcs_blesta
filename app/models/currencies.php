@@ -1,5 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Currency Management
  *
@@ -549,12 +558,12 @@ class Currencies extends AppModel
                     'message' => $this->_('Currencies.!error.code.length')
                 ],
                 'exists' => [
-                    'rule' => [[$this, 'validateCurrencyExists'], (isset($vars['company_id']) ? $vars['company_id'] : null)],
+                    'rule' => [[$this, 'validateCurrencyExists'], ($vars['company_id'] ?? null)],
                     'negate' => true,
                     'message' => $this->_(
                         'Currencies.!error.code.exists',
-                        (isset($vars['code']) ? $vars['code'] : null),
-                        (isset($vars['company_id']) ? $vars['company_id'] : null)
+                        ($vars['code'] ?? null),
+                        ($vars['company_id'] ?? null)
                     )
                 ]
             ],
@@ -769,7 +778,7 @@ class Currencies extends AppModel
             // Attempt to create the processor
             try {
                 $rate_processor = $this->ExchangeRates->create($processor, [$this->Net->create('Http')]);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Error, invalid processor
                 $this->Input->setErrors([
                     'processor' => [
@@ -798,20 +807,20 @@ class Currencies extends AppModel
         $company_settings = $this->SettingsCollection->fetchSettings(null, $company_id);
 
         // Get the exchange rate processor
-        $rate_processor = $this->getExchangeRateProcessor((isset($company_settings['exchange_rates_processor']) ? $company_settings['exchange_rates_processor'] : null));
+        $rate_processor = $this->getExchangeRateProcessor(($company_settings['exchange_rates_processor'] ?? null));
 
         // Update currencies rates
         if ($rate_processor !== false) {
             // Set default currency
-            $default_currency = (isset($company_settings['default_currency']) ? $company_settings['default_currency'] : null);
+            $default_currency = ($company_settings['default_currency'] ?? null);
 
             // Set API Key
             if ($rate_processor->requiresKey()) {
-                $rate_processor->setKey((isset($company_settings['exchange_rates_processor_key']) ? $company_settings['exchange_rates_processor_key'] : null));
+                $rate_processor->setKey(($company_settings['exchange_rates_processor_key'] ?? null));
             }
 
             // Get the exchange rate padding value
-            $pad_value = (isset($company_settings['exchange_rates_padding']) ? $company_settings['exchange_rates_padding'] : 0);
+            $pad_value = ($company_settings['exchange_rates_padding'] ?? 0);
 
             $currencies = $this->getAll($company_id);
             foreach ($currencies as $currency) {

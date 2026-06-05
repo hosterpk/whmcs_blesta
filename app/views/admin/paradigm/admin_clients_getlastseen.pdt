@@ -1,0 +1,31 @@
+<?php
+if ((isset($user_log->date_updated) ? $user_log->date_updated : false)) {
+    $this->_('AdminClients.view.member_last_seen', false, $this->Date->cast((isset($user_log->date_updated) ? $user_log->date_updated : null)));
+
+    // Build tooltip content
+    $tooltip_content = '<strong>' . $this->Html->safe($this->_('AdminClients.view.tooltip_activity', true)) . '</strong><br />';
+    if ((isset($user_log->last_activity) ? $user_log->last_activity : false)) {
+        $tooltip_content .= $this->Html->safe($user_log->last_activity);
+    } else {
+        $tooltip_content .= $this->Date->cast($user_log->date_updated, 'date_time');
+    }
+
+    if ((isset($user_log->geo_ip['location']) ? $user_log->geo_ip['location'] : null)) {
+        $location = $user_log->geo_ip['location'];
+        $tooltip_content .= '<br /><br /><strong>' . $this->Html->safe($this->_('AdminClients.view.tooltip_location', true)) . '</strong><br />';
+        $tooltip_content .= $this->Html->safe($this->Html->concat(', ', (isset($location['city']) ? $location['city'] : null), (isset($location['region']) ? $location['region'] : null)));
+        $tooltip_content .= '<br />' . (isset($location['country_name']) ? $this->Html->safe($location['country_name']) : '');
+    }
+?>
+    <span class="text-primary" style="cursor: pointer;"
+          data-bs-toggle="tooltip"
+          data-bs-placement="top"
+          data-bs-html="true"
+          data-bs-title="<?php echo $this->Html->safe($tooltip_content);?>">
+        <?php (print (isset($user_log->ip_address) ? $this->Html->safe($user_log->ip_address) : null));?>
+    </span>
+<?php
+} else {
+    $this->_('AdminClients.view.member_last_seen_never');
+}
+?>

@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * Enhance Module
  *
@@ -7,7 +9,6 @@ use Blesta\Core\Util\Validate\Server;
  */
 class Enhance extends Module
 {
-
     /**
      * Initializes the module
      */
@@ -98,6 +99,14 @@ class Enhance extends Module
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -125,6 +134,14 @@ class Enhance extends Module
             $vars = $module_row->meta;
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -297,7 +314,7 @@ class Enhance extends Module
                 $this->log($hostname . '|validateConnection', serialize($response->raw()), 'output', $success);
 
                 return $success;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Log the exception
                 $this->log($hostname . '|validateConnection', serialize(['error' => $e->getMessage()]), 'output', false);
                 return false;
@@ -380,7 +397,7 @@ class Enhance extends Module
                         }
                     }
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Log the error but continue with empty plans array
                 $this->log($row->meta->hostname . '|getPackageFields', 'Failed to fetch plans: ' . $e->getMessage(), 'output', false);
             }
@@ -395,7 +412,7 @@ class Enhance extends Module
                 $fields->fieldSelect(
                     'meta[package]',
                     $plans,
-                    (isset($vars->meta['package']) ? $vars->meta['package'] : null),
+                    ($vars->meta['package'] ?? null),
                     ['id' => 'enhance_package']
                 )
             );
@@ -404,7 +421,7 @@ class Enhance extends Module
             $package->attach(
                 $fields->fieldText(
                     'meta[package]',
-                    (isset($vars->meta['package']) ? $vars->meta['package'] : null),
+                    ($vars->meta['package'] ?? null),
                     ['id' => 'enhance_package']
                 )
             );
@@ -480,6 +497,7 @@ class Enhance extends Module
         $website_id = null;
         $subscription_id = null;
         $customer_org_id = null;
+        $customer_email = null;
         // Only provision the service if 'use_module' is true
         if ($vars['use_module'] == 'true') {
             $masked_params = $params;
@@ -574,7 +592,7 @@ class Enhance extends Module
             }
 
             // Log each customer found
-            $customerKeys = array_filter(array_keys($lastRequest), function($key) {
+            $customerKeys = array_filter(array_keys($lastRequest), function ($key) {
                 return strpos($key, 'customer_') === 0 && strpos($key, '_') === strrpos($key, '_');
             });
             foreach ($customerKeys as $key) {
@@ -582,7 +600,7 @@ class Enhance extends Module
             }
 
             // Log member details
-            $memberKeys = array_filter(array_keys($lastRequest), function($key) {
+            $memberKeys = array_filter(array_keys($lastRequest), function ($key) {
                 return strpos($key, 'member_') === 0 || strpos($key, 'members_count_') === 0 || strpos($key, 'no_members_') === 0;
             });
             foreach ($memberKeys as $key) {
@@ -1032,7 +1050,7 @@ class Enhance extends Module
         $password = !empty($vars['password']) ? $vars['password'] : $this->generatePassword();
 
         // Get package name from the package meta
-        $package_name = isset($package->meta->package) ? $package->meta->package : 'default';
+        $package_name = $package->meta->package ?? 'default';
 
         $fields = [
             'domain' => $domain,
@@ -1216,7 +1234,7 @@ class Enhance extends Module
                     $this->log($row->meta->hostname . '|sso_error', 'Failed to get members: ' . serialize($membersResponse->errors()), 'output', false);
                     $otp_response = null;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->log($row->meta->hostname . '|sso_error', 'SSO exception: ' . $e->getMessage(), 'output', false);
                 $otp_response = null;
             }
@@ -1238,11 +1256,14 @@ class Enhance extends Module
             } elseif ($otp_response) {
                 $this->log($row->meta->hostname . '|sso_error', 'SSO failed: ' . serialize($otp_response->errors()) . ' Status: ' . $otp_response->status(), 'output', false);
             }
-
         } else {
             $missing = [];
-            if (!isset($service_fields->customer_org_id)) $missing[] = 'customer_org_id';
-            if (!$row) $missing[] = 'module_row';
+            if (!isset($service_fields->customer_org_id)) {
+                $missing[] = 'customer_org_id';
+            }
+            if (!$row) {
+                $missing[] = 'module_row';
+            }
             $this->log($row ? $row->meta->hostname : 'unknown' . '|sso_error', 'Missing required fields for SSO: ' . implode(', ', $missing), 'output', false);
         }
 
@@ -1362,7 +1383,7 @@ class Enhance extends Module
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
         $this->view->set('client_id', $service->client_id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'enhance' . DS);
         return $this->view->fetch();
@@ -1451,7 +1472,7 @@ class Enhance extends Module
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
         $this->view->set('client_id', $service->client_id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'enhance' . DS);
         return $this->view->fetch();
@@ -1527,7 +1548,7 @@ class Enhance extends Module
         $domain->attach(
             $fields->fieldText(
                 'domain',
-                (isset($vars->domain) ? $vars->domain : null),
+                ($vars->domain ?? null),
                 ['id' => 'enhance_domain']
             )
         );

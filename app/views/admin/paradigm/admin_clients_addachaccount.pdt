@@ -1,0 +1,30 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.addachaccount.boxtitle_addachaccount', true));
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+?>
+    <h6 class="form-section-header"><?php $this->_('AdminClients.accountcontactinfo.heading_contact');?></h6>
+    <?php
+    echo (isset($contact_info) ? $contact_info : null);
+    ?>
+    <h6 class="form-section-header"><?php $this->_('AdminClients.accountachinfo.heading_account');?></h6>
+    <?php
+    echo (isset($ach_info) ? $ach_info : null);
+    ?>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a href="<?php echo $this->base_uri . 'clients/accounts/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+        <?php $this->_('AppController.modal.btn_cancel');?>
+    </a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminClients.addachaccount.field_accountsubmit', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * GoGetSsl Module
  *
@@ -225,7 +226,7 @@ class Gogetssl extends Module
         $order_id = '';
 
         if ($vars['use_module'] == 'true') {
-            $data = $this->fillSSLDataFrom($package, (isset($vars['client_id']) ? $vars['client_id'] : ''), $vars);
+            $data = $this->fillSSLDataFrom($package, ($vars['client_id'] ?? ''), $vars);
 
             $this->log($row->meta->api_username . '|ssl-new-order', serialize($data), 'input', true);
             $result = $this->parseResponse($this->parseResponse($api->addSSLOrder($data)), $row);
@@ -860,6 +861,14 @@ class Gogetssl extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -891,6 +900,14 @@ class Gogetssl extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -1015,7 +1032,7 @@ class Gogetssl extends Module
             $fields->fieldSelect(
                 'meta[gogetssl_product]',
                 $gogetssl_products,
-                (isset($vars->meta['gogetssl_product']) ? $vars->meta['gogetssl_product'] : null),
+                ($vars->meta['gogetssl_product'] ?? null),
                 ['id' => 'gogetssl_product']
             )
         );
@@ -1045,7 +1062,7 @@ class Gogetssl extends Module
         $gogetssl_approver_emails = [];
         try {
             $gogetssl_approver_emails = $this->parseResponse($api->getDomainEmails($domain), $row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Error, invalid authorization
             $this->Input->setErrors(['api' => ['internal' => Language::_('GoGetSSL.!error.api.internal', true)]]);
         }
@@ -1084,26 +1101,34 @@ class Gogetssl extends Module
 
         $fields->setHtml("
 			<script type=\"text/javascript\">
-                $(document).ready(function() {
-                    $('#gogetssl_fqdn').focusout(function() {
-                        if ($(this).val() !== '') {
-                            var form = $(this).closest('form');
-                            $(form).append('<input type=\"hidden\" name=\"refresh_fields\" value=\"true\">');
-                            $(form).submit();
-						}
-					});
+                document.addEventListener('DOMContentLoaded', function() {
+                    var fqdnField = document.getElementById('gogetssl_fqdn');
+                    if (!fqdnField) return;
+
+                    fqdnField.addEventListener('change', function(e) {
+                        if (!e.isTrusted) return;
+                        var form = this.closest('form');
+                        if (!form) return;
+
+                        var refreshInput = document.createElement('input');
+                        refreshInput.type = 'hidden';
+                        refreshInput.name = 'refresh_fields';
+                        refreshInput.value = 'true';
+                        form.appendChild(refreshInput);
+                        form.submit();
+                    });
                 });
 			</script>
 		");
 
         $gogetssl_fqdn = $fields->label(Language::_('GoGetSSL.service_field.gogetssl_fqdn', true), 'gogetssl_fqdn');
         $gogetssl_fqdn->attach(
-            $fields->fieldText('gogetssl_fqdn', (isset($vars->gogetssl_fqdn) ? $vars->gogetssl_fqdn : null), ['id' => 'gogetssl_fqdn'])
+            $fields->fieldText('gogetssl_fqdn', ($vars->gogetssl_fqdn ?? null), ['id' => 'gogetssl_fqdn', 'autocomplete' => 'off'])
         );
         $fields->setField($gogetssl_fqdn);
         unset($gogetssl_fqdn);
 
-        $approver_emails = $this->getApproverEmails($api, $package, (isset($vars->gogetssl_fqdn) ? $vars->gogetssl_fqdn : null));
+        $approver_emails = $this->getApproverEmails($api, $package, ($vars->gogetssl_fqdn ?? null));
 
         $gogetssl_approver_emails = ['' => Language::_('GoGetSSL.please_select', true)] + $approver_emails;
         $gogetssl_approver_email = $fields->label(
@@ -1114,7 +1139,7 @@ class Gogetssl extends Module
             $fields->fieldSelect(
                 'gogetssl_approver_email',
                 $gogetssl_approver_emails,
-                (isset($vars->gogetssl_approver_email) ? $vars->gogetssl_approver_email : null),
+                ($vars->gogetssl_approver_email ?? null),
                 ['id' => 'gogetssl_approver_email']
             )
         );
@@ -1123,7 +1148,7 @@ class Gogetssl extends Module
 
         $gogetssl_csr = $fields->label(Language::_('GoGetSSL.service_field.gogetssl_csr', true), 'gogetssl_csr');
         $gogetssl_csr->attach(
-            $fields->fieldTextArea('gogetssl_csr', (isset($vars->gogetssl_csr) ? $vars->gogetssl_csr : null), ['id' => 'gogetssl_csr'])
+            $fields->fieldTextArea('gogetssl_csr', ($vars->gogetssl_csr ?? null), ['id' => 'gogetssl_csr'])
         );
         $fields->setField($gogetssl_csr);
         unset($gogetssl_csr);
@@ -1136,7 +1161,7 @@ class Gogetssl extends Module
             $fields->fieldSelect(
                 'gogetssl_webserver_type',
                 $this->getWebserverTypes($api, $package),
-                (isset($vars->gogetssl_webserver_type) ? $vars->gogetssl_webserver_type : null),
+                ($vars->gogetssl_webserver_type ?? null),
                 ['id' => 'gogetssl_webserver_type']
             )
         );
@@ -1145,7 +1170,7 @@ class Gogetssl extends Module
 
         $gogetssl_title = $fields->label(Language::_('GoGetSSL.service_field.gogetssl_title', true), 'gogetssl_title');
         $gogetssl_title->attach(
-            $fields->fieldText('gogetssl_title', (isset($vars->gogetssl_title) ? $vars->gogetssl_title : null), ['id' => 'gogetssl_title'])
+            $fields->fieldText('gogetssl_title', ($vars->gogetssl_title ?? null), ['id' => 'gogetssl_title'])
         );
         $fields->setField($gogetssl_title);
         unset($gogetssl_title);
@@ -1157,7 +1182,7 @@ class Gogetssl extends Module
         $gogetssl_firstname->attach(
             $fields->fieldText(
                 'gogetssl_firstname',
-                (isset($vars->gogetssl_firstname) ? $vars->gogetssl_firstname : null),
+                ($vars->gogetssl_firstname ?? null),
                 ['id' => 'gogetssl_firstname']
             )
         );
@@ -1171,7 +1196,7 @@ class Gogetssl extends Module
         $gogetssl_lastname->attach(
             $fields->fieldText(
                 'gogetssl_lastname',
-                (isset($vars->gogetssl_lastname) ? $vars->gogetssl_lastname : null),
+                ($vars->gogetssl_lastname ?? null),
                 ['id' => 'gogetssl_lastname']
             )
         );
@@ -1185,7 +1210,7 @@ class Gogetssl extends Module
         $gogetssl_address1->attach(
             $fields->fieldText(
                 'gogetssl_address1',
-                (isset($vars->gogetssl_address1) ? $vars->gogetssl_address1 : null),
+                ($vars->gogetssl_address1 ?? null),
                 ['id' => 'gogetssl_address1']
             )
         );
@@ -1199,7 +1224,7 @@ class Gogetssl extends Module
         $gogetssl_address2->attach(
             $fields->fieldText(
                 'gogetssl_address2',
-                (isset($vars->gogetssl_address2) ? $vars->gogetssl_address2 : null),
+                ($vars->gogetssl_address2 ?? null),
                 ['id' => 'gogetssl_address2']
             )
         );
@@ -1208,21 +1233,21 @@ class Gogetssl extends Module
 
         $gogetssl_city = $fields->label(Language::_('GoGetSSL.service_field.gogetssl_city', true), 'gogetssl_city');
         $gogetssl_city->attach(
-            $fields->fieldText('gogetssl_city', (isset($vars->gogetssl_city) ? $vars->gogetssl_city : null), ['id' => 'gogetssl_city'])
+            $fields->fieldText('gogetssl_city', ($vars->gogetssl_city ?? null), ['id' => 'gogetssl_city'])
         );
         $fields->setField($gogetssl_city);
         unset($gogetssl_city);
 
         $gogetssl_zip = $fields->label(Language::_('GoGetSSL.service_field.gogetssl_zip', true), 'gogetssl_zip');
         $gogetssl_zip->attach(
-            $fields->fieldText('gogetssl_zip', (isset($vars->gogetssl_zip) ? $vars->gogetssl_zip : null), ['id' => 'gogetssl_zip'])
+            $fields->fieldText('gogetssl_zip', ($vars->gogetssl_zip ?? null), ['id' => 'gogetssl_zip'])
         );
         $fields->setField($gogetssl_zip);
         unset($gogetssl_zip);
 
         $gogetssl_state = $fields->label(Language::_('GoGetSSL.service_field.gogetssl_state', true), 'gogetssl_state');
         $gogetssl_state->attach(
-            $fields->fieldText('gogetssl_state', (isset($vars->gogetssl_state) ? $vars->gogetssl_state : null), ['id' => 'gogetssl_state'])
+            $fields->fieldText('gogetssl_state', ($vars->gogetssl_state ?? null), ['id' => 'gogetssl_state'])
         );
         $fields->setField($gogetssl_state);
         unset($gogetssl_state);
@@ -1234,7 +1259,7 @@ class Gogetssl extends Module
         $gogetssl_country->attach(
             $fields->fieldText(
                 'gogetssl_country',
-                (isset($vars->gogetssl_country) ? $vars->gogetssl_country : null),
+                ($vars->gogetssl_country ?? null),
                 ['id' => 'gogetssl_country']
             )
         );
@@ -1246,7 +1271,7 @@ class Gogetssl extends Module
             'gogetssl_email'
         );
         $gogetssl_email->attach(
-            $fields->fieldText('gogetssl_email', (isset($vars->gogetssl_email) ? $vars->gogetssl_email : null), ['id' => 'gogetssl_email'])
+            $fields->fieldText('gogetssl_email', ($vars->gogetssl_email ?? null), ['id' => 'gogetssl_email'])
         );
         $fields->setField($gogetssl_email);
         unset($gogetssl_email);
@@ -1258,7 +1283,7 @@ class Gogetssl extends Module
         $gogetssl_number->attach(
             $fields->fieldText(
                 'gogetssl_number',
-                (isset($vars->gogetssl_number) ? $vars->gogetssl_number : null),
+                ($vars->gogetssl_number ?? null),
                 ['id' => 'gogetssl_number']
             )
         );
@@ -1269,7 +1294,7 @@ class Gogetssl extends Module
         $gogetssl_fax->attach(
             $fields->fieldText(
                 'gogetssl_fax',
-                (isset($vars->gogetssl_fax) ? $vars->gogetssl_fax : null),
+                ($vars->gogetssl_fax ?? null),
                 ['id' => 'gogetssl_fax']
             )
         );
@@ -1283,7 +1308,7 @@ class Gogetssl extends Module
         $gogetssl_organization->attach(
             $fields->fieldText(
                 'gogetssl_organization',
-                (isset($vars->gogetssl_organization) ? $vars->gogetssl_organization : null),
+                ($vars->gogetssl_organization ?? null),
                 ['id' => 'gogetssl_organization']
             )
         );
@@ -1297,7 +1322,7 @@ class Gogetssl extends Module
         $gogetssl_organization_unit->attach(
             $fields->fieldText(
                 'gogetssl_organization_unit',
-                (isset($vars->gogetssl_organization_unit) ? $vars->gogetssl_organization_unit : null),
+                ($vars->gogetssl_organization_unit ?? null),
                 ['id' => 'gogetssl_organization_unit']
             )
         );
@@ -1533,7 +1558,7 @@ class Gogetssl extends Module
         $res = ['webservers' => []];
         try {
             $res = $this->parseResponse($api->getWebservers($cert_type), $row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Error, invalid authorization
             $this->Input->setErrors(['api' => ['internal' => Language::_('GoGetSSL.!error.api.internal', true)]]);
         }
@@ -1567,7 +1592,7 @@ class Gogetssl extends Module
         try {
             $product = $this->parseResponse($api->getProductDetails($package->meta->gogetssl_product), $row);
             return $product['product_brand'] == 'comodo';
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Error, invalid authorization
             $this->Input->setErrors(['api' => ['internal' => Language::_('GoGetSSL.!error.api.internal', true)]]);
         }
@@ -1647,7 +1672,7 @@ class Gogetssl extends Module
     public function validateConnection($api_username, $vars)
     {
         try {
-            $api_password = (isset($vars['api_password']) ? $vars['api_password'] : '');
+            $api_password = ($vars['api_password'] ?? '');
             $sandbox = (isset($vars['sandbox']) && $vars['sandbox'] == 'true' ? 'true' : 'false');
             $module_row = (object)['meta' => (object)$vars];
 
@@ -1659,7 +1684,7 @@ class Gogetssl extends Module
 
             // Remove the errors set
             $this->Input->setErrors([]);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
         }
         return false;
@@ -1688,9 +1713,7 @@ class Gogetssl extends Module
 
         if (empty($response) || !empty($response['error'])) {
             $success = false;
-            $error = (isset($response['description'])
-                ? $response['description']
-                : Language::_('GoGetSSL.!error.api.internal', true)
+            $error = ($response['description'] ?? Language::_('GoGetSSL.!error.api.internal', true)
             );
 
             if (!$ignore_error) {

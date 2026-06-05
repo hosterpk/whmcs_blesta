@@ -13,6 +13,8 @@ $lang['Cpanel.tab_client_stats'] = 'Statistics';
 $lang['Cpanel.tab_client_login'] = 'Log in to cPanel';
 $lang['Cpanel.tab_client_actions'] = 'Actions';
 
+$lang['Cpanel.back_to_manage'] = 'Back';
+
 // Module management
 $lang['Cpanel.add_module_row'] = 'Add Server';
 $lang['Cpanel.add_module_group'] = 'Add Server Group';
@@ -35,6 +37,8 @@ $lang['Cpanel.manage.module_rows.confirm_delete'] = 'Are you sure you want to de
 $lang['Cpanel.manage.module_groups.confirm_delete'] = 'Are you sure you want to delete this server group?';
 $lang['Cpanel.manage.module_rows_no_results'] = 'There are no servers.';
 $lang['Cpanel.manage.module_groups_no_results'] = 'There are no server groups.';
+$lang['Cpanel.manage.tab_rows'] = 'Servers';
+$lang['Cpanel.manage.tab_groups'] = 'Server Groups';
 
 
 $lang['Cpanel.order_options.first'] = 'First Non-full Server';

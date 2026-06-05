@@ -1,0 +1,127 @@
+<?php
+if (!empty($fields)) {
+?>
+<div class="row">
+<?php
+    $col_count = 0;
+    foreach ($fields as $field) {
+        // Skip field if visible only to clients
+        if ($field->visibility == 'client_only') {
+            continue;
+        }
+
+        // Set field label
+        $label = Language::_($field->label, true);
+        if (empty($label)) {
+            $label = $field->label;
+        }
+
+        // Set field description
+        $description = Language::_($field->description, true);
+        if (empty($description)) {
+            $description = $field->description;
+        }
+
+        // Get field value
+        $value = $vars[$field->id] ?? '';
+
+        // Set required attribute
+        $required = $field->required == 1 ? ' required' : '';
+
+        // Determine column class based on field type
+        $col_class = 'col-md-6';
+        if ($field->type == 'textarea') {
+            $col_class = 'col-12';
+        }
+
+        $col_count++;
+?>
+    <div class="<?php echo $col_class;?> mb-3">
+        <label for="custom_fields_<?php echo $this->Html->safe($field->id);?>" class="form-label custom-field-label">
+            <?php echo $this->Html->safe($label);?>
+            <span class="custom-field-badge"><?php $this->_('AdminTickets.custom_fields.badge_custom');?></span>
+            <?php if (!empty($description)) { ?>
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top" title="<?php echo $this->Html->safe($description);?>"></i>
+            <?php } ?>
+        </label>
+        <?php
+        switch ($field->type) {
+            case 'text':
+            case 'password':
+                // Use text field for password type as staff should see the value
+                ?>
+                <input type="text" name="custom_fields[<?php echo $this->Html->safe($field->id);?>]" id="custom_fields_<?php echo $this->Html->safe($field->id);?>" class="form-control" value="<?php echo $this->Html->safe($value);?>"<?php echo $required;?>>
+                <?php
+                break;
+
+            case 'quantity':
+                ?>
+                <input type="text" name="custom_fields[<?php echo $this->Html->safe($field->id);?>]" id="custom_fields_<?php echo $this->Html->safe($field->id);?>" class="form-control" value="<?php echo $this->Html->safe($value ?: ($field->min ?? 0));?>" data-type="quantity" data-min="<?php echo $this->Html->safe($field->min ?? 0);?>" data-max="<?php echo $this->Html->safe($field->max ?? 0);?>" data-step="<?php echo $this->Html->safe($field->step ?? 1);?>"<?php echo $required;?>>
+                <?php
+                break;
+
+            case 'textarea':
+                ?>
+                <textarea name="custom_fields[<?php echo $this->Html->safe($field->id);?>]" id="custom_fields_<?php echo $this->Html->safe($field->id);?>" class="form-control" rows="4"<?php echo $required;?>><?php echo $this->Html->safe($value);?></textarea>
+                <?php
+                break;
+
+            case 'select':
+                ?>
+                <select name="custom_fields[<?php echo $this->Html->safe($field->id);?>]" id="custom_fields_<?php echo $this->Html->safe($field->id);?>" class="form-select"<?php echo $required;?>>
+                    <?php
+                    $options = $field->options ?? [];
+                    if (is_array($options)) {
+                        foreach ($options as $option_value => $option_label) {
+                            if (is_array($option_label)) {
+                                $option_value = $option_label['value'] ?? $option_value;
+                                $option_label = $option_label['name'] ?? $option_label['value'] ?? $option_value;
+                            }
+                    ?>
+                    <option value="<?php echo $this->Html->safe($option_value);?>"<?php echo $value == $option_value ? ' selected' : '';?>><?php echo $this->Html->safe($option_label);?></option>
+                    <?php
+                        }
+                    }
+                    ?>
+                </select>
+                <?php
+                break;
+
+            case 'checkbox':
+                ?>
+                <div class="form-check">
+                    <input type="checkbox" name="custom_fields[<?php echo $this->Html->safe($field->id);?>]" id="custom_fields_<?php echo $this->Html->safe($field->id);?>" class="form-check-input" value="1"<?php echo $value == '1' ? ' checked' : '';?>>
+                    <label class="form-check-label" for="custom_fields_<?php echo $this->Html->safe($field->id);?>"><?php echo $this->Html->safe($label);?></label>
+                </div>
+                <?php
+                break;
+
+            case 'radio':
+                $options = $field->options ?? [];
+                if (is_array($options)) {
+                    $i = 0;
+                    foreach ($options as $option_value => $option_label) {
+                        if (is_array($option_label)) {
+                            $option_value = $option_label['value'] ?? $option_value;
+                            $option_label = $option_label['name'] ?? $option_label['value'] ?? $option_value;
+                        }
+                ?>
+                <div class="form-check">
+                    <input type="radio" name="custom_fields[<?php echo $this->Html->safe($field->id);?>]" id="custom_fields_<?php echo $this->Html->safe($field->id);?>_<?php echo $i;?>" class="form-check-input" value="<?php echo $this->Html->safe($option_value);?>"<?php echo $value == $option_value ? ' checked' : '';?>>
+                    <label class="form-check-label" for="custom_fields_<?php echo $this->Html->safe($field->id);?>_<?php echo $i;?>"><?php echo $this->Html->safe($option_label);?></label>
+                </div>
+                <?php
+                        $i++;
+                    }
+                }
+                break;
+        }
+        ?>
+    </div>
+<?php
+    }
+?>
+</div>
+<?php
+}
+?>

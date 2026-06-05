@@ -50,19 +50,11 @@ class AdminCompanyGroups extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['ClientGroups', 'Invoices', 'Navigation', 'GatewayManager']);
+        $this->uses(['ClientGroups', 'Invoices', 'GatewayManager']);
         $this->helpers(['DataStructure', 'Color']);
 
         $this->ArrayHelper = $this->DataStructure->create('Array');
 
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
-
-        // Load the color picker
-        $this->Javascript->setFile('colorpicker.min.js');
     }
 
     /**
@@ -184,7 +176,7 @@ class AdminCompanyGroups extends AdminController
                 // Reset the posted arrays fields
                 foreach ($arrays as $group_name) {
                     $this->post[$group_name] = (isset($this->post[$group_name])
-                        ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($this->post[$group_name]))
+                        ? safe_unserialize(base64_decode($this->post[$group_name]))
                         : []
                     );
                 }
@@ -215,7 +207,7 @@ class AdminCompanyGroups extends AdminController
             // Decode array fields
             foreach ($arrays as $group_name) {
                 $vars->$group_name = (isset($settings[$group_name])
-                    ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings[$group_name]))
+                    ? safe_unserialize(base64_decode($settings[$group_name]))
                     : []
                 );
             }
@@ -415,7 +407,7 @@ class AdminCompanyGroups extends AdminController
                 // Reset the posted arrays fields
                 foreach ($arrays as $group_name) {
                     $this->post[$group_name] = (isset($this->post[$group_name])
-                        ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($this->post[$group_name]))
+                        ? safe_unserialize(base64_decode($this->post[$group_name]))
                         : []
                     );
                 }
@@ -447,7 +439,7 @@ class AdminCompanyGroups extends AdminController
             // Decode array fields
             foreach ($arrays as $group_name) {
                 $vars->$group_name = (isset($settings[$group_name])
-                    ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($settings[$group_name]))
+                    ? safe_unserialize(base64_decode($settings[$group_name]))
                     : []
                 );
             }

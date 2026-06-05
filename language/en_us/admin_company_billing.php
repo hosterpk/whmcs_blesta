@@ -345,7 +345,7 @@ $lang['AdminCompanyBilling.editcoupon.tooltip_regex_pattern'] = 'Enter a regular
 $lang['AdminCompanyBilling.editcoupon.heading_packages'] = 'Package Limitations';
 
 $lang['AdminCompanyBilling.editcoupon.field_package_group_id'] = 'Package Group Filter';
-$lang['AdminCompanyBilling.editcoupon.field_couponsubmit'] = 'Edit Coupon';
+$lang['AdminCompanyBilling.editcoupon.field_couponsubmit'] = 'Update Coupon';
 
 $lang['AdminCompanyBilling.editcoupon.text_all'] = 'All';
 $lang['AdminCompanyBilling.editcoupon.text_none'] = 'None';

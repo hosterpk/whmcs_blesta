@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('blesta.map', [
     'module' => 'legacy_license',
     'module_row_key' => null,

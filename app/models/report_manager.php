@@ -1,5 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Report Manager
  *
@@ -114,13 +123,14 @@ class ReportManager extends AppModel
             if (substr($report, 0, 1) != '.' && is_dir(COMPONENTDIR . 'reports' . DS . $report)) {
                 try {
                     $rep = $this->loadReport($report);
-                    if ($format == 'any'
+                    if (
+                        $format == 'any'
                         || ($rep instanceof ReportInterface && $format == 'csv')
                         || in_array($format, $rep->getFormats())
                     ) {
                         $reports[$report] = $rep->getName();
                     }
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // The report could not be loaded, try the next
                     continue;
                 }
@@ -211,7 +221,8 @@ class ReportManager extends AppModel
             // Create the file
             $path_to_file = rtrim($this->temp_dir, DS) . DS . $this->makeFileName($format);
 
-            if (empty($this->temp_dir)
+            if (
+                empty($this->temp_dir)
                 || !is_dir($this->temp_dir)
                 || (file_put_contents($path_to_file, '') === false)
                 || !is_writable($path_to_file)
@@ -240,6 +251,11 @@ class ReportManager extends AppModel
             if ($return == 'file') {
                 return $path_to_file;
             }
+
+            // Set security headers
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none';");
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: DENY');
 
             // Download the data
             $new_file_name = 'report-' . $type . '-' . $this->Date->cast(date('c'), 'Y-m-d') . '.' . $format;
@@ -310,7 +326,7 @@ class ReportManager extends AppModel
 
         $heading_names = [];
         foreach ($headings as $key => $column) {
-            $heading_names[$key] = isset($column['name']) ? $column['name'] : $key;
+            $heading_names[$key] = $column['name'] ?? $key;
         }
 
         $heading_row = $this->buildCsvRow($heading_names);
@@ -508,7 +524,7 @@ class ReportManager extends AppModel
 
         foreach ($report_fields as $field) {
             if ($field->values != '') {
-                $field->values = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($field->values);
+                $field->values = safe_unserialize($field->values);
             }
 
             $field->required = 'no';

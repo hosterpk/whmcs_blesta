@@ -1,4 +1,5 @@
 <?php
+
 Configure::set('centovacast.map', [
     'module' => 'universal_module',
     'module_row_meta' => [

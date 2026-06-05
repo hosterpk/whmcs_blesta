@@ -1,0 +1,63 @@
+<?php /** @var View $this **/ ?>
+
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminSystemHelp.boxtitle_help', true), ['id' => 'admin_system_help']);
+    ?>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <a href="https://docs.blesta.com/display/user/Overview" target="_blank" class="card h-100 text-decoration-none" style="border-color: var(--border-color);">
+                <div class="card-body d-flex align-items-start">
+                    <i class="bi bi-book text-secondary me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h6 class="card-title mb-1"><?php $this->_('AdminSystemHelp.index.heading_user_manual');?></h6>
+                        <p class="card-text text-muted small mb-0"><?php $this->_('AdminSystemHelp.index.text_user_manual');?></p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6">
+            <a href="https://docs.blesta.com/display/dev/Overview" target="_blank" class="card h-100 text-decoration-none" style="border-color: var(--border-color);">
+                <div class="card-body d-flex align-items-start">
+                    <i class="bi bi-code-slash text-secondary me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h6 class="card-title mb-1"><?php $this->_('AdminSystemHelp.index.heading_dev_manual');?></h6>
+                        <p class="card-text text-muted small mb-0"><?php $this->_('AdminSystemHelp.index.text_dev_manual');?></p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6">
+            <a href="https://www.blesta.com/forums/" target="_blank" class="card h-100 text-decoration-none" style="border-color: var(--border-color);">
+                <div class="card-body d-flex align-items-start">
+                    <i class="bi bi-chat-dots text-secondary me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h6 class="card-title mb-1"><?php $this->_('AdminSystemHelp.index.heading_forums');?></h6>
+                        <p class="card-text text-muted small mb-0"><?php $this->_('AdminSystemHelp.index.text_forums');?></p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6">
+            <a href="https://discord.gg/XCq34pU" target="_blank" class="card h-100 text-decoration-none" style="border-color: var(--border-color);">
+                <div class="card-body d-flex align-items-start">
+                    <i class="bi bi-discord text-secondary me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h6 class="card-title mb-1"><?php $this->_('AdminSystemHelp.index.heading_discord');?></h6>
+                        <p class="card-text text-muted small mb-0"><?php $this->_('AdminSystemHelp.index.text_discord');?></p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <?php $this->Widget->end();?>
+</div>

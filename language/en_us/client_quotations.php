@@ -31,7 +31,7 @@ $lang['ClientQuotations.index.heading_subtotal'] = 'Subtotal';
 $lang['ClientQuotations.index.heading_total'] = 'Amount';
 $lang['ClientQuotations.index.heading_date_created'] = 'Date Created';
 $lang['ClientQuotations.index.heading_date_expires'] = 'Date Expires';
-$lang['ClientQuotations.index.heading_options'] = 'Options';
+$lang['ClientQuotations.index.heading_options'] = 'Actions';
 $lang['ClientQuotations.index.option_view'] = 'View';
 $lang['ClientQuotations.index.option_approve'] = 'Approve';
 

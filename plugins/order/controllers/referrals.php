@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Referrals controller
  *
@@ -39,10 +40,10 @@ class Referrals extends OrderAffiliateController
         }
 
         // Set current page of results
-        $status = (isset($this->get[0]) ? $this->get[0] : 'pending');
+        $status = ($this->get[0] ?? 'pending');
         $page = (isset($this->get[1]) ? (int)$this->get[1] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'date_added');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
+        $sort = ($this->get['sort'] ?? 'date_added');
+        $order = ($this->get['order'] ?? 'desc');
 
         // Set the number of referrals of each type
         $status_count = [

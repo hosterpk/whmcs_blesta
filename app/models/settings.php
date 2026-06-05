@@ -1,5 +1,11 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Blesta\Core\Cache\CacheFactory;
+use Loader;
+
 /**
  * System setting management
  *
@@ -11,6 +17,16 @@
  */
 class Settings extends AppModel
 {
+    /**
+     * @var array In-memory cache of system settings keyed by setting key
+     */
+    private static $settingsCache = [];
+
+    /**
+     * @var bool Whether all system settings have been bulk-loaded into cache
+     */
+    private static $settingsCacheLoaded = false;
+
     /**
      * Fetches all system settings
      *
@@ -38,17 +54,35 @@ class Settings extends AppModel
      */
     public function getSetting($key)
     {
-        $setting = $this->Record->select(['key', 'value', 'encrypted', 'inherit'])
-            ->select(['?' => 'level'], false)
-            ->appendValues(['system'])
-            ->from('settings')
-            ->where('key', '=', $key)
-            ->fetch();
-
-        if ($setting && $setting->encrypted) {
-            $setting->value = $this->systemDecrypt($setting->value);
+        // Tier 1: in-memory cache
+        if (self::$settingsCacheLoaded) {
+            return self::$settingsCache[$key] ?? false;
         }
-        return $setting;
+
+        // Tier 2: Redis cache
+        $cache = CacheFactory::get();
+        $cached = $cache->read('all', 'settings:system');
+        if ($cached !== false) {
+            foreach ($cached as $setting) {
+                self::$settingsCache[$setting->key] = $setting;
+            }
+            self::$settingsCacheLoaded = true;
+
+            return self::$settingsCache[$key] ?? false;
+        }
+
+        // Tier 3: database
+        $allSettings = $this->getSettings();
+        if (is_array($allSettings)) {
+            foreach ($allSettings as $setting) {
+                self::$settingsCache[$setting->key] = $setting;
+            }
+            // Store in Redis
+            $cache->write('all', $allSettings, 0, 'settings:system');
+        }
+        self::$settingsCacheLoaded = true;
+
+        return self::$settingsCache[$key] ?? false;
     }
 
     /**
@@ -58,7 +92,7 @@ class Settings extends AppModel
      * @param array $value_keys An array of key values to accept as valid fields
      * @see Settings::setSetting()
      */
-    public function setSettings(array $settings, array $value_keys = null)
+    public function setSettings(array $settings, ?array $value_keys = null)
     {
         if (!empty($value_keys)) {
             $settings = array_intersect_key($settings, array_flip($value_keys));
@@ -100,8 +134,32 @@ class Settings extends AppModel
             }
         }
 
-        $this->Record->duplicate('value', '=', $fields['value'])->
-            insert('settings', $fields);
+        $this->Record->duplicate('value', '=', $fields['value']);
+        if (isset($fields['encrypted'])) {
+            $this->Record->duplicate('encrypted', '=', $fields['encrypted']);
+        }
+        if (isset($fields['inherit'])) {
+            $this->Record->duplicate('inherit', '=', $fields['inherit']);
+        }
+        $this->Record->insert('settings', $fields);
+
+        // Invalidate cached setting and descendant caches (system settings are inherited by all)
+        self::clearSettingsCache();
+        Companies::clearSettingsCache();
+        ClientGroups::clearSettingsCache();
+        Clients::clearSettingsCache();
+        Staff::clearSettingsCache();
+    }
+
+    /**
+     * Clears in-memory and Redis caches for system settings
+     */
+    public static function clearSettingsCache()
+    {
+        self::$settingsCache = [];
+        self::$settingsCacheLoaded = false;
+
+        CacheFactory::get()->deleteGroup('settings:system');
     }
 
     /**
@@ -116,6 +174,13 @@ class Settings extends AppModel
     public function unsetSetting($key)
     {
         $this->Record->from('settings')->where('key', '=', $key)->delete();
+
+        // Invalidate cached setting and descendant caches (system settings are inherited by all)
+        self::clearSettingsCache();
+        Companies::clearSettingsCache();
+        ClientGroups::clearSettingsCache();
+        Clients::clearSettingsCache();
+        Staff::clearSettingsCache();
     }
 
     /**

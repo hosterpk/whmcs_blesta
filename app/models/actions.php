@@ -1,5 +1,13 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Actions
  *
@@ -75,10 +83,15 @@ class Actions extends AppModel
 
         $this->Input->setRules($rules);
 
+        // Normalize icon: strip "bi " prefix since templates prepend it
+        if (isset($vars['icon']) && str_starts_with($vars['icon'], 'bi ')) {
+            $vars['icon'] = substr($vars['icon'], 3);
+        }
+
         // Insert the action
         $vars = $this->mapOldFields($vars);
         if ($this->Input->validates($vars)) {
-            $fields = ['location', 'url', 'name', 'options', 'plugin_id', 'company_id', 'editable', 'enabled'];
+            $fields = ['location', 'url', 'name', 'icon', 'options', 'plugin_id', 'company_id', 'editable', 'enabled'];
             $this->Record->insert('actions', $vars, $fields);
 
             return $this->Record->lastInsertId();
@@ -102,10 +115,15 @@ class Actions extends AppModel
 
         $this->Input->setRules($rules);
 
+        // Normalize icon: strip "bi " prefix since templates prepend it
+        if (isset($vars['icon']) && str_starts_with($vars['icon'], 'bi ')) {
+            $vars['icon'] = substr($vars['icon'], 3);
+        }
+
         // Update an action
         $vars = $this->mapOldFields($vars);
         if ($this->Input->validates($vars)) {
-            $fields = ['name', 'url', 'options', 'enabled'];
+            $fields = ['name', 'url', 'icon', 'options', 'enabled'];
             $this->Record->where('id', '=', $action_id)->update('actions', $vars, $fields);
 
             return $action_id;
@@ -342,13 +360,13 @@ class Actions extends AppModel
      * @param bool $translate Whether to translate language definitions (optional, default: true)
      * @return stdClass The formatted action object
      */
-    private function formatAction(stdClass $action, $translate = true)
+    private function formatAction(\stdClass $action, $translate = true)
     {
         Loader::loadModels($this, ['Navigation']);
 
         // Unserialize the options
         if (property_exists($action, 'options')) {
-            $action->options = ($action->options === null ? null : \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($action->options));
+            $action->options = ($action->options === null ? null : safe_unserialize($action->options));
         }
 
         // Translate the action's names
@@ -357,9 +375,7 @@ class Actions extends AppModel
         }
 
         $action->uri = $action->url;
-        $action->action = isset($this->location_to_action_map[$action->location])
-            ? $this->location_to_action_map[$action->location]
-            : $action->location;
+        $action->action = $this->location_to_action_map[$action->location] ?? $action->location;
 
         $action->nav_items = $this->Navigation->getAll(['action_id' => $action->id]);
 
@@ -375,7 +391,7 @@ class Actions extends AppModel
      * @param stdClass $action The action object whose name should be translated
      * @return stdClass The action object with translated name
      */
-    private function translateAction(stdClass $action)
+    private function translateAction(\stdClass $action)
     {
         if (!isset($this->PluginManager)) {
             Loader::loadModels($this, ['PluginManager']);
@@ -386,7 +402,8 @@ class Actions extends AppModel
         }
 
         // Load the language file for the plugin associated with this navigation item
-        if (isset($action->plugin_id)
+        if (
+            isset($action->plugin_id)
             && !in_array($action->plugin_id, $this->loaded_plugins)
             && ($plugin = $this->PluginManager->get($action->plugin_id))
         ) {
@@ -483,6 +500,13 @@ class Actions extends AppModel
                     'message' => $this->_('Actions.!error.name.action_empty')
                 ]
             ],
+            'icon' => [
+                'length' => [
+                    'if_set' => true,
+                    'rule' => ['maxLength', 255],
+                    'message' => $this->_('Actions.!error.icon.length')
+                ]
+            ],
             'options' => [
                 'empty' => [
                     'if_set' => true,
@@ -525,6 +549,10 @@ class Actions extends AppModel
             unset($rules['plugin_id']);
             unset($rules['company_id']);
             unset($rules['editable']);
+
+            // Allow partial updates — only validate fields that are present
+            $rules['url']['empty']['if_set'] = true;
+            $rules['name']['action_empty']['if_set'] = true;
         }
 
         return $rules;

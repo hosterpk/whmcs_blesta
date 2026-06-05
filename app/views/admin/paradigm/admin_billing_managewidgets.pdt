@@ -1,0 +1,61 @@
+<?php /** @var View $this **/ ?>
+
+<p class="text-secondary mb-3"><?php $this->_('AdminBilling.managewidgets.text_toggle_widgets');?></p>
+<?php
+$this->Form->create();
+?>
+    <div class="widget-selector">
+        <?php
+        foreach ($installed_widgets ?? [] as $widget) {
+        ?>
+            <div class="widget-selector-item <?php echo ($widget->active ? 'active' : '');?>" data-widget-id="<?php echo $this->Html->safe($widget->key);?>">
+                <i class="<?php echo $this->Html->safe($widget->icon ?? 'bi bi-gear-wide-connected');?>"></i>
+                <div class="widget-name"><?php echo $this->Html->safe($widget->name);?></div>
+                <div class="widget-description"><?php echo $this->Html->safe($widget->description);?></div>
+            </div>
+        <?php
+        }
+        ?>
+    </div>
+<?php
+$this->Form->end();
+?>
+
+<script type="text/javascript">
+    document.addEventListener('click', function(e) {
+        var item = e.target.closest('.widget-selector-item');
+        if (!item) return;
+
+        item.classList.toggle('active');
+
+        // Get the widget selector container
+        var widgetSelector = item.closest('.widget-selector');
+        if (!widgetSelector) return;
+
+        // Collect all active widget IDs within this container
+        var widgets_on = [];
+        widgetSelector.querySelectorAll('.widget-selector-item.active').forEach(function(el) {
+            widgets_on.push(el.dataset.widgetId);
+        });
+
+        // Get CSRF token from form
+        var csrfTokenEl = document.querySelector('input[name="_csrf_token"]');
+        var post_data = new URLSearchParams();
+        if (widgets_on.length === 0) {
+            // Ensure the key is present so the server knows the form was submitted
+            post_data.append('widgets_on', '');
+        } else {
+            widgets_on.forEach(function(id) { post_data.append('widgets_on[]', id); });
+        }
+        if (csrfTokenEl) {
+            post_data.append('_csrf_token', csrfTokenEl.value);
+        }
+
+        // Send AJAX request
+        fetch(base_uri + 'billing/managewidgets/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: post_data.toString()
+        });
+    });
+</script>

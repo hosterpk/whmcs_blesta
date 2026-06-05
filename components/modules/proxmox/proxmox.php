@@ -182,11 +182,7 @@ class Proxmox extends Module
 
         $new_vmid = [];
 
-        if (empty($row->meta->vmid) || $row->meta->vmid < 200) {
-            $new_vmid = 200;
-        } else {
-            $new_vmid = $row->meta->vmid;
-        }
+        $new_vmid = empty($row->meta->vmid) || $row->meta->vmid < 200 ? 200 : $row->meta->vmid;
 
         $params['vmid'] = '';
         $params['storage'] = $package->meta->storage;
@@ -207,7 +203,7 @@ class Proxmox extends Module
             $available_ips = explode("\n", $row->meta->ips);
             $params['ip'] = trim(array_shift($available_ips));
 
-            $client_id = (isset($vars['client_id']) ? $vars['client_id'] : '');
+            $client_id = ($vars['client_id'] ?? '');
 
             // Create a new client (if one does not already exist)
             $client = $this->createClient($client_id, $params['userid'], $row);
@@ -227,7 +223,7 @@ class Proxmox extends Module
                 // Create the Virtual Server
                 $this->log($row->meta->host . '|vserver-create', serialize($masked_params), 'input', true);
                 $response = $this->parseResponse($vserver_api->create($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Internal Error
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Proxmox.!error.api.internal', true)]]);
             }
@@ -450,7 +446,7 @@ class Proxmox extends Module
                 }
                 sleep(5);
                 $this->parseResponse($vserver_api->terminate($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Internal Error
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Proxmox.!error.api.internal', true)]]);
                 return;
@@ -501,7 +497,7 @@ class Proxmox extends Module
 
                 $this->log($row->meta->host . '|vserver-shutdown', serialize($params), 'input', true);
                 $response = $this->parseResponse($server_api->shutdown($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
@@ -552,7 +548,7 @@ class Proxmox extends Module
 
                 $this->log($row->meta->host . '|vserver-boot', serialize($params), 'input', true);
                 $response = $this->parseResponse($server_api->boot($params), $row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
                 return;
             }
@@ -736,6 +732,14 @@ class Proxmox extends Module
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Form', 'Html', 'Widget']);
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -760,8 +764,19 @@ class Proxmox extends Module
 
         if (empty($vars)) {
             $vars = $module_row->meta;
+
+            // Mask password by replacing with ***
+            $vars->password = '***';
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         return $this->view->fetch();
     }
@@ -816,6 +831,11 @@ class Proxmox extends Module
      */
     public function editModuleRow($module_row, array &$vars)
     {
+        // If the replacement sting is submitted, replace with the stored password
+        if (isset($vars['password']) && $vars['password'] == '***') {
+            $vars['password'] = $module_row->meta->password;
+        }
+
         // Same as adding
         return $this->addModuleRow($vars);
     }
@@ -865,7 +885,6 @@ class Proxmox extends Module
             switch ($group->add_order) {
                 default:
                 case 'first':
-
                     foreach ($group->rows as $row) {
                         return $row->id;
                     }
@@ -904,6 +923,7 @@ class Proxmox extends Module
             }
         }
 
+
         // Remove nodes from 'available' if they are currently 'assigned'
         if (isset($vars->meta['nodes'])) {
             $this->assignGroups($nodes, $vars->meta['nodes']);
@@ -921,97 +941,198 @@ class Proxmox extends Module
 
         // Show nodes, and set javascript field toggles
         $assigned_nodes = $vars->meta['nodes'] ?? [];
-        $this->Form->setOutput(true);
-        $fields->setHtml('
-			<table id="proxmox_node_selector" style="display: none;">
-				<tr>
-					<td>' . Language::_('Proxmox.package_fields.assigned_nodes', true) . '</td>
-					<td></td>
-					<td>' . Language::_('Proxmox.package_fields.available_nodes', true) . '</td>
-				</tr>
-				<tr>
-					<td>
-						'
-                        . $this->Form->fieldMultiSelect(
-                            'meta[nodes][]',
-                            $assigned_nodes,
-                            [],
-                            ['id' => 'assigned_nodes']
-                        )
-                        . '
-					</td>
-					<td><a href="#" class="move_left">&nbsp;</a> &nbsp; <a href="#" class="move_right">&nbsp;</a></td>
-					<td>
-						'
-                        . $this->Form->fieldMultiSelect(
-                            'available_nodes[]',
-                            $nodes ?? [],
-                            [],
-                            ['id' => 'available_nodes']
-                        )
-                        . "
-					</td>
-				</tr>
-			</table>
 
-			<script type=\"text/javascript\">
-				$(document).ready(function() {
+        // Build drag-item HTML for assigned and available nodes
+        $assigned_items_html = '';
+        foreach ($assigned_nodes as $value => $label) {
+            $assigned_items_html .= '<div class="drag-item" data-value="'
+                . htmlspecialchars($value, ENT_QUOTES) . '" draggable="true">'
+                . htmlspecialchars($label, ENT_QUOTES) . '</div>';
+        }
+        $available_items_html = '';
+        foreach ($nodes ?? [] as $value => $label) {
+            $available_items_html .= '<div class="drag-item" data-value="'
+                . htmlspecialchars($value, ENT_QUOTES) . '" draggable="true">'
+                . htmlspecialchars($label, ENT_QUOTES) . '</div>';
+        }
+
+        $fields->setHtml('
+			<div id="proxmox_node_selector" style="display: none;">
+				<div class="dual-select-container" data-group="proxmox-nodes">
+					<div class="dual-select-panel">
+						<label class="form-label">' . Language::_('Proxmox.package_fields.assigned_nodes', true) . '</label>
+						<div class="dual-select-dropzone">
+							<div class="drag-list" id="assigned_nodes">'
+                                . $assigned_items_html
+                            . '</div>
+						</div>
+					</div>
+					<div class="dual-select-controls">
+						<button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-left"
+							title="' . Language::_('Proxmox.package_fields.assigned_nodes', true) . '">
+							<i class="bi bi-arrow-left"></i>
+						</button>
+						<button type="button" class="btn btn-sm btn-outline-primary dual-select-btn move-right"
+							title="' . Language::_('Proxmox.package_fields.available_nodes', true) . '">
+							<i class="bi bi-arrow-right"></i>
+						</button>
+					</div>
+					<div class="dual-select-panel">
+						<label class="form-label">' . Language::_('Proxmox.package_fields.available_nodes', true) . '</label>
+						<div class="dual-select-dropzone">
+							<div class="drag-list" id="available_nodes">'
+                                . $available_items_html
+                            . '</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		<script>
+				(function() {
+					var draggedItem = null;
+
+					function setupDualSelect(container) {
+						var leftList = container.querySelector(".dual-select-panel:first-child .drag-list");
+						var rightList = container.querySelector(".dual-select-panel:last-child .drag-list");
+						var moveLeftBtn = container.querySelector(".move-left");
+						var moveRightBtn = container.querySelector(".move-right");
+
+						if (!leftList || !rightList) return;
+
+						function setupDragItems() {
+							container.querySelectorAll(".drag-item").forEach(function(item) {
+								item.addEventListener("click", function(e) {
+									e.stopPropagation();
+									if (e.ctrlKey || e.metaKey) {
+										this.classList.toggle("selected");
+									} else {
+										container.querySelectorAll(".drag-item").forEach(function(i) { i.classList.remove("selected"); });
+										this.classList.add("selected");
+									}
+								});
+
+								item.addEventListener("dblclick", function(e) {
+									e.stopPropagation();
+									var currentList = this.closest(".drag-list");
+									var targetList = currentList === leftList ? rightList : leftList;
+									targetList.appendChild(this);
+									this.classList.remove("selected");
+									fetchModuleOptions();
+								});
+
+								item.addEventListener("dragstart", function(e) {
+									draggedItem = this;
+									this.classList.add("dragging");
+									e.dataTransfer.effectAllowed = "move";
+									e.dataTransfer.setData("text/plain", this.textContent);
+								});
+
+								item.addEventListener("dragend", function() {
+									this.classList.remove("dragging");
+									container.querySelectorAll(".drag-list").forEach(function(l) { l.classList.remove("drag-over"); });
+								});
+							});
+						}
+
+						[leftList, rightList].forEach(function(list) {
+							list.addEventListener("dragover", function(e) {
+								e.preventDefault();
+								this.classList.add("drag-over");
+							});
+
+							list.addEventListener("dragleave", function(e) {
+								if (!this.contains(e.relatedTarget)) {
+									this.classList.remove("drag-over");
+								}
+							});
+
+							list.addEventListener("drop", function(e) {
+								e.preventDefault();
+								this.classList.remove("drag-over");
+								if (draggedItem && draggedItem.parentNode !== this) {
+									this.appendChild(draggedItem);
+									draggedItem.classList.remove("selected");
+									draggedItem = null;
+									fetchModuleOptions();
+								}
+							});
+						});
+
+						if (moveLeftBtn) {
+							moveLeftBtn.addEventListener("click", function() {
+								rightList.querySelectorAll(".drag-item.selected").forEach(function(item) {
+									leftList.appendChild(item);
+									item.classList.remove("selected");
+								});
+								fetchModuleOptions();
+							});
+						}
+
+						if (moveRightBtn) {
+							moveRightBtn.addEventListener("click", function() {
+								leftList.querySelectorAll(".drag-item.selected").forEach(function(item) {
+									rightList.appendChild(item);
+									item.classList.remove("selected");
+								});
+								fetchModuleOptions();
+							});
+						}
+
+						setupDragItems();
+					}
+
+					document.addEventListener("click", function(e) {
+						if (!e.target.closest(".drag-item")) {
+							document.querySelectorAll(".drag-item.selected").forEach(function(item) { item.classList.remove("selected"); });
+						}
+					});
+
+					function toggleProxmoxFields() {
+						var nodeSelector = document.getElementById("proxmox_node_selector");
+						if (document.getElementById("proxmox_type").value == "") {
+							nodeSelector.style.display = "none";
+						} else {
+							nodeSelector.style.display = "";
+						}
+					}
+
+					var proxmoxType = document.getElementById("proxmox_type");
+					var nodeSelector = document.getElementById("proxmox_node_selector");
+					proxmoxType.parentNode.insertAdjacentElement("afterend", nodeSelector);
+					var wrapper = document.createElement("div");
+					nodeSelector.parentNode.insertBefore(wrapper, nodeSelector);
+					wrapper.appendChild(nodeSelector);
+
+					setupDualSelect(nodeSelector.querySelector(".dual-select-container"));
 					toggleProxmoxFields();
 
-					$('#proxmox_type').change(function() {
+					proxmoxType.addEventListener("change", function() {
 						toggleProxmoxFields();
-					});
-
-					$('#proxmox_type').change(function() {
-						selectAssignedNodes();
 						fetchModuleOptions();
 					});
 
-					$('#proxmox_template_storage').change(function() {
-						selectAssignedNodes();
-						fetchModuleOptions();
-					});
-
-					// Select all assigned groups on submit
-					$('#assigned_nodes').closest('form').submit(function() {
-						selectAssignedNodes();
-					});
-
-					// Move nodes from right to left
-					$('.move_left').click(function() {
-						$('#available_nodes option:selected').appendTo($('#assigned_nodes'));
-						selectAssignedNodes();
-						fetchModuleOptions();
-						return false;
-					});
-					// Move nodes from left to right
-					$('.move_right').click(function() {
-						$('#assigned_nodes option:selected').appendTo($('#available_nodes'));
-						selectAssignedNodes();
-						fetchModuleOptions();
-						return false;
-					});
-				});
-
-				function selectAssignedNodes() {
-					$('#assigned_nodes option').attr('selected', 'selected');
-				}
-
-				function toggleProxmoxFields() {
-					// Hide fields dependent on this value
-					if ($('#proxmox_type').val() == '') {
-						$('#assigned_nodes').closest('table').hide();
+					var templateStorage = document.getElementById("proxmox_template_storage");
+					if (templateStorage) {
+						templateStorage.addEventListener("change", function() {
+							fetchModuleOptions();
+						});
 					}
-					// Show fields dependent on this value
-					else {
-						$('#assigned_nodes').closest('table').show();
-					}
-				}
 
-                $('#proxmox_type').parent().after($('#proxmox_node_selector'));
-                $('#proxmox_node_selector').show().wrap('<li></li>');
+					document.getElementById("assigned_nodes").closest("form").addEventListener("submit", function() {
+						var assignedNodes = document.getElementById("assigned_nodes");
+						assignedNodes.querySelectorAll("input[name=\"meta[nodes][]\"]").forEach(function(i) { i.remove(); });
+						assignedNodes.querySelectorAll(".drag-item").forEach(function(item) {
+							var input = document.createElement("input");
+							input.type = "hidden";
+							input.name = "meta[nodes][]";
+							input.value = item.dataset.value;
+							assignedNodes.appendChild(input);
+						});
+					});
+					toggleProxmoxFields();
+				})();
 			</script>
-		");
+		');
 
         // Set the Proxmox type as a selectable option
         $types = ['' => Language::_('Proxmox.please_select', true)] + $this->getTypes();
@@ -1033,6 +1154,7 @@ class Proxmox extends Module
             $module_row,
             ($vars->meta['type'] ?? null) === 'lxc' ? 'rootdir' : 'images'
         );
+
         $storage = $fields->label(Language::_('Proxmox.package_fields.storage', true), 'proxmox_storage');
         $storage->attach(
             $fields->fieldSelect(
@@ -1181,8 +1303,8 @@ class Proxmox extends Module
 
         // Fetch the module row available for this package
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
 
         $fields = new ModuleFields();
@@ -1193,7 +1315,7 @@ class Proxmox extends Module
         $host_name->attach(
             $fields->fieldText(
                 'proxmox_hostname',
-                (isset($vars->proxmox_hostname) ? $vars->proxmox_hostname : null),
+                ($vars->proxmox_hostname ?? null),
                 ['id' => 'proxmox_hostname']
             )
         );
@@ -1201,7 +1323,7 @@ class Proxmox extends Module
         $password->attach(
             $fields->fieldText(
                 'password',
-                (isset($vars->password['password']) ? $vars->password['password'] : null),
+                ($vars->password['password'] ?? null),
                 ['id' => 'password']
             )
         );
@@ -1229,8 +1351,8 @@ class Proxmox extends Module
 
         // Fetch the module row available for this package
         $module_row = $this->getModuleRowByServer(
-            (isset($package->module_row) ? $package->module_row : 0),
-            (isset($package->module_group) ? $package->module_group : '')
+            ($package->module_row ?? 0),
+            ($package->module_group ?? '')
         );
 
         $fields = new ModuleFields();
@@ -1241,7 +1363,7 @@ class Proxmox extends Module
         $host_name->attach(
             $fields->fieldText(
                 'proxmox_hostname',
-                (isset($vars->proxmox_hostname) ? $vars->proxmox_hostname : ($vars->domain ?? null)),
+                ($vars->proxmox_hostname ?? ($vars->domain ?? null)),
                 ['id' => 'proxmox_hostname']
             )
         );
@@ -1249,7 +1371,7 @@ class Proxmox extends Module
         $password->attach(
             $fields->fieldText(
                 'password',
-                (isset($vars->password) ? $vars->password : null),
+                ($vars->password ?? null),
                 ['id' => 'password']
             )
         );
@@ -1344,11 +1466,11 @@ class Proxmox extends Module
      */
     public function getAdminTabs($package)
     {
-        return [
-            'tabActions' => Language::_('Proxmox.tab_actions', true),
-            'tabStats' => Language::_('Proxmox.tab_stats', true),
-            'tabConsole' => Language::_('Proxmox.tab_console', true),
-        ];
+            return [
+                'tabActions' => Language::_('Proxmox.tab_actions', true),
+                'tabStats' => Language::_('Proxmox.tab_stats', true),
+                'tabConsole' => Language::_('Proxmox.tab_console', true),
+            ];
     }
 
     /**
@@ -1361,11 +1483,18 @@ class Proxmox extends Module
      */
     public function getClientTabs($package)
     {
-        return [
-            'tabClientActions' => Language::_('Proxmox.tab_actions', true),
-            'tabClientStats' => Language::_('Proxmox.tab_stats', true),
-            'tabClientConsole' => Language::_('Proxmox.tab_console', true),
-        ];
+
+        return ($package->meta->type ?? null) === 'qemu' ? [
+                'tabClientActions' => Language::_('Proxmox.tab_actions', true),
+                'tabClientStats' => Language::_('Proxmox.tab_stats', true),
+                'tabClientConsole' => Language::_('Proxmox.tab_console', true),
+                'tabClientIsoManager' => Language::_('Proxmox.tab_isomanager', true),
+            ] : [
+                'tabClientActions' => Language::_('Proxmox.tab_actions', true),
+                'tabClientStats' => Language::_('Proxmox.tab_stats', true),
+                'tabClientConsole' => Language::_('Proxmox.tab_console', true),
+                'tabClientLXCReinstall' => Language::_('Proxmox.tab_lxcreinstall', true),
+            ];
     }
 
     /**
@@ -1401,7 +1530,7 @@ class Proxmox extends Module
         );
         $this->view->set(
             'templates',
-            $this->getServerTemplates($service_fields->proxmox_node, $package->meta->template_storage, $module_row)
+            $this->getServerTemplates($service_fields->proxmox_node, $package->meta->template_storage ?? null, $module_row)
         );
 
         $this->view->set('type', $service_fields->proxmox_type);
@@ -1453,14 +1582,6 @@ class Proxmox extends Module
         // Set default vars
         $vars = ['hostname' => $service_fields->proxmox_hostname];
 
-        $this->view->set(
-            'isos',
-            $this->getServerISOs($service_fields->proxmox_node, $package->meta->storage, $module_row)
-        );
-        $this->view->set(
-            'templates',
-            $this->getServerTemplates($service_fields->proxmox_node, $package->meta->template_storage, $module_row)
-        );
         $this->view->set('type', $service_fields->proxmox_type);
 
         // Fetch the server status
@@ -1510,26 +1631,30 @@ class Proxmox extends Module
         if (array_key_exists($get_key, (array)$get)) {
             switch ($get[$get_key]) {
                 case 'boot':
-                    if (!$this->performAction(
-                        'boot',
-                        $service_fields->proxmox_vserver_id,
-                        $service_fields->proxmox_type,
-                        $service_fields->proxmox_node,
-                        $module_row
-                    )) {
+                    if (
+                        !$this->performAction(
+                            'boot',
+                            $service_fields->proxmox_vserver_id,
+                            $service_fields->proxmox_type,
+                            $service_fields->proxmox_node,
+                            $module_row
+                        )
+                    ) {
                         $this->Input->setErrors(
                             ['api' => ['internal' => Language::_('Proxmox.!error.api.internal', true)]]
                         );
                     }
                     break;
                 case 'shutdown':
-                    if (!$this->performAction(
-                        'shutdown',
-                        $service_fields->proxmox_vserver_id,
-                        $service_fields->proxmox_type,
-                        $service_fields->proxmox_node,
-                        $module_row
-                    )) {
+                    if (
+                        !$this->performAction(
+                            'shutdown',
+                            $service_fields->proxmox_vserver_id,
+                            $service_fields->proxmox_type,
+                            $service_fields->proxmox_node,
+                            $module_row
+                        )
+                    ) {
                         $this->Input->setErrors(
                             ['api' => ['internal' => Language::_('Proxmox.!error.api.internal', true)]]
                         );
@@ -1545,7 +1670,7 @@ class Proxmox extends Module
                         $service_fields->proxmox_type,
                         $service_fields->proxmox_node,
                         $module_row,
-                        ['iso' => (isset($post['iso']) ? $post['iso'] : null)]
+                        ['iso' => ($post['iso'] ?? null)]
                     );
                     break;
                 case 'unmount':
@@ -1621,6 +1746,11 @@ class Proxmox extends Module
                         $response = $this->parseResponse($server_api->create($params), $row);
                     }
 
+                    sleep(5);
+
+                    // Attempt to start the VM
+                    $this->performAction('boot', $params['vmid'], $params['type'], $params['node'], $module_row, [], true);
+
                     break;
                 default:
                     break;
@@ -1675,7 +1805,7 @@ class Proxmox extends Module
                     'ds' => $get[$get_key]
                 ];
                 $response = $this->parseResponse($server_api->graph($params), $module_row);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Nothing to do
             }
 
@@ -1733,7 +1863,7 @@ class Proxmox extends Module
             if ($response && ($response->status == 'success' || in_array($action, $null_actions))) {
                 return true;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -1892,13 +2022,15 @@ class Proxmox extends Module
         $response = $this->parseResponse($server_api->vnc($params), $module_row);
 
         // Set console info
-        $session = [
-            'vnc_ip' => $module_row->meta->host,
-            'vnc_user' => $response->data->user,
-            'vnc_password' => $response->data->ticket,
-            'vnc_port' => $response->data->port,
-            'vnc_cert' => str_replace("\n", '|', $response->data->cert)
-        ];
+        if ($response && $response->data) {
+            $session = [
+                'vnc_ip' => $module_row->meta->host,
+                'vnc_user' => $response->data->user,
+                'vnc_password' => $response->data->ticket,
+                'vnc_port' => $response->data->port,
+                'vnc_cert' => str_replace("\n", '|', $response->data->cert)
+            ];
+        }
 
         // Check whether the VNC vendor code is available
         $this->view->set('vnc_applet_available', is_dir(VENDORDIR . 'vnc'));
@@ -1906,6 +2038,143 @@ class Proxmox extends Module
         $this->view->set('node_statistics', $this->getNodeStatistics($service_fields->proxmox_node, $module_row));
         $this->view->set('console', (object)$session);
 
+        $this->view->setDefaultView('components' . DS . 'modules' . DS . 'proxmox' . DS);
+        return $this->view;
+    }
+
+    /**
+     * Client ISO Manager tab
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param array $get Any GET parameters
+     * @param array $post Any POST parameters
+     * @param array $files Any FILES parameters
+     * @return string The string representing the contents of this tab
+     */
+    public function tabClientIsoManager($package, $service, array $get = null, array $post = null, array $files = null)
+    {
+        $view = $this->isoManager($package, $service, $get, $post, true);
+        return $view->fetch();
+    }
+
+    /**
+     * Builds the data for the admin/client ISO manager tabs
+     * @see Proxmox::tabClientIsoManager()
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @return View A template view to be rendered
+     */
+    private function isoManager($package, $service, $get = null, $post = null, $client = false)
+    {
+
+        $template = ($client ? 'tab_client_isomanager' : '');
+        $this->view = new View($template, 'default');
+        // Load the helpers required for this view
+        Loader::loadHelpers($this, ['Form', 'Html']);
+
+        // Get the service fields
+        $service_fields = $this->serviceFieldsToObject($service->fields);
+        $module_row = $this->getModuleRow($package->module_row);
+
+        // Perform the actions
+        $this->actionsTab($package, $service, true, $get, $post);
+
+        // Set default vars
+        $vars = ['hostname' => $service_fields->proxmox_hostname];
+        $this->view->set(
+            'isos',
+            $this->getServerISOs($service_fields->proxmox_node, $package->meta->storage, $module_row)
+        );
+
+        $this->view->set('client_id', $service->client_id);
+        $this->view->set('service_id', $service->id);
+
+        $this->view->base_uri = $this->base_uri;
+        $this->view->set(
+            'server',
+            $this->getServerState(
+                $service_fields->proxmox_vserver_id,
+                $service_fields->proxmox_type,
+                $service_fields->proxmox_node,
+                $module_row
+            )
+        );
+
+        $this->view->set('type', $service_fields->proxmox_type);
+        $this->view->set('vars', (object)$vars);
+        $this->view->set('service_fields', $this->serviceFieldsToObject($service->fields));
+
+        $this->view->set('view', $this->view->view);
+        $this->view->setDefaultView('components' . DS . 'modules' . DS . 'proxmox' . DS);
+        return $this->view;
+    }
+
+    /**
+     * Client LXC Reinstall tab
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param array $get Any GET parameters
+     * @param array $post Any POST parameters
+     * @param array $files Any FILES parameters
+     * @return string The string representing the contents of this tab
+     */
+    public function tabClientLXCReinstall($package, $service, array $get = null, array $post = null, array $files = null)
+    {
+        $view = $this->lxcReinstall($package, $service, $get, $post, true);
+        return $view->fetch();
+    }
+
+    /**
+     * Builds the data for the admin/client lxc reinstall tabs
+     * @see Proxmox::tabClientLXCReinstall()
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @return View A template view to be rendered
+     */
+    private function lxcReinstall($package, $service, $get = null, $post = null, $client = false)
+    {
+        $template = ($client ? 'tab_client_lxcreinstall' : '');
+        $this->view = new View($template, 'default');
+        // Load the helpers required for this view
+        Loader::loadHelpers($this, ['Form', 'Html']);
+
+        // Get the service fields
+        $service_fields = $this->serviceFieldsToObject($service->fields);
+        $module_row = $this->getModuleRow($package->module_row);
+
+        // Perform the actions
+        $this->actionsTab($package, $service, true, $get, $post);
+
+        // Set default vars
+        $vars = ['hostname' => $service_fields->proxmox_hostname];
+
+        $this->view->set('client_id', $service->client_id);
+        $this->view->set('service_id', $service->id);
+
+        $this->view->base_uri = $this->base_uri;
+        $this->view->set(
+            'server',
+            $this->getServerState(
+                $service_fields->proxmox_vserver_id,
+                $service_fields->proxmox_type,
+                $service_fields->proxmox_node,
+                $module_row
+            )
+        );
+        $this->view->set(
+            'templates',
+            $this->getServerTemplates($service_fields->proxmox_node, $package->meta->template_storage ?? null, $module_row)
+        );
+
+        $this->view->set('type', $service_fields->proxmox_type);
+        $this->view->set('vars', (object)$vars);
+        $this->view->set('service_fields', $this->serviceFieldsToObject($service->fields));
+
+        $this->view->set('view', $this->view->view);
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'proxmox' . DS);
         return $this->view;
     }
@@ -1921,11 +2190,11 @@ class Proxmox extends Module
         $step = 1024;
         $unit = 'B';
 
-        if (($value = number_format($bytes/($step*$step*$step), 2)) >= 1) {
+        if (($value = number_format($bytes / ($step * $step * $step), 2)) >= 1) {
             $unit = 'GB';
-        } elseif (($value = number_format($bytes/($step*$step), 2)) >= 1) {
+        } elseif (($value = number_format($bytes / ($step * $step), 2)) >= 1) {
             $unit = 'MB';
-        } elseif (($value = number_format($bytes/($step), 2)) >= 1) {
+        } elseif (($value = number_format($bytes / ($step), 2)) >= 1) {
             $unit = 'KB';
         } else {
             $value = $bytes;
@@ -1938,7 +2207,7 @@ class Proxmox extends Module
     {
 
         $days = floor($seconds / 86400);
-        $hours= floor(($seconds % 86400) / 3600);
+        $hours = floor(($seconds % 86400) / 3600);
         $minutes = floor(($seconds % 3600) / 60);
 
         return Language::_('Proxmox.!uptime.value', true, $days, $hours, $minutes);
@@ -1988,7 +2257,7 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|vserver-status', serialize($params), 'input', true);
             $response = $this->parseResponse($server_api->status($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2002,12 +2271,11 @@ class Proxmox extends Module
 
                 // Set CPU to percent usage
                 if ($key == 'cpu') {
-                    $data['cpu_formatted'] = round(($value*100), 2);
+                    $data['cpu_formatted'] = round(($value * 100), 2);
                 }
-                if ($key == 'uptime'){
+                if ($key == 'uptime') {
                     $data['uptime_formatted'] = $this->convertSecondsToDays($value);
-                }
-                elseif (array_key_exists($key, $percent_values)) {
+                } elseif (array_key_exists($key, $percent_values)) {
                     // Set mem and disk stats
                     if (isset($temp_data['max' . $key])) {
                         $data[$key . '_formatted']['used_' . $percent_values[$key] . '_formatted']
@@ -2015,7 +2283,7 @@ class Proxmox extends Module
                         $data[$key . '_formatted']['total_' . $percent_values[$key] . '_formatted']
                             = $this->convertBytesToString($temp_data['max' . $key]);
                         $data[$key . '_formatted']['percent_used_' . $percent_values[$key]]
-                            = round(($value/($temp_data['max' . $key] == 0 ? 1 : $temp_data['max' . $key])*100), 2);
+                            = round(($value / ($temp_data['max' . $key] == 0 ? 1 : $temp_data['max' . $key]) * 100), 2);
                     }
                 }
             }
@@ -2051,16 +2319,17 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|vserver-isos', serialize($params), 'input', true);
             $response = $this->parseResponse($node_api->storageContent($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
         $result = [];
-        foreach ($response->data as $file) {
+        foreach ($response->data ?? [] as $file) {
             if ($file->content == 'iso') {
                 $result[$file->volid] = $file->volid;
             }
         }
+
         return $result;
     }
 
@@ -2091,7 +2360,7 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|vserver-templates', serialize($params), 'input', true);
             $response = $this->parseResponse($node_api->storageContent($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2103,6 +2372,7 @@ class Proxmox extends Module
                 $result[$template] = $template;
             }
         }
+
         return $result;
     }
 
@@ -2132,7 +2402,7 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|node-statistics', serialize($params), 'input', true);
             $response = $this->parseResponse($nodes_api->statistics($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -2171,12 +2441,12 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|nodes-storage', serialize($params), 'input', true);
             $response = $this->parseResponse($node_api->storageList($params), $module_row);
-        } catch (Exception $e) {
-            // Nothing to do
+        } catch (\Throwable $e) {
+            $this->log($module_row->meta->host . '|nodes-storage', $e->getMessage(), 'output', false);
         }
 
         $result = [];
-        foreach ($response->data as $storage) {
+        foreach (($response->data ?? []) as $storage) {
             if ($content_type === null || strpos($storage->content ?? '', $content_type) !== false) {
                 $result[$storage->storage] = $storage->storage;
             }
@@ -2210,7 +2480,7 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|listnodes', serialize($params), 'input', true);
             $response = $this->parseResponse($nodes_api->getList($params), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -2247,7 +2517,7 @@ class Proxmox extends Module
 
             $this->log($module_row->meta->host . '|liststorage', serialize([]), 'input', true);
             $response = $this->parseResponse($storage_api->getList(), $module_row);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
             return [];
         }
@@ -2275,12 +2545,12 @@ class Proxmox extends Module
 
         $fields = [
             'type' => $package->meta->type,
-            'template' => $package->meta->template_storage . ':vztmpl/' . $package->meta->default_template ?? null,
+            'template' => ($package->meta->template_storage ?? null) . ':vztmpl/' . ($package->meta->default_template ?? null),
             'template_storage' => $package->meta->template_storage ?? null,
             'node' => $node,
             'hostname' => isset($vars['proxmox_hostname']) ? strtolower($vars['proxmox_hostname']) : null,
             'userid' => isset($vars['client_id']) ? 'vmuser' . $vars['client_id'] : null,
-            'password'=> !empty($vars['password']) ? $vars['password'] : $this->generatePassword(),
+            'password' => !empty($vars['password']) ? $vars['password'] : $this->generatePassword(),
             'memory' => $package->meta->memory ?? 0,
             'swap' => $package->meta->swap ?? 0,
             'hdd' => $package->meta->hdd ?? 0,
@@ -2375,7 +2645,7 @@ class Proxmox extends Module
             // Check the client exists
             $this->log($module_row->meta->host . '|client-checkexists', serialize($params), 'input', true);
             $response = $this->parseResponse($client_api->checkExists($params), $module_row, true);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Internal Error
             $this->Input->setErrors(['api' => ['internal' => Language::_('Proxmox.!error.api.internal', true)]]);
             return $client_fields;
@@ -2408,7 +2678,7 @@ class Proxmox extends Module
                 // Create a client
                 $this->log($module_row->meta->host . '|client-create', serialize($masked_params), 'input', true);
                 $response = $this->parseResponse($client_api->create($params), $module_row, true);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Internal Error
                 $this->Input->setErrors(['api' => ['internal' => Language::_('Proxmox.!error.api.internal', true)]]);
             }
@@ -2421,7 +2691,7 @@ class Proxmox extends Module
 
                     $this->log($module_row->meta->host . '|client-checkexists', serialize($params), 'input', true);
                     $response = $this->parseResponse($client_api->checkExists($params), $module_row, true);
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Nothing to do
                 }
             }
@@ -2500,9 +2770,9 @@ class Proxmox extends Module
         $raw_output = $response->raw();
 
         foreach ($masked_params as $masked_param) {
-            if (property_exists($output, $masked_param)) {
+            if ($output && property_exists($output, $masked_param)) {
                 $raw_output = preg_replace(
-                    '/<' . $masked_param . ">(.*)<\/" . $masked_param . '>/',
+                    '/<' . $masked_param . '>(.*)<\/' . $masked_param . '>/',
                     '<' . $masked_param . '>***</' . $masked_param . '>',
                     $raw_output
                 );
@@ -2609,7 +2879,7 @@ class Proxmox extends Module
         $count = count($chars) - 1;
         $num_chars = (int)abs($min_chars == $max_chars ? $min_chars : mt_rand($min_chars, $max_chars));
 
-        for ($i=0; $i<$num_chars; $i++) {
+        for ($i = 0; $i < $num_chars; $i++) {
             $password = $chars[mt_rand(0, $count)] . $password;
         }
 
@@ -2725,13 +2995,15 @@ class Proxmox extends Module
                 'meta[default_template]' => [
                     'format' => [
                        'rule' => ['matches', '#^[0-9a-zA-Z.:/_-]+$#'],
-                       'message' => Language::_('Proxmox.!error.meta[default_template].format', true)
+                       'message' => Language::_('Proxmox.!error.meta[default_template].format', true),
+                       'if_set' => true
                     ]
                 ],
                 'meta[template_storage]' => [
                     'format' => [
                         'rule' => ['matches', '#^[0-9a-zA-Z.:/_-]+$#'],
-                        'message' => Language::_('Proxmox.!error.meta[template_storage].format', true)
+                        'message' => Language::_('Proxmox.!error.meta[template_storage].format', true),
+                        'if_set' => true
                     ]
                 ],
             ];

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Payouts controller
  *
@@ -42,10 +43,10 @@ class Payouts extends OrderAffiliateController
         }
 
         // Set current page of results
-        $status = (isset($this->get[0]) ? $this->get[0] : 'pending');
+        $status = ($this->get[0] ?? 'pending');
         $page = (isset($this->get[1]) ? (int)$this->get[1] : 1);
-        $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'id');
-        $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
+        $sort = ($this->get['sort'] ?? 'id');
+        $order = ($this->get['order'] ?? 'desc');
 
         // Set the number of payout requests of each type
         $status_count = [
@@ -109,7 +110,8 @@ class Payouts extends OrderAffiliateController
     public function add()
     {
         // Get affiliate or redirect if not given
-        if (!($client = $this->Clients->get($this->Session->read('blesta_client_id')))
+        if (
+            !($client = $this->Clients->get($this->Session->read('blesta_client_id')))
             || !($affiliate = $this->OrderAffiliates->getByClientId($client->id))
         ) {
             $this->redirect($this->base_uri . 'order/affiliates/signup/');
@@ -144,9 +146,7 @@ class Payouts extends OrderAffiliateController
         );
 
         // Set withdrawal currency
-        $withdrawal_currency = isset($affiliate_settings['withdrawal_currency'])
-            ? $affiliate_settings['withdrawal_currency']
-            : 'USD';
+        $withdrawal_currency = $affiliate_settings['withdrawal_currency'] ?? 'USD';
 
         // Get available payout
         $available_payout = $this->CurrencyFormat->cast(
@@ -158,7 +158,8 @@ class Payouts extends OrderAffiliateController
         );
 
         // Set an error message if the available payout is less than the minimum withdrawal amount
-        if (isset($affiliate_settings['min_withdrawal_amount'])
+        if (
+            isset($affiliate_settings['min_withdrawal_amount'])
             && $available_payout < $affiliate_settings['min_withdrawal_amount']
         ) {
             $this->setMessage(
@@ -195,18 +196,16 @@ class Payouts extends OrderAffiliateController
 
             // Add payout request
             $amount = $this->Currencies->convert(
-                isset($this->post['requested_amount']) ? $this->post['requested_amount'] : 0,
+                $this->post['requested_amount'] ?? 0,
                 $withdrawal_currency,
-                isset($this->post['requested_currency'])
-                    ? $this->post['requested_currency']
-                    : $withdrawal_currency,
+                $this->post['requested_currency'] ?? $withdrawal_currency,
                 $this->company_id
             );
             $fields = [
                 'affiliate_id' => $affiliate->id,
-                'payment_method_id' => isset($this->post['payment_method']) ? $this->post['payment_method'] : null,
+                'payment_method_id' => $this->post['payment_method'] ?? null,
                 'requested_amount' => $amount,
-                'paid_amount' => isset($this->post['requested_amount']) ? $this->post['requested_amount'] : null,
+                'paid_amount' => $this->post['requested_amount'] ?? null,
                 'paid_currency' => $withdrawal_currency
             ];
             $this->OrderAffiliatePayouts->add(array_merge($this->post, $fields));

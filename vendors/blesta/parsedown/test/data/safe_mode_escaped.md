@@ -1,1 +1,0 @@
-[click](javascript:alert%28%22xss%22%28)

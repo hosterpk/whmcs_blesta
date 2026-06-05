@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 /**
@@ -39,6 +40,11 @@ class IspmanagerApi
      * @var int The port on which to connect to the API
      */
     private $port;
+
+    /**
+     * @var Blesta\Core\ServiceProviders\Logger Container logger
+     */
+    private $logger;
 
     /**
      * Initializes the class.
@@ -274,7 +280,7 @@ class IspmanagerApi
             return (object) ['error' => $request->error, 'response' => $request];
         }
 
-        return (object) ['response' => isset($request->doc->elem) ? $request->doc->elem : []];
+        return (object) ['response' => $request->doc->elem ?? []];
     }
 
     /**
@@ -290,7 +296,7 @@ class IspmanagerApi
             return (object) ['error' => $request->error, 'response' => $request];
         }
 
-        return (object) ['response' => isset($request->doc->elem) ? $request->doc->elem : []];
+        return (object) ['response' => $request->doc->elem ?? []];
     }
 
     /**

@@ -1,6 +1,16 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
 use Blesta\Core\Util\Common\Traits\Container;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use ReflectionClass;
+use Router;
+use stdClass;
 
 /**
  * Messenger manager.
@@ -119,7 +129,7 @@ class MessengerManager extends AppModel
 
                 // Set the installed version of the messenger
                 $messengers[$i]->installed_version = $messenger->version;
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Messenger could not be loaded
                 unset($messengers[$i]);
                 continue;
@@ -172,7 +182,7 @@ class MessengerManager extends AppModel
             $this->Record->where('company_id', '=', $company_id);
         }
 
-        return (boolean) $this->Record->fetch();
+        return (bool) $this->Record->fetch();
     }
 
     /**
@@ -231,7 +241,7 @@ class MessengerManager extends AppModel
     public function add(array $vars)
     {
         // Retrieve the messenger
-        $messenger = $this->loadMessenger(isset($vars['dir']) ? $vars['dir'] : null);
+        $messenger = $this->loadMessenger($vars['dir'] ?? null);
 
         $vars['name'] = $messenger->getName();
         $vars['version'] = $messenger->getVersion();
@@ -356,7 +366,7 @@ class MessengerManager extends AppModel
             if (substr($messenger, 0, 1) != '.' && is_dir(COMPONENTDIR . 'messengers' . DS . $messenger)) {
                 try {
                     $mod = $this->loadMessenger($messenger);
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // The messenger could not be loaded, try the next
                     continue;
                 }
@@ -397,7 +407,7 @@ class MessengerManager extends AppModel
                 $serialize = !is_scalar($meta[$i]['value']);
                 $meta[$i]['messenger_id'] = $messenger_id;
                 $meta[$i]['serialized'] = (int) $serialize;
-                $meta[$i]['value'] = $serialize ? json_encode($meta[$i]['value']) : $meta[$i]['value'];
+                $meta[$i]['value'] = $serialize ? serialize($meta[$i]['value']) : $meta[$i]['value'];
 
                 if (isset($meta[$i]['encrypted']) && $meta[$i]['encrypted'] == '1') {
                     $meta[$i]['value'] = $this->systemEncrypt($meta[$i]['value']);
@@ -427,7 +437,7 @@ class MessengerManager extends AppModel
             }
 
             if ($data->serialized > 0) {
-                $data->value = \Blesta\Core\Util\Common\Classes\Model::safeUnserialize($data->value);
+                $data->value = safe_unserialize($data->value);
             }
 
             $meta->{$data->key} = $data->value;
@@ -464,6 +474,7 @@ class MessengerManager extends AppModel
                     COMPONENTDIR . 'messengers' . DS . $dir . DS . $messenger->getLogo()
                 )
             ),
+            'icon' => $messenger->getIcon(),
             'installed' => $this->isInstalled($dir, $company_id),
             'description' => $messenger->getDescription()
         ];
@@ -561,7 +572,7 @@ class MessengerManager extends AppModel
         $enabled_type_messages = $this->Messages->getMessageGroupEnabledTypes($message_group->id);
         $company_settings = $this->SettingsCollection->fetchSettings($this->Companies, $company_id);
         $messenger_configuration = isset($company_settings['messenger_configuration'])
-            ? \Blesta\Core\Util\Common\Classes\Model::safeUnserialize(base64_decode($company_settings['messenger_configuration']))
+            ? safe_unserialize(base64_decode($company_settings['messenger_configuration']))
             : [];
         foreach ($message_group_with_messages->messages as $message) {
             if (!in_array($message->type, $enabled_type_messages)) {
@@ -639,7 +650,7 @@ class MessengerManager extends AppModel
      *  value is the value to replace it with
      * @return string The parsed message template
      */
-    public function buildMessage($text, $company_id, array $tags = null)
+    public function buildMessage($text, $company_id, ?array $tags = null)
     {
         // Merge the default tags with those given
         $tags = array_merge($this->default_tags, (array) $tags);

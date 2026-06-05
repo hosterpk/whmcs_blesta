@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Affiliates controller
  *
@@ -67,9 +68,7 @@ class Affiliates extends OrderAffiliateController
             'available_payout',
             $this->getAvailableAffiliatePayout(
                 $affiliate->id,
-                isset($affiliate_settings['withdrawal_currency'])
-                    ? $affiliate_settings['withdrawal_currency']
-                    : 'USD'
+                $affiliate_settings['withdrawal_currency'] ?? 'USD'
             )
         );
         $this->set('referral_link', trim($this->base_url, '/') . $this->base_uri . 'order/forms/a/' . $affiliate->code);

@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  *
@@ -10,7 +11,7 @@ class WhmcsConfiguration
         $this->remote = $remote;
     }
 
-    public function get($setting=null)
+    public function get($setting = null)
     {
         $this->remote->select()->from('tblconfiguration');
 

@@ -124,9 +124,17 @@ class Upload extends Component
     public function setUploadPath($path, $create = false)
     {
         $allowed = false;
-        foreach ($this->allowed_paths as $allowed_path) {
-            if (strpos($path, $allowed_path) === 0) {
-                $allowed = true;
+        $candidate = $this->resolveCandidatePath($path);
+        if ($candidate !== false) {
+            foreach ($this->allowed_paths as $allowed_path) {
+                $real_allowed = realpath($allowed_path);
+                if ($real_allowed && str_starts_with(
+                    $candidate . DIRECTORY_SEPARATOR,
+                    rtrim($real_allowed, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+                )) {
+                    $allowed = true;
+                    break;
+                }
             }
         }
 
@@ -391,10 +399,22 @@ class Upload extends Component
      */
     public function createUploadPath($path, $permissions = 0755)
     {
+        if (!is_string($path) || strpos($path, "\0") !== false) {
+            return;
+        }
+
         $allowed = false;
-        foreach ($this->allowed_paths as $allowed_path) {
-            if (strpos($path, $allowed_path) === 0) {
-                $allowed = true;
+        $candidate = $this->resolveCandidatePath($path);
+        if ($candidate !== false) {
+            foreach ($this->allowed_paths as $allowed_path) {
+                $real_allowed = realpath($allowed_path);
+                if ($real_allowed && str_starts_with(
+                    $candidate . DIRECTORY_SEPARATOR,
+                    rtrim($real_allowed, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+                )) {
+                    $allowed = true;
+                    break;
+                }
             }
         }
 
@@ -407,6 +427,56 @@ class Upload extends Component
                 $this->Input->setErrors(['path' => ['created' => Language::_('Upload.!error.path_created', true)]]);
             }
         }
+    }
+
+    /**
+     * Resolves a path whose tail may not yet exist by finding the deepest existing ancestor,
+     * applying realpath() to it, then lexically appending the remaining suffix.
+     * Rejects paths that attempt to traverse above the existing ancestor via "..".
+     *
+     * @param string $path The path to resolve
+     * @return string|false The resolved candidate path, or false if it escapes the existing ancestor
+     */
+    private function resolveCandidatePath($path)
+    {
+        $check = rtrim($path, '/\\');
+        while ($check !== '' && !file_exists($check)) {
+            $parent = dirname($check);
+            if ($parent === $check) {
+                break;
+            }
+            $check = $parent;
+        }
+
+        $real_existing = realpath($check);
+        if ($real_existing === false) {
+            return false;
+        }
+
+        $suffix = (string) substr($path, strlen($check));
+        $segments = preg_split('#[/\\\\]+#', $suffix, -1, PREG_SPLIT_NO_EMPTY);
+
+        $resolved_segments = [];
+        foreach ($segments as $segment) {
+            if ($segment === '.' || $segment === '') {
+                continue;
+            }
+            if ($segment === '..') {
+                if (empty($resolved_segments)) {
+                    return false;
+                }
+                array_pop($resolved_segments);
+                continue;
+            }
+            $resolved_segments[] = $segment;
+        }
+
+        $resolved = rtrim($real_existing, '/\\');
+        if (!empty($resolved_segments)) {
+            $resolved .= DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $resolved_segments);
+        }
+
+        return $resolved;
     }
 
     /**

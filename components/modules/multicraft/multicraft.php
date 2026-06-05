@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Multicraft Module
  *
@@ -173,6 +174,14 @@ class Multicraft extends Module
         }
 
         $this->view->set('default_port', $service->getDefaultPort());
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         $this->view->set('ips_in_use', $this->getIpsInUseFields());
         return $this->view->fetch();
@@ -212,6 +221,14 @@ class Multicraft extends Module
         $service = new MulticraftService();
 
         $this->view->set('default_port', $service->getDefaultPort());
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object)$vars);
         $this->view->set('ips_in_use', $this->getIpsInUseFields());
         return $this->view->fetch();
@@ -387,11 +404,11 @@ class Multicraft extends Module
         }
 
         // Get the API
-        $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+        $api_url = ($row->meta->panel_api_url ?? '');
         $api = $this->getApi(
             $api_url,
-            (isset($row->meta->username) ? $row->meta->username : ''),
-            (isset($row->meta->key) ? $row->meta->key : '')
+            ($row->meta->username ?? ''),
+            ($row->meta->key ?? '')
         );
         $this->loadLib('multicraft_service');
         $service = new MulticraftService($api, $row);
@@ -440,11 +457,11 @@ class Multicraft extends Module
         }
 
         // Get the API
-        $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+        $api_url = ($row->meta->panel_api_url ?? '');
         $api = $this->getApi(
             $api_url,
-            (isset($row->meta->username) ? $row->meta->username : ''),
-            (isset($row->meta->key) ? $row->meta->key : '')
+            ($row->meta->username ?? ''),
+            ($row->meta->key ?? '')
         );
         $this->loadLib('multicraft_service');
         $service_api = new MulticraftService($api, $row);
@@ -496,11 +513,11 @@ class Multicraft extends Module
         }
 
         // Get the API
-        $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+        $api_url = ($row->meta->panel_api_url ?? '');
         $api = $this->getApi(
             $api_url,
-            (isset($row->meta->username) ? $row->meta->username : ''),
-            (isset($row->meta->key) ? $row->meta->key : '')
+            ($row->meta->username ?? ''),
+            ($row->meta->key ?? '')
         );
         $this->loadLib('multicraft_service');
         $service_api = new MulticraftService($api, $row);
@@ -551,11 +568,11 @@ class Multicraft extends Module
         }
 
         // Get the API
-        $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+        $api_url = ($row->meta->panel_api_url ?? '');
         $api = $this->getApi(
             $api_url,
-            (isset($row->meta->username) ? $row->meta->username : ''),
-            (isset($row->meta->key) ? $row->meta->key : '')
+            ($row->meta->username ?? ''),
+            ($row->meta->key ?? '')
         );
         $this->loadLib('multicraft_service');
         $service_api = new MulticraftService($api, $row);
@@ -607,11 +624,11 @@ class Multicraft extends Module
         }
 
         // Get the API
-        $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+        $api_url = ($row->meta->panel_api_url ?? '');
         $api = $this->getApi(
             $api_url,
-            (isset($row->meta->username) ? $row->meta->username : ''),
-            (isset($row->meta->key) ? $row->meta->key : '')
+            ($row->meta->username ?? ''),
+            ($row->meta->key ?? '')
         );
         $this->loadLib('multicraft_service');
         $service_api = new MulticraftService($api, $row);
@@ -784,8 +801,8 @@ class Multicraft extends Module
         // Configure the date formats
         $this->Date->setTimezone('UTC', Configure::get('Blesta.company_timezone'));
         $this->Date->setFormats([
-            'date'=>$this->Companies->getSetting(Configure::get('Blesta.company_id'), 'date_format')->value,
-            'date_time'=>$this->Companies->getSetting(Configure::get('Blesta.company_id'), 'datetime_format')->value
+            'date' => $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'date_format')->value,
+            'date_time' => $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'datetime_format')->value
         ]);
 
         // Get the service fields
@@ -794,13 +811,13 @@ class Multicraft extends Module
 
         // Fetch the server info
         if ($row) {
-            $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+            $api_url = ($row->meta->panel_api_url ?? '');
             $api = $this->getApi(
                 $api_url,
-                (isset($row->meta->username) ? $row->meta->username : ''),
-                (isset($row->meta->key) ? $row->meta->key : '')
+                ($row->meta->username ?? ''),
+                ($row->meta->key ?? '')
             );
-            $server_id = (isset($service_fields->multicraft_server_id) ? $service_fields->multicraft_server_id : '');
+            $server_id = ($service_fields->multicraft_server_id ?? '');
 
             // Run a command or clear the log
             if (!empty($post)) {
@@ -865,17 +882,15 @@ class Multicraft extends Module
         if ($row) {
             // Kick a player
             if (!empty($post['action']) && $post['action'] == 'kick' && !empty($post['player'])) {
-                $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+                $api_url = ($row->meta->panel_api_url ?? '');
                 $api = $this->getApi(
                     $api_url,
-                    (isset($row->meta->username) ? $row->meta->username : ''),
-                    (isset($row->meta->key) ? $row->meta->key : '')
+                    ($row->meta->username ?? ''),
+                    ($row->meta->key ?? '')
                 );
 
                 // Kick the player
-                $server_id = (isset($service_fields->multicraft_server_id)
-                    ? $service_fields->multicraft_server_id
-                    : ''
+                $server_id = ($service_fields->multicraft_server_id ?? ''
                 );
                 $command = 'kick ' . $post['player'];
                 $api->sendConsoleCommand($server_id, $command);
@@ -916,23 +931,24 @@ class Multicraft extends Module
 
         // Fetch the server info
         if ($row) {
-            $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+            $api_url = ($row->meta->panel_api_url ?? '');
             $api = $this->getApi(
                 $api_url,
-                (isset($row->meta->username) ? $row->meta->username : ''),
-                (isset($row->meta->key) ? $row->meta->key : '')
+                ($row->meta->username ?? ''),
+                ($row->meta->key ?? '')
             );
 
             // Get the server info
-            $server_id = (isset($service_fields->multicraft_server_id) ? $service_fields->multicraft_server_id : '');
+            $server_id = ($service_fields->multicraft_server_id ?? '');
             $server = $api->getServer($server_id);
-            $server = (isset($server['data']['Server']) ? $server['data']['Server'] : []);
+            $server = ($server['data']['Server'] ?? []);
             $this->view->set('server', $server);
 
             // Perform an action, iff server is not suspended
             if (array_key_exists('suspended', $server) && $server['suspended'] == '0' && !empty($post)) {
                 // Server actions
-                if (!empty($post['submit'])
+                if (
+                    !empty($post['submit'])
                     && in_array($post['submit'], ['start', 'restart', 'stop', 'set_daytime', 'set_nighttime'])
                 ) {
                     if (in_array($post['submit'], ['set_daytime', 'set_nighttime'])) {
@@ -944,7 +960,8 @@ class Multicraft extends Module
                         $action = $post['submit'] . 'Server';
                         $api->{$action}($server_id);
                     }
-                } elseif (isset($post['server_name']) && isset($service_fields->multicraft_user_name)
+                } elseif (
+                    isset($post['server_name']) && isset($service_fields->multicraft_user_name)
                     && $service_fields->multicraft_user_name == '1'
                 ) {
                     // Update server name if allowed to change it
@@ -1063,17 +1080,17 @@ class Multicraft extends Module
 
         // Fetch the server info
         if ($row) {
-            $api_url = (isset($row->meta->panel_api_url) ? $row->meta->panel_api_url : '');
+            $api_url = ($row->meta->panel_api_url ?? '');
             $api = $this->getApi(
                 $api_url,
-                (isset($row->meta->username) ? $row->meta->username : ''),
-                (isset($row->meta->key) ? $row->meta->key : '')
+                ($row->meta->username ?? ''),
+                ($row->meta->key ?? '')
             );
 
             // Get the server info
-            $server_id = (isset($service_fields->multicraft_server_id) ? $service_fields->multicraft_server_id : '');
+            $server_id = ($service_fields->multicraft_server_id ?? '');
             $status = $api->getServerStatus($server_id, true);
-            $status = (isset($status['data']) ? $status['data'] : []);
+            $status = ($status['data'] ?? []);
 
             // Log the API calls if set to log everything
             if (isset($row->meta->log_all) && $row->meta->log_all == '1') {
@@ -1081,7 +1098,7 @@ class Multicraft extends Module
             }
         }
 
-        $status = (isset($status) ? $status : []);
+        $status = ($status ?? []);
         if ($return) {
             return $status;
         }

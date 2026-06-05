@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\ServiceProviders;
 
 use Blesta\Core\ServiceProviders\Common\AbstractServiceProvider;
@@ -123,7 +124,7 @@ class Requestor extends AbstractServiceProvider
                     // IPv4
                     $forwarded_ip = explode(':', $forwarded_ip);
                     $forwarded_ip = $forwarded_ip[0];
-                } else if (str_contains($forwarded_ip, ']:')) {
+                } elseif (str_contains($forwarded_ip, ']:')) {
                     // IPv6
                     $forwarded_ip = explode(']:', $forwarded_ip);
                     $forwarded_ip = $forwarded_ip[0] . ']';

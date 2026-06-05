@@ -20,6 +20,10 @@ $lang['AdminMain.index.heading_date_added'] = "Date Ordered";
 $lang['AdminMain.index.field_ordersubmit'] = "Update Orders";
 $lang['AdminMain.index.field_markas'] = "Mark as:";
 $lang['AdminMain.index.text_location'] = "Location";
+$lang['AdminMain.index.paid'] = "Paid";
+$lang['AdminMain.index.unpaid'] = "Unpaid";
+$lang['AdminMain.index.loading'] = "Loading...";
+$lang['AdminMain.index.text_items_selected'] = "items selected";
 
 // Search
 $lang['AdminMain.search.page_title'] = 'Search Results for "%1$s"'; // %1$s is the search keywords
@@ -34,28 +38,35 @@ $lang['AdminMain.orderinfo.fraudreport_heading_key'] = "Key";
 $lang['AdminMain.orderinfo.fraudreport_heading_value'] = "Value";
 
 $lang['AdminMain.orderinfo.applied_heading'] = "Transactions";
+$lang['AdminMain.orderinfo.applied_heading_id'] = "Transaction ID";
 $lang['AdminMain.orderinfo.applied_heading_paymenttype'] = "Payment Type";
 $lang['AdminMain.orderinfo.applied_heading_amount'] = "Amount";
+$lang['AdminMain.orderinfo.applied_heading_status'] = "Status";
+$lang['AdminMain.orderinfo.applied_heading_date'] = "Date";
 $lang['AdminMain.orderinfo.applied_heading_applied'] = "Applied";
 $lang['AdminMain.orderinfo.applied_heading_appliedon'] = "Applied On";
-$lang['AdminMain.orderinfo.applied_heading_options'] = "Options";
+$lang['AdminMain.orderinfo.applied_heading_options'] = "Actions";
 $lang['AdminMain.orderinfo.applied_option_edit'] = "Edit";
 $lang['AdminMain.orderinfo.applied_no_results'] = "There are no transactions applied to this order.";
 
 $lang['AdminMain.orderinfo.services_heading'] = "Services";
+$lang['AdminMain.orderinfo.services_heading_name'] = "Service";
 $lang['AdminMain.orderinfo.services_heading_package'] = "Package";
+$lang['AdminMain.orderinfo.services_heading_status'] = "Status";
 $lang['AdminMain.orderinfo.services_heading_label'] = "Label";
 $lang['AdminMain.orderinfo.services_heading_term'] = "Term";
 $lang['AdminMain.orderinfo.services_heading_dateadded'] = "Date Added";
 $lang['AdminMain.orderinfo.services_heading_daterenews'] = "Date Renews";
-$lang['AdminMain.orderinfo.services_heading_options'] = "Options";
+$lang['AdminMain.orderinfo.services_heading_options'] = "Actions";
 $lang['AdminMain.orderinfo.services_option_manage'] = "Manage";
+$lang['AdminMain.orderinfo.services_status_pending'] = "Pending";
 
 $lang['AdminMain.orderinfo.services_text_never'] = "Never";
 $lang['AdminMain.orderinfo.services_no_results'] = "There are no services in this order.";
 
 // Settings
 $lang['AdminMain.settings.heading_notifications'] = "Order Notifications";
+$lang['AdminMain.settings.text_notifications'] = "Configure how you want to receive notifications for new orders.";
 $lang['AdminMain.settings.field_email_notice'] = "Email";
 $lang['AdminMain.settings.field_email_notice_never'] = "Do not send";
 $lang['AdminMain.settings.field_email_notice_manual'] = "Only send if manual approval required";
@@ -70,6 +81,7 @@ $lang['AdminMain.settings.field_messenger_notice_manual'] = "Only send if manual
 $lang['AdminMain.settings.field_messenger_notice_always'] = "Always send";
 
 $lang['AdminMain.settings.heading_affiliate_notifications'] = "Affiliate Notifications";
+$lang['AdminMain.settings.text_affiliate_notifications'] = "Configure how you want to receive notifications for affiliate payouts.";
 $lang['AdminMain.settings.field_payout_notice'] = 'Payout';
 $lang['AdminMain.settings.field_payout_notice_never'] = 'Never';
 $lang['AdminMain.settings.field_payout_notice_always'] = 'Always';

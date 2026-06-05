@@ -1,131 +1,179 @@
 
         <?php
         $category_name = (isset($category->name) ? $category->name : null);
-        if (!empty($category_name) && (isset($show_links) ? $show_links : false)) {
+        $dropdown_mode = !(isset($show_links) ? $show_links : false);
+        $is_search_mode = isset($is_search_mode) && $is_search_mode;
+
+        if (!empty($category_name) && !$dropdown_mode) {
         ?>
-        <div class="title_row first">
-            <h3><?php echo (isset($category_name) ? $this->Html->safe($category_name) : null);?></h3>
-        </div>
+        <h6 class="form-section-header"><?php echo (isset($category_name) ? $this->Html->safe($category_name) : null);?></h6>
         <?php
         }
 
-        if (!empty($category) || !empty($categories) || !empty($responses)) {
-        ?>
-        <div class="pad clear" id="responses">
-            <?php
-            // Show up a category
-            if (!empty($category)) {
+        if ($is_search_mode && $dropdown_mode) {
+            // Search results mode - flat list with category paths
+            foreach ((isset($search_results) ? $search_results : []) as $result) {
             ?>
-            <div class="up_level py-1">
-                <?php
-                $up_href = (isset($show_links) ? $show_links : false) ? $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/index/' . (empty($category->parent_id) ? '' : (isset($category->parent_id) ? $category->parent_id : null) . '/')) : '#';
-                ?>
-                <a id="category_<?php echo (isset($category->parent_id) ? $this->Html->safe($category->parent_id) : null);?>" class="text_link" href="<?php echo $up_href;?>">
-                    <i class="fas fa-level-down-alt fa-rotate-180"></i>
-                    <?php $this->_('AdminResponses.index.text_up_level');?>
-                </a>
+            <div class="predefined-response-item predefined-response-search-result" data-response-id="<?php echo (isset($result['id']) ? $this->Html->safe($result['id']) : null);?>">
+                <div class="response-main">
+                    <i class="bi bi-chat-left-text"></i>
+                    <?php echo (isset($result['name']) ? $this->Html->safe($result['name']) : null);?>
+                </div>
+                <?php if (!empty($result['category_path'])) { ?>
+                <div class="response-category-path">
+                    <i class="bi bi-folder2"></i>
+                    <?php echo $this->Html->safe($result['category_path']);?>
+                </div>
+                <?php } ?>
             </div>
             <?php
             }
-            ?>
-
-            <div class="row">
-                <?php
-                $i = 0;
-                // List categories
-                foreach ((isset($categories) ? $categories : []) as $cat) {
-                    $i++;
+        } elseif (!empty($category) || !empty($categories) || !empty($responses)) {
+            if ($dropdown_mode) {
+                // Dropdown mode - used in ticket add/reply predefined responses dropdown
+                // Show up a category (back navigation)
+                if (!empty($category)) {
                 ?>
-                <div class="category col-sm-4">
-                    <i class="fas fa-folder"></i>
-                    <?php
-                    if ((isset($show_links) ? $show_links : false)) {
-                    ?>
-                    <a class="text_link" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/index/' . (isset($cat->id) ? $cat->id : null) . '/');?>"><?php echo (isset($cat->name) ? $this->Html->safe($cat->name) : null);?></a>
-                    <?php $this->_('AdminResponses.!text.open_parenthesis');?><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/editcategory/' . (isset($cat->id) ? $cat->id : null) . '/');?>"><?php $this->_('AdminResponses.index.edit');?></a>
-                    <?php $this->_('AdminResponses.!text.forward_slash');?>
-                    <?php
-                    $this->Form->create($this->base_uri . 'plugin/support_manager/admin_responses/deletecategory/');
-                    $this->Form->fieldHidden('id', (isset($cat->id) ? $cat->id : null));
-                    ?>
-                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/deletecategory/' . (isset($cat->id) ? $cat->id : null) . '/');?>" class="manage" rel="<?php $this->_('AdminResponses.modal.delete_category');?>"><?php $this->_('AdminResponses.index.delete');?></a><?php $this->_('AdminResponses.!text.closed_parenthesis');?>
-                    <?php
-                    $this->Form->end();
-                    ?>
-                    <?php
-                    } else {
-                    ?>
-                    <a id="category_<?php echo (isset($cat->id) ? $this->Html->safe($cat->id) : null);?>" class="text_link" href="#"><?php echo (isset($cat->name) ? $this->Html->safe($cat->name) : null);?></a>
-                    <?php
-                    }
-                    ?>
+                <div class="predefined-response-category" data-category-id="<?php echo (isset($category->parent_id) ? $this->Html->safe($category->parent_id) : '');?>">
+                    <i class="bi bi-arrow-return-left"></i>
+                    <?php $this->_('AdminResponses.index.text_up_level');?>
                 </div>
                 <?php
-                    if ($i % 3 == 0) {
-                        ?>
-            </div>
-            <div class="row">
-                        <?php
-                    }
+                }
+
+                // List categories
+                foreach ((isset($categories) ? $categories : []) as $cat) {
+                ?>
+                <div class="predefined-response-category" data-category-id="<?php echo (isset($cat->id) ? $this->Html->safe($cat->id) : null);?>">
+                    <i class="bi bi-folder2"></i>
+                    <?php echo (isset($cat->name) ? $this->Html->safe($cat->name) : null);?>
+                </div>
+                <?php
+                }
+
+                // List responses
+                foreach ((isset($responses) ? $responses : []) as $response) {
+                ?>
+                <div class="predefined-response-item" data-response-id="<?php echo (isset($response->id) ? $this->Html->safe($response->id) : null);?>">
+                    <i class="bi bi-chat-left-text"></i>
+                    <?php echo (isset($response->name) ? $this->Html->safe($response->name) : null);?>
+                </div>
+                <?php
+                }
+            } else {
+                // Management mode - used in responses admin page
+        ?>
+        <div class="pad clear" id="responses">
+            <div class="row g-3">
+                <?php
+                // List categories
+                foreach ((isset($categories) ? $categories : []) as $cat) {
+                ?>
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                    <div class="response-folder-card" role="link" tabindex="0" data-href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/index/' . (isset($cat->id) ? $cat->id : null) . '/');?>">
+                        <div class="response-folder-icon">
+                            <i class="bi bi-folder-fill"></i>
+                        </div>
+                        <div class="response-folder-name"><?php echo (isset($cat->name) ? $this->Html->safe($cat->name) : null);?></div>
+                        <?php if (isset($cat->item_count) && $cat->item_count > 0) { ?>
+                        <span class="response-folder-count badge bg-secondary"><?php echo $this->Html->safe($cat->item_count);?></span>
+                        <?php } ?>
+                        <div class="response-folder-actions">
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/editcategory/' . (isset($cat->id) ? $cat->id : null) . '/');?>" class="response-folder-action-btn" title="<?php $this->_('AdminResponses.index.edit');?>">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <?php
+                            $this->Form->create($this->base_uri . 'plugin/support_manager/admin_responses/deletecategory/', ['class' => 'd-inline']);
+                            $this->Form->fieldHidden('id', (isset($cat->id) ? $cat->id : null));
+                            ?>
+                            <button type="button" class="response-folder-action-btn response-folder-delete-btn modal-confirm-delete" data-confirm-message="<?php $this->_('AdminResponses.modal.delete_category');?>" title="<?php $this->_('AdminResponses.index.delete');?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <?php $this->Form->end();?>
+                        </div>
+                    </div>
+                </div>
+                <?php
                 }
                 // List responses
                 foreach ((isset($responses) ? $responses : []) as $response) {
-                    $i++;
                 ?>
-                <div class="response_item col-sm-4">
-                    <i class="fas fa-file"></i>
-                    <?php
-                    if ((isset($show_links) ? $show_links : false)) {
-                    ?>
-                    <a class="text_link response" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/edit/' . (isset($response->id) ? $response->id : null) . '/');?>"><?php echo (isset($response->name) ? $this->Html->safe($response->name) : null);?></a>
-                    <?php $this->_('AdminResponses.!text.open_parenthesis');?><a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/edit/' . (isset($response->id) ? $response->id : null) . '/');?>"><?php $this->_('AdminResponses.index.edit');?></a>
-                    <?php $this->_('AdminResponses.!text.forward_slash');?>
-                    <?php
-                    $this->Form->create($this->base_uri . 'plugin/support_manager/admin_responses/delete/');
-                    $this->Form->fieldHidden('id', (isset($response->id) ? $response->id : null));
-                    ?>
-                        <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/delete/' . (isset($response->id) ? $response->id : null) . '/');?>" class="manage" rel="<?php $this->_('AdminResponses.modal.delete_response');?>"><?php $this->_('AdminResponses.index.delete');?></a><?php $this->_('AdminResponses.!text.closed_parenthesis');?>
-                    <?php
-                    $this->Form->end();
-                    ?>
-                    <?php
-                    } else {
-                    ?>
-                    <a id="response_<?php echo (isset($response->id) ? $this->Html->safe($response->id) : null);?>" class="text_link response" href="#"><?php echo (isset($response->name) ? $this->Html->safe($response->name) : null);?></a>
-                    <?php
-                    }
-                    ?>
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+                    <div class="response-folder-card response-item-card" role="link" tabindex="0" data-href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/edit/' . (isset($response->id) ? $response->id : null) . '/');?>">
+                        <div class="response-folder-icon">
+                            <i class="bi bi-chat-left-text"></i>
+                        </div>
+                        <div class="response-folder-name"><?php echo (isset($response->name) ? $this->Html->safe($response->name) : null);?></div>
+                        <div class="response-folder-actions">
+                            <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/admin_responses/edit/' . (isset($response->id) ? $response->id : null) . '/');?>" class="response-folder-action-btn" title="<?php $this->_('AdminResponses.index.edit');?>">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <?php
+                            $this->Form->create($this->base_uri . 'plugin/support_manager/admin_responses/delete/', ['class' => 'd-inline']);
+                            $this->Form->fieldHidden('id', (isset($response->id) ? $response->id : null));
+                            ?>
+                            <button type="button" class="response-folder-action-btn response-folder-delete-btn modal-confirm-delete" data-confirm-message="<?php $this->_('AdminResponses.modal.delete_response');?>" title="<?php $this->_('AdminResponses.index.delete');?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <?php $this->Form->end();?>
+                        </div>
+                    </div>
                 </div>
                 <?php
-                    if ($i % 3 == 0) {
-                        ?>
-            </div>
-            <div class="row">
-                        <?php
-                    }
                 }
                 ?>
             </div>
-            <div class="clear"></div>
         </div>
         <?php
+            }
         }
 
-        if (empty($categories) && empty($responses)) {
+        // Only show empty message in management mode (not in dropdown mode)
+        if (!$dropdown_mode && empty($categories) && empty($responses)) {
         ?>
-            <div class="empty_section float-none">
-                <div class="empty_box"><?php $this->_('AdminResponses.index.no_responses');?></div>
+            <div class="card-body text-center text-muted py-5">
+                <i class="bi bi-chat-square-text" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3 mb-0"><?php $this->_('AdminResponses.index.no_responses');?></p>
             </div>
         <?php
         }
         ?>
 <?php
-if ((isset($show_links) ? $show_links : false)) {
+if (!$dropdown_mode) {
 ?>
 <script type="text/javascript">
-    $(document).ready(function() {
-        $('#responses a.manage[rel]').blestaModalConfirm({base_url: '<?php echo $this->Html->safe($this->base_uri);?>', close: '<?php $this->_('AppController.modal.text_close');?>', submit: true});
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle card click navigation
+    document.querySelectorAll('#responses .response-folder-card[data-href]').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            // Don't navigate if clicking on action buttons, links, or forms
+            if (e.target.closest('.response-folder-actions')) {
+                return;
+            }
+            var href = this.dataset.href;
+            if (href) {
+                window.location.href = href;
+            }
+        });
+
+        // Handle keyboard navigation (Enter key)
+        card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.target.closest('.response-folder-actions')) {
+                var href = this.dataset.href;
+                if (href) {
+                    window.location.href = href;
+                }
+            }
+        });
     });
+
+    // Prevent action button clicks from triggering card navigation
+    document.querySelectorAll('#responses .response-folder-action-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+});
 </script>
 <?php
 }

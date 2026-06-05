@@ -22,7 +22,7 @@ class AdminSearch extends AppController
         // Require login
         $this->requireLogin();
 
-        Language::loadLang(['admin_search']);
+        Language::loadLang('admin_search');
     }
 
     /**
@@ -196,7 +196,7 @@ class AdminSearch extends AppController
             $this->setMessage('notice', Language::_('AdminSearch.!notice.results_truncated', true));
         }
 
-        return ['clients' => $this->partial('admin_search_clients', ['clients' => $clients])];
+        return ['clients' => $this->partial('admin_search_clients', ['clients' => $clients, 'smart_search' => !$pagination])];
     }
 
     /**
@@ -256,7 +256,7 @@ class AdminSearch extends AppController
             $this->setMessage('notice', Language::_('AdminSearch.!notice.results_truncated', true));
         }
 
-        return ['invoices' => $this->partial('admin_search_invoices', ['invoices' => $invoices])];
+        return ['invoices' => $this->partial('admin_search_invoices', ['invoices' => $invoices, 'smart_search' => !$pagination])];
     }
 
     /**
@@ -318,7 +318,7 @@ class AdminSearch extends AppController
             $this->setMessage('notice', Language::_('AdminSearch.!notice.results_truncated', true));
         }
 
-        return ['transactions' => $this->partial('admin_search_transactions', $vars)];
+        return ['transactions' => $this->partial('admin_search_transactions', $vars + ['smart_search' => !$pagination])];
     }
 
     /**
@@ -363,7 +363,7 @@ class AdminSearch extends AppController
         return [
             'services' => $this->partial(
                 'admin_search_services',
-                ['services' => $services, 'service_status' => $this->Services->getStatusTypes()]
+                ['services' => $services, 'service_status' => $this->Services->getStatusTypes(), 'smart_search' => !$pagination]
             )
         ];
     }
@@ -410,7 +410,7 @@ class AdminSearch extends AppController
         return [
             'packages' => $this->partial(
                 'admin_search_packages',
-                ['packages' => $packages, 'package_status' => $this->Packages->getStatusTypes()]
+                ['packages' => $packages, 'package_status' => $this->Packages->getStatusTypes(), 'smart_search' => !$pagination]
             )
         ];
     }

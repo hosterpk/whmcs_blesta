@@ -1,31 +1,43 @@
 
-	<ul>
-        <li>
-            <?php
-            $this->Form->label($this->_("Payumoney.merchant_key", true), "merchant_key");
-            $this->Form->fieldText("merchant_key", (isset($meta['merchant_key']) ? $meta['merchant_key'] : null), array('id'=>"merchant_key"));
-            ?>
-            <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("Payumoney.merchant_key_note");?></div></span>
-        </li>
-		<li>
-            <?php
-            $this->Form->label($this->_("Payumoney.merchant_salt", true), "merchant_salt");
-            $this->Form->fieldText("merchant_salt", (isset($meta['merchant_salt']) ? $meta['merchant_salt'] : null), array('id'=>"merchant_salt"));
-            ?>
-            <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("Payumoney.merchant_salt_note");?></div></span>
-		</li>
-		<li>
-            <?php
-            $this->Form->label($this->_("Payumoney.auth_header", true), "auth_header");
-            $this->Form->fieldText("auth_header", (isset($meta['auth_header']) ? $meta['auth_header'] : null), array('id'=>"auth_header"));
-            ?>
-            <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("Payumoney.auth_header_note");?></div></span>
-		</li>
-		<li>
-            <?php
-            $this->Form->fieldCheckbox("test_mode", "true", ((isset($meta['test_mode']) ? $meta['test_mode'] : "false") == "true"), array('id'=>"test_mode"));
-            $this->Form->label($this->_("Payumoney.test_mode", true), "test_mode", array('class'=>"inline"));
-            ?>
-            <span class="tooltip"><?php $this->_("AppController.tooltip.text");?><div><?php $this->_("Payumoney.test_mode_note"); ?></div></span>
-        </li>
-	</ul>
+<div class="mb-3">
+    <label for="merchant_key" class="form-label">
+        <?php $this->_("Payumoney.merchant_key"); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_("Payumoney.merchant_key_note", true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText("merchant_key", (isset($meta['merchant_key']) ? $meta['merchant_key'] : null), ['id' => "merchant_key", 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <label for="merchant_salt" class="form-label">
+        <?php $this->_("Payumoney.merchant_salt"); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_("Payumoney.merchant_salt_note", true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText("merchant_salt", (isset($meta['merchant_salt']) ? $meta['merchant_salt'] : null), ['id' => "merchant_salt", 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <label for="auth_header" class="form-label">
+        <?php $this->_("Payumoney.auth_header"); ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+           title="<?php echo $this->Html->safe($this->_("Payumoney.auth_header_note", true)); ?>"></i>
+    </label>
+    <?php
+    $this->Form->fieldText("auth_header", (isset($meta['auth_header']) ? $meta['auth_header'] : null), ['id' => "auth_header", 'class' => 'form-control']);
+    ?>
+</div>
+<div class="mb-3">
+    <div class="form-check">
+        <?php
+        $this->Form->fieldCheckbox("test_mode", "true", ((isset($meta['test_mode']) ? $meta['test_mode'] : "false") == "true"), ['id' => "test_mode", 'class' => 'form-check-input']);
+        ?>
+        <label for="test_mode" class="form-check-label">
+            <?php $this->_("Payumoney.test_mode"); ?>
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+               title="<?php echo $this->Html->safe($this->_("Payumoney.test_mode_note", true)); ?>"></i>
+        </label>
+    </div>
+</div>

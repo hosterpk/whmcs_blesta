@@ -1,7 +1,11 @@
 <?php
+
+namespace Blesta\Helpers\DataStructure\String;
+
+use Loader;
+
 /**
  * String Data Structure helper
- *
  * Provides utility methods to assist in manipulating strings.
  *
  * @package blesta
@@ -111,8 +115,8 @@ class DataStructureString
 
         if ($options['word_length'] && $options['word_length'] > 0) {
             // Determine the words
-            $words = preg_split("/[\s]+/", $result);
-            $spaces = preg_split("/[^\s]+/", $result);
+            $words = preg_split('/[\s]+/', $result);
+            $spaces = preg_split('/[^\s]+/', $result);
             $word_count = count($words);
 
             // Rebuild the words

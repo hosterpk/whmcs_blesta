@@ -38,8 +38,8 @@ class ReassignPricingPlugin extends Plugin
                 'uri' => 'plugin/reassign_pricing/admin_main/index/',
                 'name' => 'ReassignPricingPlugin.action_staff_client.index',
                 'options' => [
-                    'class' => 'record_payment',
-                    'icon' => 'fa-random'
+                    'class' => 'reassign_pricing',
+                    'icon' => 'bi bi-shuffle'
                 ]
             ]
         ];

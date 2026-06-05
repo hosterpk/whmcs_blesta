@@ -1,125 +1,137 @@
+<?php /** @var View $this */ ?>
+
 <?php
 echo (isset($message) ? $message : null);
 
 $this->Widget->clear();
 $this->Widget->setStyleSheet($this->view_dir . 'css/styles.css?ver=1.0.0', ['id' => 'mass_mailer_styles']);
+$this->Widget->setBodyWrapper(false);
 $this->Widget->create($this->_('AdminCompose.index.boxtitle', true), ['id' => 'admin_compose'], (isset($render_section) ? $render_section : null));
 ?>
-    <div class="inner">
-        <?php
-        $this->Form->create(null, ['id' => 'mass_mailer_compose']);
-        ?>
-        <div class="pad">
-            <ul id="email">
-                <li>
-                    <?php $this->Form->label($this->_('AdminCompose.index.form.from_name', true), 'from_name');?>
-                    <?php $this->Form->fieldText('from_name', (isset($vars->from_name) ? $vars->from_name : null), ['id' => 'from_name']);?>
+    <?php
+    $this->Form->create(null, ['id' => 'mass_mailer_compose']);
+    ?>
+    <div class="card-body" id="email">
+        <div class="mb-3">
+            <?php $this->Form->label($this->_('AdminCompose.index.form.from_name', true), 'from_name', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('from_name', (isset($vars->from_name) ? $vars->from_name : null), ['id' => 'from_name', 'class' => 'form-control']);?>
+        </div>
+        <div class="mb-3">
+            <?php $this->Form->label($this->_('AdminCompose.index.form.from_address', true), 'from_address', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('from_address', (isset($vars->from_address) ? $vars->from_address : null), ['id' => 'from_address', 'class' => 'form-control']);?>
+        </div>
+        <div class="mb-3">
+            <?php $this->Form->label($this->_('AdminCompose.index.form.subject', true), 'subject', ['class' => 'form-label']);?>
+            <?php $this->Form->fieldText('subject', (isset($vars->subject) ? $vars->subject : null), ['id' => 'subject', 'class' => 'form-control']);?>
+        </div>
+        <div class="mb-3">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#compose-html" type="button" role="tab">
+                        <?php $this->_('AdminCompose.index.form.html');?>
+                    </button>
                 </li>
-                <li>
-                    <?php $this->Form->label($this->_('AdminCompose.index.form.from_address', true), 'from_address');?>
-                    <?php $this->Form->fieldText('from_address', (isset($vars->from_address) ? $vars->from_address : null), ['id' => 'from_address']);?>
-                </li>
-                <li>
-                    <?php $this->Form->label($this->_('AdminCompose.index.form.subject', true), 'subject');?>
-                    <?php $this->Form->fieldText('subject', (isset($vars->subject) ? $vars->subject : null), ['id' => 'subject']);?>
-                </li>
-                <li>
-                    <div class="tab_content">
-                        <ul class="tabs">
-                            <li class="current">
-                                <a href="#"><?php $this->Form->label($this->_('AdminCompose.index.form.html', true), 'html');?></a>
-                            </li>
-                            <li>
-                                <a href="#"><?php $this->Form->label($this->_('AdminCompose.index.form.text', true), 'text');?></a>
-                            </li>
-                        </ul>
-                        <div class="inner_content">
-                            <div><?php $this->Form->fieldTextarea('html', (isset($vars->html) ? $vars->html : null), ['id' => 'html', 'data-language' => substr(Configure::get('Blesta.language'), 0, 2)]);?></div>
-                            <div><?php $this->Form->fieldTextarea('text', (isset($vars->text) ? $vars->text : null), ['id' => 'text']);?></div>
-                        </div>
-                    </div>
-                </li>
-                <li>
-                    <p><i class="fas fa-exclamation-triangle"></i> <?php $this->_('AdminCompose.index.text.note');?></p>
-                </li>
-                <li>
-                    <?php
-                    $this->Form->label($this->_('AdminCompose.index.text_tags', true));
-                    $show_service_tags = (!empty($tags['service']));
-                    ?>
-                    <div class="replacement_tags">
-                        <div class="col-md-<?php echo $show_service_tags ? '6' : '12';?>">
-                            <table class="table">
-                                <tr class="heading_row">
-                                    <td colspan="2" class="last"><?php $this->_('AdminCompose.index.heading_client_tags');?></td>
-                                </tr>
-                                <?php
-                                $i = 0;
-                                foreach ((isset($tags['client']) ? $tags['client'] : null) as $tag => $label) {
-                                ?>
-                                <tr<?php echo ($i++%2 == 1) ? ' class="odd_row"' : '';?>>
-                                    <td><?php echo (isset($tag) ? $this->Html->safe($tag) : null);?></td>
-                                    <td><?php $this->_($label);?></td>
-                                </tr>
-                                <?php
-                                }
-                                ?>
-                            </table>
-                        </div>
-                        <?php
-                        if ($show_service_tags) {
-                        ?>
-                        <div class="col-md-6">
-                            <table class="table">
-                                <tr class="heading_row">
-                                    <td colspan="2" class="last"><?php $this->_('AdminCompose.index.heading_service_tags');?></td>
-                                </tr>
-                                <?php
-                                $i = 0;
-                                foreach ((isset($tags['service']) ? $tags['service'] : null) as $tag => $label) {
-                                ?>
-                                <tr<?php echo ($i++%2 == 1) ? ' class="odd_row"' : '';?>>
-                                    <td><?php echo (isset($tag) ? $this->Html->safe($tag) : null);?></td>
-                                    <td><?php $this->_($label);?></td>
-                                </tr>
-                                <?php
-                                }
-                                ?>
-                            </table>
-                        </div>
-                        <?php
-                        }
-                        ?>
-                    </div>
-                    <div class="clear"></div>
-                </li>
-                <li>
-                    <?php
-                    $this->Form->fieldCheckbox(
-                        'log',
-                        '1',
-                        (isset($vars->log) ? $vars->log : null) === '1',
-                        ['id' => 'log']
-                    );
-                    ?>
-                    <label for="log" class="inline">
-                        <?php $this->_('AdminCompose.index.form.log');?>
-                        <span class="tooltip"><?php $this->_('AppController.tooltip.text');?><div><?php $this->_('AdminCompose.!tooltip.log');?></div></span>
-                    </label>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#compose-text" type="button" role="tab">
+                        <?php $this->_('AdminCompose.index.form.text');?>
+                    </button>
                 </li>
             </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="compose-html" role="tabpanel">
+                    <?php $this->Form->fieldTextarea('html', (isset($vars->html) ? $vars->html : null), ['id' => 'html', 'class' => 'form-control wysiwyg', 'data-language' => substr(Configure::get('Blesta.language'), 0, 2)]);?>
+                </div>
+                <div class="tab-pane fade" id="compose-text" role="tabpanel">
+                    <?php $this->Form->fieldTextarea('text', (isset($vars->text) ? $vars->text : null), ['id' => 'text', 'class' => 'form-control', 'rows' => 12]);?>
+                </div>
+            </div>
         </div>
-
-        <div class="button_row">
+        <div class="mb-3">
+            <p><i class="bi bi-exclamation-triangle"></i> <?php $this->_('AdminCompose.index.text.note');?></p>
+        </div>
+        <div class="mb-3">
             <?php
-            $this->Form->fieldSubmit('preview', $this->_('AdminCompose.index.form.preview', true), ['class' => 'btn btn-primary pull-right']);
+            $this->Form->label($this->_('AdminCompose.index.text_tags', true), null, ['class' => 'form-label']);
+            $show_service_tags = (!empty($tags['service']));
             ?>
-            <a class="btn btn-default pull-right" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/mass_mailer/admin_filter/');?>"><?php $this->_('AdminCompose.index.link_back');?></a>
+            <div class="replacement_tags">
+                <div class="col-md-<?php echo $show_service_tags ? '6' : '12';?>">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th colspan="2"><?php $this->_('AdminCompose.index.heading_client_tags');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            foreach ((isset($tags['client']) ? $tags['client'] : null) as $tag => $label) {
+                            ?>
+                            <tr>
+                                <td><?php echo (isset($tag) ? $this->Html->safe($tag) : null);?></td>
+                                <td><?php $this->_($label);?></td>
+                            </tr>
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php
+                if ($show_service_tags) {
+                ?>
+                <div class="col-md-6">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th colspan="2"><?php $this->_('AdminCompose.index.heading_service_tags');?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            foreach ((isset($tags['service']) ? $tags['service'] : null) as $tag => $label) {
+                            ?>
+                            <tr>
+                                <td><?php echo (isset($tag) ? $this->Html->safe($tag) : null);?></td>
+                                <td><?php $this->_($label);?></td>
+                            </tr>
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php
+                }
+                ?>
+            </div>
+            <div class="clear"></div>
         </div>
+        <div class="mb-3 form-check">
+            <?php
+            $this->Form->fieldCheckbox(
+                'log',
+                '1',
+                (isset($vars->log) ? $vars->log : null) === '1',
+                ['id' => 'log', 'class' => 'form-check-input']
+            );
+            ?>
+            <label class="form-check-label" for="log">
+                <?php $this->_('AdminCompose.index.form.log');?>
+                <span data-bs-toggle="tooltip" data-bs-title="<?php $this->_('AdminCompose.!tooltip.log');?>"><i class="bi bi-info-circle"></i></span>
+            </label>
+        </div>
+    </div>
+
+    <?php $this->Widget->footer(); ?>
+    <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/mass_mailer/admin_filter/');?>"><?php $this->_('AdminCompose.index.link_back');?></a>
         <?php
-        $this->Form->end();
+        $this->Form->fieldSubmit('preview', $this->_('AdminCompose.index.form.preview', true), ['class' => 'btn btn-primary']);
         ?>
     </div>
+    <?php
+    $this->Form->end();
+    ?>
 
 <script type="text/javascript" src="<?php echo $this->Html->safe($this->view_dir . 'js/mass_mailer.js');?>"></script>
 <?php

@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Common\Traits\Container;
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . 'namecheap_response.php';
@@ -105,7 +106,7 @@ class NamecheapApi
         $args['Command'] = $command;
 
         if (!isset($args['ClientIP'])) {
-            $args['ClientIP'] = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+            $args['ClientIP'] = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
             if (!filter_var($args['ClientIP'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
                 $args['ClientIP'] = '127.0.0.1';
             }

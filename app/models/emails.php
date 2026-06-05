@@ -1,5 +1,17 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Configure;
+use Exception;
+use Language;
+use Loader;
+use H2o;
+use PDOException;
+use stdClass;
+use Throwable;
+
 /**
  * Email management
  *
@@ -11,7 +23,6 @@
  */
 class Emails extends AppModel
 {
-
     /**
      * An array of key/value pairs to be used as default tags for email templates
      */
@@ -71,9 +82,14 @@ class Emails extends AppModel
         }
 
         // Trigger the Emails.get event
-        extract($this->executeAndParseEvent('Emails.get', [
+        $event = $this->executeAndParseEvent('Emails.get', [
             'email' => $email
-        ]));
+        ]);
+        if ($event instanceof \Blesta\Core\Util\Events\Common\EventInterface && ($errors = $event->getErrors())) {
+            $this->Input->setErrors($errors);
+            return false;
+        }
+        extract($event);
 
         return $email;
     }
@@ -231,7 +247,12 @@ class Emails extends AppModel
                 'include_attachments', 'status'
             ];
             $this->Record->insert('emails', $vars, $fields);
-            return $this->Record->lastInsertId();
+            $email_id = $this->Record->lastInsertId();
+
+            Loader::loadModels($this, ['EmailSnapshots']);
+            $this->EmailSnapshots->save($email_id);
+
+            return $email_id;
         }
         $this->setParseError();
     }
@@ -275,9 +296,15 @@ class Emails extends AppModel
                 'subject', 'text', 'html', 'email_signature_id', 'email_template_group_id',
                 'include_attachments', 'status'
             ];
+
             $this->Record->where('id', '=', $id)->update('emails', $vars, $fields);
+
+            Loader::loadModels($this, ['EmailSnapshots']);
+            $this->EmailSnapshots->save($id);
+
             return;
         }
+
         $this->setParseError();
     }
 
@@ -643,11 +670,11 @@ class Emails extends AppModel
         $company_id,
         $lang,
         $to,
-        array $tags = null,
+        ?array $tags = null,
         $cc = null,
         $bcc = null,
-        array $attachments = null,
-        array $options = null
+        ?array $attachments = null,
+        ?array $options = null
     ) {
         if (!isset($this->Staff)) {
             Loader::loadModels($this, ['Staff']);
@@ -731,11 +758,7 @@ class Emails extends AppModel
             $email->options = $options;
 
             // Set attachments if enabled for this email
-            if (($email->include_attachments ?? 0) == 1) {
-                $email->attachments = array_merge(($email->attachments ?? []), ($attachments ?? []));
-            } else {
-                $email->attachments = null;
-            }
+            $email->attachments = ($email->include_attachments ?? 0) == 1 ? array_merge(($email->attachments ?? []), ($attachments ?? [])) : null;
 
             // Set optional from/from name/replyto
             if (isset($options['from'])) {
@@ -801,11 +824,11 @@ class Emails extends AppModel
         $to,
         $subject,
         array $body,
-        array $tags = null,
+        ?array $tags = null,
         $cc = null,
         $bcc = null,
-        array $attachments = null,
-        array $options = null
+        ?array $attachments = null,
+        ?array $options = null
     ) {
         // Validate this data
         $vars = [
@@ -845,8 +868,8 @@ class Emails extends AppModel
             );
 
             $email = new stdClass();
-            $email->html = isset($body['html']) ? $body['html'] : null;
-            $email->text = isset($body['text']) ? $body['text'] : null;
+            $email->html = $body['html'] ?? null;
+            $email->text = $body['text'] ?? null;
             $email->subject = $subject;
             $email->from = $from;
             $email->from_name = $from_name;
@@ -1085,7 +1108,7 @@ class Emails extends AppModel
      * @return mixed A stdClass object representing the parsed email template,
      *  false if no such template exists
      */
-    public function buildEmail($action, $company_id, $lang, array $tags = null)
+    public function buildEmail($action, $company_id, $lang, ?array $tags = null)
     {
         if ($lang == null) {
             $lang = Configure::get('Language.default');
@@ -1248,8 +1271,8 @@ class Emails extends AppModel
                 'unique' => [
                     'rule' => [
                         [$this, 'validateUnique'],
-                        (isset($vars['email_group_id']) ? $vars['email_group_id'] : null),
-                        (isset($vars['lang']) ? $vars['lang'] : null)
+                        ($vars['email_group_id'] ?? null),
+                        ($vars['lang'] ?? null)
                     ],
                     'message' => $this->_('Emails.!error.company_id.unique')
                 ]
@@ -1290,7 +1313,7 @@ class Emails extends AppModel
             'email_signature_id' => [
                 'exists' => [
                     //'if_set' => true,
-                    'rule' => [[$this, 'validateSignatureExists'], (isset($vars['company_id']) ? $vars['company_id'] : null)],
+                    'rule' => [[$this, 'validateSignatureExists'], ($vars['company_id'] ?? null)],
                     'message' => $this->_('Emails.!error.email_signature_id.exists')
                 ]
             ],
@@ -1352,7 +1375,7 @@ class Emails extends AppModel
             $rules = [
                 'action' => [
                     'exists' => [
-                        'rule' => [[$this, 'validateEmailGroupAction'], (isset($vars['action']) ? $vars['action'] : null)],
+                        'rule' => [[$this, 'validateEmailGroupAction'], ($vars['action'] ?? null)],
                         'message' => $this->_('Emails.!error.action.exists')
                     ]
                 ],
@@ -1421,7 +1444,7 @@ class Emails extends AppModel
                 'message' => $this->_('Emails.!error.to_addresses.empty')
             ],
             'format' => [
-                'rule' => [[$this, 'validateEmailAddresses'], (isset($vars['to_addresses']) ? $vars['to_addresses'] : null)],
+                'rule' => [[$this, 'validateEmailAddresses'], ($vars['to_addresses'] ?? null)],
                 'message' => $this->_('Emails.!error.to_addresses.format')
             ]
         ];
@@ -1430,7 +1453,7 @@ class Emails extends AppModel
         if (!empty($vars['cc_addresses'])) {
             $rules['cc_addresses'] = [
                 'format' => [
-                    'rule' => [[$this, 'validateEmailAddresses'], (isset($vars['cc_addresses']) ? $vars['cc_addresses'] : null)],
+                    'rule' => [[$this, 'validateEmailAddresses'], ($vars['cc_addresses'] ?? null)],
                     'message' => $this->_('Emails.!error.cc_addresses.format')
                 ]
             ];
@@ -1438,7 +1461,7 @@ class Emails extends AppModel
         if (!empty($vars['bcc_addresses'])) {
             $rules['bcc_addresses'] = [
                 'format' => [
-                    'rule' => [[$this, 'validateEmailAddresses'], (isset($vars['bcc_addresses']) ? $vars['bcc_addresses'] : null)],
+                    'rule' => [[$this, 'validateEmailAddresses'], ($vars['bcc_addresses'] ?? null)],
                     'message' => $this->_('Emails.!error.bcc_addresses.format')
                 ]
             ];
@@ -1447,7 +1470,7 @@ class Emails extends AppModel
         if (!empty($vars['attachments'])) {
             $rules['attachments'] = [
                 'exist' => [
-                    'rule' => [[$this, 'validateAttachmentPaths'], (isset($vars['attachments']) ? $vars['attachments'] : null)],
+                    'rule' => [[$this, 'validateAttachmentPaths'], ($vars['attachments'] ?? null)],
                     'message' => $this->_('Emails.!error.attachments.exist')
                 ]
             ];
@@ -1621,7 +1644,7 @@ class Emails extends AppModel
         } catch (H2o_Error $e) {
             $this->parseError = $e->getMessage();
             return false;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Don't care about any other exception
         }
         return true;

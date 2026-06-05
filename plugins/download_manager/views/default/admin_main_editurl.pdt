@@ -1,71 +1,84 @@
+<?php /** @var View $this */ ?>
 
+<?php
+echo ($message ?? null);
+
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminMain.editurl.boxtitle_add', true));
+
+$this->Form->create(null, ['id' => 'edit_url', 'class' => 'disable-on-submit']);
+?>
+<div class="card-body">
+    <div class="mb-3">
         <?php
-        echo ($message ?? null);
-
-        $this->Widget->clear();
-        $this->Widget->create($this->_('AdminMain.editurl.boxtitle_add', true));
-
-        $this->Form->create(null, ['id' => 'add_url']);
+        $this->Form->label($this->_('AdminMain.editurl.field_url', true), 'url', ['class' => 'form-label']);
+        $this->Form->fieldText('url', ($vars->url ?? null), ['id' => 'url', 'class' => 'form-control']);
         ?>
-        <div class="inner">
-            <div class="pad">
-                <ul>
-                    <li>
-                        <?php $this->Form->label($this->_('AdminMain.editurl.field_url', true), 'url');?>
-                        <?php $this->Form->fieldText('url', ($vars->url ?? null), ['id' => 'url']);?>
-                    </li>
-                    <li>
-                        <?php
-                        $this->Form->fieldRadio('url_type', 'file', (($vars->url_type ?? 'file') == 'file'), ['id' => 'file', 'class' => 'url_type']);
-                        $this->Form->label($this->_('AdminMain.editurl.field_file', true), 'file', ['class' => 'inline']);
-                        $this->Form->fieldRadio('url_type', 'category', (($vars->url_type ?? null) == 'category'), ['id' => 'category', 'class' => 'url_type']);
-                        $this->Form->label($this->_('AdminMain.editurl.field_category', true), 'category', ['class' => 'inline']);
-                        ?>
-                    </li>
-                    <li id="field_file" style="display:none;">
-                        <?php $this->Form->label($this->_('AdminMain.editurl.field_file', true), 'file');?>
-                        <?php $this->Form->fieldSelect('file', ($files ?? null), ($vars->file ?? null), array_merge(['class' => 'stretch']));?>
-                    </li>
-                    <li id="field_category" style="display:none;">
-                        <?php $this->Form->label($this->_('AdminMain.editurl.field_category', true), 'file_name');?>
-                        <?php $this->Form->fieldSelect('category', ($categories ?? null), ($vars->category ?? null), array_merge(['class' => 'stretch']));?>
-                        <span class="tooltip"><?php $this->_('AppController.tooltip.text');?> <div><?php $this->_('AdminMain.!tooltip.category_type');?></div></span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="button_row">
-                <?php
-                $this->Form->fieldSubmit('save', $this->_('AdminMain.editurl.submit_add', true), ['class' => 'btn btn-primary pull-right']);
-                ?>
-                <a class="btn btn-default pull-right" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/');?>"><?php $this->_('AdminMain.editurl.submit_cancel');?></a>
-            </div>
+    </div>
+    <div class="mb-3">
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('url_type', 'file', (($vars->url_type ?? 'file') == 'file'), ['id' => 'url_type_file', 'class' => 'form-check-input url_type']);
+            $this->Form->label($this->_('AdminMain.editurl.field_file', true), 'url_type_file', ['class' => 'form-check-label']);
+            ?>
         </div>
+        <div class="form-check form-check-inline">
+            <?php
+            $this->Form->fieldRadio('url_type', 'category', (($vars->url_type ?? null) == 'category'), ['id' => 'url_type_category', 'class' => 'form-check-input url_type']);
+            $this->Form->label($this->_('AdminMain.editurl.field_category', true), 'url_type_category', ['class' => 'form-check-label']);
+            ?>
+        </div>
+    </div>
+    <div class="mb-3" id="field_file" style="display:none;">
         <?php
-        $this->Form->end();
-        $this->Widget->end();
+        $this->Form->label($this->_('AdminMain.editurl.field_file', true), 'file', ['class' => 'form-label']);
+        $this->Form->fieldSelect('file', ($files ?? null), ($vars->file ?? null), ['id' => 'file', 'class' => 'form-select']);
         ?>
+    </div>
+    <div class="mb-3" id="field_category" style="display:none;">
+        <?php
+        $this->Form->label($this->_('AdminMain.editurl.field_category', true), 'category', ['class' => 'form-label']);
+        ?>
+        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php $this->_('AdminMain.!tooltip.category_type'); ?>"></i>
+        <?php
+        $this->Form->fieldSelect('category', ($categories ?? null), ($vars->category ?? null), ['id' => 'category', 'class' => 'form-select']);
+        ?>
+    </div>
+</div>
+
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/download_manager/admin_main/urls/'); ?>"><?php $this->_('AdminMain.editurl.submit_cancel'); ?></a>
+    <?php
+    $this->Form->fieldSubmit('save', $this->_('AdminMain.editurl.submit_add', true), ['class' => 'btn btn-primary']);
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
 
 <script type="text/javascript">
-$(document).ready(function() {
-    // Hide/show url type fields
-    if ($('#file').prop('checked')) {
-        $('#field_file').show();
-        $('#field_category').hide();
-    }
-    if ($('#category').prop('checked')) {
-        $('#field_file').hide();
-        $('#field_category').show();
+document.addEventListener('DOMContentLoaded', function() {
+    var field_file = document.getElementById('field_file');
+    var field_category = document.getElementById('field_category');
+    var url_type_file = document.getElementById('url_type_file');
+    var url_type_category = document.getElementById('url_type_category');
+
+    function toggleUrlType() {
+        if (url_type_file.checked) {
+            field_file.style.display = 'block';
+            field_category.style.display = 'none';
+        } else if (url_type_category.checked) {
+            field_file.style.display = 'none';
+            field_category.style.display = 'block';
+        }
     }
 
-    $('.url_type').change(function() {
-        if ($(this).val() == "file") {
-            $('#field_file').show();
-            $('#field_category').hide();
-        } else {
-            $('#field_file').hide();
-            $('#field_category').show();
-        }
-    });
+    toggleUrlType();
+
+    url_type_file.addEventListener('change', toggleUrlType);
+    url_type_category.addEventListener('change', toggleUrlType);
 });
 </script>

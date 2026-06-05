@@ -151,8 +151,8 @@ class ClientMain extends SupportManagerController
     {
         return [
             'low' => 'secondary',
-            'medium' => 'info',
-            'high' => 'success',
+            'medium' => 'primary',
+            'high' => 'info',
             'critical' => 'warning',
             'emergency' => 'danger'
         ];

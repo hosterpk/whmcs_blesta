@@ -1,4 +1,5 @@
 <?php
+
 // Emails
 Configure::set('Order.install.emails', [
     [

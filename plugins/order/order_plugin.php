@@ -1,4 +1,5 @@
 <?php
+
 use Blesta\Core\Util\Events\Common\EventInterface;
 
 /**
@@ -52,6 +53,7 @@ class OrderPlugin extends Plugin
                 setField('monthly_breakdown', ['type' => 'tinyint', 'size' => 1, 'default' => 0])->
                 setField('require_ssl', ['type' => 'tinyint', 'size' => 1, 'default' => 0])->
                 setField('require_captcha', ['type' => 'tinyint', 'size' => 1, 'default' => 0])->
+                setField('require_recurring_consent', ['type' => 'tinyint', 'size' => 1, 'default' => 0])->
                 setField('require_tos', ['type' => 'tinyint', 'size' => 1, 'default' => 0])->
                 setField('tos_url', ['type' => 'varchar', 'size' => 255, 'is_null' => true, 'default' => null])->
                 setField('abandoned_cart_first', ['type' => 'smallint', 'size' => 5, 'is_null' => true, 'default' => null])->
@@ -146,6 +148,10 @@ class OrderPlugin extends Plugin
                     'ip_address',
                     ['type' => 'varchar', 'size' => 45, 'is_null' => true, 'default' => null]
                 )->
+                setField(
+                    'recurring_consent_date',
+                    ['type' => 'datetime', 'is_null' => true, 'default' => null]
+                )->
                 setField('date_added', ['type' => 'datetime'])->
                 setKey(['id'], 'primary')->
                 setKey(['order_number'], 'unique')->
@@ -163,7 +169,7 @@ class OrderPlugin extends Plugin
 
             // Create affiliate database tables
             $this->createAffiliateTables();
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Error adding... no permission?
             $this->Input->setErrors(['db' => ['create' => $e->getMessage()]]);
             return;
@@ -179,16 +185,12 @@ class OrderPlugin extends Plugin
         $emails = Configure::get('Order.install.emails');
         foreach ($emails as $email) {
             $group = $this->EmailGroups->getByAction($email['action']);
-            if ($group) {
-                $group_id = $group->id;
-            } else {
-                $group_id = $this->EmailGroups->add([
+            $group_id = $group ? $group->id : $this->EmailGroups->add([
                     'action' => $email['action'],
                     'type' => $email['type'],
                     'plugin_dir' => $email['plugin_dir'],
                     'tags' => $email['tags']
                 ]);
-            }
 
             // Set from hostname to use that which is configured for the company
             if (isset(Configure::get('Blesta.company')->hostname)) {
@@ -216,6 +218,9 @@ class OrderPlugin extends Plugin
 
         // Add initial affiliate company settings
         $this->populateAffiliateCompanySettings(Configure::get('Blesta.company_id'));
+
+        // Register bell notification actions
+        $this->addNotificationActions();
     }
 
     /**
@@ -306,13 +311,13 @@ class OrderPlugin extends Plugin
                             'text' => str_replace(
                                 'Amount: {invoice.total} {order.currency}{% if order.fraud_status !="" %}',
                                 "Amount: {invoice.total} {order.currency}\n"
-                                . "IP Address: {order.ip_address}{% if order.fraud_status !=\"\" %}",
+                                . 'IP Address: {order.ip_address}{% if order.fraud_status !="" %}',
                                 $template->text
                             ),
                             'html' => str_replace(
                                 'Amount: {invoice.total} {order.currency}{% if order.fraud_status !="" %}',
                                 "Amount: {invoice.total} {order.currency}<br />\n"
-                                . "IP Address: {order.ip_address}{% if order.fraud_status !=\"\" %}",
+                                . 'IP Address: {order.ip_address}{% if order.fraud_status !="" %}',
                                 $template->html
                             )
                         ];
@@ -334,8 +339,8 @@ class OrderPlugin extends Plugin
 
                 // Add description
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `description`
-                    TEXT NOT NULL AFTER `name` "
+                    'ALTER TABLE `order_forms` ADD `description`
+                    TEXT NOT NULL AFTER `name` '
                 );
             }
 
@@ -349,8 +354,8 @@ class OrderPlugin extends Plugin
             if (version_compare($current_version, '2.13.0', '<')) {
                 // Add order form package group order
                 $this->Record->query(
-                    "ALTER TABLE `order_form_groups` ADD `order`
-                    SMALLINT(5) NOT NULL DEFAULT 0 AFTER `package_group_id`"
+                    'ALTER TABLE `order_form_groups` ADD `order`
+                    SMALLINT(5) NOT NULL DEFAULT 0 AFTER `package_group_id`'
                 );
             }
 
@@ -507,8 +512,8 @@ class OrderPlugin extends Plugin
 
                 // Add order form order
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `order`
-                    SMALLINT(5) NOT NULL DEFAULT 0 AFTER `date_added`"
+                    'ALTER TABLE `order_forms` ADD `order`
+                    SMALLINT(5) NOT NULL DEFAULT 0 AFTER `date_added`'
                 );
 
                 // Add 'hold_unverified_orders' setting, if not exists
@@ -541,24 +546,24 @@ class OrderPlugin extends Plugin
 
                 // Add additional columns to order_forms table
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `abandoned_cart_first`
-                    SMALLINT(5) NULL DEFAULT NULL AFTER `tos_url`"
+                    'ALTER TABLE `order_forms` ADD `abandoned_cart_first`
+                    SMALLINT(5) NULL DEFAULT NULL AFTER `tos_url`'
                 );
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `abandoned_cart_second`
-                    SMALLINT(5) NULL DEFAULT NULL AFTER `abandoned_cart_first`"
+                    'ALTER TABLE `order_forms` ADD `abandoned_cart_second`
+                    SMALLINT(5) NULL DEFAULT NULL AFTER `abandoned_cart_first`'
                 );
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `abandoned_cart_third`
-                    SMALLINT(5) NULL DEFAULT NULL AFTER `abandoned_cart_second`"
+                    'ALTER TABLE `order_forms` ADD `abandoned_cart_third`
+                    SMALLINT(5) NULL DEFAULT NULL AFTER `abandoned_cart_second`'
                 );
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `abandoned_cart_cancellation`
-                    SMALLINT(5) NULL DEFAULT NULL AFTER `abandoned_cart_third`"
+                    'ALTER TABLE `order_forms` ADD `abandoned_cart_cancellation`
+                    SMALLINT(5) NULL DEFAULT NULL AFTER `abandoned_cart_third`'
                 );
                 $this->Record->query(
-                    "ALTER TABLE `order_forms` ADD `inactive_after_cancellation`
-                    TINYINT(1) NOT NULL DEFAULT 0 AFTER `abandoned_cart_cancellation`"
+                    'ALTER TABLE `order_forms` ADD `inactive_after_cancellation`
+                    TINYINT(1) NOT NULL DEFAULT 0 AFTER `abandoned_cart_cancellation`'
                 );
 
                 // Update email templates to include abandoned notices
@@ -599,6 +604,28 @@ class OrderPlugin extends Plugin
                 $this->Record->query("ALTER TABLE `order_forms`
                     ADD `monthly_breakdown` TINYINT( 1 ) UNSIGNED NOT NULL DEFAULT '0' AFTER `allow_coupons`;");
             }
+
+            // Upgrade to 3.0.0
+            if (version_compare($current_version, '3.0.0', '<')) {
+                $this->addNotificationActions();
+            }
+
+            // Upgrade to 3.1.0
+            if (version_compare($current_version, '3.1.0', '<')) {
+                $this->Record->
+                    setField(
+                        'require_recurring_consent',
+                        ['type' => 'tinyint', 'size' => 1, 'default' => 0]
+                    )->
+                    alter('order_forms');
+
+                $this->Record->
+                    setField(
+                        'recurring_consent_date',
+                        ['type' => 'datetime', 'is_null' => true, 'default' => null]
+                    )->
+                    alter('orders');
+            }
         }
     }
 
@@ -621,7 +648,7 @@ class OrderPlugin extends Plugin
 
             // Update all orders to JSON-encode the fraud report
             foreach ($orders as $order) {
-                if (empty($order->fraud_report) || false === ($report = unserialize($order->fraud_report))) {
+                if (empty($order->fraud_report) || false === ($report = safe_unserialize($order->fraud_report))) {
                     continue;
                 }
 
@@ -649,16 +676,12 @@ class OrderPlugin extends Plugin
         $emails = Configure::get('Order.install.emails');
         foreach ($emails as $email) {
             $group = $this->EmailGroups->getByAction($email['action']);
-            if ($group) {
-                $group_id = $group->id;
-            } else {
-                $group_id = $this->EmailGroups->add([
+            $group_id = $group ? $group->id : $this->EmailGroups->add([
                     'action' => $email['action'],
                     'type' => $email['type'],
                     'plugin_dir' => $email['plugin_dir'],
                     'tags' => $email['tags']
                 ]);
-            }
 
             // Set from hostname to use that which is configured for the company
             if (isset(Configure::get('Blesta.company')->hostname)) {
@@ -813,16 +836,12 @@ class OrderPlugin extends Plugin
         Loader::loadModels($this, ['PluginManager']);
 
         // Get companies that have the order plugin installed
-        if (empty($company_id)) {
-            $company_ids = $this->Record->select('company_id')
+        $company_ids = empty($company_id) ? $this->Record->select('company_id')
                 ->from('order_settings')
                 ->group('company_id')
-                ->fetchAll();
-        } else {
-            $company_ids = [
+                ->fetchAll() : [
                 (object) ['company_id' => $company_id]
             ];
-        }
 
         $settings = [
             ['key' => 'enabled', 'value' => 'false'],
@@ -903,6 +922,9 @@ class OrderPlugin extends Plugin
             }
         }
 
+        // Remove bell notification actions
+        $this->removeNotificationActions();
+
         // Remove affiliate settings for this company
         $this->Record->from('order_affiliate_company_settings')
             ->where('company_id', '=', Configure::get('Blesta.company_id'))
@@ -929,7 +951,7 @@ class OrderPlugin extends Plugin
                 $this->Record->drop('order_settings');
                 $this->Record->drop('orders');
                 $this->Record->drop('order_services');
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 // Error dropping... no permission?
                 $this->Input->setErrors(['db' => ['create' => $e->getMessage()]]);
                 return;
@@ -1348,7 +1370,7 @@ class OrderPlugin extends Plugin
             Configure::get('Blesta.company_id'),
             'excluded_packages'
         );
-        $excluded_packages = isset($settings->value) ? (array)\Blesta\Core\Util\Common\Classes\Model::safeUnserialize($settings->value) : [];
+        $excluded_packages = isset($settings->value) ? (array)safe_unserialize($settings->value) : [];
 
         $client = $this->Clients->get($params['client_id']);
         foreach ($referred_services as $referred_service) {
@@ -1557,7 +1579,7 @@ class OrderPlugin extends Plugin
 
         // If the embed code is not set, return
         if (isset($order_settings['enable_js']) && $order_settings['enable_js'] == 'enable') {
-            $antifraud = isset($order_settings['antifraud']) ? $order_settings['antifraud'] : '';
+            $antifraud = $order_settings['antifraud'] ?? '';
 
             try {
                 $fraud_detect = $this->Antifraud->create($antifraud, [$order_settings]);
@@ -1570,7 +1592,7 @@ class OrderPlugin extends Plugin
                 } else {
                     return;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 return;
             }
         } else {
@@ -1834,5 +1856,127 @@ class OrderPlugin extends Plugin
                 $this->CronTasks->addTaskRun($task_id, $task_vars);
             }
         }
+    }
+
+    /**
+     * Registers bell notification actions for the order plugin
+     * and enables them for all staff groups and staff members
+     */
+    private function addNotificationActions()
+    {
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Record']);
+        }
+
+        $actions = [
+            [
+                'action' => 'Order.staff_order_received',
+                'target' => 'staff'
+            ],
+            [
+                'action' => 'Order.staff_payout_requested',
+                'target' => 'staff'
+            ]
+        ];
+
+        $company_id = Configure::get('Blesta.company_id');
+
+        // Get all staff groups for this company
+        $staff_groups = $this->Record->select(['id'])
+            ->from('staff_groups')
+            ->where('company_id', '=', $company_id)
+            ->fetchAll();
+
+        foreach ($actions as $action) {
+            // Only add to notification_actions if it doesn't already exist
+            $exists = $this->Record->select(['id'])
+                ->from('notification_actions')
+                ->where('company_id', '=', $company_id)
+                ->where('action', '=', $action['action'])
+                ->where('target', '=', $action['target'])
+                ->fetch();
+
+            if (!$exists) {
+                $this->Record->insert('notification_actions', [
+                    'company_id' => $company_id,
+                    'dir' => 'order',
+                    'type' => 'plugin',
+                    'target' => $action['target'],
+                    'action' => $action['action']
+                ]);
+            }
+
+            // Enable for all staff groups and their staff members (allow duplicates without error)
+            foreach ($staff_groups as $staff_group) {
+                $this->Record->duplicate('action', '=', $action['action'])
+                    ->insert('staff_group_notifications', [
+                        'staff_group_id' => $staff_group->id,
+                        'action' => $action['action']
+                    ]);
+
+                // Opt in all staff members in this group by default
+                $staff_members = $this->Record->select(['staff_group.staff_id'])
+                    ->from('staff_group')
+                    ->where('staff_group.staff_group_id', '=', $staff_group->id)
+                    ->fetchAll();
+
+                foreach ($staff_members as $staff_member) {
+                    $this->Record->duplicate('action', '=', $action['action'])
+                        ->insert('staff_notifications', [
+                            'staff_group_id' => $staff_group->id,
+                            'staff_id' => $staff_member->staff_id,
+                            'action' => $action['action']
+                        ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Removes bell notification actions for the order plugin
+     * and cleans up staff group notification entries
+     */
+    private function removeNotificationActions()
+    {
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Record']);
+        }
+
+        $company_id = Configure::get('Blesta.company_id');
+
+        $actions = [
+            'Order.staff_order_received',
+            'Order.staff_payout_requested'
+        ];
+
+        // Get staff group IDs for this company
+        $staff_groups = $this->Record->select(['id'])
+            ->from('staff_groups')
+            ->where('company_id', '=', $company_id)
+            ->fetchAll();
+        $staff_group_ids = array_map(fn($g) => $g->id, $staff_groups);
+
+        foreach ($actions as $action) {
+            if (!empty($staff_group_ids)) {
+                // Remove from staff_group_notifications (scoped to this company's groups)
+                $this->Record->from('staff_group_notifications')
+                    ->where('action', '=', $action)
+                    ->where('staff_group_id', 'in', $staff_group_ids)
+                    ->delete();
+
+                // Remove from staff_notifications (scoped to this company's groups)
+                $this->Record->from('staff_notifications')
+                    ->where('action', '=', $action)
+                    ->where('staff_group_id', 'in', $staff_group_ids)
+                    ->delete();
+            }
+        }
+
+        // Remove from notification_actions (already company-scoped)
+        $this->Record->from('notification_actions')
+            ->where('dir', '=', 'order')
+            ->where('type', '=', 'plugin')
+            ->where('company_id', '=', $company_id)
+            ->delete();
     }
 }

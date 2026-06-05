@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Maxmind minFraud Proxy Detection
  *

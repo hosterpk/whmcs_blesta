@@ -1,0 +1,148 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminCompanyCurrencies.add.boxtitle_add', true), ['id' => 'admin_company_currencies_add']);
+            ?>
+            <?php $this->Form->create(null, ['id' => 'currency-add-form', 'class' => 'disable-on-submit']);?>
+
+                    <div class="mb-3">
+                        <label for="code" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.add.field_code');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'code',
+                            (isset($vars->code) ? $vars->code : null),
+                            ['id' => 'code', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="format" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.add.field_format');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldSelect(
+                            'format',
+                            (isset($formats) ? $formats : null),
+                            (isset($vars->format) ? $vars->format : null),
+                            ['id' => 'format', 'class' => 'form-select'],
+                            ['class' => 'currency_value']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="precision" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.add.field_precision');?>
+                            <i class="bi bi-info-circle ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="<?php echo $this->Html->safe($this->_('AdminCompanyCurrencies.!tooltip.precision', true));?>"></i>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'precision',
+                            (isset($vars->precision) ? $vars->precision : 4),
+                            ['id' => 'precision', 'class' => 'form-control', 'maxlength' => '1']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="prefix" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.add.field_prefix');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'prefix',
+                            (isset($vars->prefix) ? $vars->prefix : null),
+                            ['id' => 'prefix', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="suffix" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.add.field_suffix');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'suffix',
+                            (isset($vars->suffix) ? $vars->suffix : null),
+                            ['id' => 'suffix', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="exchange_rate" class="form-label">
+                            <?php $this->_('AdminCompanyCurrencies.add.field_exchange_rate');?>
+                        </label>
+                        <?php
+                        $this->Form->fieldText(
+                            'exchange_rate',
+                            (isset($vars->exchange_rate) ? $vars->exchange_rate : null),
+                            ['id' => 'exchange_rate', 'class' => 'form-control']
+                        );
+                        ?>
+                    </div>
+
+                <?php $this->Widget->footer(); ?>
+                <div class="d-flex justify-content-end">
+                    <?php
+                    $this->Form->fieldSubmit(
+                        'save',
+                        $this->_('AdminCompanyCurrencies.add.field_addsubmit', true),
+                        ['class' => 'btn btn-primary', 'id' => 'submit-button']
+                    );
+                    ?>
+                </div>
+                <?php $this->Form->end();?>
+            <?php $this->Widget->end(); ?>
+        </div>
+
+<?php
+// Setup confirmation if exchange rates automatically update
+if ((isset($exchange_rates_auto_update) ? $this->Html->safe($exchange_rates_auto_update) : null) == 'true') {
+?>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('currency-add-form');
+    const submitButton = document.getElementById('submit-button');
+
+    if (!form || !submitButton) return;
+
+    submitButton.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        const confirmMessage = <?php echo json_encode($this->_('AdminCompanyCurrencies.add.confirm_add', true));?>;
+
+        if (confirm(confirmMessage)) {
+            form.submit();
+        }
+    });
+
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>
+<?php
+} else {
+?>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+</script>
+<?php
+}
+?>

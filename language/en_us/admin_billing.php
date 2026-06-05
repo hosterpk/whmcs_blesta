@@ -42,6 +42,7 @@ $lang['AdminBilling.updatedashboard.text_layout'] = 'Select a layout below to cu
 
 // Manage Widgets
 $lang['AdminBilling.managewidgets.text_widgets'] = 'Drag widgets from the right to the left to add them to your billing overview, or from left to right to remove them.';
+$lang['AdminBilling.managewidgets.text_toggle_widgets'] = 'Click on widgets to show or hide them from your dashboard.';
 $lang['AdminBilling.managewidgets.text_version'] = 'ver %1$s'; // %1$s is the version number of the plugin
 $lang['AdminBilling.managewidgets.text_author'] = 'Author: ';
 
@@ -59,7 +60,7 @@ $lang['AdminBilling.invoices.heading_due'] = 'Due';
 $lang['AdminBilling.invoices.heading_dateclosed'] = 'Date Closed';
 $lang['AdminBilling.invoices.heading_datebilled'] = 'Date Billed';
 $lang['AdminBilling.invoices.heading_datedue'] = 'Date Due';
-$lang['AdminBilling.invoices.heading_options'] = 'Options';
+$lang['AdminBilling.invoices.heading_options'] = 'Actions';
 $lang['AdminBilling.invoices.heading_term'] = 'Term';
 $lang['AdminBilling.invoices.heading_duration'] = 'Duration';
 $lang['AdminBilling.invoices.heading_count'] = 'Count';
@@ -104,7 +105,7 @@ $lang['AdminBilling.quotations.heading_subtotal'] = 'Subtotal';
 $lang['AdminBilling.quotations.heading_total'] = 'Amount';
 $lang['AdminBilling.quotations.heading_date_created'] = 'Creation Date';
 $lang['AdminBilling.quotations.heading_date_expires'] = 'Expiration Date';
-$lang['AdminBilling.quotations.heading_options'] = 'Options';
+$lang['AdminBilling.quotations.heading_options'] = 'Actions';
 
 $lang['AdminBilling.quotations.option_edit'] = 'Edit';
 $lang['AdminBilling.quotations.option_view'] = 'View';
@@ -115,13 +116,17 @@ $lang['AdminBilling.quotations.confirm_approve'] = 'Are you sure you want to app
 
 $lang['AdminBilling.quotations.no_results'] = 'There are no quotes with this status.';
 
+$lang['AdminBilling.quotations.filter_toggle'] = 'Toggle Filters';
+$lang['AdminBilling.quotations.field_filterclear'] = 'Clear';
+$lang['AdminBilling.quotations.field_filtersubmit'] = 'Apply Filters';
+
 
 // Quotation Invoices
 $lang['AdminBilling.quotationinvoices.headingexpand_invoice'] = 'Invoice #';
 $lang['AdminBilling.quotationinvoices.headingexpand_amount'] = 'Amount';
 $lang['AdminBilling.quotationinvoices.headingexpand_paid'] = 'Paid';
 $lang['AdminBilling.quotationinvoices.headingexpand_date_billed'] = 'Date Billed';
-$lang['AdminBilling.quotationinvoices.headingexpand_options'] = 'Options';
+$lang['AdminBilling.quotationinvoices.headingexpand_options'] = 'Actions';
 
 $lang['AdminBilling.quotationinvoices.option_view'] = 'View';
 
@@ -140,7 +145,7 @@ $lang['AdminBilling.services.heading_dateadded'] = 'Date Added';
 $lang['AdminBilling.services.heading_daterenews'] = 'Date Renews';
 $lang['AdminBilling.services.heading_datesuspended'] = 'Date Suspended';
 $lang['AdminBilling.services.heading_datecanceled'] = 'Date Canceled';
-$lang['AdminBilling.services.heading_options'] = 'Options';
+$lang['AdminBilling.services.heading_options'] = 'Actions';
 $lang['AdminBilling.services.option_manage'] = 'Manage';
 $lang['AdminBilling.services.option_delete'] = 'Delete';
 $lang['AdminBilling.services.confirm_delete'] = 'Are you sure you want to delete this service?';
@@ -157,6 +162,10 @@ $lang['AdminBilling.services.text_pending_service_changes'] = 'This service has 
 $lang['AdminBilling.services.text_never'] = 'Never';
 $lang['AdminBilling.services.no_results'] = 'There are no services with this status.';
 
+$lang['AdminBilling.services.filter_toggle'] = 'Toggle Filters';
+$lang['AdminBilling.services.field_filterclear'] = 'Clear';
+$lang['AdminBilling.services.field_filtersubmit'] = 'Apply Filters';
+
 $lang['AdminBilling.services.recurring_term'] = '%1$s %2$s @ %3$s'; // %1$s is the service term length (number), %2$s is the service period, %3$s is the formatted service renewal price
 $lang['AdminBilling.services.action.schedule_cancellation'] = 'Schedule Cancellation';
 $lang['AdminBilling.services.action.field_action_type_term'] = 'End of Term';
@@ -167,7 +176,9 @@ $lang['AdminBilling.services.action.suspend'] = 'Suspend';
 $lang['AdminBilling.services.action.unsuspend'] = 'Unsuspend';
 $lang['AdminBilling.services.action.field_client'] = 'Client:';
 $lang['AdminBilling.services.action.field_suspension_reason'] = 'Suspension Reason:';
-$lang['AdminBilling.services.field_actionsubmit'] = 'Submit';
+$lang['AdminBilling.services.field_actionsubmit'] = 'Apply';
+$lang['AdminBilling.services.text_item_selected'] = 'item selected';
+$lang['AdminBilling.services.text_items_selected'] = 'items selected';
 
 
 // Service info
@@ -187,7 +198,7 @@ $lang['AdminBilling.transactions.heading_applied'] = 'Applied';
 $lang['AdminBilling.transactions.heading_number'] = 'Number';
 $lang['AdminBilling.transactions.heading_reference_id'] = 'Reference #';
 $lang['AdminBilling.transactions.heading_date'] = 'Date';
-$lang['AdminBilling.transactions.heading_options'] = 'Options';
+$lang['AdminBilling.transactions.heading_options'] = 'Actions';
 
 $lang['AdminBilling.transactions.category_approved'] = 'Approved';
 $lang['AdminBilling.transactions.category_declined'] = 'Declined';
@@ -204,13 +215,15 @@ $lang['AdminBilling.transactions.no_results'] = 'There are no transactions with 
 $lang['AdminBilling.transactions.headingexpand_invoice'] = 'Invoice';
 $lang['AdminBilling.transactions.headingexpand_amount'] = 'Amount';
 $lang['AdminBilling.transactions.headingexpand_appliedon'] = 'Applied On';
+$lang['AdminBilling.transactions.headingexpand_options'] = 'Actions';
+$lang['AdminBilling.transactions.option_view'] = 'View';
 $lang['AdminBilling.transactions.applied_no_results'] = 'This transaction has not been applied to any invoices.';
 
 $lang['AdminBilling.invoices.headingexpand_paymenttype'] = 'Payment Type';
 $lang['AdminBilling.invoices.headingexpand_amount'] = 'Amount';
 $lang['AdminBilling.invoices.headingexpand_applied'] = 'Applied';
 $lang['AdminBilling.invoices.headingexpand_appliedon'] = 'Applied On';
-$lang['AdminBilling.invoices.headingexpand_options'] = 'Options';
+$lang['AdminBilling.invoices.headingexpand_options'] = 'Actions';
 $lang['AdminBilling.invoices.applied_no_results'] = 'This invoice has no transactions applied to it.';
 $lang['AdminBilling.invoices.text_edit'] = 'Edit';
 
@@ -235,6 +248,8 @@ $lang['AdminBilling.printqueue.heading_deliverydatesent'] = 'Date Sent';
 
 $lang['AdminBilling.printqueue.text_printsubmit'] = 'Print';
 $lang['AdminBilling.printqueue.text_marksubmit'] = 'Mark Printed';
+$lang['AdminBilling.printqueue.text_item_selected'] = 'item selected';
+$lang['AdminBilling.printqueue.text_items_selected'] = 'items selected';
 
 
 // Batch

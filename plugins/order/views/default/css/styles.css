@@ -123,3 +123,7 @@ select option.hidden {
     display: none !important;
     color: rgba(0, 0, 0, 0) !important;
 }
+.table tr.collapse>td,
+.table tr.collapsing>td {
+    padding: 0 !important;
+}

@@ -1,4 +1,5 @@
 <?php
+
 set_time_limit(500);
 /**
  * User: Parag Mehta<parag@paragm.com>
@@ -6,26 +7,26 @@ set_time_limit(500);
  * Time: 7:42 PM
  * This file is created by www.thesslstore.com for your use. You are free to change the file as per your needs.
  */
-include_once "abstractions.php";
-include_once "requests.php";
-include_once "responses.php";
+include_once 'abstractions.php';
+include_once 'requests.php';
+include_once 'responses.php';
 
 class thesslstoreApi
 {
-    public static $API_MODE_LIVE='LIVE';
-    public static $API_MODE_TEST='TEST';
-    public static $LOG_ALLAPICALLS=false;
+    public static $API_MODE_LIVE = 'LIVE';
+    public static $API_MODE_TEST = 'TEST';
+    public static $LOG_ALLAPICALLS = false;
 
-    private $_apimode='TEST';
-    private $_partnerCode='';
-    private $_authToken='';
-    private $_token='';
-    private $_tokenID='';
-    private $_tokenCode='';
-    private $_IsUsedForTokenSystem=false;
-    private $_userAgent='';
+    private $_apimode = 'TEST';
+    private $_partnerCode = '';
+    private $_authToken = '';
+    private $_token = '';
+    private $_tokenID = '';
+    private $_tokenCode = '';
+    private $_IsUsedForTokenSystem = false;
+    private $_userAgent = '';
 
-    function __construct($partnerCode,$authToken,$token,$tokenID,$tokenCode,$IsUsedForTokenSystem,$apimode, $userAgent = 'Blesta-1.4.0')
+    function __construct($partnerCode, $authToken, $token, $tokenID, $tokenCode, $IsUsedForTokenSystem, $apimode, $userAgent = 'Blesta-1.4.0')
     {
             $this->EnsurePHPVersion();
             $this->_apimode = $apimode;
@@ -40,10 +41,9 @@ class thesslstoreApi
 
     public function EnsurePHPVersion()
     {
-            if(floatval(phpversion())< 5.2)
-            {
-                    throw new Exception('Not Supported version of PHP. Requires atleast 5.2 or greater version of PHP.');
-            }
+        if (floatval(phpversion()) < 5.2) {
+                throw new Exception('Not Supported version of PHP. Requires atleast 5.2 or greater version of PHP.');
+        }
     }
 
     private function getAPIRequest()
@@ -60,39 +60,37 @@ class thesslstoreApi
             return $AuthRequest;
     }
 
-    private function cloneObjectFromJson($obj,$jsonobj)
+    private function cloneObjectFromJson($obj, $jsonobj)
     {
-        if($jsonobj!=null && is_object($jsonobj))
-        {
-            foreach ($jsonobj AS $key => $val) $obj->{$key} = $val;
+        if ($jsonobj != null && is_object($jsonobj)) {
+            foreach ($jsonobj as $key => $val) {
+                $obj->{$key} = $val;
+            }
             return $obj;
-        }
-        else
+        } else {
             return $jsonobj; //No need to map as it's a scalar value
+        }
     }
 
-    private function getCURL($url,$method,$message='')
+    private function getCURL($url, $method, $message = '')
     {
             $ch = curl_init();
-            if (!$ch)
-            {
-                    die("Couldn't initialize a cURL handle");
-            }
-            curl_setopt($ch, CURLOPT_URL,$url);
-            if($method=='POST')
-            {
-                    curl_setopt($ch, CURLOPT_POST, 1);
-            }
-            else
-            {
-                    curl_setopt($ch,CURLOPT_HTTPGET,1);
-            }
+        if (!$ch) {
+                die("Couldn't initialize a cURL handle");
+        }
+            curl_setopt($ch, CURLOPT_URL, $url);
+        if ($method == 'POST') {
+                curl_setopt($ch, CURLOPT_POST, 1);
+        } else {
+                curl_setopt($ch, CURLOPT_HTTPGET, 1);
+        }
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-            if($message!='')
-                    curl_setopt($ch, CURLOPT_POSTFIELDS,$message); //Append POST messages
-            curl_setopt($ch,CURLOPT_HTTPHEADER,array ("Content-Type: application/json; charset=utf-8"));
+        if ($message != '') {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $message); //Append POST messages
+        }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8']);
             return $ch;
     }
 
@@ -100,18 +98,18 @@ class thesslstoreApi
     {
             $returnresp = new curlresponse();
             $returnresp->response = curl_exec($curl);
-            if(curl_errno($curl))
-                    $returnresp->error = curl_error($curl);
+        if (curl_errno($curl)) {
+                $returnresp->error = curl_error($curl);
+        }
             $returnresp->info = curl_getinfo($curl);
             curl_close($curl); // close cURL handler
             return $returnresp; //Return Result
     }
 
-    private function postToCurl($url,$requestData,$responseData,$HttpMethod='POST')
+    private function postToCurl($url, $requestData, $responseData, $HttpMethod = 'POST')
     {
         $logid = uniqid('api-without-token-'); //for calls without ID
-        if(isset($requestData->AuthRequest))
-        {
+        if (isset($requestData->AuthRequest)) {
             $requestData->AuthRequest = $this->getAPIRequest();
             $logid = $requestData->AuthRequest->ReplayToken;
         }
@@ -119,39 +117,35 @@ class thesslstoreApi
         /*echo "<pre>";
         print_r($requestData);
         die();*/
-        if($requestData!=null)
+        if ($requestData != null) {
             $msg = json_encode($requestData); //SET JSON FORMAT if not null
-       	$curl = $this->getCURL($url,$HttpMethod, $msg);
-       	$response = $this->getCURLResponse($curl);
+        }
+        $curl = $this->getCURL($url, $HttpMethod, $msg);
+        $response = $this->getCURLResponse($curl);
 
-        if(self::$LOG_ALLAPICALLS)
-        {
+        if (self::$LOG_ALLAPICALLS) {
             $requestfile = $logid . '-request.json';
             $responsefile = $logid . '-response.json';
             file_put_contents($requestfile, $msg);
             file_put_contents($responsefile, $response);
         }
-        if($response->error=='')
-       	{
-       		$respobj = json_decode($response->response);
-       		if($responseData!=null) //Indicates if Casting required to a class type
-               $result = $this->cloneObjectFromJson($responseData,$respobj);
-            else
-               $result = $respobj; //Returns raw response if not
+        if ($response->error == '') {
+            $respobj = json_decode($response->response);
+            if ($responseData != null) { //Indicates if Casting required to a class type
+                $result = $this->cloneObjectFromJson($responseData, $respobj);
+            } else {
+                $result = $respobj; //Returns raw response if not
+            }
 
-           if(isset($result->AuthRequest))
-           {
-                if($result->AuthResponse->ReplayToken!=$requestData->AuthRequest->ReplayToken)
-                {
+            if (isset($result->AuthRequest)) {
+                if ($result->AuthResponse->ReplayToken != $requestData->AuthRequest->ReplayToken) {
                        $result = $responseData;
                        die('Something wrong with API, ReplayTokens does not match!');
                 }
-           }
+            }
             return $result;
-        }
-        else
-        {
-            $error = array('isError' => true, 'Message' => array($response->error));
+        } else {
+            $error = ['isError' => true, 'Message' => [$response->error]];
             $responseData->isError = $error['isError'];
             $responseData->Message = $error['Message'];
             $responseData->AuthResponse = (object)$error;
@@ -160,17 +154,10 @@ class thesslstoreApi
         }
     }
 
-	public function getURL()
-	{
-		if(strtoupper($this->_apimode)=='LIVE')
-		{
-		   return 'https://api.thesslstore.com/rest';
-		}
-		else
-        {
-            return 'https://sandbox-wbapi.thesslstore.com/rest';
-        }
-	}
+    public function getURL()
+    {
+        return strtoupper($this->_apimode) == 'LIVE' ? 'https://api.thesslstore.com/rest' : 'https://sandbox-wbapi.thesslstore.com/rest';
+    }
 
     /**
      * @param csr_request $csr_request
@@ -180,7 +167,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/csr/';
         $csrresp = new csr_response();
-        return $this->postToCurl($url,$csr_request,$csrresp);
+        return $this->postToCurl($url, $csr_request, $csrresp);
     }
 
     /**
@@ -191,7 +178,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/sslchecker/';
         $resp =  new ssl_validation_response();
-        return $this->postToCurl($url,$ssl_validation_request,$resp);
+        return $this->postToCurl($url, $ssl_validation_request, $resp);
     }
 
     /**
@@ -202,7 +189,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/whois/';
         $resp =  new whois_response();
-        return $this->postToCurl($url,$whois_request,$resp);
+        return $this->postToCurl($url, $whois_request, $resp);
     }
 
     /**
@@ -213,7 +200,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/free/claimfree/';
         $resp = new free_claimfree_response();
-        return $this->postToCurl($url,$free_claimfree_request,$resp);
+        return $this->postToCurl($url, $free_claimfree_request, $resp);
     }
 
     /**
@@ -224,17 +211,17 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/free/cuinfo/';
         $resp = new free_cuinfo_response();
-        return $this->postToCurl($url,$free_cuinfo_request,$resp);
+        return $this->postToCurl($url, $free_cuinfo_request, $resp);
     }
 
     /**
          * @return apiresponse
     */
     public function health_status()
-  	{
+    {
         $url = $this->getURL() . '/health/status/';
         $resp = new apiresponse();
-        return $this->postToCurl($url,null,$resp,'GET');
+        return $this->postToCurl($url, null, $resp, 'GET');
     }
 
     /**
@@ -251,7 +238,7 @@ class thesslstoreApi
         $health_validate_request->UserAgent = $apidetails->UserAgent;
         $health_validate_request->ReplayToken = $apidetails->ReplayToken;
 
-        return $this->postToCurl($url,$health_validate_request,$resp);
+        return $this->postToCurl($url, $health_validate_request, $resp);
     }
 
     /**
@@ -267,7 +254,7 @@ class thesslstoreApi
         $health_validate_token_request->UserAgent = $apidetails->UserAgent;
         $health_validate_token_request->ReplayToken = $apidetails->ReplayToken;
 
-        return $this->postToCurl($url,$health_validate_token_request,$resp);
+        return $this->postToCurl($url, $health_validate_token_request, $resp);
     }
 
     /**
@@ -278,7 +265,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/order/agreement/';
         $resp = new order_agreement_response();
-        return $this->postToCurl($url,$order_agreement_request,$resp);
+        return $this->postToCurl($url, $order_agreement_request, $resp);
     }
 
     /**
@@ -289,7 +276,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/order/approverlist/';
         $resp = new order_approverlist_response();
-        return $this->postToCurl($url,$order_approverlist_request,$resp);
+        return $this->postToCurl($url, $order_approverlist_request, $resp);
     }
 
     /**
@@ -300,7 +287,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/order/download/';
         $resp = new order_download_response();
-        return $this->postToCurl($url,$order_download_request,$resp);
+        return $this->postToCurl($url, $order_download_request, $resp);
     }
 
     /**
@@ -311,7 +298,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/order/downloadaszip/';
         $resp = new order_download_zip_response();
-        return $this->postToCurl($url,$order_download_request,$resp);
+        return $this->postToCurl($url, $order_download_request, $resp);
     }
 
 
@@ -323,7 +310,7 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/order/inviteorder/';
         $resp = new order_response();
-        return $this->postToCurl($url,$order_inviteorder_request,$resp);
+        return $this->postToCurl($url, $order_inviteorder_request, $resp);
     }
 
     /**
@@ -334,7 +321,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/neworder/';
             $resp = new order_response();
-            return $this->postToCurl($url,$order_neworder_request,$resp);
+            return $this->postToCurl($url, $order_neworder_request, $resp);
     }
 
     /**  Should return array(order_response())
@@ -345,7 +332,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/query/';
             $resp =  new order_query_response();
-            return $this->postToCurl($url,$order_query_request,$resp);
+            return $this->postToCurl($url, $order_query_request, $resp);
     }
 
     /**
@@ -356,7 +343,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/certificaterevokerequest/';
             $resp =  new apiresponse();
-            return $this->postToCurl($url,$order_certificaterevokerequest_request,$resp);
+            return $this->postToCurl($url, $order_certificaterevokerequest_request, $resp);
     }
 
     /**
@@ -367,7 +354,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/vulnerabilityscanrequest/';
             $resp = new order_vulnerabilityscanrequest_response();
-            return $this->postToCurl($url,$order_vulnerabilityscanrequest_request,$resp);
+            return $this->postToCurl($url, $order_vulnerabilityscanrequest_request, $resp);
     }
 
     /**
@@ -378,7 +365,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/refundrequest/';
             $resp = new order_response();
-            return $this->postToCurl($url,$order_refundrequest_request,$resp);
+            return $this->postToCurl($url, $order_refundrequest_request, $resp);
     }
 
     /**
@@ -389,7 +376,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/refundstatus/';
             $resp = new order_response();
-            return $this->postToCurl($url,$order_refundstatus_request,$resp);
+            return $this->postToCurl($url, $order_refundstatus_request, $resp);
     }
 
     /**
@@ -400,18 +387,18 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/order/reissue/';
             $resp = new order_response();
-            return $this->postToCurl($url,$order_reissue_request,$resp);
+            return $this->postToCurl($url, $order_reissue_request, $resp);
     }
 
-	/**
+    /**
      * @param order_changeapproveremail_request $order_changeapproveremail_request
      * @return apiresponse
     */
-    public function  order_changeapproveremail($order_changeapproveremail_request)
+    public function order_changeapproveremail($order_changeapproveremail_request)
     {
             $url = $this->getURL() . '/order/changeapproveremail/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$order_changeapproveremail_request,$resp);
+            return $this->postToCurl($url, $order_changeapproveremail_request, $resp);
     }
 
 
@@ -419,22 +406,22 @@ class thesslstoreApi
      * @param order_resend_request $order_resend_request
      * @return apiresponse
     */
-    public function  order_resend($order_resend_request)
+    public function order_resend($order_resend_request)
     {
             $url = $this->getURL() . '/order/resend/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$order_resend_request,$resp);
+            return $this->postToCurl($url, $order_resend_request, $resp);
     }
 
     /**
      * @param order_status_request $order_status_request
      * @return order_response
     */
-    public function  order_status($order_status_request)
+    public function order_status($order_status_request)
     {
             $url = $this->getURL() . '/order/status/';
             $resp = new order_response();
-            return $this->postToCurl($url,$order_status_request,$resp);
+            return $this->postToCurl($url, $order_status_request, $resp);
     }
 
 
@@ -442,44 +429,44 @@ class thesslstoreApi
      * @param order_neworder_request $order_validate_request
      * @return apiresponse
     */
-    public function  order_validate($order_validate_request)
+    public function order_validate($order_validate_request)
     {
             $url = $this->getURL() . '/order/validate/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$order_validate_request,$resp);
+            return $this->postToCurl($url, $order_validate_request, $resp);
     }
 
     /**
      * @param product_query_request $product_query_request
      * @return object
     */
-    public function  product_query($product_query_request)
+    public function product_query($product_query_request)
     {
             $url = $this->getURL() . '/product/query/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$product_query_request,$resp);
+            return $this->postToCurl($url, $product_query_request, $resp);
     }
 
     /**
      * @param setting_setordercallback_request $setting_setordercallback_request
      * @return apiresponse
     */
-    public function  setting_setordercallback($setting_setordercallback_request)
+    public function setting_setordercallback($setting_setordercallback_request)
     {
             $url = $this->getURL() . '/setting/setordercallback/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$setting_setordercallback_request,$resp);
+            return $this->postToCurl($url, $setting_setordercallback_request, $resp);
     }
 
     /**
      * @param setting_setpricecallback_request $setting_setpricecallback_request
      * @return apiresponse
     */
-    public function  setting_setpricecallback($setting_setpricecallback_request)
+    public function setting_setpricecallback($setting_setpricecallback_request)
     {
             $url = $this->getURL() . '/setting/setpricecallback/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$setting_setpricecallback_request,$resp);
+            return $this->postToCurl($url, $setting_setpricecallback_request, $resp);
     }
 
     /**
@@ -490,41 +477,41 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/setting/settemplate/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$setting_settemplate_request,$resp);
+            return $this->postToCurl($url, $setting_settemplate_request, $resp);
     }
 
     /**
      * @param setting_cancelnotification_request $setting_cancelnotification_request
      * @return apiresponse
     */
-    public function  setting_setcancelnotification($setting_cancelnotification_request)
+    public function setting_setcancelnotification($setting_cancelnotification_request)
     {
             $url = $this->getURL() . '/setting/cancelnotification/';
             $resp = new apiresponse();
-            return $this->postToCurl($url,$setting_cancelnotification_request,$resp);
+            return $this->postToCurl($url, $setting_cancelnotification_request, $resp);
     }
 
     /**
      * @param user_add_request $user_add_request
      * @return user_subuser_response
     */
-    public function  user_add($user_add_request)
+    public function user_add($user_add_request)
     {
             $url = $this->getURL() . '/user/add/';
             $resp = new user_subuser_response();
-            return $this->postToCurl($url,$user_add_request,$resp);
+            return $this->postToCurl($url, $user_add_request, $resp);
     }
 
     /**
      * @param user_activate_request $user_activate_request
      * @return user_subuser_response
     */
-    public function  user_activate($user_activate_request)
+    public function user_activate($user_activate_request)
     {
 
             $url = $this->getURL() . '/user/activate/';
             $resp = new user_subuser_response();
-            return $this->postToCurl($url,$user_activate_request,$resp);
+            return $this->postToCurl($url, $user_activate_request, $resp);
     }
 
     /**
@@ -535,7 +522,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/user/deactivate/';
             $resp = new user_subuser_response();
-            return $this->postToCurl($url,$user_deactivate_request,$resp);
+            return $this->postToCurl($url, $user_deactivate_request, $resp);
     }
 
     /**
@@ -546,7 +533,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/user/query/';
             $resp = new user_query_response();
-            return $this->postToCurl($url,$user_query_request,$resp);
+            return $this->postToCurl($url, $user_query_request, $resp);
     }
 
     /**
@@ -557,7 +544,7 @@ class thesslstoreApi
     {
             $url = $this->getURL() . '/user/newuser/';
             $resp = new user_newuser_response();
-            return $this->postToCurl($url,$user_newuser_request,$resp);
+            return $this->postToCurl($url, $user_newuser_request, $resp);
     }
 
     /**
@@ -568,11 +555,8 @@ class thesslstoreApi
     {
         $url = $this->getURL() . '/order/getsymantecreplacementorders/';
         $resp = new order_replacement_response();
-        return $this->postToCurl($url,$order_replacement_request,$resp);
+        return $this->postToCurl($url, $order_replacement_request, $resp);
     }
-
-
-
 }
 
 class messagehelper
@@ -600,6 +584,3 @@ class messagehelper
         echo "</pre></br>\n";
     }
 }
-
-
-?>

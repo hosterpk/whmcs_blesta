@@ -1,67 +1,61 @@
 <?php
-	$this->Form->create();
-?>
+$this->Form->create(); ?>
 <div class="panel-pad">
-    <h2><?php $this->_("ThesslstoreModule.tab_select_approver_email"); ?></h2>
+    <h2><?php $this->_('ThesslstoreModule.tab_select_approver_email'); ?></h2>
         <div class="inner">
             <h3><?php echo $domainName; ?></h3>
             <div class="pad">
                 <ul style='margin-left:-30px;'>
                     <?php
-                        $this->Form-> fieldHidden("domains[0]", $domainName );
-                        $this->Form-> fieldHidden("approverEmail[0]", $approverEmail);
-                        foreach($approverEmailsListArray as $value=>$key){
-                        ?>
+                    $this->Form->fieldHidden('domains[0]', $domainName);
+                    $this->Form->fieldHidden('approverEmail[0]', $approverEmail);
+                    foreach ($approverEmailsListArray as $value => $key) { ?>
                         <li style='list-style: outside none;'>
                         <?php
-                            $checked = false;
-                            if(isset($key) && $key==$approverEmail)
+                        $checked = false;
+                        if (isset($key) && $key == $approverEmail) {
                             $checked = true;
-                            $this->Form->fieldRadio("email[0]", $key, $checked, array('id' => $domainName.$key) );
-                            $this->Form->label($key,$domainName.$key,array('class' => "inline"));
+                        }
+                        $this->Form->fieldRadio('email[0]', $key, $checked, ['id' => $domainName . $key]);
+                        $this->Form->label($key, $domainName . $key, ['class' => 'inline']);
                         ?>
                         </li>
-                    <?php
-                    }
+                    <?php }
                     ?>
             	</ul>
             </div>
             <?php
-            $domainsCount=count($domainNames);
-            for($i=0;$i<$domainsCount;$i++)
-            {
-            	$j=$i+1;
-            ?>
+            $domainsCount = count($domainNames);
+            for ($i = 0; $i < $domainsCount; $i++) {
+                $j = $i + 1; ?>
             <h3><?php echo $domainNames[$i]; ?></h3>
             <div class="pad">
             	<ul style='margin-left:-30px;'>
                 	<?php
-                        $this->Form-> fieldHidden("domains[$j]", $domainNames[$i] );
-                        $this->Form-> fieldHidden("approverEmail[$j]", $approverEmails[$i]);
-                        foreach($approverEmailsListArrays[$i] as $values=>$keys){
-                        ?>
+                 $this->Form->fieldHidden("domains[$j]", $domainNames[$i]);
+                 $this->Form->fieldHidden("approverEmail[$j]", $approverEmails[$i]);
+                 foreach ($approverEmailsListArrays[$i] as $values => $keys) { ?>
                         <li style='list-style: outside none;'>
                         <?php
-                            $checked = false;
-                            if(isset($keys) && $keys==$approverEmails[$i])
+                        $checked = false;
+                        if (isset($keys) && $keys == $approverEmails[$i]) {
                             $checked = true;
-                            $this->Form->fieldRadio("email[$j]", $keys, $checked, array('id' => $domainNames[$i].$keys) );
-                            $this->Form->label($keys,$domainNames[$i].$keys,array('class' => "inline"));
+                        }
+                        $this->Form->fieldRadio("email[$j]", $keys, $checked, ['id' => $domainNames[$i] . $keys]);
+                        $this->Form->label($keys, $domainNames[$i] . $keys, ['class' => 'inline']);
                         ?>
                         </li>
-                   	<?php
-                    }
-                    ?>
+                   	<?php }
+                 ?>
                 </ul>
             </div>
             <?php
             }
             ?>
             <button class="btn btn-light float-left" type="submit" name="save">
-                		<?php $this->_("ThesslstoreModule.change_approver_email.save_btn");?>
+                		<?php $this->_('ThesslstoreModule.change_approver_email.save_btn'); ?>
             </button>
         </div>
 </div>
-<?php
-$this->Form->end();
+<?php $this->Form->end();
 ?>

@@ -166,13 +166,53 @@
 
                 <?php
                 if (!(isset($order->order_number) ? $order->order_number : null) && (isset($order_form->require_tos) ? $order_form->require_tos : null)) {
+                    $tos_extra_class = (isset($order_form->require_recurring_consent) && $order_form->require_recurring_consent && !empty($totals_recurring)) ? ' mb-0' : '';
                 ?>
-                <div class="form-group">
+                <div class="form-group<?php echo $tos_extra_class;?>">
                     <div class="checkbox">
                         <label>
                             <?php
                             $this->Form->fieldCheckbox('agree_tos', 'true', (isset($vars->agree_tos) ? $vars->agree_tos : null) == 'true');
                             $this->_('Checkout.index.field_agree_tos', false, $this->Html->safe($order_form->tos_url));
+                            ?>
+                        </label>
+                    </div>
+                </div>
+                <?php
+                }
+
+                if (
+                    !(isset($order->order_number) ? $order->order_number : null)
+                    && (isset($order_form->require_recurring_consent) ? $order_form->require_recurring_consent : null)
+                    && !empty($totals_recurring)
+                ) {
+                    // Build recurring amount details string
+                    $recurring_parts = [];
+                    foreach ($totals_recurring as $recurring) {
+                        $term = $this->Html->safe($recurring['term']);
+                        $period = $this->Html->safe(
+                            ($term == 1
+                                ? (isset($periods[$recurring['period']]) ? $periods[$recurring['period']] : null)
+                                : (isset($periods[$recurring['period'] . '_plural']) ? $periods[$recurring['period'] . '_plural'] : null)
+                            ),
+                            true
+                        );
+                        $amount = $this->Html->safe($recurring['totals']['total_without_exclusive_tax']['amount_formatted']);
+                        $recurring_parts[] = $amount . ' ' . ($term == 1 ? Language::_('Checkout.index.recurring_every', true, $period) : Language::_('Checkout.index.recurring_every_term', true, $term, $period));
+                    }
+                    if (count($recurring_parts) > 1) {
+                        $last = array_pop($recurring_parts);
+                        $recurring_details = implode(', ', $recurring_parts) . ' ' . Language::_('Checkout.index.recurring_and', true) . ' ' . $last;
+                    } else {
+                        $recurring_details = $recurring_parts[0] ?? '';
+                    }
+                ?>
+                <div class="form-group">
+                    <div class="checkbox">
+                        <label>
+                            <?php
+                            $this->Form->fieldCheckbox('agree_recurring_consent', 'true', (isset($vars->agree_recurring_consent) ? $vars->agree_recurring_consent : null) == 'true');
+                            $this->_('Checkout.index.field_agree_recurring_consent', false, $this->Html->safe($system_company->name ?? ''), $recurring_details);
                             ?>
                         </label>
                     </div>

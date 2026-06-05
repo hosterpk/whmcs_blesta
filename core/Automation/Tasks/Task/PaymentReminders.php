@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Automation\Tasks\Task;
 
 use Blesta\Core\Automation\Tasks\Common\AbstractTask;
@@ -131,7 +132,8 @@ class PaymentReminders extends AbstractTask
                 $client = $clients[$invoice->client_id];
 
                 // Skip clients that are not set to receive this notice
-                if (isset($client->settings['send_payment_notices'])
+                if (
+                    isset($client->settings['send_payment_notices'])
                     && $client->settings['send_payment_notices'] != 'true'
                 ) {
                     continue;
@@ -163,10 +165,11 @@ class PaymentReminders extends AbstractTask
     private function getAutodebitAccount($client, array $autodebit_accounts, array $ccTypes, array $achTypes)
     {
         // Get autodebit account info
-        $autodebit_account = isset($autodebit_accounts[$client->id]) ? $autodebit_accounts[$client->id] : null;
+        $autodebit_account = $autodebit_accounts[$client->id] ?? null;
 
         // Set the autodebit payment account (if any)
-        if ($client->settings['autodebit'] == 'true'
+        if (
+            $client->settings['autodebit'] == 'true'
             && !$autodebit_account
             && ($debit_account = $this->Clients->getDebitAccount($client->id))
         ) {
@@ -177,9 +180,7 @@ class PaymentReminders extends AbstractTask
 
             // Set the account type (as a tag for the email)
             $account_types = $debit_account->type == 'cc' ? $ccTypes : $achTypes;
-            $autodebit_account->type_name = isset($account_types[$autodebit_account->type])
-                    ? $account_types[$autodebit_account->type]
-                    : $autodebit_account->type;
+            $autodebit_account->type_name = $account_types[$autodebit_account->type] ?? $autodebit_account->type;
 
             $autodebit_account->account_type = $debit_account->type;
         }
@@ -247,7 +248,8 @@ class PaymentReminders extends AbstractTask
     private function shouldSendReminder(stdClass $invoice, stdClass $client, $action)
     {
         // Ensure the settings allow for the client to receive this notice
-        if (isset($client->settings[$action])
+        if (
+            isset($client->settings[$action])
             && is_numeric($client->settings[$action])
             && (!isset($client->settings['send_payment_notices'])
                 || $client->settings['send_payment_notices'] == 'true')
@@ -263,7 +265,7 @@ class PaymentReminders extends AbstractTask
                     $invoice_date,
                     ($days_from_due_date >= 0 ? '+' : '-') . abs($days_from_due_date) . ' days',
                     'c',
-                    isset($this->options['timezone']) ? $this->options['timezone'] : 'UTC'
+                    $this->options['timezone'] ?? 'UTC'
                 )
             );
 
@@ -308,7 +310,7 @@ class PaymentReminders extends AbstractTask
         $hash = $this->Invoices->createPayHash($client->id, $invoice->id);
 
         // Get the company hostname
-        $hostname = isset(Configure::get('Blesta.company')->hostname) ? Configure::get('Blesta.company')->hostname : '';
+        $hostname = Configure::get('Blesta.company')->hostname ?? '';
 
         $tags = [
             'contact' => $contact,
@@ -403,7 +405,7 @@ class PaymentReminders extends AbstractTask
         $hash = $this->Invoices->createPayHash($client->id, $invoice->id);
 
         // Get the company hostname
-        $hostname = isset(Configure::get('Blesta.company')->hostname) ? Configure::get('Blesta.company')->hostname : '';
+        $hostname = Configure::get('Blesta.company')->hostname ?? '';
 
         $tags = [
             'contact' => $contact,

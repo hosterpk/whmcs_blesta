@@ -18,13 +18,7 @@ class AdminSystemCompanies extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Companies', 'Navigation']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-        );
+        $this->uses(['Companies']);
     }
 
     /**

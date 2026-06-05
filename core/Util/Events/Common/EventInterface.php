@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events\Common;
 
 /**
@@ -31,7 +32,7 @@ interface EventInterface
      *
      * @param array $params An array of parameters to be held by this event
      */
-    public function setParams(array $params = null);
+    public function setParams(?array $params = null);
 
     /**
      * Returns the return value set for this event
@@ -46,4 +47,32 @@ interface EventInterface
      * @param mixed $value The return value for the event
      */
     public function setReturnValue($value);
+
+    /**
+     * Retrieves the errors set for this event, if any
+     *
+     * @return array An array of errors
+     */
+    public function getErrors();
+
+    /**
+     * Sets errors for this event
+     *
+     * @param array $errors An array of errors
+     */
+    public function setErrors(array $errors = []);
+
+    /**
+     * Retrieves the rules set for this event, if any
+     *
+     * @return array An array of rules
+     */
+    public function getRules();
+
+    /**
+     * Sets rules for this event
+     *
+     * @param array $rules An array of rules
+     */
+    public function setRules(array $rules = []);
 }

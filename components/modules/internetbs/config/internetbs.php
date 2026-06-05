@@ -1,4 +1,5 @@
 <?php
+
 // TLD List
 Configure::set('Internetbs.tlds', [
     '.com',

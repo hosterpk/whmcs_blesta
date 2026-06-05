@@ -9,11 +9,15 @@ $lang['Centoswebpanel.module_row'] = 'Server';
 $lang['Centoswebpanel.module_row_plural'] = 'Servers';
 $lang['Centoswebpanel.module_group'] = 'Server Group';
 
+$lang['Centoswebpanel.back_to_manage'] = 'Back';
+
 // Module management
 $lang['Centoswebpanel.add_module_row'] = 'Add Server';
 $lang['Centoswebpanel.add_module_group'] = 'Add Server Group';
 $lang['Centoswebpanel.manage.module_rows_title'] = 'Servers';
 $lang['Centoswebpanel.manage.module_groups_title'] = 'Server Groups';
+$lang['Centoswebpanel.manage.tab_rows'] = 'Servers';
+$lang['Centoswebpanel.manage.tab_groups'] = 'Server Groups';
 $lang['Centoswebpanel.manage.module_rows_heading.name'] = 'Server Label';
 $lang['Centoswebpanel.manage.module_rows_heading.hostname'] = 'Hostname';
 $lang['Centoswebpanel.manage.module_rows_heading.accounts'] = 'Accounts';

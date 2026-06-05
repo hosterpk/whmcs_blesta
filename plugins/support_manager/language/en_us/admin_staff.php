@@ -31,7 +31,7 @@ $lang['AdminStaff.index.heading_email'] = 'Email';
 $lang['AdminStaff.index.heading_ticket_emails'] = 'Receive Ticket Emails';
 $lang['AdminStaff.index.heading_mobile_ticket_emails'] = 'Receive Mobile Ticket Emails';
 $lang['AdminStaff.index.heading_ticket_messenger_notifications'] = 'Receive Ticket Messenger Notifications';
-$lang['AdminStaff.index.heading_options'] = 'Options';
+$lang['AdminStaff.index.heading_options'] = 'Actions';
 $lang['AdminStaff.index.option_edit'] = 'Edit';
 $lang['AdminStaff.index.option_delete'] = 'Delete';
 

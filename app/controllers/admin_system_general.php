@@ -18,14 +18,8 @@ class AdminSystemGeneral extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'Settings', 'Transactions']);
+        $this->uses(['Settings', 'Transactions']);
         $this->components(['SettingsCollection']);
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getSystem($this->base_uri)])
-        );
     }
 
     // General settings
@@ -45,6 +39,7 @@ class AdminSystemGeneral extends AdminController
             $fields = [
                 'log_days' => '',
                 'log_dir' => '',
+                'cache_dir' => '',
                 'temp_dir' => '',
                 'uploads_dir' => '',
                 'root_web_dir' => '',
@@ -58,7 +53,7 @@ class AdminSystemGeneral extends AdminController
             }
 
             // Set trailing slashes if missing
-            $dirs = ['temp_dir', 'uploads_dir', 'root_web_dir', 'log_dir'];
+            $dirs = ['temp_dir', 'uploads_dir', 'root_web_dir', 'log_dir', 'cache_dir'];
             foreach ($dirs as $dir) {
                 if (!empty($data[$dir]) && substr($data[$dir], -1, 1) != DS) {
                     $data[$dir] .= DS;
@@ -71,16 +66,67 @@ class AdminSystemGeneral extends AdminController
                 ? ROOTWEBDIR
                 : $data['root_web_dir'];
 
+            // Preflight cache_dir. The marker file (config/cache.dir.php) is the
+            // bootstrap-time canonical source for CACHEDIR, so we refuse the save unless we
+            // can mutate it as required (write a non-empty path; remove an existing marker
+            // when the path is cleared). Removing a file requires write permission on the
+            // parent dir, not the file itself.
+            $marker_file = ROOTWEBDIR . 'config' . DS . 'cache.dir.php';
+            $config_dir = ROOTWEBDIR . 'config';
+            $cache_dir_error = null;
+            if (!empty($data['cache_dir'])) {
+                if (!is_dir($data['cache_dir']) || !is_writable($data['cache_dir'])) {
+                    $cache_dir_error = 'AdminSystemGeneral.!error.cache_dir';
+                } elseif (
+                    (file_exists($marker_file) && !is_writable($marker_file))
+                    || (!file_exists($marker_file) && !is_writable($config_dir))
+                ) {
+                    $cache_dir_error = 'AdminSystemGeneral.!error.cache_dir_marker';
+                }
+            } elseif (is_file($marker_file) && !is_writable($config_dir)) {
+                $cache_dir_error = 'AdminSystemGeneral.!error.cache_dir_marker';
+            }
+
             // Prevent an upload directory from being set that doesn't exist or is within the root web directory
             if (!file_exists($data['uploads_dir'])
                 || strpos(realpath($data['uploads_dir']), realpath($root_web_dir)) !== false
             ) {
                 $this->setMessage('error', Language::_('AdminSystemGeneral.!error.upload_dir', true));
+            } elseif ($cache_dir_error !== null) {
+                $this->setMessage('error', Language::_($cache_dir_error, true));
             } else {
-                // Update the settings
-                $this->Settings->setSettings($data, array_keys($fields));
+                // Mutate the marker file BEFORE saving settings so that, if the filesystem
+                // op fails despite the preflight (race, ACL quirk, full disk), the DB row
+                // is not updated and the UI does not falsely report success.
+                $marker_ok = true;
+                if (!empty($data['cache_dir'])) {
+                    $marker_contents = "<?php\nreturn " . var_export($data['cache_dir'], true) . ";\n";
+                    if (@file_put_contents($marker_file, $marker_contents) === false) {
+                        $marker_ok = false;
+                    }
+                } elseif (is_file($marker_file)) {
+                    @unlink($marker_file);
+                    if (file_exists($marker_file)) {
+                        $marker_ok = false;
+                    }
+                }
 
-                $this->setMessage('message', Language::_('AdminSystemGeneral.!success.basic_updated', true));
+                if (!$marker_ok) {
+                    $this->setMessage('error', Language::_('AdminSystemGeneral.!error.cache_dir_marker', true));
+                } else {
+                    $this->Settings->setSettings($data, array_keys($fields));
+
+                    if (!empty($data['cache_dir']) && is_dir($data['cache_dir']) && is_writable($data['cache_dir'])) {
+                        // Drop a defense-in-depth .htaccess so that, if the admin pointed cache_dir
+                        // inside the docroot, Apache still refuses to serve its contents.
+                        $htaccess = $data['cache_dir'] . '.htaccess';
+                        if (!file_exists($htaccess)) {
+                            @file_put_contents($htaccess, "Order deny,allow\nDeny from all\n");
+                        }
+                    }
+
+                    $this->setMessage('message', Language::_('AdminSystemGeneral.!success.basic_updated', true));
+                }
             }
         }
 
@@ -91,7 +137,8 @@ class AdminSystemGeneral extends AdminController
         $dirs_writable = [
             'temp_dir' => false,
             'uploads_dir' => false,
-            'log_dir' => false
+            'log_dir' => false,
+            'cache_dir' => false
         ];
 
         foreach ($dirs_writable as $dir => &$value) {

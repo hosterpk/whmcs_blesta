@@ -1,4 +1,5 @@
 <?php
+
 /**
  * System Overview main controller
  *
@@ -43,9 +44,13 @@ class AdminMain extends SystemOverviewController
             $this->redirect($this->base_uri);
         }
 
-        $this->set('content', $this->partial('admin_main_overview', $this->overview(false)));
+        // Get overview data
+        $data = $this->overview();
+        foreach ($data as $key => $value) {
+            $this->set($key, $value);
+        }
 
-        return $this->renderAjaxWidgetIfAsync(isset($this->get[0]) ? false : null);
+        return $this->renderAjaxWidgetIfAsync(null);
     }
 
     /**
@@ -61,10 +66,8 @@ class AdminMain extends SystemOverviewController
 
     /**
      * System overview
-     *
-     * @param bool $echo Whether or not to print the data via json, or to return it
      */
-    public function overview($echo = true)
+    private function overview()
     {
         $this->uses(['SystemOverview.SystemOverviewStatistics', 'SystemOverview.SystemOverviewUsers']);
 
@@ -166,12 +169,24 @@ class AdminMain extends SystemOverviewController
                     continue 2;
             }
 
+            // Map FontAwesome icons to Bootstrap Icons
+            $icon_map = [
+                'fa-users' => 'bi-people',
+                'fa-cogs' => 'bi-box-seam',
+                'fa-calendar-times' => 'bi-calendar-x',
+                'fa-clock' => 'bi-clock-history',
+                'fa-file-alt' => 'bi-file-earmark-text',
+                'fa-cart-arrow-down' => 'bi-cart',
+                'fa-ticket-alt' => 'bi-ticket-detailed'
+            ];
+            $bootstrap_icon = $icon_map[$icon] ?? 'bi-circle';
+
             $statistics[] = [
                 'class' => $statistic,
                 'name' => Language::_('AdminMain.overview.statistic.' . $statistic, true),
                 'value' => $value,
                 'url' => $url,
-                'icon' => 'fas fa-fw ' . $icon
+                'icon' => $bootstrap_icon
             ];
         }
 
@@ -185,42 +200,167 @@ class AdminMain extends SystemOverviewController
             }
         }
 
-        // Create tabs partial
-        $tabs_data = [
-            'graphs' => $this->getGraphs($overview_settings, $current_tab)
-        ];
-        $tab_partial = $this->partial('admin_main_tab_overview', $tabs_data);
+        // Get all graphs data for all tabs (not just current tab)
+        $all_graphs = ['graphs' => [], 'settings' => []];
+        $tab_keys = ['all', 'clients', 'services'];
+        foreach ($tab_keys as $tab_key) {
+            $tab_graphs = $this->getGraphs($overview_settings, $tab_key);
+            if (!empty($tab_graphs['graphs'])) {
+                $all_graphs['graphs'] = array_merge($all_graphs['graphs'], $tab_graphs['graphs']);
+            }
+            if (!empty($tab_graphs['settings'])) {
+                $all_graphs['settings'] = array_merge($all_graphs['settings'], $tab_graphs['settings']);
+            }
+        }
 
-        $data = [
+        return [
             'statistics' => $statistics,
             'recent_users' => $this->getRecentUsers(),
             'tabs' => $tabs,
-            'tab_content' => $tab_partial,
+            'graphs' => $all_graphs,
         ];
+    }
 
-        if (!$echo) {
-            return $data;
+    /**
+     * AJAX Fetch graph data for a specific time period
+     */
+    public function graphData()
+    {
+        if (!$this->isAjax()) {
+            exit();
         }
 
-        $this->outputAsJson(['overview'=>$this->partial('admin_main_overview', $data)]);
+        // Get period from request (24h, 7d, 30d)
+        $period = isset($this->get[0]) ? strtolower($this->get[0]) : '7d';
+
+        // Convert period to days
+        $days = 7;
+        switch ($period) {
+            case '24h':
+                $days = 1;
+                break;
+            case '7d':
+                $days = 7;
+                break;
+            case '30d':
+                $days = 30;
+                break;
+        }
+
+        // Get settings
+        $settings = $this->SystemOverviewSettings->getSettings(
+            $this->Session->read('blesta_staff_id'),
+            $this->company_id
+        );
+
+        // Get graphs with the specified date range
+        $graphs = $this->getGraphsForPeriod($settings, $days);
+
+        $this->outputAsJson(['graphs' => $graphs]);
         return false;
     }
 
     /**
-     * AJAX Fetch tab content
+     * Gets graph data for a specific number of days
+     *
+     * @param array $settings The plugin settings
+     * @param int $days Number of days to fetch data for
+     * @return array Graph data
      */
-    public function tab()
+    private function getGraphsForPeriod(array $settings, $days)
     {
-        if (!$this->isAjax() || !isset($this->get[0])) {
-            exit();
+        $this->uses(['SystemOverview.SystemOverviewStatistics']);
+
+        $graphs = [];
+
+        foreach ($settings as $setting) {
+            if ($setting->value != 1) {
+                continue;
+            }
+
+            switch ($setting->key) {
+                case 'graph_clients':
+                case 'graph_services':
+                    $graph = $this->getGraphForDays($setting->key, $days);
+
+                    $data = [];
+                    foreach ($graph as $key => $value) {
+                        $data[] = [
+                            'name' => Language::_('AdminMain.graph_line_name.' . $key, true),
+                            'points' => $graph[$key]
+                        ];
+                    }
+
+                    $graphs[$setting->key] = [
+                        'name' => Language::_('AdminMain.graph_name.' . $setting->key, true),
+                        'data' => $data
+                    ];
+                    break;
+            }
         }
 
-        $data = [
-            'graphs' => $this->getGraphs([], $this->get[0])
-        ];
+        return $graphs;
+    }
 
-        $this->outputAsJson(['content'=>$this->partial('admin_main_tab_overview', $data)]);
-        return false;
+    /**
+     * Retrieves graph data for a specific number of days
+     *
+     * @param string $key The graph setting key
+     * @param int $days The number of days to retrieve data for
+     * @return array An array of line data representing the graph
+     */
+    private function getGraphForDays($key, $days)
+    {
+        $this->uses(['SystemOverview.SystemOverviewStatistics']);
+
+        $lines = [];
+        $datetime = $this->SystemOverviewStatistics->dateToUtc(date('c'));
+
+        for ($i = 0; $i < max(0, (int) $days); $i++) {
+            $date = strtotime($datetime . ' -' . $i . ' days');
+            $day_start = $this->SystemOverviewStatistics->dateToUtc($this->Date->cast($date, 'Y-m-d 00:00:00'));
+            $day_end = $this->SystemOverviewStatistics->dateToUtc($this->Date->cast($date, 'Y-m-d 23:59:59'));
+            $day_start_time = $date * 1000;
+
+            switch ($key) {
+                case 'graph_services':
+                    $lines['active'][] = [
+                        $day_start_time,
+                        $this->SystemOverviewStatistics->getServices($this->company_id, $day_start, $day_end)
+                    ];
+                    $lines['canceled'][] = [
+                        $day_start_time,
+                        $this->SystemOverviewStatistics->getServices(
+                            $this->company_id,
+                            $day_start,
+                            $day_end,
+                            'canceled'
+                        )
+                    ];
+                    $lines['suspended'][] = [
+                        $day_start_time,
+                        $this->SystemOverviewStatistics->getServices(
+                            $this->company_id,
+                            $day_start,
+                            $day_end,
+                            'suspended'
+                        )
+                    ];
+                    break;
+                case 'graph_clients':
+                    $lines['new'][] = [
+                        $day_start_time,
+                        $this->SystemOverviewStatistics->getClients($this->company_id, $day_start, $day_end)
+                    ];
+                    break;
+            }
+        }
+
+        foreach ($lines as $type => $line) {
+            $lines[$type] = array_reverse($line);
+        }
+
+        return $lines;
     }
 
     /**
@@ -346,14 +486,14 @@ class AdminMain extends SystemOverviewController
             if ($use_geo_ip) {
                 try {
                     $user->geo_ip = ['location' => $this->NetGeoIp->getLocation($user->ip_address)];
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     // Nothing to do
                 }
             }
 
             // Set last activity time language (in minutes)
             $user_activity_timestamp = $this->Date->toTime($user->date_updated);
-            $last_activity = ($current_timestamp - $user_activity_timestamp)/60;
+            $last_activity = ($current_timestamp - $user_activity_timestamp) / 60;
             if ($last_activity < 1) {
                 $user->last_activity = Language::_('AdminMain.overview.tooltip_last_activity_now', true);
             } elseif ($last_activity == 1) {
@@ -376,7 +516,8 @@ class AdminMain extends SystemOverviewController
             // Set a class for this user in terms of last activity
             if ($current_timestamp < ($user_activity_timestamp + $this->activity_time_frames['latest']['seconds'])) {
                 $user->class = $this->activity_time_frames['latest']['class'];
-            } elseif ($current_timestamp
+            } elseif (
+                $current_timestamp
                 < ($user_activity_timestamp + $this->activity_time_frames['recent']['seconds'])
             ) {
                 $user->class = $this->activity_time_frames['recent']['class'];
@@ -414,26 +555,26 @@ class AdminMain extends SystemOverviewController
                 switch ($setting->key) {
                     case 'graph_clients':
                         $tabs[] = [
-                            'name'=> Language::_('AdminMain.overview.tab_clients', true),
+                            'name' => Language::_('AdminMain.overview.tab_clients', true),
                             'tab' => 'clients',
-                            'url'=> $base_url . 'clients/',
+                            'url' => $base_url . 'clients/',
                             'current' => ($current_tab == 'clients')
                         ];
                         break;
                     case 'graph_services':
                         $tabs[] = [
-                            'name'=> Language::_('AdminMain.overview.tab_services', true),
+                            'name' => Language::_('AdminMain.overview.tab_services', true),
                             'tab' => 'services',
-                            'url'=> $base_url . 'services/',
+                            'url' => $base_url . 'services/',
                             'current' => ($current_tab == 'services')
                         ];
                         break;
                     case 'show_one_tab':
                         $tabs = [
                             [
-                                'name'=> Language::_('AdminMain.overview.tab_all', true),
+                                'name' => Language::_('AdminMain.overview.tab_all', true),
                                 'tab' => 'all',
-                                'url'=> $base_url . 'all/',
+                                'url' => $base_url . 'all/',
                                 'current' => ($current_tab == 'all')
                             ]
                         ];
@@ -503,7 +644,7 @@ class AdminMain extends SystemOverviewController
                             // Get the graph data over the set interval
                             $graph = $this->getGraph(
                                 $setting->key,
-                                (isset($graph_settings['date_range']) ? $graph_settings['date_range'] : 0)
+                                ($graph_settings['date_range'] ?? 0)
                             );
 
                             // Set each graph line name

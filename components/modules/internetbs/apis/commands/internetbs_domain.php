@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Internet.bs Domain Management
  *
@@ -31,7 +32,7 @@ class InternetbsDomain
      *  - Domain The domain name to check.
      * @return InternetbsResponse The response object
      */
-    public function check(array $vars) : InternetbsResponse
+    public function check(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Check', $vars);
     }
@@ -50,7 +51,7 @@ class InternetbsDomain
      *  - AutoRenew Enable or disable domain automatic renewal. Possible values are YES or NO.
      * @return InternetbsResponse The response object
      */
-    public function create(array $vars) : InternetbsResponse
+    public function create(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Create', $vars, 'POST');
     }
@@ -67,7 +68,7 @@ class InternetbsDomain
      *  - Dnssec Use this option to specify DNSSEC config for domain.
      * @return InternetbsResponse The response object
      */
-    public function update(array $vars) : InternetbsResponse
+    public function update(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Update', $vars, 'POST');
     }
@@ -80,7 +81,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function info(array $vars) : InternetbsResponse
+    public function info(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Info', $vars);
     }
@@ -92,7 +93,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function registryStatus(array $vars) : InternetbsResponse
+    public function registryStatus(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/RegistryStatus', $vars);
     }
@@ -113,7 +114,7 @@ class InternetbsDomain
      *      domain will be renewed for one year once the transfer gets completed.
      * @return InternetbsResponse The response object
      */
-    public function transfer(array $vars) : InternetbsResponse
+    public function transfer(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Transfer/Initiate', $vars, 'POST');
     }
@@ -128,7 +129,7 @@ class InternetbsDomain
      *  - transferAuthInfo The auth info (also transfer password, transfer secret, epp auth info, etc...).
      * @return InternetbsResponse The response object
      */
-    public function transferRetry(array $vars) : InternetbsResponse
+    public function transferRetry(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Transfer/Retry', $vars, 'POST');
     }
@@ -141,7 +142,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function transferCancel(array $vars) : InternetbsResponse
+    public function transferCancel(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Transfer/Cancel', $vars, 'POST');
     }
@@ -156,7 +157,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function resendAuthEmail(array $vars) : InternetbsResponse
+    public function resendAuthEmail(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Transfer/ResendAuthEmail', $vars, 'POST');
     }
@@ -168,7 +169,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function transferHistory(array $vars) : InternetbsResponse
+    public function transferHistory(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Transfer/History', $vars, 'POST');
     }
@@ -184,7 +185,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function transferAwayApprove(array $vars) : InternetbsResponse
+    public function transferAwayApprove(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/TransferAway/Approve', $vars, 'POST');
     }
@@ -199,7 +200,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function transferAwayReject(array $vars) : InternetbsResponse
+    public function transferAwayReject(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/TransferAway/Reject', $vars, 'POST');
     }
@@ -211,7 +212,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function lock(array $vars) : InternetbsResponse
+    public function lock(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/RegistrarLock/Enable', $vars, 'POST');
     }
@@ -223,7 +224,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function unlock(array $vars) : InternetbsResponse
+    public function unlock(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/RegistrarLock/Disable', $vars, 'POST');
     }
@@ -236,7 +237,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function lockStatus(array $vars) : InternetbsResponse
+    public function lockStatus(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/RegistrarLock/Status', $vars, 'POST');
     }
@@ -248,7 +249,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function privateWhoisEnable(array $vars) : InternetbsResponse
+    public function privateWhoisEnable(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/PrivateWhois/Enable', $vars, 'POST');
     }
@@ -260,7 +261,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function privateWhoisDisable(array $vars) : InternetbsResponse
+    public function privateWhoisDisable(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/PrivateWhois/Disable', $vars, 'POST');
     }
@@ -272,7 +273,7 @@ class InternetbsDomain
      *  - Domain The domain name.
      * @return InternetbsResponse The response object
      */
-    public function privateWhoisStatus(array $vars) : InternetbsResponse
+    public function privateWhoisStatus(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/PrivateWhois/Status', $vars, 'POST');
     }
@@ -291,7 +292,7 @@ class InternetbsDomain
      *      a dot followed by the extension.
      * @return InternetbsResponse The response object
      */
-    public function list(array $vars = []) : InternetbsResponse
+    public function list(array $vars = []): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/List', $vars, 'POST');
     }
@@ -302,7 +303,7 @@ class InternetbsDomain
      *
      * @return InternetbsResponse The response object
      */
-    public function count() : InternetbsResponse
+    public function count(): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Count', [], 'POST');
     }
@@ -317,7 +318,7 @@ class InternetbsDomain
      *  - discountCode A discount code if you have one. By default, no discount is used.
      * @return InternetbsResponse The response object
      */
-    public function renew(array $vars) : InternetbsResponse
+    public function renew(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Renew', $vars, 'POST');
     }
@@ -331,7 +332,7 @@ class InternetbsDomain
      *  - discountCode A discount code if you have one. By default no discount is used.
      * @return InternetbsResponse The response object
      */
-    public function restore(array $vars) : InternetbsResponse
+    public function restore(array $vars): InternetbsResponse
     {
         return $this->api->apiRequest('/Domain/Restore', $vars, 'POST');
     }

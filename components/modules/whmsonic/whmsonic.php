@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * Whmsonic Module.
  *
@@ -143,7 +145,7 @@ class Whmsonic extends Module
             $fields->fieldSelect(
                 'meta[client_type]',
                 $this->getClientTypes(),
-                (isset($vars->meta['client_type']) ? $vars->meta['client_type'] : null)
+                ($vars->meta['client_type'] ?? null)
             ),
             ['id' => 'client_type']
         );
@@ -154,7 +156,7 @@ class Whmsonic extends Module
             $fields->fieldSelect(
                 'meta[bitrate]',
                 $this->getBitRates(),
-                (isset($vars->meta['bitrate']) ? $vars->meta['bitrate'] : null)
+                ($vars->meta['bitrate'] ?? null)
             ),
             ['id' => 'bitrate']
         );
@@ -162,21 +164,21 @@ class Whmsonic extends Module
 
         $hspace = $fields->label(Language::_('Whmsonic.package_fields.hspace', true), 'hspace');
         $hspace->attach(
-            $fields->fieldText('meta[hspace]', (isset($vars->meta['hspace']) ? $vars->meta['hspace'] : null)),
+            $fields->fieldText('meta[hspace]', ($vars->meta['hspace'] ?? null)),
             ['id' => 'hspace']
         );
         $fields->setField($hspace);
 
         $bandwidth = $fields->label(Language::_('Whmsonic.package_fields.bandwidth', true), 'bandwidth');
         $bandwidth->attach(
-            $fields->fieldText('meta[bandwidth]', (isset($vars->meta['bandwidth']) ? $vars->meta['bandwidth'] : null)),
+            $fields->fieldText('meta[bandwidth]', ($vars->meta['bandwidth'] ?? null)),
             ['id' => 'bandwidth']
         );
         $fields->setField($bandwidth);
 
         $listeners = $fields->label(Language::_('Whmsonic.package_fields.listeners', true), 'listeners');
         $listeners->attach(
-            $fields->fieldText('meta[listeners]', (isset($vars->meta['listeners']) ? $vars->meta['listeners'] : null)),
+            $fields->fieldText('meta[listeners]', ($vars->meta['listeners'] ?? null)),
             ['id' => 'listeners']
         );
         $fields->setField($listeners);
@@ -186,7 +188,7 @@ class Whmsonic extends Module
             $fields->fieldSelect(
                 'meta[autodj]',
                 $this->getAutoDJAccessOptions(),
-                (isset($vars->meta['autodj']) ? $vars->meta['autodj'] : null)
+                ($vars->meta['autodj'] ?? null)
             ),
             ['id' => 'autodj']
         );
@@ -353,6 +355,14 @@ class Whmsonic extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -386,6 +396,14 @@ class Whmsonic extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -497,7 +515,7 @@ class Whmsonic extends Module
             $username->attach(
                 $fields->fieldText(
                     'username',
-                    (isset($vars->username) ? $vars->username : null),
+                    ($vars->username ?? null),
                     ['id' => 'username']
                 )
             );
@@ -530,7 +548,7 @@ class Whmsonic extends Module
             $username->attach(
                 $fields->fieldText(
                     'username',
-                    (isset($vars->username) ? $vars->username : null),
+                    ($vars->username ?? null),
                     ['id' => 'username']
                 )
             );
@@ -562,7 +580,7 @@ class Whmsonic extends Module
         $username->attach(
             $fields->fieldText(
                 'username',
-                (isset($vars->username) ? $vars->username : null),
+                ($vars->username ?? null),
                 ['id' => 'username']
             )
         );
@@ -711,7 +729,6 @@ class Whmsonic extends Module
         $api = $this->getApi($row->meta->password, $row->meta->ip_address, $row->meta->use_ssl);
         // Only provision the service if 'use_module' is true
         if ($vars['use_module'] == 'true') {
-
             $masked_params = $params;
             $masked_params['radio_password'] = '***';
 
@@ -1051,8 +1068,8 @@ class Whmsonic extends Module
         if (!empty($post)) {
             Loader::loadModels($this, ['Services']);
             $data = [
-                'password' => (isset($post['password']) ? $post['password'] : null),
-                'radio_password' => (isset($post['radio_password']) ? $post['radio_password'] : null)
+                'password' => ($post['password'] ?? null),
+                'radio_password' => ($post['radio_password'] ?? null)
             ];
             $this->Services->edit($service->id, $data);
 
@@ -1065,7 +1082,7 @@ class Whmsonic extends Module
 
         $this->view->set('service_fields', $service_fields);
         $this->view->set('service_id', $service->id);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'whmsonic' . DS);
         return $this->view->fetch();
@@ -1277,8 +1294,8 @@ class Whmsonic extends Module
                 'valid_connection' => [
                     'rule' => [
                         [$this, 'validateConnection'],
-                        isset($vars['ip_address']) ? $vars['ip_address'] : '',
-                        isset($vars['use_ssl']) ? $vars['use_ssl'] : 'false'
+                        $vars['ip_address'] ?? '',
+                        $vars['use_ssl'] ?? 'false'
                     ],
                     'message' => Language::_('Whmsonic.!error.api.internal', true)
                 ]
@@ -1358,8 +1375,9 @@ class Whmsonic extends Module
             $this->log($ip_address, serialize($result), 'output', $success);
 
             return $success;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Trap any errors encountered, could not validate connection
+            $this->log($ip_address, serialize(['error' => $e->getMessage()]), 'output', false);
         }
         return false;
     }

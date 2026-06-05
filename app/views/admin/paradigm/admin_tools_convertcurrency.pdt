@@ -1,0 +1,44 @@
+<?php /** @var View $this **/ ?>
+
+
+        <?php
+        echo (isset($message) ? $message : null);
+
+        $this->Widget->clear();
+        $this->Widget->create($this->_('AdminTools.convertcurrency.boxtitle_currency', true), ['id' => 'admin_tools_convertcurrency'], ($render_section ?? null));
+
+        $this->Form->create(null, ['class' => 'disable-on-submit']);
+        ?>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <?php
+                $this->Form->label($this->_('AdminTools.convertcurrency.field_amount', true), 'amount', ['class' => 'form-label']);
+                $this->Form->fieldText('amount', ($vars->amount ?? null), ['id' => 'amount', 'type' => 'number', 'step' => 'any', 'min' => '0', 'class' => 'form-control']);
+                ?>
+            </div>
+            <div class="col-md-3">
+                <?php
+                $this->Form->label($this->_('AdminTools.convertcurrency.field_from', true), 'from_currency', ['class' => 'form-label']);
+                $this->Form->fieldSelect('from_currency', ($currencies ?? null), ($vars->from_currency ?? null), ['id' => 'from_currency', 'class' => 'form-select']);
+                ?>
+            </div>
+            <div class="col-md-2 d-flex justify-content-center pb-2">
+                <i class="bi bi-arrow-right fs-4 text-muted"></i>
+            </div>
+            <div class="col-md-3">
+                <?php
+                $this->Form->label($this->_('AdminTools.convertcurrency.field_to', true), 'to_currency', ['class' => 'form-label']);
+                $this->Form->fieldSelect('to_currency', ($currencies ?? null), ($vars->to_currency ?? null), ['id' => 'to_currency', 'class' => 'form-select']);
+                ?>
+            </div>
+        </div>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminTools.convertcurrency.field_currencysubmit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+        <?php
+        $this->Form->end();
+        $this->Widget->end();
+        ?>

@@ -1,5 +1,7 @@
 <?php
+
 use Blesta\Core\Util\Validate\Server;
+
 /**
  * Centovacast Module.
  *
@@ -99,7 +101,7 @@ class Centovacast extends Module
             $fields->fieldSelect(
                 'meta[servertype]',
                 $this->getServerTypes(),
-                (isset($vars->meta['servertype']) ? $vars->meta['servertype'] : null),
+                ($vars->meta['servertype'] ?? null),
                 ['id' => 'centovacast_servertype']
             )
         );
@@ -114,7 +116,7 @@ class Centovacast extends Module
             $fields->fieldSelect(
                 'meta[apptypes]',
                 $this->getAppTypes(),
-                (isset($vars->meta['apptypes']) ? $vars->meta['apptypes'] : null),
+                ($vars->meta['apptypes'] ?? null),
                 ['id' => 'centovacast_apptypes']
             )
         );
@@ -129,7 +131,7 @@ class Centovacast extends Module
             $fields->fieldSelect(
                 'meta[usesource]',
                 $this->getSourceCapabilities(),
-                (isset($vars->meta['usesource']) ? $vars->meta['usesource'] : null),
+                ($vars->meta['usesource'] ?? null),
                 ['id' => 'centovacast_usesource']
             )
         );
@@ -144,7 +146,7 @@ class Centovacast extends Module
         $maxclients->attach(
             $fields->fieldText(
                 'meta[maxclients]',
-                (isset($vars->meta['maxclients']) ? $vars->meta['maxclients'] : null),
+                ($vars->meta['maxclients'] ?? null),
                 ['id' => 'centovacast_maxclients']
             )
         );
@@ -163,7 +165,7 @@ class Centovacast extends Module
         $maxbitrate->attach(
             $fields->fieldText(
                 'meta[maxbitrate]',
-                (isset($vars->meta['maxbitrate']) ? $vars->meta['maxbitrate'] : null),
+                ($vars->meta['maxbitrate'] ?? null),
                 ['id' => 'centovacast_maxbitrate']
             )
         );
@@ -182,7 +184,7 @@ class Centovacast extends Module
         $transferlimit->attach(
             $fields->fieldText(
                 'meta[transferlimit]',
-                (isset($vars->meta['transferlimit']) ? $vars->meta['transferlimit'] : null),
+                ($vars->meta['transferlimit'] ?? null),
                 ['id' => 'centovacast_transferlimit']
             )
         );
@@ -201,7 +203,7 @@ class Centovacast extends Module
         $diskquota->attach(
             $fields->fieldText(
                 'meta[diskquota]',
-                (isset($vars->meta['diskquota']) ? $vars->meta['diskquota'] : null),
+                ($vars->meta['diskquota'] ?? null),
                 ['id' => 'centovacast_diskquota']
             )
         );
@@ -376,6 +378,14 @@ class Centovacast extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -408,6 +418,14 @@ class Centovacast extends Module
             }
         }
 
+        // Fetch module
+        Loader::loadModels($this, ['ModuleManager']);
+        $module = $this->ModuleManager->getByClass(
+            \Illuminate\Support\Str::snake(get_class($this)),
+            Configure::get('Blesta.company_id')
+        );
+        $module = ($module[0] ?? []);
+        $this->view->set('module', (object) $module);
         $this->view->set('vars', (object) $vars);
 
         return $this->view->fetch();
@@ -516,7 +534,7 @@ class Centovacast extends Module
         $ipaddress->attach(
             $fields->fieldText(
                 'centovacast_ipaddress',
-                (isset($vars->centovacast_ipaddress) ? $vars->centovacast_ipaddress : ($vars->ipaddress ?? null)),
+                ($vars->centovacast_ipaddress ?? ($vars->ipaddress ?? null)),
                 ['id' => 'centovacast_ipaddress']
             )
         );
@@ -532,7 +550,7 @@ class Centovacast extends Module
         $port->attach(
             $fields->fieldText(
                 'centovacast_port',
-                (isset($vars->centovacast_port) ? $vars->centovacast_port : ($vars->port ?? null)),
+                ($vars->centovacast_port ?? ($vars->port ?? null)),
                 ['id' => 'centovacast_port']
             )
         );
@@ -565,7 +583,7 @@ class Centovacast extends Module
         $hostname->attach(
             $fields->fieldText(
                 'centovacast_hostname',
-                (isset($vars->centovacast_hostname) ? $vars->centovacast_hostname : ($vars->hostname ?? null)),
+                ($vars->centovacast_hostname ?? ($vars->hostname ?? null)),
                 ['id' => 'centovacast_hostname']
             )
         );
@@ -578,7 +596,7 @@ class Centovacast extends Module
         $title->attach(
             $fields->fieldText(
                 'centovacast_title',
-                (isset($vars->centovacast_title) ? $vars->centovacast_title : ($vars->title ?? null)),
+                ($vars->centovacast_title ?? ($vars->title ?? null)),
                 ['id' => 'centovacast_title']
             )
         );
@@ -591,7 +609,7 @@ class Centovacast extends Module
         $genre->attach(
             $fields->fieldText(
                 'centovacast_genre',
-                (isset($vars->centovacast_genre) ? $vars->centovacast_genre : ($vars->genre ?? null)),
+                ($vars->centovacast_genre ?? ($vars->genre ?? null)),
                 ['id' => 'centovacast_genre']
             )
         );
@@ -621,7 +639,7 @@ class Centovacast extends Module
         $hostname->attach(
             $fields->fieldText(
                 'centovacast_hostname',
-                (isset($vars->hostname) ? $vars->hostname : $vars->centovacast_hostname),
+                ($vars->hostname ?? $vars->centovacast_hostname),
                 ['id' => 'centovacast_hostname']
             )
         );
@@ -649,7 +667,7 @@ class Centovacast extends Module
         $title->attach(
             $fields->fieldText(
                 'centovacast_title',
-                (isset($vars->title) ? $vars->title : $vars->centovacast_title),
+                ($vars->title ?? $vars->centovacast_title),
                 ['id' => 'centovacast_title']
             )
         );
@@ -662,7 +680,7 @@ class Centovacast extends Module
         $genre->attach(
             $fields->fieldText(
                 'centovacast_genre',
-                (isset($vars->genre) ? $vars->genre : $vars->centovacast_genre),
+                ($vars->genre ?? $vars->centovacast_genre),
                 ['id' => 'centovacast_genre']
             )
         );
@@ -675,7 +693,7 @@ class Centovacast extends Module
         $ipaddress->attach(
             $fields->fieldText(
                 'centovacast_ipaddress',
-                (isset($vars->ipaddress) ? $vars->ipaddress : $vars->centovacast_ipaddress),
+                ($vars->ipaddress ?? $vars->centovacast_ipaddress),
                 ['id' => 'centovacast_ipaddress']
             )
         );
@@ -691,7 +709,7 @@ class Centovacast extends Module
         $port->attach(
             $fields->fieldText(
                 'centovacast_port',
-                (isset($vars->port) ? $vars->port : $vars->centovacast_port),
+                ($vars->port ?? $vars->centovacast_port),
                 ['id' => 'centovacast_port']
             )
         );
@@ -844,7 +862,7 @@ class Centovacast extends Module
                 $params['rpchostid'] = $servers[array_rand($servers)]->id;
 
                 $result = $this->parseResponse($api->createAccount($params));
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->Input->setErrors(
                     ['api' => ['internal' => Language::_('Centovacast.!error.api.internal', true)]]
                 );
@@ -1280,13 +1298,16 @@ class Centovacast extends Module
         if (!empty($post)) {
             switch ($post['action']) {
                 case 'restart':
-                    $api->restartStream($service_fields->centovacast_username);
+                    $this->log($row->meta->hostname . '|restartstream', serialize($service_fields->centovacast_username), 'input', true);
+                    $this->parseResponse($api->restartStream($service_fields->centovacast_username));
                     break;
                 case 'stop':
-                    $api->stopStream($service_fields->centovacast_username);
+                    $this->log($row->meta->hostname . '|stopstream', serialize($service_fields->centovacast_username), 'input', true);
+                    $this->parseResponse($api->stopStream($service_fields->centovacast_username));
                     break;
                 case 'start':
-                    $api->startStream($service_fields->centovacast_username);
+                    $this->log($row->meta->hostname . '|startstream', serialize($service_fields->centovacast_username), 'input', true);
+                    $this->parseResponse($api->startStream($service_fields->centovacast_username));
                     break;
                 default:
                     break;
@@ -1313,7 +1334,7 @@ class Centovacast extends Module
         $this->view->set('service_id', $service->id);
         $this->view->set('account_info', $account_info);
         $this->view->set('stream_info', $stream_info);
-        $this->view->set('vars', (isset($vars) ? $vars : new stdClass()));
+        $this->view->set('vars', ($vars ?? new stdClass()));
 
         $this->view->setDefaultView('components' . DS . 'modules' . DS . 'centovacast' . DS);
 
@@ -1527,7 +1548,7 @@ class Centovacast extends Module
         try {
             $output = $this->parseResponse($api->listAccounts());
             $accounts = count($output);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Nothing to do
         }
 
@@ -1576,9 +1597,29 @@ class Centovacast extends Module
         try {
             $api = $this->getApi($hostname, $username, $password, $port, $use_ssl);
 
-            return $this->parseResponse($api->listAccounts());
-        } catch (Exception $e) {
-            // Trap any errors encountered, could not validate connection
+            $this->log($hostname, json_encode(compact('hostname', 'username', 'port', 'use_ssl')), 'input', true);
+
+            $response = $api->sanityCheck();
+
+            $row = $this->getModuleRow();
+            $success = true;
+
+            // Set internal error
+            if (empty($response)) {
+                $this->Input->setErrors(['api' => ['internal' => Language::_('Centovacast.!error.api.internal', true)]]);
+                $success = false;
+            }
+
+            if (($response->type ?? '') == 'error') {
+                $this->Input->setErrors(['api' => ['error' => $response->response->message]]);
+                $success = false;
+            }
+
+            $this->log($hostname, json_encode($response), 'output', $success);
+
+            return $success;
+        } catch (\Throwable $e) {
+            $this->log($hostname, $e->getMessage(), 'output', false);
         }
 
         return false;

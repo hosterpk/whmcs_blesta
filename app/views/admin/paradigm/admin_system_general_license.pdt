@@ -1,0 +1,47 @@
+<?php /** @var View $this **/ ?>
+
+        <div class="main-content-padding">
+            <?php echo (isset($message) ? $message : null);?>
+
+            <?php
+            $this->Widget->clear();
+            $this->Widget->create($this->_('AdminSystemGeneral.license.boxtitle_license', true), ['id' => 'admin_system_general_license']);
+            ?>
+
+            <?php
+            $this->Form->create(null, ['id' => 'admin_system_general_license', 'class' => 'disable-on-submit']);
+            ?>
+
+            <div class="mb-3">
+                <label for="license_key" class="form-label">
+                    <?php $this->_('AdminSystemGeneral.license.field.license_key');?>
+                    <i class="bi bi-info-circle ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('AdminSystemGeneral.!tooltip.license_key', true));?>"></i>
+                </label>
+                <?php
+                $this->Form->fieldText(
+                    'license_key',
+                    (isset($vars['license_key']) ? $vars['license_key'] : null),
+                    ['id' => 'license_key', 'class' => 'form-control']
+                );
+                ?>
+            </div>
+
+            <?php $this->Widget->footer(); ?>
+            <div class="d-flex justify-content-end">
+                <?php
+                $this->Form->fieldSubmit(
+                    'save',
+                    $this->_('AdminSystemGeneral.license.field.licensesubmit', true),
+                    ['class' => 'btn btn-primary']
+                );
+                ?>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+
+            <?php $this->Widget->end();?>
+        </div>

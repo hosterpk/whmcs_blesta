@@ -1,0 +1,24 @@
+<?php
+if ((isset($service->cancellation_reason) ? $service->cancellation_reason : null)) {
+?>
+<div class="alert alert-warning m-3">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <?php $this->_('AdminBilling.serviceinfo.cancellation_reason', false, $service->cancellation_reason);?>
+</div>
+<?php
+}
+
+if ((isset($content) ? $content : null)) {
+?>
+<div class="p-3 service-info-content">
+    <?php echo $content;?>
+</div>
+<?php
+} else {
+?>
+<div class="text-center py-4 text-muted">
+    <p class="mb-0"><?php $this->_('AdminBilling.serviceinfo.no_results');?></p>
+</div>
+<?php
+}
+?>

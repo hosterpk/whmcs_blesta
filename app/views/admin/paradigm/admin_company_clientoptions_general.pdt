@@ -1,0 +1,21 @@
+<?php /** @var View $this **/ ?>
+
+<div class="main-content-padding">
+    <?php echo (isset($message) ? $message : null);?>
+
+    <?php
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminCompanyClientoptions.general.boxtitle', true), ['id' => 'admin_company_clientoptions_general']);
+    ?>
+    <?php $this->Form->create(null, ['class' => 'disable-on-submit']); ?>
+            <!-- Dynamic Client General Form -->
+            <?php echo (isset($client_general_form) ? $client_general_form : null);?>
+        <?php $this->Widget->footer(); ?>
+        <div class="d-flex justify-content-end">
+            <?php
+            $this->Form->fieldSubmit('save', $this->_('AdminCompanyClientoptions.general.text_submit', true), ['class' => 'btn btn-primary']);
+            ?>
+        </div>
+        <?php $this->Form->end(); ?>
+    <?php $this->Widget->end(); ?>
+</div>

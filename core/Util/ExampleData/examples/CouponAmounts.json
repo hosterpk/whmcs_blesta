@@ -1,0 +1,14 @@
+[
+    {
+        "coupon_id": 32,
+        "currency": "USD",
+        "amount": "10.0000",
+        "type": "percent"
+    },
+    {
+        "coupon_id": 32,
+        "currency": "EUR",
+        "amount": "10.0000",
+        "type": "percent"
+    }
+]

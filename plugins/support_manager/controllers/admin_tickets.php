@@ -160,6 +160,11 @@ class AdminTickets extends SupportManagerController
             unset($ticket_actions['delete']);
         }
 
+        // Get AI assistant name for ticket listing display
+        $this->uses(['SupportManager.SupportManagerSettings']);
+        $ai_name_setting = $this->SupportManagerSettings->getSetting('sm_ai_assistant_name', $this->company_id);
+        $this->set('ai_assistant_name', $ai_name_setting ? $ai_name_setting->value : null);
+
         $this->set('staff_id', $this->staff_id);
         $this->set('tickets', $tickets);
         $this->set('page', $page);
@@ -168,15 +173,48 @@ class AdminTickets extends SupportManagerController
         $this->set('ticket_actions', $ticket_actions);
         $this->set('ticket_statuses', $this->SupportManagerTickets->getStatuses());
 
-        // Set the input field filters for the widget
-        $filters = $this->getFilters($post_filters);
-        $this->set('filters', $filters);
-        $this->set('filter_vars', $post_filters);
-
         // Set a message if staff/departments are not setup
         if (!$this->isAjax()) {
             $this->setDepartmentStaffNotice();
             $this->set('set_ticket_time', true);
+
+            // Build sidebar filter data
+            $this->uses(['SupportManager.SupportManagerDepartments']);
+
+            $departments = $this->Form->collapseObjectArray(
+                $this->SupportManagerDepartments->getAll($this->company_id),
+                'name',
+                'id'
+            );
+
+            $staff = [];
+            foreach ($this->SupportManagerStaff->getAll($this->company_id) as $staff_member) {
+                $staff[$staff_member->id] = $staff_member->first_name . ' ' . $staff_member->last_name;
+            }
+
+            $time_options = [];
+            $minutes = [15, 30];
+            $hours = [1, 6, 12, 24, 72];
+            foreach ($minutes as $minute) {
+                $time_options[$minute] = Language::_('AdminTickets.index.minutes', true, $minute);
+            }
+            foreach ($hours as $hour) {
+                $time_options[$hour * 60] = Language::_(
+                    'AdminTickets.index.' . ($hour == 1 ? 'hour' : 'hours'),
+                    true,
+                    $hour
+                );
+            }
+
+            $sidebar_html = $this->partial('admin_tickets_sidebar', [
+                'filter_vars' => $post_filters,
+                'priorities' => $this->SupportManagerTickets->getPriorities(),
+                'departments' => $departments,
+                'staff' => $staff,
+                'time_options' => $time_options
+            ]);
+            $this->structure->set('side_bar_content', $sidebar_html);
+            $this->structure->set('side_bar', ['partials/plugin_sidebar', null, 'side-content-mobile-visible']);
         }
 
         // Render the request if ajax
@@ -305,7 +343,7 @@ class AdminTickets extends SupportManagerController
     public function add()
     {
         $this->uses([
-            'Clients', 'Contacts', 'Staff', 'Services', 'ModuleManager', 'SupportManager.SupportManagerDepartments', 'SupportManager.SupportManagerStaff'
+            'Clients', 'Contacts', 'Staff', 'Services', 'ModuleManager', 'SupportManager.SupportManagerDepartments', 'SupportManager.SupportManagerStaff', 'SupportManager.SupportManagerResponses'
         ]);
 
         // Set the client if given
@@ -361,6 +399,45 @@ class AdminTickets extends SupportManagerController
                 $client_id = $data['client_id'];
             }
 
+            // Reject base64 inline images
+            $has_base64 = $this->SupportManagerTickets->containsBase64Images($data['details'] ?? '');
+            if ($has_base64) {
+                $this->setMessage('error', [
+                    'details' => ['base64' => Language::_(
+                        'SupportManagerTickets.!error.inline_image.base64',
+                        true
+                    )]
+                ], false, null, false);
+                $vars = (object)$this->post;
+
+                // Set the priorities and staff to show
+                if (!empty($data['department_id'])) {
+                    $priorities = $please_select + $this->SupportManagerTickets->getPriorities();
+                    $department_staff += $this->Form->collapseObjectArray(
+                        $this->SupportManagerStaff->getAll($this->company_id, $data['department_id'], false),
+                        ['first_name', 'last_name'],
+                        'id',
+                        ' '
+                    );
+                }
+            }
+
+            // Finalize inline images and create the ticket
+            $inline_attachment_ids = [];
+            if (!$has_base64) {
+                $temp_ids = $this->post['inline_image_temp_ids'] ?? [];
+                if (!empty($temp_ids)) {
+                    if (is_string($temp_ids)) {
+                        $temp_ids = json_decode($temp_ids, true) ?: [];
+                    }
+                    $finalized = $this->SupportManagerTickets->finalizeInlineImages(
+                        $data['details'],
+                        $temp_ids
+                    );
+                    $data['details'] = $finalized['details'];
+                    $inline_attachment_ids = $finalized['attachment_ids'];
+                }
+
             // Create a transaction
             $this->SupportManagerTickets->begin();
 
@@ -386,6 +463,9 @@ class AdminTickets extends SupportManagerController
                 // Error, reset vars
                 $this->SupportManagerTickets->rollBack();
 
+                // Rollback inline attachments since the reply failed
+                $this->SupportManagerTickets->rollbackInlineAttachments($inline_attachment_ids);
+
                 $vars = (object)$this->post;
                 $this->setMessage('error', $errors, false, null, false);
 
@@ -402,6 +482,14 @@ class AdminTickets extends SupportManagerController
             } else {
                 // Success
                 $this->SupportManagerTickets->commit();
+
+                // Link inline attachments to the reply
+                if (!empty($inline_attachment_ids) && !empty($reply_id)) {
+                    $this->SupportManagerTickets->linkInlineAttachmentsToReply(
+                        $inline_attachment_ids,
+                        $reply_id
+                    );
+                }
 
                 // Fetch the ticket
                 $ticket = $this->SupportManagerTickets->get($ticket_id);
@@ -445,6 +533,7 @@ class AdminTickets extends SupportManagerController
                 );
                 $this->redirect($this->base_uri . 'plugin/support_manager/admin_tickets/');
             }
+            } // end if (!$has_base64)
         }
 
         // Set departments, statuses
@@ -465,8 +554,7 @@ class AdminTickets extends SupportManagerController
         // Set department custom fields
         if (!empty($data['department_id'])) {
             $department = $this->SupportManagerDepartments->get($data['department_id']);
-            $input_fields = $this->formatDepartmentCustomFields($department->fields, $vars->custom_fields ?? []);
-            $department_fields = new FieldsHtml($input_fields);
+            $department_fields = $this->renderDepartmentCustomFields($department->fields, $vars->custom_fields ?? []);
         }
 
         // Fetch client-related contacts
@@ -482,7 +570,7 @@ class AdminTickets extends SupportManagerController
         $this->set('service_ids', $service_ids);
         $this->set('departments', $departments);
         $this->set('priorities', ($priorities ?? $please_select));
-        $this->set('department_fields', isset($department_fields) ? $department_fields->generate() : '');
+        $this->set('department_fields', $department_fields ?? '');
         $this->set('statuses', $statuses);
         $this->set('department_staff', $department_staff);
         $this->set('client', $client);
@@ -490,11 +578,36 @@ class AdminTickets extends SupportManagerController
         // Get staff settings and set default markdown_editor_mode if not set
         $staff_settings = $this->SupportManagerStaff->getSettings($this->staff_id, $this->company_id);
         if (!isset($staff_settings['markdown_editor_mode'])) {
-            $staff_settings['markdown_editor_mode'] = 'wysiwyg';
+            $staff_settings['markdown_editor_mode'] = 'markdown_no_preview';
         }
 
         $this->set('staff_id', $this->staff_id);
         $this->set('staff_settings', $staff_settings);
+
+        // Load predefined responses
+        Language::loadLang('admin_responses', null, PLUGINDIR . 'support_manager' . DS . 'language' . DS);
+        $predefined_responses = $this->partial('admin_responses_response_list', [
+            'categories' => $this->SupportManagerResponses->getAllCategories($this->company_id, null),
+            'show_links' => false
+        ]);
+        $this->set('predefined_responses', $predefined_responses);
+
+        // Pre-render the sidebar partial and set it up for the side-content area
+        $sidebar_html = $this->partial(
+            'admin_tickets_add_sidebar',
+            [
+                'vars' => $vars,
+                'client' => $client,
+                'departments' => $departments,
+                'department_staff' => $department_staff,
+                'priorities' => ($priorities ?? $please_select),
+                'statuses' => $statuses,
+                'service_ids' => $service_ids,
+                'contacts' => $contacts
+            ]
+        );
+        $this->structure->set('side_bar_content', $sidebar_html);
+        $this->structure->set('side_bar', ['partials/plugin_sidebar', null, 'side-content-mobile-visible']);
     }
 
     /**
@@ -509,7 +622,7 @@ class AdminTickets extends SupportManagerController
         }
 
         $this->uses([
-            'Clients', 'Contacts', 'Services', 'Staff', 'ModuleManager', 'SupportManager.SupportManagerDepartments'
+            'Clients', 'Contacts', 'Services', 'Staff', 'ModuleManager', 'SupportManager.SupportManagerDepartments', 'SupportManager.SupportManagerResponses'
         ]);
 
         $department = $this->SupportManagerDepartments->get($ticket->department_id);
@@ -563,6 +676,34 @@ class AdminTickets extends SupportManagerController
             // Get staff
             $staff = $this->Staff->get($data['staff_id']);
 
+            // Reject base64 inline images
+            $has_base64 = $this->SupportManagerTickets->containsBase64Images($data['details'] ?? '');
+            if ($has_base64) {
+                $this->setMessage('error', [
+                    'details' => ['base64' => Language::_(
+                        'SupportManagerTickets.!error.inline_image.base64',
+                        true
+                    )]
+                ], false, null, false);
+                $vars = (object)$this->post;
+            }
+
+            // Finalize inline images and create the reply
+            $inline_attachment_ids = [];
+            if (!$has_base64) {
+                $temp_ids = $this->post['inline_image_temp_ids'] ?? [];
+                if (!empty($temp_ids)) {
+                    if (is_string($temp_ids)) {
+                        $temp_ids = json_decode($temp_ids, true) ?: [];
+                    }
+                    $finalized = $this->SupportManagerTickets->finalizeInlineImages(
+                        $data['details'],
+                        $temp_ids
+                    );
+                    $data['details'] = $finalized['details'];
+                    $inline_attachment_ids = $finalized['attachment_ids'];
+                }
+
             // Create a transaction
             $this->SupportManagerTickets->begin();
 
@@ -573,11 +714,31 @@ class AdminTickets extends SupportManagerController
                 // Error, reset vars
                 $this->SupportManagerTickets->rollBack();
 
+                // Rollback inline attachments since the reply failed
+                $this->SupportManagerTickets->rollbackInlineAttachments($inline_attachment_ids);
+
                 $vars = (object)$this->post;
                 $this->setMessage('error', $errors, false, null, false);
             } else {
                 // Success, commit
                 $this->SupportManagerTickets->commit();
+
+                // Link inline attachments to the reply
+                if (!empty($inline_attachment_ids) && !empty($reply_id)) {
+                    $this->SupportManagerTickets->linkInlineAttachmentsToReply(
+                        $inline_attachment_ids,
+                        $reply_id
+                    );
+                }
+
+                // Mark AI response as used if this reply used an AI-generated response
+                if (!empty($this->post['ai_analysis_id'])) {
+                    $this->uses(['SupportManager.SupportManagerAiResponseAnalyses']);
+                    $this->SupportManagerAiResponseAnalyses->markUsed(
+                        $this->post['ai_analysis_id'],
+                        $this->staff_id
+                    );
+                }
 
                 // Get the company hostname
                 $hostname = isset(Configure::get('Blesta.company')->hostname)
@@ -616,6 +777,7 @@ class AdminTickets extends SupportManagerController
                 );
                 $this->redirect($this->base_uri . 'plugin/support_manager/admin_tickets/');
             }
+            } // end if (!$has_base64)
         }
 
         // Set initial ticket
@@ -637,8 +799,7 @@ class AdminTickets extends SupportManagerController
         }
 
         // Set department custom fields
-        $input_fields = $this->formatDepartmentCustomFields($department->fields, $vars->custom_fields ?? []);
-        $department_fields = new FieldsHtml($input_fields);
+        $department_fields = $this->renderDepartmentCustomFields($department->fields, $vars->custom_fields ?? []);
 
         $this->set('ticket', $ticket);
         $this->set('vars', $vars);
@@ -665,13 +826,15 @@ class AdminTickets extends SupportManagerController
         $this->set('service_ids', $service_ids);
         $this->set('statuses', $this->SupportManagerTickets->getStatuses());
         $this->set('priorities', $this->SupportManagerTickets->getPriorities());
-        $this->set('department_fields', $department_fields->generate());
+        $this->set('department_fields', $department_fields);
         $this->set('staff_id', $this->staff_id);
         $this->set('service', $this->Services->get($ticket->service_id));
 
         // Set the client this ticket belongs to
+        $client = null;
         if (!empty($ticket->client_id)) {
-            $this->set('client', $this->Clients->get($ticket->client_id, false));
+            $client = $this->Clients->get($ticket->client_id, false);
+            $this->set('client', $client);
         }
 
         $please_select = ['' => Language::_('AppController.select.please', true)];
@@ -693,6 +856,15 @@ class AdminTickets extends SupportManagerController
         $this->set('departments', $departments);
         $this->set('department_staff', $department_staff);
 
+        // Get AI settings
+        $this->uses(['SupportManager.SupportManagerSettings']);
+        $ai_settings_raw = $this->SupportManagerSettings->getSettings($this->company_id);
+        $ai_settings = [];
+        foreach ($ai_settings_raw as $setting) {
+            $ai_settings[$setting->key] = $setting->value;
+        }
+        $this->set('ai_settings', $ai_settings);
+
         // Make staff settings available for those staff that have replied to this ticket
         $staff_settings = [
             $this->staff_id => $this->SupportManagerStaff->getSettings($this->staff_id, $this->company_id)
@@ -713,7 +885,7 @@ class AdminTickets extends SupportManagerController
         // Set default markdown_editor_mode if not set for each staff member
         foreach ($staff_settings as $staff_id => &$settings) {
             if (!isset($settings['markdown_editor_mode'])) {
-                $settings['markdown_editor_mode'] = 'wysiwyg';
+                $settings['markdown_editor_mode'] = 'markdown_no_preview';
             }
         }
 
@@ -727,7 +899,8 @@ class AdminTickets extends SupportManagerController
                     'ticket' => $ticket,
                     'ticket_actions' => $this->getReplyActions(),
                     'thumbnails_per_row' => Configure::get('SupportManager.thumbnails_per_row'),
-                    'staff_settings' => $staff_settings
+                    'staff_settings' => $staff_settings,
+                    'ai_settings' => $ai_settings
                 ]
             )
         );
@@ -743,6 +916,34 @@ class AdminTickets extends SupportManagerController
 
         // Set the page title
         $this->structure->set('page_title', Language::_('AdminTickets.reply.page_title', true, $ticket->code));
+
+        // Load predefined responses
+        Language::loadLang('admin_responses', null, PLUGINDIR . 'support_manager' . DS . 'language' . DS);
+        $predefined_responses = $this->partial('admin_responses_response_list', [
+            'categories' => $this->SupportManagerResponses->getAllCategories($this->company_id, null),
+            'show_links' => false
+        ]);
+        $this->set('predefined_responses', $predefined_responses);
+
+        // Pre-render the sidebar partial and set it up for the side-content area
+        $sidebar_html = $this->partial(
+            'admin_tickets_reply_sidebar',
+            [
+                'ticket' => $ticket,
+                'vars' => $vars,
+                'client' => $client ?? null,
+                'service' => $this->Services->get($ticket->service_id),
+                'departments' => $departments,
+                'department_staff' => $department_staff,
+                'priorities' => $priorities ?? $this->SupportManagerTickets->getPriorities(),
+                'statuses' => $statuses ?? $this->SupportManagerTickets->getStatuses(),
+                'service_ids' => $service_ids,
+                'contacts' => $contacts,
+                'ai_settings' => $ai_settings
+            ]
+        );
+        $this->structure->set('side_bar_content', $sidebar_html);
+        $this->structure->set('side_bar', ['partials/plugin_sidebar', null, 'side-content-mobile-visible']);
     }
 
     /**
@@ -1187,8 +1388,7 @@ class AdminTickets extends SupportManagerController
         );
 
         // Get department fields
-        $input_fields = $this->formatDepartmentCustomFields($department->fields, $this->post['custom_fields'] ?? []);
-        $input_html = new FieldsHtml($input_fields);
+        $department_fields = $this->renderDepartmentCustomFields($department->fields, $this->post['custom_fields'] ?? []);
 
         // Fetch client related services
         $service_ids = [];
@@ -1198,7 +1398,7 @@ class AdminTickets extends SupportManagerController
 
         $this->outputAsJson([
             'department_staff' => $department_staff,
-            'department_fields' => $input_html->generate(),
+            'department_fields' => $department_fields,
             'enable_related_services' => $department->enable_related_services,
             'service_ids' => $service_ids
         ]);
@@ -1255,6 +1455,44 @@ class AdminTickets extends SupportManagerController
     }
 
     /**
+     * AJAX searches predefined responses across all categories
+     */
+    public function searchResponses()
+    {
+        $this->uses(['SupportManager.SupportManagerResponses']);
+
+        // Ensure this is an AJAX request
+        if (!$this->isAjax()) {
+            header($this->server_protocol . ' 401 Unauthorized');
+            exit();
+        }
+
+        $query = isset($this->get['q']) ? trim($this->get['q']) : '';
+
+        // Require minimum 2 characters
+        if (strlen($query) < 2) {
+            echo json_encode(['results' => [], 'error' => 'min_chars']);
+            return false;
+        }
+
+        // Search for matching responses
+        $results = $this->SupportManagerResponses->search($this->company_id, $query, 20);
+
+        // Format results for JSON output
+        $formatted_results = [];
+        foreach ($results as $response) {
+            $formatted_results[] = [
+                'id' => $response->id,
+                'name' => $response->name,
+                'category_path' => $response->category_path
+            ];
+        }
+
+        echo json_encode(['results' => $formatted_results]);
+        return false;
+    }
+
+    /**
      * AJAX retrieves the predefined response text for a specific response
      */
     public function checkReplies()
@@ -1270,6 +1508,14 @@ class AdminTickets extends SupportManagerController
         }
 
 
+        // Get AI settings for reply display
+        $this->uses(['SupportManager.SupportManagerSettings']);
+        $ai_settings_raw = $this->SupportManagerSettings->getSettings($this->company_id);
+        $ai_settings = [];
+        foreach ($ai_settings_raw as $setting) {
+            $ai_settings[$setting->key] = $setting->value;
+        }
+
         echo json_encode([
             'reply_count' => count($ticket->replies),
             'ticket_replies' => $this->partial(
@@ -1277,11 +1523,80 @@ class AdminTickets extends SupportManagerController
                 [
                     'ticket' => $ticket,
                     'ticket_actions' => $this->getReplyActions(),
-                    'thumbnails_per_row' => Configure::get('SupportManager.thumbnails_per_row')
+                    'thumbnails_per_row' => Configure::get('SupportManager.thumbnails_per_row'),
+                    'ai_settings' => $ai_settings
                 ]
             )
         ]);
         return false;
+    }
+
+    /**
+     * AJAX endpoint for uploading inline images from the markdown editor.
+     * Returns JSON with temp_id and alt text on success.
+     */
+    public function uploadImage()
+    {
+        // Require AJAX request
+        if (!$this->isAjax()) {
+            header($this->server_protocol . ' 401 Unauthorized');
+            exit();
+        }
+
+        // Validate the uploaded file exists
+        if (empty($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $this->outputAsJson([
+                'error' => Language::_('SupportManagerTickets.!error.inline_image.upload', true)
+            ]);
+            return false;
+        }
+
+        $result = $this->SupportManagerTickets->uploadInlineImageTemp($_FILES['image']);
+
+        if (($errors = $this->SupportManagerTickets->errors())) {
+            // Return the first error message
+            $error_message = '';
+            foreach ($errors as $field_errors) {
+                foreach ($field_errors as $message) {
+                    $error_message = $message;
+                    break 2;
+                }
+            }
+            $this->outputAsJson(['error' => $error_message]);
+            return false;
+        }
+
+        // Include preview URL so the editor can display the image
+        $result['preview_url'] = $this->base_uri
+            . 'plugin/support_manager/admin_tickets/getinlineimagetemp/'
+            . $result['temp_id'] . '/';
+
+        $this->outputAsJson($result);
+        return false;
+    }
+
+    /**
+     * AJAX Serves a temp inline image for editor preview
+     */
+    public function getInlineImageTemp()
+    {
+        $temp_id = $this->get[0] ?? null;
+        if (!$temp_id) {
+            header($this->server_protocol . ' 404 Not Found');
+            exit();
+        }
+
+        $file = $this->SupportManagerTickets->getInlineImageTempFile($temp_id);
+        if (!$file) {
+            header($this->server_protocol . ' 404 Not Found');
+            exit();
+        }
+
+        header('Content-Type: ' . $file['mime']);
+        header('Content-Length: ' . filesize($file['file_path']));
+        header('Cache-Control: private, max-age=300');
+        readfile($file['file_path']);
+        exit();
     }
 
     /**
@@ -1609,6 +1924,21 @@ class AdminTickets extends SupportManagerController
     }
 
     /**
+     * Renders department custom fields using the styled partial template
+     *
+     * @param array $fields An array of field objects from the department
+     * @param array $vars The field values
+     * @return string The rendered HTML for the custom fields
+     */
+    private function renderDepartmentCustomFields(array $fields, array $vars = [])
+    {
+        return $this->partial('admin_tickets_custom_fields', [
+            'fields' => $fields,
+            'vars' => $vars
+        ]);
+    }
+
+    /**
      * Formats the custom field options to be used in a "select" field
      *
      * @param array $options An array containing the custom field options
@@ -1628,5 +1958,532 @@ class AdminTickets extends SupportManagerController
         }
 
         return $formatted_options;
+    }
+
+    /**
+     * AJAX endpoint to retrieve existing AI response for a ticket
+     *
+     * Fetches the most recent AI-generated response analysis for a ticket if one exists.
+     * Returns response content, confidence score, concerns, and metadata.
+     *
+     * @return void Outputs JSON response with AI analysis data or error
+     */
+    public function ajaxGetAiResponse()
+    {
+        $this->uses(['SupportManager.SupportManagerSettings', 'SupportManager.SupportManagerAiResponseAnalyses']);
+
+        // Only accept GET requests via AJAX
+        if (!$this->isAjax()) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ajax_only', true)
+            ]);
+            return;
+        }
+
+        $ticket_id = $this->get['ticket_id'] ?? null;
+
+        // Validate ticket exists and staff has access
+        if (!$ticket_id || !($ticket = $this->SupportManagerTickets->get($ticket_id, true, null, $this->staff_id))) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ticket_invalid', true)
+            ]);
+            return false;
+        }
+
+        // Check if AI is enabled
+        $ai_enabled = $this->SupportManagerSettings->getSetting('sm_ai_enabled', $this->company_id);
+        if (empty($ai_enabled->value) || $ai_enabled->value !== 'true') {
+            $this->outputAsJson([
+                'success' => false,
+                'has_response' => false
+            ]);
+            return false;
+        }
+
+        // Get latest AI response analysis for ticket (status: pending)
+        $ai_analysis = $this->SupportManagerAiResponseAnalyses->getByTicketId($ticket_id, 'pending');
+
+        if (!$ai_analysis) {
+            $this->outputAsJson([
+                'success' => true,
+                'has_response' => false
+            ]);
+            return false;
+        }
+
+        // Calculate time ago
+        $generated_time = strtotime($ai_analysis->created_at);
+        $time_diff = time() - $generated_time;
+        if ($time_diff < 60) {
+            $time_ago = Language::_('AdminTickets.reply.text_just_now', true);
+        } elseif ($time_diff < 3600) {
+            $minutes = floor($time_diff / 60);
+            $time_ago = Language::_('AdminTickets.reply.text_minutes_ago', true, $minutes);
+        } elseif ($time_diff < 86400) {
+            $hours = floor($time_diff / 3600);
+            $time_ago = Language::_('AdminTickets.reply.text_hours_ago', true, $hours);
+        } else {
+            $days = floor($time_diff / 86400);
+            $time_ago = Language::_('AdminTickets.reply.text_days_ago', true, $days);
+        }
+
+        // Get response data from new model structure
+        $concerns = [];
+        if ($ai_analysis->concerns) {
+            $decoded_concerns = json_decode($ai_analysis->concerns, true);
+            $concerns = is_array($decoded_concerns) ? $decoded_concerns : [];
+        }
+
+        // Sanitize concerns to prevent XSS
+        $concerns = $concerns ?? [];
+        $safe_concerns = array_map(function($concern) {
+            return $this->Html->safe($concern);
+        }, $concerns);
+
+        // Sanitize notes and content to prevent XSS
+        $safe_notes = $this->sanitizeAiContent($ai_analysis->internal_notes ?? '');
+        $safe_content = $this->sanitizeAiContent($ai_analysis->response_text ?? '');
+
+        // Return response data
+        $this->outputAsJson([
+            'success' => true,
+            'has_response' => true,
+            'response_id' => $ai_analysis->id,
+            'analysis_id' => $ai_analysis->id,
+            'notes' => $safe_notes,
+            'content' => $safe_content,
+            'response_confidence' => $ai_analysis->confidence ?? null,
+            'suggested_tools' => [],  // No tools in manual workflow
+            'confidence' => (int)($ai_analysis->confidence ?? 0),
+            'reasoning' => $ai_analysis->confidence_reasoning ?? '',
+            'concerns' => $safe_concerns,
+            'model' => $ai_analysis->model ?? 'unknown',
+            'generated_at' => date('c', $generated_time),
+            'time_ago' => $time_ago
+        ]);
+        return false;
+    }
+
+    /**
+     * AJAX endpoint to generate a new AI response for a ticket
+     *
+     * Triggers AI analysis and response generation for the specified ticket.
+     * Returns the generated response content, confidence score, and metadata.
+     * If regenerating, rejects the previous response first.
+     *
+     * @return void Outputs JSON response with generated AI analysis or error
+     */
+    public function ajaxGenerateAiResponse()
+    {
+        $this->uses(['SupportManager.SupportManagerSettings']);
+
+        // Only accept POST requests
+        if (!$this->isAjax() || empty($this->post)) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ajax_only', true)
+            ]);
+            return;
+        }
+
+        $ticket_id = $this->post['ticket_id'] ?? null;
+        $regenerate = $this->post['regenerate'] ?? false;
+
+        // Validate ticket exists and staff has access
+        if (!$ticket_id || !($ticket = $this->SupportManagerTickets->get($ticket_id, true, null, $this->staff_id))) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ticket_invalid', true)
+            ]);
+            return false;
+        }
+
+        // Check if AI is enabled
+        $ai_enabled = $this->SupportManagerSettings->getSetting('sm_ai_enabled', $this->company_id);
+        if (empty($ai_enabled->value) || $ai_enabled->value !== 'true') {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ai_not_enabled', true)
+            ]);
+            return false;
+        }
+
+        try {
+            // If regenerating, delete old pending responses
+            if ($regenerate) {
+                $this->uses(['SupportManager.SupportManagerAiResponseAnalyses']);
+                $old_analysis = $this->SupportManagerAiResponseAnalyses->getByTicketId($ticket_id, 'pending');
+                if ($old_analysis) {
+                    $this->SupportManagerAiResponseAnalyses->delete($old_analysis->id);
+                }
+            }
+
+            // Get all unprocessed client replies for this ticket
+            $unprocessed_replies = $this->SupportManagerTickets->getUnprocessedClientReplies($ticket_id);
+
+            // For manual generation, allow generation even without unprocessed replies
+            // In this case, use full conversation context without marking specific replies as "new"
+            $reply_ids = [];
+            if (!empty($unprocessed_replies)) {
+                $reply_ids = array_map(function($r) { return $r->id; }, $unprocessed_replies);
+            }
+
+            // Load AI helper
+            Loader::load(PLUGINDIR . 'support_manager' . DS . 'lib' . DS . 'support_manager_ai_helper.php');
+            $ai_helper = new SupportManagerAiHelper($this->company_id);
+
+            // Generate response (manual workflow)
+            // If reply_ids is empty, generates based on full conversation context
+            // If reply_ids provided, focuses on those specific new replies
+            $analysis_id = $ai_helper->generateResponseForReplies(
+                $reply_ids,
+                $ticket,
+                $unprocessed_replies,
+                ['save_to_db' => true]
+            );
+
+            if (!$analysis_id) {
+                throw new Exception('Failed to generate AI analysis');
+            }
+
+            // Fetch the analysis from database
+            $analysis = $ai_helper->SupportManagerAiResponseAnalyses->get($analysis_id);
+
+            if (!$analysis) {
+                throw new Exception('Failed to retrieve AI analysis');
+            }
+
+            // Parse concerns JSON
+            $concerns = [];
+            if ($analysis->concerns) {
+                $decoded_concerns = json_decode($analysis->concerns, true);
+                $concerns = is_array($decoded_concerns) ? $decoded_concerns : [];
+            }
+
+            // Calculate time ago
+            $time_ago = Language::_('AdminTickets.reply.text_just_now', true);
+
+            // Sanitize concerns to prevent XSS
+            $safe_concerns = array_map(function($concern) {
+                return $this->Html->safe($concern);
+            }, $concerns);
+
+            // Sanitize notes and content to prevent XSS
+            $safe_notes = $this->sanitizeAiContent($analysis->internal_notes ?? '');
+            $safe_content = $this->sanitizeAiContent($analysis->response_text ?? '');
+
+            // Format response for JSON
+            $response = [
+                'success' => true,
+                'response_id' => $analysis_id,
+                'analysis_id' => $analysis_id,
+                'notes' => $safe_notes,
+                'content' => $safe_content,
+                'response_confidence' => $analysis->confidence ?? null,
+                'requires_review' => true,
+                'suggested_tools' => [],  // No tools for manual workflow
+                'confidence' => $analysis->confidence ?? 50,
+                'reasoning' => $analysis->confidence_reasoning ?? '',
+                'concerns' => $safe_concerns,
+                'model' => $analysis->model ?? 'unknown',
+                'prompt_tokens' => $analysis->prompt_tokens ?? 0,
+                'completion_tokens' => $analysis->completion_tokens ?? 0,
+                'cost' => number_format($analysis->cost ?? 0, 4),
+                'generated_at' => date('c', strtotime($analysis->created_at)),
+                'time_ago' => $time_ago
+            ];
+
+            $this->outputAsJson($response);
+        } catch (Exception $e) {
+            // Generate unique error ID for log correlation
+            $error_id = uniqid('ai_err_');
+
+            // Log full error details with error ID
+            $this->logger->error("AI generation failed [{$error_id}]: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+
+            // Return generic error with reference code
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ai_generation_failed', true),
+                'error_code' => $error_id
+            ]);
+        }
+        return false;
+    }
+
+    /**
+     * AJAX endpoint to generate or retrieve an AI summary for a specific reply
+     *
+     * @return void Outputs JSON response with summary or error
+     */
+    public function ajaxSummarizeReply()
+    {
+        $this->uses(['SupportManager.SupportManagerSettings']);
+
+        // Only accept POST requests via AJAX
+        if (!$this->isAjax() || empty($this->post)) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ajax_only', true)
+            ]);
+            return;
+        }
+
+        $reply_id = $this->post['reply_id'] ?? null;
+
+        // Load Record component for direct DB queries
+        Loader::loadComponents($this, ['Record']);
+
+        // Fetch the reply including type and staff_id for authorization checks
+        $reply = $this->Record->select(['ticket_id', 'staff_id', 'type', 'details', 'ai_summary'])
+            ->from('support_replies')
+            ->where('id', '=', $reply_id)
+            ->fetch();
+
+        if (!$reply) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.reply_not_found', true)
+            ]);
+            return;
+        }
+
+        // Validate ticket access before returning any data
+        if (!($ticket = $this->SupportManagerTickets->get($reply->ticket_id, true, null, $this->staff_id))) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ticket_invalid', true)
+            ]);
+            return;
+        }
+
+        // Only allow summarizing client replies (not staff replies or internal notes)
+        if ($reply->type !== 'reply' || ($reply->staff_id !== null && $reply->staff_id !== '')) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.reply_not_found', true)
+            ]);
+            return;
+        }
+
+        // Return cached summary if it exists
+        if (!empty($reply->ai_summary)) {
+            $this->outputAsJson([
+                'success' => true,
+                'summary_html' => $this->TextParser->encode('markdown', $reply->ai_summary)
+            ]);
+            return;
+        }
+
+        // Check if AI is enabled
+        $ai_enabled = $this->SupportManagerSettings->getSetting('sm_ai_enabled', $this->company_id);
+        if (empty($ai_enabled->value) || $ai_enabled->value !== 'true') {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ai_not_enabled', true)
+            ]);
+            return;
+        }
+
+        try {
+            // Load AI helper and generate summary
+            Loader::load(PLUGINDIR . 'support_manager' . DS . 'lib' . DS . 'support_manager_ai_helper.php');
+            $ai_helper = new SupportManagerAiHelper($this->company_id);
+
+            $summary = $ai_helper->generateSummary($reply->details);
+
+            if ($summary === false) {
+                throw new Exception('Summary generation returned false');
+            }
+
+            // Persist the summary
+            $this->Record->where('id', '=', $reply_id)
+                ->update('support_replies', ['ai_summary' => $summary]);
+
+            $this->outputAsJson([
+                'success' => true,
+                'summary_html' => $this->TextParser->encode('markdown', $summary)
+            ]);
+        } catch (Exception $e) {
+            $error_id = uniqid('ai_sum_');
+            $this->logger->error("AI summary failed [{$error_id}]: " . $e->getMessage());
+
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.summary_failed', true),
+                'error_code' => $error_id
+            ]);
+        }
+        return false;
+    }
+
+    /**
+     * AJAX endpoint to validate an AI response
+     *
+     * Verifies that a staff member has access to use an AI-generated response.
+     * The response will only be marked as "used" when the actual reply is submitted.
+     * This prevents premature usage tracking for responses that are inserted but never sent.
+     * Requires staff to have access to the ticket associated with the analysis.
+     *
+     * @return void Outputs JSON response with success status or error
+     */
+    public function ajaxUseAiResponse()
+    {
+        $this->uses(['SupportManager.SupportManagerAiResponseAnalyses']);
+
+        if (!$this->isAjax() || empty($this->post)) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ajax_only', true)
+            ]);
+            return;
+        }
+
+        $analysis_id = $this->post['response_id'] ?? $this->post['analysis_id'] ?? null;
+
+        if (!$analysis_id) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.analysis_invalid', true)
+            ]);
+            return;
+        }
+
+        // Get the response analysis to find its associated ticket
+        $analysis = $this->SupportManagerAiResponseAnalyses->get($analysis_id);
+        if (!$analysis) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.analysis_invalid', true)
+            ]);
+            return;
+        }
+
+        // Verify staff has access to the ticket associated with this analysis
+        if (!($ticket = $this->SupportManagerTickets->get($analysis->ticket_id, true, null, $this->staff_id))) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.no_access', true)
+            ]);
+            return;
+        }
+
+        // Don't mark as used yet - will be marked when the reply is actually submitted
+        // Return the analysis_id so the frontend can include it in the reply form
+        $this->outputAsJson([
+            'success' => true,
+            'analysis_id' => $analysis_id
+        ]);
+    }
+
+    /**
+     * AJAX endpoint to reject an AI response
+     *
+     * Records that a staff member has rejected an AI-generated response.
+     * This is used for tracking AI effectiveness and improving future responses.
+     * Requires staff to have access to the ticket associated with the analysis.
+     *
+     * @return void Outputs JSON response with success status or error
+     */
+    public function ajaxRejectAiResponse()
+    {
+        $this->uses(['SupportManager.SupportManagerAiResponseAnalyses']);
+
+        if (!$this->isAjax() || empty($this->post)) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.ajax_only', true)
+            ]);
+            return;
+        }
+
+        $analysis_id = $this->post['response_id'] ?? $this->post['analysis_id'] ?? null;
+
+        if (!$analysis_id) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.analysis_invalid', true)
+            ]);
+            return;
+        }
+
+        // Get the response analysis to find its associated ticket
+        $analysis = $this->SupportManagerAiResponseAnalyses->get($analysis_id);
+        if (!$analysis) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.analysis_invalid', true)
+            ]);
+            return;
+        }
+
+        // Verify staff has access to the ticket associated with this analysis
+        if (!($ticket = $this->SupportManagerTickets->get($analysis->ticket_id, true, null, $this->staff_id))) {
+            $this->outputAsJson([
+                'success' => false,
+                'error' => Language::_('AdminTickets.!error.no_access', true)
+            ]);
+            return;
+        }
+
+        // Delete the rejected response (in new architecture, rejection = deletion for regeneration)
+        $this->SupportManagerAiResponseAnalyses->delete($analysis_id);
+
+        $this->outputAsJson([
+            'success' => true
+        ]);
+        return false; // Prevent auto-render
+    }
+
+    /**
+     * Sanitizes AI-generated HTML content to prevent XSS attacks
+     *
+     * Uses HTMLPurifier to allow safe HTML formatting (paragraphs, lists, emphasis)
+     * while removing dangerous elements and attributes (scripts, iframes, event handlers).
+     *
+     * @param string $content The AI-generated content to sanitize
+     * @return string The sanitized HTML content
+     */
+    private function sanitizeAiContent($content)
+    {
+        if (empty($content)) {
+            return '';
+        }
+
+        // Load HTMLPurifier (composer autoloads it, but explicit include for safety)
+        if (!class_exists('HTMLPurifier_Config')) {
+            require_once VENDORDIR . 'ezyang' . DS . 'htmlpurifier' . DS . 'library' . DS . 'HTMLPurifier.auto.php';
+        }
+
+        // Configure HTMLPurifier for AI-generated content
+        $config = HTMLPurifier_Config::createDefault();
+
+        // Set cache directory
+        $cacheDir = CACHEDIR . 'htmlpurifier';
+        if (!file_exists($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+        $config->set('Cache.SerializerPath', $cacheDir);
+
+        // Allow safe HTML elements that AI might generate
+        $config->set('HTML.Allowed', 'p,br,strong,em,b,i,u,ul,ol,li,a[href],blockquote,code,pre');
+
+        // Convert newlines to <br> for plain text content
+        $config->set('AutoFormat.AutoParagraph', false);
+        $config->set('AutoFormat.Linkify', false);
+
+        // Security settings
+        $config->set('HTML.Nofollow', true);  // Add rel="nofollow" to links
+        $config->set('URI.DisableExternalResources', true);  // Block external images, etc.
+        $config->set('Attr.EnableID', false);  // Disable ID attributes
+        $config->set('Attr.AllowedClasses', []);  // No CSS classes allowed
+
+        // Create purifier and sanitize
+        $purifier = new HTMLPurifier($config);
+        $sanitized = $purifier->purify($content);
+
+        return trim($sanitized);
     }
 }

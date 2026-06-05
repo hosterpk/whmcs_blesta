@@ -1,5 +1,10 @@
 <?php
+
+namespace Blesta\Helpers\DataStructure;
+
 use Blesta\Core\Util\Helpers\Helper;
+use Exception;
+use Loader;
 
 /**
  * Factory class for creating Data Structure Helper objects
@@ -18,13 +23,7 @@ class DataStructure extends Helper
      */
     public static function create($structure)
     {
-        $structure = Loader::fromCamelCase($structure);
-        $structure_file = 'data_structure_' . $structure;
-        $structure_name = Loader::toCamelCase($structure_file);
-
-        if (!Loader::load(dirname(__FILE__) . DS . $structure . DS . $structure_file . '.php')) {
-            throw new Exception("Data structure helper '" . $structure_name . "' does not exist.");
-        }
+        $structure_name = "\\Blesta\\Helpers\\DataStructure\\{$structure}\\DataStructure{$structure}";
 
         if (class_exists($structure_name)) {
             return new $structure_name();

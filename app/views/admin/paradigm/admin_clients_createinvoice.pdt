@@ -1,0 +1,563 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminClients.createinvoice.boxtitle_createinvoice', true), ['id' => 'admin_clients_createinvoice']);
+?>
+    <?php $this->Form->create(null, ['id' => 'create-invoice', 'class' => 'disable-on-submit']);?>
+    <div class="table-responsive mb-4">
+        <table class="table table-hover" id="invoiceLineItemsTable">
+            <thead>
+                <tr>
+                    <th style="width: 30px;"><i class="bi bi-grip-vertical text-muted"></i></th>
+                    <th><?php $this->_('AdminClients.createinvoice.heading_description');?></th>
+                    <th style="width: 100px;"><?php $this->_('AdminClients.createinvoice.heading_quantity');?></th>
+                    <th style="width: 120px;"><?php $this->_('AdminClients.createinvoice.heading_unitcost');?></th>
+                    <th style="width: 60px;"><?php $this->_('AdminClients.createinvoice.heading_tax');?></th>
+                    <th style="width: 100px;"><?php $this->_('AdminClients.createinvoice.heading_options');?></th>
+                    <th style="width: 30px;"></th>
+                </tr>
+            </thead>
+            <tbody id="invoiceLineItemsBody">
+                <?php
+                $num_rows = max(1, count((isset($vars->line_items) ? $vars->line_items : [])));
+                for ($i = 0; $i < $num_rows; $i++) {
+                    $tax_disabled = (isset($client->settings['tax_exempt']) ? $client->settings['tax_exempt'] : null) == 'true' ? ['disabled' => 'disabled'] : [];
+                ?>
+                <tr class="line-row">
+                    <td class="sortable-drag-handle text-center" style="cursor: grab;">
+                        <i class="bi bi-grip-vertical text-muted"></i>
+                    </td>
+                    <td><?php $this->Form->fieldText('lines[description][]', ($vars->line_items[$i]->description ?? null), ['class' => 'form-control line-item']);?></td>
+                    <td><?php $this->Form->fieldText('lines[qty][]', $this->CurrencyFormat->truncateDecimal(($vars->line_items[$i]->qty ?? null), 0), ['class' => 'form-control line-item-quantity']);?></td>
+                    <td><?php $this->Form->fieldText('lines[amount][]', $this->CurrencyFormat->format(($vars->line_items[$i]->amount ?? null), (isset($vars->currency) ? $vars->currency : null), ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false, 'decimals' => 4]), ['class' => 'form-control line-item-unit-cost']);?></td>
+                    <td class="text-center">
+                        <?php $this->Form->fieldHidden('lines[tax][]', (($vars->line_items[$i]->tax ?? null) == 'true') ? 'true' : 'false', ['class' => 'line-tax']);?>
+                        <?php $this->Form->fieldCheckbox('tax[]', 'true', (($vars->line_items[$i]->tax ?? null) == 'true' && $client->settings['tax_exempt'] !== 'true'), array_merge(['class' => 'form-check-input line-item-tax-cb'], $tax_disabled));?>
+                        <?php
+                        if (($client->settings['tax_exempt'] ?? null) == 'true') {
+                        ?>
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.!tooltip.client_taxempt');?>"></i>
+                        <?php
+                        }
+                        ?>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-success line-row-add" title="<?php $this->_('AdminClients.createinvoice.option_add');?>">
+                                <i class="bi bi-plus-circle"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger line-row-delete" title="<?php $this->_('AdminClients.createinvoice.option_delete');?>">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>
+                <?php
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <?php
+                    $this->Form->label($this->_('AdminClients.createinvoice.field_datebilled', true), 'date_billed', ['class' => 'form-label']);
+                    $this->Form->fieldText('date_billed', (isset($vars->date_billed) ? $vars->date_billed : $this->Date->format('Y-m-d')), ['id' => 'date_billed', 'class' => 'form-control date']);
+                    ?>
+                </div>
+                <div class="col-md-4">
+                    <?php
+                    $this->Form->label($this->_('AdminClients.createinvoice.field_datedue', true), 'date_due', ['class' => 'form-label']);
+                    $this->Form->fieldText('date_due', (isset($vars->date_due) ? $vars->date_due : null), ['id' => 'date_due', 'class' => 'form-control date']);
+                    ?>
+                </div>
+                <div class="col-md-4">
+                    <?php
+                    $this->Form->label($this->_('AdminClients.createinvoice.field_currency', true), 'currency', ['class' => 'form-label']);
+                    $this->Form->fieldSelect('currency', (isset($currencies) ? $currencies : null), (isset($vars->currency) ? $vars->currency : null), ['id' => 'currency', 'class' => 'form-select']);
+                    ?>
+                </div>
+            </div>
+            <?php
+            if ((isset($delivery_methods) ? $delivery_methods : null)) {
+            ?>
+            <div class="mb-3">
+                <?php
+                $this->Form->label($this->_('AdminClients.createinvoice.field_invoicedelivery', true), 'delivery', ['class' => 'form-label']);
+                foreach ($delivery_methods as $method => $name) {
+                    ?>
+                    <div class="form-check form-check-inline">
+                        <?php
+                        $this->Form->fieldCheckbox('delivery[]', $method, in_array($method, (array)(isset($vars->delivery) ? $vars->delivery : null)), ['id' => 'delivery[' . $method . ']', 'class' => 'form-check-input']);
+                        $this->Form->label($name, 'delivery[' . $method . ']', ['class' => 'form-check-label']);
+                        ?>
+                    </div>
+                    <?php
+                }
+                ?>
+            </div>
+            <?php
+            }
+            ?>
+            <div class="mb-3">
+                <?php $this->Form->label($this->_('AdminClients.createinvoice.field_autodebit', true), 'autodebit', ['class' => 'form-label']);?>
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox('autodebit', '1', (isset($vars->autodebit) ? $vars->autodebit : '1') == '1', ['id' => 'autodebit', 'class' => 'form-check-input']);
+                    $this->Form->label($this->_('AdminClients.createinvoice.field_autodebit_text', true), 'autodebit', ['class' => 'form-check-label']);
+                    ?>
+                    <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="<?php $this->_('AdminClients.createinvoice.tooltip_autodebit');?>"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex justify-content-end">
+                <div class="pricing-summary-box">
+                    <div class="pricing-line">
+                        <span class="pricing-label"><?php $this->_('AdminClients.editinvoice.price_subtotal');?></span>
+                        <span class="pricing-amount" id="invoiceSubtotal"></span>
+                    </div>
+                    <?php
+                    for ($i = 0; $i < 2; $i++) {
+                    ?>
+                    <div class="pricing-line pricing-tax" id="taxLine<?php echo $i + 1;?>"<?php echo !isset($vars->taxes[$i]) ? ' style="display: none;"' : '';?>>
+                        <span class="pricing-label" id="taxLabel<?php echo $i + 1;?>"></span>
+                        <span class="pricing-amount" id="taxAmount<?php echo $i + 1;?>"></span>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                    <?php
+                    if ((isset($vars->paid) ? $vars->paid : null) > 0) {
+                        $this->Form->fieldHidden('amount_paid', $vars->paid);
+                    ?>
+                    <div class="pricing-line text-success pricing-paid" id="paidLine" style="display: none;">
+                        <span class="pricing-label"><?php $this->_('AdminClients.editinvoice.price_paid');?></span>
+                        <span class="pricing-amount" id="invoicePaid"></span>
+                    </div>
+                    <div class="pricing-line pricing-due" id="dueLine" style="display: none;">
+                        <span class="pricing-label"><?php $this->_('AdminClients.editinvoice.price_due');?></span>
+                        <span class="pricing-amount" id="invoiceDue"></span>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                    <div class="pricing-divider"></div>
+                    <div class="pricing-line pricing-total">
+                        <span class="pricing-label" id="totalLabel"><?php $this->_('AdminClients.createinvoice.price_total');?></span>
+                        <span class="pricing-amount" id="invoiceTotal"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion mb-3" id="recurringAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#recurringCollapse">
+                    <i class="bi bi-arrow-repeat me-2"></i> <?php $this->_('AdminClients.createinvoice.section_recurringinvoice');?>
+                </button>
+            </h2>
+            <div id="recurringCollapse" class="accordion-collapse collapse" data-bs-parent="#recurringAccordion">
+                <div class="accordion-body">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <?php
+                            $this->Form->label($this->_('AdminClients.createinvoice.heading_term', true), 'term', ['class' => 'form-label']);
+                            $this->Form->fieldText('term', (isset($vars->term) ? $vars->term : null), ['id' => 'term', 'class' => 'form-control']);
+                            ?>
+                        </div>
+                        <div class="col-md-2">
+                            <?php
+                            $this->Form->label($this->_('AdminClients.createinvoice.heading_period', true), 'period', ['class' => 'form-label']);
+                            $this->Form->fieldSelect('period', (isset($periods) ? $periods : null), (isset($vars->period) ? $vars->period : 'month'), ['id' => 'period', 'class' => 'form-select']);
+                            ?>
+                        </div>
+                        <div class="col-md-5">
+                            <?php
+                            $this->Form->label($this->_('AdminClients.createinvoice.heading_duration', true), 'duration', ['class' => 'form-label']);
+                            ?>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="form-check">
+                                    <?php
+                                    $this->Form->fieldRadio('duration', 'indefinitely', ((isset($vars->duration) ? $vars->duration : 'indefinitely') == 'indefinitely'), ['id' => 'indefinitely', 'class' => 'form-check-input']);
+                                    $this->Form->label($this->_('AdminClients.createinvoice.field_duration_indefinitely', true), 'indefinitely', ['class' => 'form-check-label']);
+                                    ?>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <?php
+                                    $this->Form->fieldRadio('duration', 'times', ((isset($vars->duration) ? $vars->duration : null) == 'times'), ['id' => 'duration', 'class' => 'form-check-input']);
+                                    $this->Form->fieldText('duration_time', (isset($vars->duration_time) ? $vars->duration_time : null), ['id' => 'duration_time', 'class' => 'form-control form-control-sm', 'style' => 'width: 70px;']);
+                                    $this->Form->label($this->_('AdminClients.createinvoice.field_duration_times', true), 'duration_time', ['class' => 'form-label mb-0']);
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <?php
+                            $this->Form->label($this->_('AdminClients.createinvoice.heading_nextbilldate', true), 'recur_date_billed', ['class' => 'form-label']);
+                            $this->Form->fieldText('recur_date_billed', (isset($vars->recur_date_billed) ? $vars->recur_date_billed : null), ['id' => 'recur_date_billed', 'class' => 'form-control date']);
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion mb-3" id="notesAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#notesCollapse">
+                    <i class="bi bi-sticky me-2"></i><?php $this->_('AdminClients.createinvoice.section_notes');?>
+                </button>
+            </h2>
+            <div id="notesCollapse" class="accordion-collapse collapse" data-bs-parent="#notesAccordion">
+                <div class="accordion-body">
+                    <div class="mb-3">
+                        <?php
+                        $this->Form->label($this->_('AdminClients.createinvoice.field_notepublic', true), 'note_public', ['class' => 'form-label']);
+                        $this->Form->fieldTextarea('note_public', (isset($vars->note_public) ? $vars->note_public : null), ['id' => 'note_public', 'class' => 'form-control']);
+                        ?>
+                    </div>
+                    <div class="mb-0">
+                        <?php
+                        $this->Form->label($this->_('AdminClients.createinvoice.field_noteprivate', true), 'note_private', ['class' => 'form-label']);
+                        $this->Form->fieldTextarea('note_private', (isset($vars->note_private) ? $vars->note_private : null), ['id' => 'note_private', 'class' => 'form-control']);
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-between align-items-center position-relative">
+    <div class="auto-save-status position-absolute start-0 top-50 translate-middle-y text-muted small text-truncate pe-2" style="max-width: calc(100% - 260px);" aria-live="polite"></div>
+    <div class="d-flex gap-2">
+        <a href="<?php echo $this->base_uri . 'clients/view/' . ($client->id ?? '');?>/" class="btn btn-secondary">
+            <?php $this->_('AppController.modal.btn_cancel');?>
+        </a>
+    </div>
+    <div class="d-flex gap-2">
+        <?php
+        $this->Form->fieldHidden('invoice_id', '', ['id' => 'invoice_id']);
+        $this->Form->fieldSubmit('submit_draft', $this->_('AdminClients.createinvoice.field_invoicedraft', true), ['class' => 'btn btn-outline-warning']);
+        $this->Form->fieldSubmit('save', $this->_('AdminClients.createinvoice.field_invoicesubmit', true), ['class' => 'btn btn-primary']);
+        ?>
+    </div>
+</div>
+    <?php $this->Form->end();?>
+<?php
+$this->Widget->end();
+?>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var totalsUri = <?php echo json_encode((isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'clients/calcLineTotals/' . (isset($client->id) ? $this->Html->safe($client->id) : null));?>;
+    var form = document.getElementById('create-invoice');
+    var lineItemsBody = document.getElementById('invoiceLineItemsBody');
+    var autoSaveInterval = 60000;
+    var focused = false;
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(el) {
+        return new bootstrap.Tooltip(el);
+    });
+
+    // On load calculate totals
+    calculateTotals();
+
+    // Initialize date pickers
+    if (typeof blestaBindDatePicker === 'function') {
+        blestaBindDatePicker();
+    }
+
+    // Initialize SortableJS for line items
+    if (typeof Sortable !== 'undefined' && lineItemsBody) {
+        Sortable.create(lineItemsBody, {
+            animation: 150,
+            handle: '.sortable-drag-handle',
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                calculateTotals();
+            }
+        });
+    }
+
+    // Event delegation for tax checkbox changes
+    lineItemsBody.addEventListener('change', function(e) {
+        if (e.target.classList.contains('line-item-tax-cb')) {
+            var row = e.target.closest('tr');
+            var hiddenTax = row.querySelector('.line-tax');
+            if (hiddenTax) {
+                hiddenTax.value = e.target.checked ? 'true' : 'false';
+            }
+            calculateTotals();
+        }
+
+        // Update totals when quantity or amount changes
+        if (e.target.classList.contains('line-item-quantity') || e.target.classList.contains('line-item-unit-cost')) {
+            calculateTotals();
+        }
+    });
+
+    // Currency change handler
+    document.getElementById('currency').addEventListener('change', calculateTotals);
+
+    // Handle Shift+Enter in description input to convert to textarea
+    lineItemsBody.addEventListener('keydown', function(e) {
+        if (
+            e.key === 'Enter'
+            && e.shiftKey
+            && e.target.classList.contains('line-item')
+            && e.target.tagName === 'INPUT'
+        ) {
+            e.preventDefault();
+            var input = e.target;
+            var textarea = document.createElement('textarea');
+            for (var i = 0; i < input.attributes.length; i++) {
+                if (input.attributes[i].name !== 'type') {
+                    textarea.setAttribute(input.attributes[i].name, input.attributes[i].value);
+                }
+            }
+            textarea.value = input.value;
+            input.parentNode.replaceChild(textarea, input);
+            textarea.focus();
+        }
+    });
+
+    // Check the 'number of times' field
+    var durationTime = document.getElementById('duration_time');
+    if (durationTime) {
+        durationTime.addEventListener('focus', function() {
+            var durationRadio = document.getElementById('duration');
+            if (durationRadio) {
+                durationRadio.checked = true;
+            }
+        });
+    }
+
+    // Remove blank lines when the form is submitted
+    form.addEventListener('submit', function(e) {
+        var lineRows = document.querySelectorAll('.line-row');
+        lineRows.forEach(function(row) {
+            var lineItem = row.querySelector('input.line-item');
+            var lineQty = row.querySelector('input.line-item-quantity');
+            var lineAmount = row.querySelector('input.line-item-unit-cost');
+
+            if (lineItem && lineQty && lineAmount &&
+                lineItem.value.length <= 0 &&
+                lineQty.value.length <= 0 &&
+                lineAmount.value.length <= 0) {
+                var deleteBtn = row.querySelector('.line-row-delete');
+                if (deleteBtn) {
+                    deleteBtn.click();
+                }
+            }
+        });
+    });
+
+    // Event delegation for add/delete buttons and auto-add functionality
+    lineItemsBody.addEventListener('click', function(e) {
+        var addBtn = e.target.closest('.line-row-add');
+        var deleteBtn = e.target.closest('.line-row-delete');
+
+        if (addBtn) {
+            e.preventDefault();
+            var firstRow = document.querySelector('tr.line-row');
+            if (!firstRow) return;
+
+            var fields = firstRow.cloneNode(true);
+            fields.querySelectorAll('input[type="text"], input[type="hidden"], textarea').forEach(function(el) {
+                el.value = '';
+            });
+            fields.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(function(el) {
+                el.checked = false;
+            });
+
+            var descriptionField = fields.querySelector('textarea.line-item');
+            if (descriptionField) {
+                var input = document.createElement('input');
+                input.type = 'text';
+                for (var i = 0; i < descriptionField.attributes.length; i++) {
+                    var attr = descriptionField.attributes[i];
+                    if (attr.name !== 'type' && attr.name !== 'rows' && attr.name !== 'cols') {
+                        input.setAttribute(attr.name, attr.value);
+                    }
+                }
+                descriptionField.parentNode.replaceChild(input, descriptionField);
+            }
+
+            var currentRow = addBtn.closest('tr');
+            currentRow.insertAdjacentElement('afterend', fields);
+
+            var lineId = fields.querySelector('.line_id');
+            if (lineId) lineId.remove();
+        }
+
+        if (deleteBtn) {
+            e.preventDefault();
+            var lineRows = document.querySelectorAll('tr.line-row');
+            if (lineRows.length <= 1) return;
+
+            var currentRow = deleteBtn.closest('tr');
+            var lineItem = currentRow.querySelector('.line_id');
+            var lastRow = document.querySelector('tr.line-row:last-child');
+
+            if (lineItem && lastRow && lineItem.value) {
+                var cloned = lineItem.cloneNode(true);
+                lastRow.insertAdjacentElement('afterend', cloned);
+            }
+
+            currentRow.remove();
+            calculateTotals();
+        }
+    });
+
+    // Auto-add new line when typing in description
+    lineItemsBody.addEventListener('input', function(e) {
+        if (e.target.classList.contains('line-item')) {
+            if (e.target.value.length > 1) return;
+
+            var currentRow = e.target.closest('.line-row');
+            var nextRow = currentRow.nextElementSibling;
+            var blankLineAfter = nextRow ? nextRow.querySelector('input.line-item') : null;
+            if (!blankLineAfter) {
+                var addBtn = currentRow.querySelector('.line-row-add');
+                if (addBtn) addBtn.click();
+            }
+        }
+    });
+
+    function calculateTotals() {
+        var formData = new FormData(form);
+        fetch(totalsUri, {
+            method: 'POST',
+            body: new URLSearchParams(formData),
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data) {
+                // Update subtotal
+                var subtotalEl = document.getElementById('invoiceSubtotal');
+                if (subtotalEl && data.subtotal) subtotalEl.textContent = data.subtotal.amount_formatted;
+
+                // Update tax lines
+                for (var i = 0; i < 2; i++) {
+                    var taxLine = document.getElementById('taxLine' + (i + 1));
+                    var taxLabel = document.getElementById('taxLabel' + (i + 1));
+                    var taxAmount = document.getElementById('taxAmount' + (i + 1));
+
+                    if (taxLine && taxLabel && taxAmount) {
+                        if (data.tax && data.tax[i]) {
+                            taxLabel.textContent = data.tax[i].name;
+                            taxAmount.textContent = data.tax[i].amount_formatted;
+                            taxLine.style.display = 'flex';
+                        } else {
+                            taxLine.style.display = 'none';
+                        }
+                    }
+                }
+
+                // Update total
+                var totalEl = document.getElementById('invoiceTotal');
+                if (totalEl && data.total) totalEl.textContent = data.total.amount_formatted;
+
+                // Update paid/due if applicable
+                var paidLine = document.getElementById('paidLine');
+                var dueLine = document.getElementById('dueLine');
+                var paidEl = document.getElementById('invoicePaid');
+                var dueEl = document.getElementById('invoiceDue');
+                var totalLabel = document.getElementById('totalLabel');
+
+                if (data.total_paid && data.total_paid.amount > 0) {
+                    if (paidEl) paidEl.textContent = data.total_paid.amount_formatted;
+                    if (dueEl) dueEl.textContent = data.total_due.amount_formatted;
+                    if (paidLine) paidLine.style.display = 'flex';
+                    if (dueLine) dueLine.style.display = 'flex';
+                } else {
+                    if (paidLine) paidLine.style.display = 'none';
+                    if (dueLine) dueLine.style.display = 'none';
+                }
+            }
+        })
+        .catch(function(error) {
+            console.error('Error updating totals:', error);
+        });
+    }
+
+    function autoSave() {
+        var formData = new FormData(form);
+        var autoSaveStatus = document.querySelector('.auto-save-status');
+
+        fetch(form.action, {
+            method: form.method || 'POST',
+            body: new URLSearchParams(formData),
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var text = <?php echo json_encode($this->_('AdminClients.createinvoice.auto_save_error', true));?>;
+            var icon = 'bi bi-x-circle';
+            if (data.success) {
+                text = <?php echo json_encode($this->_('AdminClients.createinvoice.auto_save_saved', true));?>;
+                icon = 'bi bi-check-circle';
+
+                var invoiceIdField = document.getElementById('invoice_id');
+                if (invoiceIdField && data.invoice_id) {
+                    invoiceIdField.value = data.invoice_id;
+                }
+
+                document.querySelectorAll('.line-row .line_id').forEach(function(el) {
+                    el.remove();
+                });
+
+                if (data.invoice && data.invoice.line_items) {
+                    document.querySelectorAll('.line-row').forEach(function(row, index) {
+                        if (data.invoice.line_items[index]) {
+                            var input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'lines[id][]';
+                            input.value = data.invoice.line_items[index].id;
+                            input.className = 'line_id';
+                            row.insertBefore(input, row.firstChild);
+                        }
+                    });
+                }
+            }
+
+            if (autoSaveStatus) {
+                autoSaveStatus.innerHTML = '<i class="' + icon + '"></i> ' + text;
+                autoSaveStatus.style.display = 'block';
+                setTimeout(function() {
+                    autoSaveStatus.style.display = 'none';
+                }, 2000);
+            }
+
+            setTimeout(autoSave, autoSaveInterval);
+        })
+        .catch(function() {
+            setTimeout(autoSave, autoSaveInterval);
+        });
+    }
+
+    // Begin auto save after form gains focus
+    var inputs = form.querySelectorAll('input');
+    inputs.forEach(function(input) {
+        input.addEventListener('focus', function() {
+            if (!focused) {
+                setTimeout(autoSave, autoSaveInterval);
+                focused = true;
+            }
+        });
+    });
+});
+</script>

@@ -17,6 +17,5 @@ class FeedReaderController extends AppController
         // Override default view directory
         $this->view->view = 'default';
         $this->structure->view = 'default';
-        //$this->view->setDefaultViewPath("FeedReader");
     }
 }

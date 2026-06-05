@@ -1,5 +1,14 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Blesta\Core\Util\Input\Fields\InputFields;
+use Configure;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Package Option management
  *
@@ -282,7 +291,8 @@ class PackageOptions extends AppModel
         // Pricing may not have a cancel fee
         if (array_key_exists('values', $vars)) {
             foreach ($vars['values'] as $index_value => $value) {
-                if (array_key_exists('pricing', $vars['values'][$index_value])
+                if (
+                    array_key_exists('pricing', $vars['values'][$index_value])
                     && is_array($vars['values'][$index_value]['pricing'])
                 ) {
                     foreach ($vars['values'][$index_value]['pricing'] as $index => $price) {
@@ -324,7 +334,7 @@ class PackageOptions extends AppModel
 
                 // Non-quantity default values must be binary, 1 or 0
                 if (isset($vars['type']) && $vars['type'] != 'quantity' && array_key_exists('default', $temp_val)) {
-                    $temp_val['default'] = (int)((isset($temp_val['default']) ? $temp_val['default'] : '0') == '1');
+                    $temp_val['default'] = (int)(($temp_val['default'] ?? '0') == '1');
                 }
 
                 // Each quantity value must be null
@@ -341,7 +351,7 @@ class PackageOptions extends AppModel
                         $temp_val['value'] = '';
                     } else {
                         // All other non-quantity types must have a non-null value
-                        $temp_val['value'] = (isset($temp_val['value']) ? $temp_val['value'] : '');
+                        $temp_val['value'] = ($temp_val['value'] ?? '');
                     }
 
                     // Each non-quantity type must have a null min/max/step
@@ -456,12 +466,12 @@ class PackageOptions extends AppModel
             $this->addOptionValues(
                 $option_id,
                 $vars['company_id'],
-                (isset($vars['values']) ? $vars['values'] : []),
+                ($vars['values'] ?? []),
                 $vars['type']
             );
 
             // Assign package option groups
-            $this->addOptionGroups($option_id, (isset($vars['groups']) ? $vars['groups'] : []));
+            $this->addOptionGroups($option_id, ($vars['groups'] ?? []));
 
             if (!$in_transaction) {
                 $this->Record->commit();
@@ -565,7 +575,7 @@ class PackageOptions extends AppModel
             $this->addOptionValues(
                 $option_id,
                 $vars['company_id'],
-                (isset($vars['values']) ? $vars['values'] : []),
+                ($vars['values'] ?? []),
                 $vars['type']
             );
 
@@ -592,6 +602,9 @@ class PackageOptions extends AppModel
      */
     public function delete($option_id)
     {
+        // Delete image files for all values of this option
+        $this->deleteValueImages($option_id);
+
         // Delete the package option, its values, and pricing
         $this->Record->from('package_options')
             ->leftJoin(
@@ -647,6 +660,9 @@ class PackageOptions extends AppModel
      */
     public function deleteOptionValues($option_id, $value_id = null)
     {
+        // Delete image files for values being removed
+        $this->deleteValueImages($option_id, $value_id);
+
         $this->Record->from('package_option_values')
             ->leftJoin(
                 'package_option_pricing',
@@ -663,6 +679,66 @@ class PackageOptions extends AppModel
         }
 
         $this->Record->delete(['package_option_values.*', 'package_option_pricing.*', 'pricings.*']);
+    }
+
+    /**
+     * Deletes image files associated with package option values
+     *
+     * @param int $option_id The package option ID
+     * @param int $value_id A specific value ID, or null for all values of the option
+     */
+    private function deleteValueImages($option_id, $value_id = null)
+    {
+        $query = $this->Record->select(['image'])
+            ->from('package_option_values')
+            ->where('option_id', '=', $option_id)
+            ->where('image', '!=', null);
+
+        if ($value_id) {
+            $query->where('id', '=', $value_id);
+        }
+
+        $values = $query->fetchAll();
+
+        if (empty($values)) {
+            return;
+        }
+
+        Loader::loadComponents($this, ['SettingsCollection']);
+        $uploads_dir = $this->SettingsCollection->fetchSetting(
+            null,
+            Configure::get('Blesta.company_id'),
+            'uploads_dir'
+        );
+
+        if (empty($uploads_dir['value'])) {
+            return;
+        }
+
+        $path = $uploads_dir['value'] . Configure::get('Blesta.company_id')
+            . DS . 'package_options' . DS;
+
+        foreach ($values as $val) {
+            if (!empty($val->image) && file_exists($path . $val->image)) {
+                @unlink($path . $val->image);
+            }
+        }
+    }
+
+    /**
+     * Fetches the image filename for a given option value
+     *
+     * @param int $value_id The package option value ID
+     * @return string|null The image filename, or null if not set
+     */
+    public function getValueImage($value_id)
+    {
+        $value = $this->Record->select(['image'])
+            ->from('package_option_values')
+            ->where('id', '=', $value_id)
+            ->fetch();
+
+        return $value->image ?? null;
     }
 
     /**
@@ -773,6 +849,7 @@ class PackageOptions extends AppModel
     {
         $num_values = count($values);
         $order = 0;
+        $submitted_value_ids = [];
         for ($i = 0; $i < $num_values; $i++) {
             // Delete the value if no name is given, unless it is a type (i.e. text/textarea/password) that is blank
             if ($this->canDeleteValue(($values[$i] ?? null), $type)) {
@@ -781,13 +858,13 @@ class PackageOptions extends AppModel
             }
 
             // Add the package option value
-            $fields = ['option_id', 'name', 'value', 'default', 'status', 'order', 'min', 'max', 'step'];
+            $fields = ['option_id', 'name', 'value', 'default', 'status', 'order', 'min', 'max', 'step', 'image'];
 
             $values[$i]['option_id'] = $option_id;
             $values[$i]['order'] = $order;
 
             // Add or update the package option value
-            if ($this->canEditValue((isset($values[$i]['id']) ? $values[$i]['id'] : null))) {
+            if ($this->canEditValue(($values[$i]['id'] ?? null))) {
                 $this->Record->where('id', '=', $values[$i]['id'])
                     ->update('package_option_values', $values[$i], $fields);
                 $value_id = $values[$i]['id'];
@@ -798,14 +875,27 @@ class PackageOptions extends AppModel
 
             // Add/update/delete package option pricing
             if ($value_id) {
+                $submitted_value_ids[] = $value_id;
                 $this->addOptionPricing(
                     $value_id,
                     $company_id,
-                    (isset($values[$i]['pricing']) ? $values[$i]['pricing'] : [])
+                    ($values[$i]['pricing'] ?? [])
                 );
             }
 
             $order++;
+        }
+
+        // Delete any existing option values that were not included in the submission
+        $existing_values = $this->Record->select(['id'])
+            ->from('package_option_values')
+            ->where('option_id', '=', $option_id)
+            ->fetchAll();
+
+        foreach ($existing_values as $existing) {
+            if (!in_array($existing->id, $submitted_value_ids)) {
+                $this->deleteOptionValues($option_id, $existing->id);
+            }
         }
     }
 
@@ -977,7 +1067,7 @@ class PackageOptions extends AppModel
             where('package_option_pricing.id', '=', $pricing_id)->fetch();
 
         // Check if we need to increase the precision of the current price to avoid losing decimals
-        if (substr((string)$pricing->price, -2) !== '00') {
+        if ($pricing && substr((string)$pricing->price, -2) !== '00') {
             $pricing->precision = 4;
         }
 
@@ -1170,14 +1260,17 @@ class PackageOptions extends AppModel
 
         foreach ($options as $i => &$option) {
             // Skip any white-list options not given or any black-list options given
-            if (($white_list && !in_array($option->id, $filters['allow'])) ||
-                ($black_list && in_array($option->id, $filters['disallow']))) {
+            if (
+                ($white_list && !in_array($option->id, $filters['allow'])) ||
+                ($black_list && in_array($option->id, $filters['disallow']))
+            ) {
                 unset($options[$i]);
                 continue;
             }
 
             // Remove addable/editable options that don't match the filtering criteria
-            if ((array_key_exists('addable', $filters)
+            if (
+                (array_key_exists('addable', $filters)
                     && (($filters['addable'] == '1' && $option->addable != '1')
                         || ($filters['addable'] == '0' && $option->addable != '0')
                     )
@@ -1195,7 +1288,8 @@ class PackageOptions extends AppModel
             foreach ($option->values as $j => &$value) {
                 // The option must be inactive to remove, but must also not be a selected value in the configoption list
                 // because that would indicate it is an option we should include (e.g. an existing value to maintain)
-                if ($value->status === 'inactive'
+                if (
+                    $value->status === 'inactive'
                     && (!array_key_exists('configoptions', $filters)
                         || !isset($filters['configoptions'][$option->id])
                         || $filters['configoptions'][$option->id] !== $value->value
@@ -1246,7 +1340,7 @@ class PackageOptions extends AppModel
      *  - configoptions An array of key/value pairs currently in use where
      *      each key is the package option ID and each value is the option value
      *  - new Set to 1 if this is for a new package, or 0 if this is for an existing package (default 1)
-     * @return ModuleFields A ModuleFields object, containg the fields to render
+     * @return InputFields A InputFields object, containing the fields to render
      */
     public function getFields(
         $package_id,
@@ -1257,16 +1351,13 @@ class PackageOptions extends AppModel
         $convert_currency = null,
         array $options = null
     ) {
-        if (!class_exists('ModuleFields')) {
-            Loader::load(COMPONENTDIR . 'modules' . DS . 'module_field.php');
-            Loader::load(COMPONENTDIR . 'modules' . DS . 'module_fields.php');
-        }
         Loader::loadHelpers($this, ['CurrencyFormat', 'TextParser']);
         Loader::loadModels($this, ['Packages']);
+
         $Markdown = $this->TextParser->create('markdown');
         $this->Currencies = $this->CurrencyFormat->Currencies;
 
-        $fields = new ModuleFields();
+        $fields = new InputFields();
 
         // Determine whether we are assuming these options are new
         $new = ($options !== null && isset($options['new']) && $options['new'] == '0' ? false : true);
@@ -1278,7 +1369,7 @@ class PackageOptions extends AppModel
 
         foreach ($options as $option) {
             $field_name = 'configoptions[' . $option->id . ']';
-            $field_value = isset($vars->configoptions[$option->id]) ? $vars->configoptions[$option->id] : null;
+            $field_value = $vars->configoptions[$option->id] ?? null;
             $use_renewal_price = ($upgrade && $package->upgrades_use_renewal)
                 || (!$upgrade
                     && isset($vars->service_id)
@@ -1621,7 +1712,7 @@ class PackageOptions extends AppModel
                     $field->attach(
                         $fields->fieldText(
                             $field_name,
-                            $field_value !== null ? $field_value : '',
+                            $field_value ?? '',
                             ['id' => $id],
                             ($show_price ? $field_label : null)
                         )
@@ -1684,7 +1775,7 @@ class PackageOptions extends AppModel
                     $field->attach(
                         $fields->fieldPassword(
                             $field_name,
-                            ['id' => $id, 'value' => ($field_value !== null ? $field_value : '')],
+                            ['id' => $id, 'value' => ($field_value ?? '')],
                             ($show_price ? $field_label : null)
                         )
                     );
@@ -1746,7 +1837,7 @@ class PackageOptions extends AppModel
                     $field->attach(
                         $fields->fieldTextarea(
                             $field_name,
-                            ($field_value !== null ? $field_value : ''),
+                            ($field_value ?? ''),
                             ['id' => $id],
                             ($show_price ? $field_label : null)
                         )
@@ -1809,9 +1900,7 @@ class PackageOptions extends AppModel
     {
         $data = [];
         foreach ($options as $option) {
-            $data['configoptions'][$option->option_id] = $option->value !== null
-                ? $option->value
-                : $option->qty;
+            $data['configoptions'][$option->option_id] = $option->value ?? $option->qty;
         }
         return $data;
     }
@@ -1858,10 +1947,10 @@ class PackageOptions extends AppModel
     private function getRules(array $vars, $edit = false)
     {
         // Retrieve the type from input
-        $type = (isset($vars['type']) ? $vars['type'] : null);
+        $type = ($vars['type'] ?? null);
 
         // Convert a value to an integer if not null
-        $toInteger = function($value) {
+        $toInteger = function ($value) {
             return ($value === null ? null : (int)$value);
         };
 
@@ -1911,7 +2000,7 @@ class PackageOptions extends AppModel
                 ],
                 'active_status' => [
                     'rule' => [
-                        function($values, $type) {
+                        function ($values, $type) {
                             // If the values are not given in the proper format, pass this rule
                             // A more appropriate rule will fail instead
                             if (!is_array($values)) {
@@ -1939,7 +2028,7 @@ class PackageOptions extends AppModel
                     'message' => $this->_('PackageOptions.!error.values.active_status')
                 ],
                 'single_default_value' => [
-                    'rule' => function($values) {
+                    'rule' => function ($values) {
                         // If the values are not given in the proper format, pass this rule
                         // A more appropriate rule will fail instead
                         if (!is_array($values)) {
@@ -1949,7 +2038,7 @@ class PackageOptions extends AppModel
                         // There may only be a max of one default value for the option
                         $total_defaults = 0;
                         foreach ($values as $value) {
-                            if ((isset($value['default']) ? $value['default'] : '0') == '1') {
+                            if (($value['default'] ?? '0') == '1') {
                                 $total_defaults++;
                             }
                         }
@@ -1959,7 +2048,7 @@ class PackageOptions extends AppModel
                     'message' => $this->_('PackageOptions.!error.values.single_default_value')
                 ],
                 'unique' => [
-                    'rule' => function($values) use ($type) {
+                    'rule' => function ($values) use ($type) {
                         // Only validate checkbox, radio, and select options
                         // since the others do not actually submit a value
                         return in_array($type, ['checkbox', 'radio', 'select'])
@@ -1972,14 +2061,10 @@ class PackageOptions extends AppModel
             'values[][name]' => [
                 'empty' => [
                     'if_set' => true,
-                    'rule' => function($name) use ($type) {
+                    'rule' => function ($name) use ($type) {
                         // The name must be empty for text, textarea, and password
                         // types since it is unused in those cases
-                        if (in_array($type, ['text', 'textarea', 'password'])) {
-                            return $name === '';
-                        } else {
-                            return !empty($name);
-                        }
+                        return in_array($type, ['text', 'textarea', 'password']) ? $name === '' : !empty($name);
                     },
                     'message' => $this->_('PackageOptions.!error.values[][name].empty')
                 ],
@@ -2030,7 +2115,8 @@ class PackageOptions extends AppModel
                             }
 
                             // The default quantity value must be valid according to the min/max/step
-                            if ($default < $min
+                            if (
+                                $default < $min
                                 || ($max !== null && $default > $max)
                                 || (($default - $min) % $step !== 0)
                             ) {
@@ -2117,7 +2203,7 @@ class PackageOptions extends AppModel
                 'valid' => [
                     'if_set' => true,
                     'rule' => [
-                        function($price, $period) {
+                        function ($price, $period) {
                             // The renewal price may not be set for the onetime period
                             return ($period != 'onetime' || $price === null);
                         },
@@ -2144,7 +2230,7 @@ class PackageOptions extends AppModel
             'groups' => [
                 'exists' => [
                     'if_set' => true,
-                    'rule' => [[$this, 'validateGroupIds'], (isset($vars['company_id']) ? $vars['company_id'] : null)],
+                    'rule' => [[$this, 'validateGroupIds'], ($vars['company_id'] ?? null)],
                     'message' => $this->_('PackageOptions.!error.groups.exists')
                 ]
             ],
@@ -2185,6 +2271,43 @@ class PackageOptions extends AppModel
                 ]
             ];
 
+            // Validate that omitted option values (not submitted) are not in use by any service
+            $rules['type']['in_use'] = [
+                'rule' => [
+                    function ($type, $option_id, $values) {
+                        // Collect submitted value IDs
+                        $submitted_ids = [];
+                        if (is_array($values)) {
+                            foreach ($values as $value) {
+                                if (!empty($value['id'])) {
+                                    $submitted_ids[] = $value['id'];
+                                }
+                            }
+                        }
+
+                        // Check if any existing values not in the submission are in use
+                        $existing_values = $this->Record->select(['id'])
+                            ->from('package_option_values')
+                            ->where('option_id', '=', $option_id)
+                            ->fetchAll();
+
+                        foreach ($existing_values as $existing) {
+                            if (
+                                !in_array($existing->id, $submitted_ids)
+                                && $this->Services->isServiceOptionValueInUse($existing->id)
+                            ) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    },
+                    ['_linked' => 'option_id'],
+                    ['_linked' => 'values']
+                ],
+                'message' => $this->_('PackageOptions.!error.type.in_use')
+            ];
+
             // Validate any IDs that may have been given
             $rules['values[][id]'] = [
                 'exists' => [
@@ -2203,9 +2326,10 @@ class PackageOptions extends AppModel
                 'delete_in_use' => [
                     'if_set' => true,
                     'rule' => [
-                        function($id, $term, $option_value_id) {
+                        function ($id, $term, $option_value_id) {
                             // The option value pricing cannot be deleted if it is in use by a service
-                            if ($this->canDeleteValuePrice(['id' => $id, 'term' => $term])
+                            if (
+                                $this->canDeleteValuePrice(['id' => $id, 'term' => $term])
                                 && $this->Services->isServiceOptionValueInUse($option_value_id, $id)
                             ) {
                                 return false;
@@ -2224,11 +2348,12 @@ class PackageOptions extends AppModel
             $rules['values[][value]']['edit_in_use'] = [
                 'if_set' => true,
                 'rule' => [
-                    function($value, $id, $name, $pricing, $option_type) {
+                    function ($value, $id, $name, $pricing, $option_type) {
                         // The value cannot be changed if it is in use by a service
                         // However, text/textarea/password values are user-defined, and quantity values
                         // have no conflict with current service values, so they are ignored
-                        if ($this->canEditValue($id)
+                        if (
+                            $this->canEditValue($id)
                             // Ensure we aren't deleting the value, which is handled by a separate input validation rule
                             && !$this->canDeleteValue(compact('id', 'value', 'name', 'pricing'), $option_type)
                             && ($option_value = $this->getValueById($id))
@@ -2253,9 +2378,10 @@ class PackageOptions extends AppModel
             $rules['values[][value]']['delete_in_use'] = [
                 'if_set' => true,
                 'rule' => [
-                    function($value, $id, $name, $pricing, $option_type) {
+                    function ($value, $id, $name, $pricing, $option_type) {
                         // The value cannot be deleted if it is in use by a service
-                        if ($this->canDeleteValue(compact('id', 'value', 'name', 'pricing'), $option_type)
+                        if (
+                            $this->canDeleteValue(compact('id', 'value', 'name', 'pricing'), $option_type)
                             && $this->Services->isServiceOptionValueInUse($id)
                         ) {
                             return false;
@@ -2394,7 +2520,8 @@ class PackageOptions extends AppModel
      * @param array $values A numerically-indexed array of package option values
      * @return bool False if all package option values contain duplicates, or true otherwise
      */
-    private function validateUniqueValues($values) {
+    private function validateUniqueValues($values)
+    {
         $option_values = [];
         foreach ((array)$values as $index => $value) {
             if (($value['status'] ?? null) == 'inactive') {

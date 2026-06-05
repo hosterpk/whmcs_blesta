@@ -1,5 +1,10 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+
 /**
  * Coupon Package Option management
  *
@@ -287,7 +292,7 @@ class CouponPackageOptions extends AppModel
             'regex_pattern' => [
                 'valid' => [
                     'if_set' => true,
-                    'rule' => function($pattern) {
+                    'rule' => function ($pattern) {
                         if (empty($pattern)) {
                             return true;
                         }

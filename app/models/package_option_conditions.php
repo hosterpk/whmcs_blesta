@@ -1,5 +1,12 @@
 <?php
 
+namespace Blesta\App\Models;
+
+use Blesta\App\AppModel;
+use Language;
+use Loader;
+use stdClass;
+
 /**
  * Package Option Condition management
  *
@@ -255,11 +262,7 @@ class PackageOptionConditions extends AppModel
                 'exists' => [
                     'if_set' => $edit || isset($vars['value']),
                     'rule' => function ($value_id) use ($that) {
-                        if (is_array($value_id)) {
-                            $value_ids = $value_id;
-                        } else {
-                            $value_ids = [$value_id];
-                        }
+                        $value_ids = is_array($value_id) ? $value_id : [$value_id];
 
                         $valid = true;
                         foreach ($value_ids as $id) {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Maxmind API response handler
  *

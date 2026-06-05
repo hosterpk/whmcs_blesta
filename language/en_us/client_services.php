@@ -63,7 +63,7 @@ $lang['ClientServices.index.heading_datecreated'] = 'Date Created';
 $lang['ClientServices.index.heading_daterenews'] = 'Date Renews';
 $lang['ClientServices.index.heading_datesuspended'] = 'Date Suspended';
 $lang['ClientServices.index.heading_datecanceled'] = 'Date Canceled';
-$lang['ClientServices.index.heading_options'] = 'Options';
+$lang['ClientServices.index.heading_options'] = 'Actions';
 $lang['ClientServices.index.option_manage'] = 'Manage';
 
 $lang['ClientServices.index.recurring_term'] = '%1$s %2$s @ %3$s'; // %1$s is the service term length (number), %2$s is the service period, %3$s is the formatted service renewal price

@@ -1,0 +1,41 @@
+<?php
+if (!($is_ajax ?? false)) {
+?>
+<div class="main-content-padding">
+    <?php echo ($message ?? null);?>
+<?php
+}
+
+$this->Widget->clear();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminSearch.index.boxtitle_search', true, ($vars->search ?? null)), ['id' => 'search_results'], ($render_section ?? null));
+
+if (!empty($results)) {
+    foreach (($results ?? []) as $result) {
+?>
+    <?php echo $result;?>
+<?php
+    }
+
+    // Pagination in card-footer (only for single-type search)
+    if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+        $this->Widget->footer();
+        $this->Pagination->build();
+    }
+} else {
+?>
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminSearch.clients.no_results');?></p>
+</div>
+<?php
+}
+
+$this->Widget->end();
+
+if (!($is_ajax ?? false)) {
+?>
+</div>
+<?php
+}
+?>

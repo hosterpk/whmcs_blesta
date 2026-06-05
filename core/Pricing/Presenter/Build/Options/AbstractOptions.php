@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Build\Options;
 
 use Blesta\Core\Pricing\Presenter\Format\Type\Item\ArrayFormatterInterface;
@@ -132,7 +133,7 @@ abstract class AbstractOptions implements OptionsInterface
     {
         foreach ($this->discounts as $discount) {
             // Preserve the from_service flag before formatting
-            $fromService = isset($discount->from_service) ? $discount->from_service : null;
+            $fromService = $discount->from_service ?? null;
 
             $formatted = $formatter->format((object)$discount);
 

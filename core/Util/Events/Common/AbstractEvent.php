@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Util\Events\Common;
 
 /**
@@ -25,6 +26,14 @@ abstract class AbstractEvent implements EventInterface
      * @var mixed The return value (if any) from the event listener
      */
     protected $returnValue;
+    /**
+     * @var array An array of errors held by this event
+     */
+    protected $errors = [];
+    /**
+     * @var array An array of rules held by this event
+     */
+    protected $rules = [];
 
     /**
      * Creates a new event
@@ -32,7 +41,7 @@ abstract class AbstractEvent implements EventInterface
      * @param string $name The name of the event
      * @param array $params An array of parameters to be held by this event (optional)
      */
-    public function __construct($name, array $params = null)
+    public function __construct($name, ?array $params = null)
     {
         $this->name = $name;
         $this->setParams($params);
@@ -57,7 +66,7 @@ abstract class AbstractEvent implements EventInterface
     /**
      * {@inheritdoc}
      */
-    public function setParams(array $params = null)
+    public function setParams(?array $params = null)
     {
         $this->params = $params;
     }
@@ -76,5 +85,37 @@ abstract class AbstractEvent implements EventInterface
     public function setReturnValue($value)
     {
         $this->returnValue = $value;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getErrors()
+    {
+        return $this->errors;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setErrors(array $errors = [])
+    {
+        $this->errors = $errors;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getRules()
+    {
+        return $this->rules;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setRules(array $rules = [])
+    {
+        $this->rules = $rules;
     }
 }

@@ -1,13 +1,15 @@
 {
-	"version": "2.0.0",
-	"name": "Payumoney.name",
-	"description": "Payumoney.description",
-	"authors": [
-		{
-			"name": "Phillips Data, Inc.",
-			"url": "http://www.blesta.com"
-		}
-	],
-	"currencies": ["INR"],
-	"signup_url": "https://onboarding.payumoney.com/app/account"
+    "version": "3.0.0",
+    "name": "Payumoney.name",
+    "description": "Payumoney.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "http://www.blesta.com"
+        }
+    ],
+    "currencies": [
+        "INR"
+    ],
+    "signup_url": "https://onboarding.payumoney.com/app/account"
 }

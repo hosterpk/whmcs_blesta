@@ -102,30 +102,23 @@ class Download extends Component
             $file_name = basename($file);
         }
 
-        if (($file = realpath($file)) === false || str_contains($file, '..')) {
+        if (($file = realpath($file)) === false || !$this->isPathAllowed($file)) {
             return false;
         }
 
-        $allowed = false;
-        foreach ($this->allowed_paths as $path) {
-            if (str_contains(realpath($file), $path)) {
-                $allowed = true;
-            }
-        }
+        $file_name = $this->sanitizeFileName($file_name);
 
-        if ($allowed) {
-            $this->setHeader('Content-Description', 'File Transfer');
-            foreach ($this->content_type as $type) {
-                $this->setHeader('Content-Type', $type);
-            }
-            $this->setHeader('Content-Disposition', 'inline; filename="' . $file_name . '"');
-            $this->setHeader('Expires', '0');
-            $this->setHeader('Cache-Control', 'public, must-revalidate, max-age=0');
-            $this->setHeader('Pragma', 'public');
-            $this->setHeader('Content-Length', filesize($file));
-
-            $this->output($file, $send_mode);
+        $this->setHeader('Content-Description', 'File Transfer');
+        foreach ($this->content_type as $type) {
+            $this->setHeader('Content-Type', $type);
         }
+        $this->setHeader('Content-Disposition', 'inline; filename="' . $file_name . '"');
+        $this->setHeader('Expires', '0');
+        $this->setHeader('Cache-Control', 'public, must-revalidate, max-age=0');
+        $this->setHeader('Pragma', 'public');
+        $this->setHeader('Content-Length', filesize($file));
+
+        $this->output($file, $send_mode);
     }
 
     /**
@@ -136,6 +129,8 @@ class Download extends Component
      */
     public function streamData($file_name, $data)
     {
+        $file_name = $this->sanitizeFileName($file_name);
+
         $this->setHeader('Content-Description', 'File Transfer');
         foreach ($this->content_type as $type) {
             $this->setHeader('Content-Type', $type);
@@ -163,31 +158,24 @@ class Download extends Component
             $file_name = basename($file);
         }
 
-        if (($file = realpath($file)) === false || str_contains($file, '..')) {
+        if (($file = realpath($file)) === false || !$this->isPathAllowed($file)) {
             return false;
         }
 
-        $allowed = false;
-        foreach ($this->allowed_paths as $path) {
-            if (strpos($file, $path) === 0) {
-                $allowed = true;
-            }
-        }
+        $file_name = $this->sanitizeFileName($file_name);
 
-        if ($allowed) {
-            $this->setHeader('Content-Description', 'File Transfer');
-            foreach ($this->content_type as $type) {
-                $this->setHeader('Content-Type', $type);
-            }
-            $this->setHeader('Content-Disposition', 'attachment; filename="' . $file_name . '"');
-            $this->setHeader('Content-Transfer-Encoding', $this->encoding);
-            $this->setHeader('Expires', '0');
-            $this->setHeader('Cache-Control', 'public, must-revalidate, max-age=0');
-            $this->setHeader('Pragma', 'public');
-            $this->setHeader('Content-Length', filesize($file));
-
-            $this->output($file, $send_mode);
+        $this->setHeader('Content-Description', 'File Transfer');
+        foreach ($this->content_type as $type) {
+            $this->setHeader('Content-Type', $type);
         }
+        $this->setHeader('Content-Disposition', 'attachment; filename="' . $file_name . '"');
+        $this->setHeader('Content-Transfer-Encoding', $this->encoding);
+        $this->setHeader('Expires', '0');
+        $this->setHeader('Cache-Control', 'public, must-revalidate, max-age=0');
+        $this->setHeader('Pragma', 'public');
+        $this->setHeader('Content-Length', filesize($file));
+
+        $this->output($file, $send_mode);
     }
 
     /**
@@ -198,6 +186,8 @@ class Download extends Component
      */
     public function downloadData($file_name, $data)
     {
+        $file_name = $this->sanitizeFileName($file_name);
+
         $this->setHeader('Content-Description', 'File Transfer');
         foreach ($this->content_type as $type) {
             $this->setHeader('Content-Type', $type);
@@ -210,6 +200,46 @@ class Download extends Component
         $this->setHeader('Content-Length', strlen($data));
 
         $this->output($data, 'data');
+    }
+
+    /**
+     * Checks whether the given resolved file path is within any of the allowed paths
+     *
+     * @param string $file The realpath-resolved file path to check
+     * @return bool True if the file is within an allowed path, false otherwise
+     */
+    private function isPathAllowed($file)
+    {
+        if (str_contains($file, '..')) {
+            return false;
+        }
+
+        foreach ($this->allowed_paths as $path) {
+            if ($path
+                && (str_starts_with(
+                    $file . DIRECTORY_SEPARATOR,
+                    rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+                ) || $file === $path)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Sanitizes a file name for safe use in HTTP headers by stripping CR/LF and escaping quotes
+     *
+     * @param string $file_name The file name to sanitize
+     * @return string The sanitized file name
+     */
+    private function sanitizeFileName($file_name)
+    {
+        $file_name = str_replace(["\r", "\n"], '', $file_name);
+        $file_name = str_replace('"', '\\"', $file_name);
+
+        return $file_name;
     }
 
     /**

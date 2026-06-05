@@ -18,17 +18,11 @@ class AdminCompanyThemes extends AdminController
     {
         parent::preAction();
 
-        $this->uses(['Navigation', 'Themes']);
+        $this->uses(['Themes']);
         $this->components(['SettingsCollection', 'Session']);
         $this->helpers(['DataStructure']);
 
         $this->ArrayHelper = $this->DataStructure->create('Array');
-
-        // Set the left nav for all settings pages to settings_leftnav
-        $this->set(
-            'left_nav',
-            $this->partial('settings_leftnav', ['nav' => $this->Navigation->getCompany($this->base_uri)])
-        );
     }
 
     /**
@@ -36,14 +30,14 @@ class AdminCompanyThemes extends AdminController
      */
     public function index()
     {
-        // Set the type of theme
-        $theme_type = 'admin';
-        if (isset($this->get[0]) && $this->get[0] == 'client') {
+        // Set the type of theme (defaults to client)
+        $theme_type = 'client';
+        if (isset($this->get[0]) && $this->get[0] == 'admin') {
             $theme_type = $this->get[0];
         }
 
         if (!empty($this->post)) {
-            $this->Themes->change($this->post['id'], $theme_type);
+            $this->Themes->change($this->post['theme_id'] ?? $this->post['id'], $theme_type);
 
             if (($errors = $this->Themes->errors())) {
                 $this->setMessage('error', $errors);
@@ -74,8 +68,8 @@ class AdminCompanyThemes extends AdminController
     public function add()
     {
         // Set the type of theme
-        $theme_type = 'admin';
-        if (isset($this->get[0]) && $this->get[0] == 'client') {
+        $theme_type = 'client';
+        if (isset($this->get[0]) && in_array($this->get[0], ['admin', 'client'])) {
             $theme_type = $this->get[0];
         }
 
@@ -150,18 +144,15 @@ class AdminCompanyThemes extends AdminController
             }
         }
 
-        // Format colors
-        if (isset($vars->colors) && is_array($vars->colors)) {
+        // Format colors (client themes only)
+        if ($theme_type !== 'admin' && isset($vars->colors) && is_array($vars->colors)) {
             $vars->colors = $this->formatTransparentColors($vars->colors);
         }
 
-        $this->set('colors', $this->Themes->getAvailableColors($theme_type));
+        // Only pass color data for client themes
+        $this->set('colors', $theme_type !== 'admin' ? $this->Themes->getAvailableColors($theme_type) : []);
         $this->set('vars', $vars);
 
-        // Load the color picker
-        $this->Javascript->setFile('colorpicker.min.js');
-
-        // Load Ace editor
         $this->Javascript->setFile('ace/src-min/ace.js', 'head', VENDORWEBDIR);
     }
 
@@ -206,18 +197,15 @@ class AdminCompanyThemes extends AdminController
             $vars = $theme;
         }
 
-        // Format colors
-        if (isset($vars->colors) && is_array($vars->colors)) {
+        // Format colors (client themes only)
+        if ($theme->type !== 'admin' && isset($vars->colors) && is_array($vars->colors)) {
             $vars->colors = $this->formatTransparentColors($vars->colors);
         }
 
-        $this->set('colors', $this->Themes->getAvailableColors($theme->type));
+        // Only pass color data for client themes
+        $this->set('colors', $theme->type !== 'admin' ? $this->Themes->getAvailableColors($theme->type) : []);
         $this->set('vars', $vars);
 
-        // Load the color picker
-        $this->Javascript->setFile('colorpicker.min.js');
-
-        // Load Ace editor
         $this->Javascript->setFile('ace/src-min/ace.js', 'head', VENDORWEBDIR);
     }
 
@@ -269,6 +257,12 @@ class AdminCompanyThemes extends AdminController
         // Export the theme
         $export = clone $theme;
         unset($export->id, $export->company_id);
+
+        // Admin themes don't export color or logo data
+        if ($export->type === 'admin') {
+            $export->colors = [];
+            $export->logo_url = '';
+        }
 
         $theme_name = strtolower(str_replace(' ', '_', $export->name));
         $theme_name = substr(preg_replace('/[^a-z0-9_-]/i', '', $theme_name), 0, 249);

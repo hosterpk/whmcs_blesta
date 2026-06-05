@@ -80,6 +80,9 @@ class ClientTheme extends AppController
         }
 
         // Send the custom theme CSS
+        header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none';");
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: DENY');
         header('Cache-Control: max-age=' . (strtotime(Configure::get('Blesta.cache_length')) - time()));
         header('Content-type: text/css');
         echo $css;

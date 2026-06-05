@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Modifier\Type\Description;
 
 use Blesta\Items\Collection\ItemCollection;
@@ -107,7 +108,7 @@ class Description
      *  to combine the two sets of meta data into a single description)
      * @return string The description
      */
-    public function getDescription(array $meta, array $oldMeta = null)
+    public function getDescription(array $meta, ?array $oldMeta = null)
     {
         $description = '';
 

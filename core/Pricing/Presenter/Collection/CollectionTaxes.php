@@ -1,4 +1,5 @@
 <?php
+
 namespace Blesta\Core\Pricing\Presenter\Collection;
 
 use Blesta\Pricing\Collection\ItemPriceCollection;
@@ -41,7 +42,7 @@ trait CollectionTaxes
             }
 
             $tax_items[] = (object)[
-                'id' => (isset($meta['_data']['tax_id']) ? $meta['_data']['tax_id'] : null),
+                'id' => ($meta['_data']['tax_id'] ?? null),
                 'description' => $tax->getDescription(),
                 'amount' => $tax->amount(),
                 'type' => $tax->type(),
