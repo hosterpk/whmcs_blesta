@@ -3178,6 +3178,14 @@ class WhmcsMigrator extends Migrator
             return $str;
         }
 
+        if (function_exists('mb_scrub')) {
+            return mb_scrub($str, 'UTF-8');
+        }
+
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($str, 'UTF-8', 'UTF-8');
+        }
+
         if (function_exists('iconv')) {
             $converted = iconv('UTF-8', 'UTF-8//IGNORE', $str);
             if ($converted !== false) {
@@ -3240,6 +3248,10 @@ class WhmcsMigrator extends Migrator
                     )
                 );
             }
+
+            if (is_string($return_data[$field])) {
+                $return_data[$field] = $this->cleanUtf8($return_data[$field]);
+            }
         }
 
         return $return_data;
@@ -3275,8 +3287,7 @@ class WhmcsMigrator extends Migrator
                 return $this->getValidDate($value);
             },
             'truncate' => function ($value, $max_length) {
-                $string = $this->DataStructure->create('string');
-                return $string->truncate($value, ['length' => $max_length]);
+                return $this->normalizeImportedText($value, $max_length);
             },
             'strip_tags' => function ($value) {
                 return strip_tags($value);
