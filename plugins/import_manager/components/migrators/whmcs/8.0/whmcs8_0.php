@@ -393,7 +393,7 @@ class Whmcs8_0 extends WhmcsMigrator
             if ($client->phonenumber != '') {
                 $vars = [
                     'contact_id' => $contact_id,
-                    'number' => $this->decode($client->phonenumber),
+                    'number' => $this->normalizeContactNumber($client->phonenumber),
                     'type' => 'phone',
                     'location' => 'home'
                 ];

@@ -102,6 +102,7 @@ class WhmcsMigrator extends Migrator
                 $this->debug("-----------------\n");
             } catch (Throwable $e) {
                 $errors[] = $action . ': ' . $e->getMessage() . ' on line ' . $e->getLine();
+                $this->rollbackOpenTransaction();
                 $this->logException($e);
             }
         }
@@ -116,7 +117,7 @@ class WhmcsMigrator extends Migrator
 
         if ($this->enable_debug) {
             $this->debug(print_r($this->Input->errors(), true));
-            exit;
+            exit(!empty($errors) ? 1 : 0);
         }
     }
 
@@ -189,6 +190,43 @@ class WhmcsMigrator extends Migrator
             }
         }
         unset($admins);
+    }
+
+    /**
+     * Roll back the local connection if the current import stage left a transaction open.
+     */
+    protected function rollbackOpenTransaction()
+    {
+        if (!isset($this->local)) {
+            return;
+        }
+
+        try {
+            $connection = $this->local->getConnection();
+            if ($connection && $connection->inTransaction()) {
+                $this->local->rollBack();
+            }
+        } catch (Throwable $e) {
+            // Preserve the original import error.
+        }
+    }
+
+    /**
+     * Normalize contact numbers to fit Blesta's contact_numbers.number column.
+     *
+     * @param string $number The remote contact number
+     * @return string
+     */
+    protected function normalizeContactNumber($number)
+    {
+        $number = trim($this->decode($number));
+
+        if (strlen($number) > 64) {
+            $this->debug('Truncated contact number: ' . substr($number, 0, 120));
+            $number = substr($number, 0, 64);
+        }
+
+        return $number;
     }
 
     /**
@@ -303,7 +341,7 @@ class WhmcsMigrator extends Migrator
             if ($client->phonenumber != '') {
                 $vars = [
                     'contact_id' => $contact_id,
-                    'number' => $this->decode($client->phonenumber),
+                    'number' => $this->normalizeContactNumber($client->phonenumber),
                     'type' => 'phone',
                     'location' => 'home'
                 ];
@@ -575,7 +613,7 @@ class WhmcsMigrator extends Migrator
             if ($contact->phonenumber != '') {
                 $vars = [
                     'contact_id' => $contact_id,
-                    'number' => $this->decode($contact->phonenumber),
+                    'number' => $this->normalizeContactNumber($contact->phonenumber),
                     'type' => 'phone',
                     'location' => 'home'
                 ];
@@ -702,6 +740,9 @@ class WhmcsMigrator extends Migrator
                     : $this->getValidDate($invoice->datepaid, 'Y-m-d H:i:s', true),
                 'date_autodebit' => null,
                 'status' => $status,
+                'subtotal' => $invoice->subtotal,
+                'total' => $invoice->subtotal + $invoice->tax + $invoice->tax2,
+                'paid' => 0,
                 'previous_due' => 0,
                 'currency' => $invoice->currency,
                 'note_public' => $invoice->notes,
@@ -786,19 +827,6 @@ class WhmcsMigrator extends Migrator
         }
         $this->local->commit();
         unset($lines);
-
-        // Update totals
-        if (isset($this->mappings['invoices'])) {
-            foreach ($this->mappings['invoices'] as $remote_invoice_id => $local_invoice_id) {
-                $totals = $this->getInvoiceTotals($local_invoice_id);
-
-                $this->local->where('id', '=', $local_invoice_id)
-                    ->update(
-                        'invoices',
-                        ['subtotal' => $totals['subtotal'], 'total' => $totals['total'], 'paid' => $totals['paid']]
-                    );
-            }
-        }
 
         $periods = [
             'Days' => 'day',
@@ -1446,10 +1474,14 @@ class WhmcsMigrator extends Migrator
         unset($rows);
 
         $services = $this->fetchall ? $this->WhmcsServices->get()->fetchAll() : $this->WhmcsServices->get();
+        $service_custom_fields = method_exists($this->WhmcsServices, 'getAllCustomFields')
+            ? $this->WhmcsServices->getAllCustomFields()
+            : [];
+        $packages = [];
         $this->local->begin();
         foreach ($services as $service) {
             // Get service custom fields
-            $custom_fields = $this->WhmcsServices->getCustomFields($service->id);
+            $custom_fields = $service_custom_fields[$service->id] ?? [];
             if (!empty($custom_fields) && !is_scalar($custom_fields)) {
                 $service = (object) array_merge((array) $service, (array) $custom_fields);
             }
@@ -1463,7 +1495,11 @@ class WhmcsMigrator extends Migrator
                 continue;
             }
 
-            $package = $this->Packages->get($this->mappings['packages'][$service->packageid]);
+            $package_id = $this->mappings['packages'][$service->packageid];
+            if (!isset($packages[$package_id])) {
+                $packages[$package_id] = $this->Packages->get($package_id);
+            }
+            $package = $packages[$package_id];
 
             if (!isset($this->mappings['modules'])) {
                 if (!isset($this->ModuleManager)) {
@@ -1547,6 +1583,7 @@ class WhmcsMigrator extends Migrator
         }
         $this->local->commit();
         unset($services);
+        unset($service_custom_fields);
 
         $option_types = $this->WhmcsProducts->getConfigOptionTypes();
 
@@ -1604,6 +1641,9 @@ class WhmcsMigrator extends Migrator
         $domains = $this->fetchall
             ? $this->WhmcsServices->getDomains()->fetchAll()
             : $this->WhmcsServices->getDomains();
+        $packages = [];
+        $has_module_logs = !method_exists($this->WhmcsServices, 'hasModuleLogEntries')
+            || $this->WhmcsServices->hasModuleLogEntries();
         $this->local->begin();
         $i = 0;
         foreach ($domains as $domain) {
@@ -1618,7 +1658,10 @@ class WhmcsMigrator extends Migrator
             }
 
             // If the domain belongs to a registrar handled by Logicboxes, fetch the order ID
-            if ($domain->registrar == 'resellerclub' || $domain->registrar == 'netearthone') {
+            if (
+                $has_module_logs
+                && ($domain->registrar == 'resellerclub' || $domain->registrar == 'netearthone')
+            ) {
                 $order_id = $this->WhmcsServices->getDomainLogicboxesOrderId($domain->domain);
                 $domain->order_id = $order_id['response'] ?? null;
             }
@@ -1725,7 +1768,11 @@ class WhmcsMigrator extends Migrator
                 );
             }
 
-            $package = $this->Packages->get($this->mappings['packages'][$tld . $domain->registrar]);
+            $package_id = $this->mappings['packages'][$tld . $domain->registrar];
+            if (!isset($packages[$package_id])) {
+                $packages[$package_id] = $this->Packages->get($package_id);
+            }
+            $package = $packages[$package_id];
             $mapping = $this->getModuleMapping($domain->registrar, 'registrar');
 
             // Get currency this client is invoiced in
@@ -2762,13 +2809,18 @@ class WhmcsMigrator extends Migrator
             return null;
         }
 
-        $pricing_id = null;
+        static $pricing_cache = [];
+        $cache_key = $package->id . ':' . $term['term'] . ':' . $term['period'] . ':' . ($currency ?? '');
+        if (isset($pricing_cache[$cache_key])) {
+            return $pricing_cache[$cache_key];
+        }
+
         if ($package) {
             foreach ($package->pricing as $price) {
                 if ($price->term == $term['term'] && $price->period == $term['period']) {
-                    $pricing_id = $price->id;
                     if ($price->currency == $currency) {
-                        return $price;
+                        $pricing_cache[$cache_key] = $price;
+                        return $pricing_cache[$cache_key];
                     }
                 }
             }
@@ -2793,6 +2845,9 @@ class WhmcsMigrator extends Migrator
             innerJoin('pricings', 'pricings.id', '=', 'package_pricing.pricing_id', false)->
             innerJoin('packages', 'packages.id', '=', 'package_pricing.package_id', false)->
             where('package_pricing.id', '=', $pricing_id)->fetch();
+
+        $pricing_cache[$cache_key] = $pricing;
+        return $pricing_cache[$cache_key];
     }
 
     /**
@@ -2811,16 +2866,24 @@ class WhmcsMigrator extends Migrator
             return null;
         }
 
+        static $option_pricing_cache = [];
+        $cache_key = $value_id . ':' . $term['term'] . ':' . $term['period'] . ':' . $currency;
+        if (array_key_exists($cache_key, $option_pricing_cache)) {
+            return $option_pricing_cache[$cache_key];
+        }
+
         $fields = ['package_option_pricing.id', 'package_option_pricing.pricing_id',
             'package_option_pricing.option_value_id', 'pricings.term',
             'pricings.period', 'pricings.price', 'pricings.setup_fee',
             'pricings.cancel_fee', 'pricings.currency'];
-        return $this->local->select($fields)->from('package_option_pricing')->
+        $option_pricing_cache[$cache_key] = $this->local->select($fields)->from('package_option_pricing')->
             innerJoin('pricings', 'pricings.id', '=', 'package_option_pricing.pricing_id', false)->
             where('pricings.currency', '=', $currency)->
             where('pricings.period', '=', $term['period'])->
             where('pricings.term', '=', $term['term'])->
             where('package_option_pricing.option_value_id', '=', $value_id)->fetch();
+
+        return $option_pricing_cache[$cache_key];
     }
 
     /**
@@ -2834,6 +2897,12 @@ class WhmcsMigrator extends Migrator
      */
     private function getModuleRowId($local_module_id, $row_value = null, $remote_module = null)
     {
+        static $module_row_cache = [];
+        $cache_key = $local_module_id . ':' . ($row_value ?? '') . ':' . ($remote_module ?? '');
+        if (array_key_exists($cache_key, $module_row_cache)) {
+            return $module_row_cache[$cache_key];
+        }
+
         $module_row = false;
         if ($row_value) {
             $module_row = $this->local->select(['module_rows.*'])->from('module_rows')->
@@ -2852,11 +2921,13 @@ class WhmcsMigrator extends Migrator
                 where('module_rows.module_id', '=', $local_module_id)->fetch();
         }
         if ($module_row) {
-            return $module_row->id;
+            $module_row_cache[$cache_key] = $module_row->id;
+            return $module_row_cache[$cache_key];
         } else {
             $module_row = $this->local->select(['module_rows.*'])->from('module_rows')->
                 where('module_rows.module_id', '=', $local_module_id)->fetch();
-            return $module_row->id;
+            $module_row_cache[$cache_key] = $module_row->id;
+            return $module_row_cache[$cache_key];
         }
     }
 
@@ -2872,7 +2943,18 @@ class WhmcsMigrator extends Migrator
             Loader::loadModels($this, ['Clients']);
         }
 
-        static $currencies = [];
+        static $currencies = null;
+
+        if ($currencies === null) {
+            $currencies = [];
+            $settings = $this->local->select(['client_id', 'value'])
+                ->from('client_settings')
+                ->where('key', '=', 'default_currency')
+                ->fetchAll();
+            foreach ($settings as $setting) {
+                $currencies[$setting->client_id] = $setting->value;
+            }
+        }
 
         if (!isset($currencies[$client_id])) {
             $default_currency = $this->Clients->getSetting($client_id, 'default_currency');
@@ -2914,11 +2996,24 @@ class WhmcsMigrator extends Migrator
             return $str;
         }
 
-        if (function_exists('mb_detect_encoding') && mb_detect_encoding($str) == 'UTF-8') {
-            return html_entity_decode($str, ENT_QUOTES, 'UTF-8');
+        $decoded = html_entity_decode($str, ENT_QUOTES, 'UTF-8');
+
+        if (function_exists('mb_detect_encoding') && mb_detect_encoding($decoded) == 'UTF-8') {
+            return $decoded;
         }
 
-        return utf8_encode(html_entity_decode($str, ENT_QUOTES, 'UTF-8'));
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($decoded, 'UTF-8', 'ISO-8859-1');
+        }
+
+        if (function_exists('iconv')) {
+            $converted = iconv('ISO-8859-1', 'UTF-8//IGNORE', $decoded);
+            if ($converted !== false) {
+                return $converted;
+            }
+        }
+
+        return $decoded;
     }
 
     /**

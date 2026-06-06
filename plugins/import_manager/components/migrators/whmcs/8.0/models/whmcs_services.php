@@ -69,6 +69,29 @@ class WhmcsServices
     }
 
     /**
+     * Fetch all custom fields for all services.
+     *
+     * @return array An array of custom fields keyed by service ID
+     */
+    public function getAllCustomFields()
+    {
+        $fields = $this->remote->select(
+            ['tblcustomfieldsvalues.relid', 'tblcustomfields.fieldname', 'tblcustomfieldsvalues.value']
+        )->
+            from('tblcustomfields')->
+            innerJoin('tblcustomfieldsvalues', 'tblcustomfieldsvalues.fieldid', '=', 'tblcustomfields.id', false)->
+            where('tblcustomfields.type', '=', 'product')->
+            getStatement();
+
+        $custom_fields = [];
+        foreach ($fields as $field) {
+            $custom_fields[$field->relid][$field->fieldname] = $field->value;
+        }
+
+        return $custom_fields;
+    }
+
+    /**
      * Fetch all domain-name services
      *
      * @return PDOStatement
@@ -76,6 +99,18 @@ class WhmcsServices
     public function getDomains()
     {
         return $this->remote->select()->from('tbldomains')->getStatement();
+    }
+
+    /**
+     * Checks whether WHMCS module logs exist.
+     *
+     * @return bool True if module log entries exist, false otherwise
+     */
+    public function hasModuleLogEntries()
+    {
+        $log = $this->remote->select(['COUNT(*)' => 'total'], false)->from('tblmodulelog')->fetch();
+
+        return $log && $log->total > 0;
     }
 
     /**
