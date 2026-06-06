@@ -230,6 +230,59 @@ class WhmcsMigrator extends Migrator
     }
 
     /**
+     * Normalize text to fit a destination varchar column.
+     *
+     * @param mixed $value The value to normalize
+     * @param int $max_length The maximum byte length
+     * @return mixed The normalized value
+     */
+    protected function normalizeImportedText($value, $max_length)
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $value = $this->decode($value);
+        if (strlen($value) <= $max_length) {
+            return $value;
+        }
+
+        if (function_exists('mb_strcut')) {
+            return mb_strcut($value, 0, $max_length, 'UTF-8');
+        }
+
+        return substr($value, 0, $max_length);
+    }
+
+    /**
+     * Saves imported client settings directly, bypassing expensive per-setting model logging.
+     *
+     * @param int $client_id The local client ID
+     * @param array $settings The settings to save
+     */
+    protected function setImportedClientSettings($client_id, array $settings)
+    {
+        $fields = ['key', 'client_id', 'value', 'encrypted'];
+
+        foreach ($settings as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            $vars = [
+                'key' => $key,
+                'client_id' => $client_id,
+                'value' => $value,
+                'encrypted' => 0
+            ];
+
+            $this->local->duplicate('value', '=', $vars['value'])
+                ->duplicate('encrypted', '=', 0)
+                ->insert('client_settings', $vars, $fields);
+        }
+    }
+
+    /**
      * Import clients
      */
     protected function importClients()
@@ -940,22 +993,11 @@ class WhmcsMigrator extends Migrator
 
         // Add invoice credits
         $this->local->begin();
+        $invoice_ids = [];
         foreach ($this->credits as $credit) {
-            $transaction_id = $this->addTransaction($credit, null);
-            $vars = [
-                'date' => $credit['date_added'],
-                'amounts' => [
-                    [
-                        'invoice_id' => $credit['invoice_id'],
-                        'amount' => $credit['amount'],
-                    ]
-                ]
-            ];
-            $this->Transactions->apply($transaction_id, $vars);
-
-            if (!in_array($credit['invoice_id'], $invoice_ids)) {
-                $invoice_ids[] = $credit['invoice_id'];
-            }
+            $transaction_id = $this->addImportedTransaction($credit);
+            $this->applyImportedTransaction($transaction_id, $credit['invoice_id'], $credit['amount'], $credit['date_added']);
+            $invoice_ids[$credit['invoice_id']] = true;
         }
         $this->local->commit();
         unset($this->credits);
@@ -985,7 +1027,7 @@ class WhmcsMigrator extends Migrator
                     'status' => $status,
                     'date_added' => $this->getValidDate($transaction->date, 'c')
                 ];
-                $transaction_id = $this->addTransaction($vars, $transaction->id);
+                $transaction_id = $this->addImportedTransaction($vars, $transaction->id);
 
                 // If the transactions was refunded add a new transaction for the difference
                 if ($status == 'refunded' && $transaction->refund < $transaction->amountin) {
@@ -997,27 +1039,26 @@ class WhmcsMigrator extends Migrator
                         'status' => 'approved',
                         'date_added' => $this->getValidDate($transaction->date, 'c')
                     ];
-                    $transaction_id = $this->addTransaction($vars, $transaction->id);
+                    $transaction_id = $this->addImportedTransaction($vars, $transaction->id);
                 }
             }
 
             // Apply payment
-            if (isset($this->mappings['invoices'][$transaction->invoiceid]) && $transaction->amountin > 0) {
-                $vars = [
-                    'date' => $this->getValidDate($transaction->date, 'c'),
-                    'amounts' => [
-                        [
-                            'invoice_id' => $this->mappings['invoices'][$transaction->invoiceid],
-                            'amount' => $transaction->amountin - ($transaction->refund > 0 ? $transaction->refund : 0),
-                        ]
-                    ]
-                ];
-                $this->Transactions->apply($transaction_id, $vars);
-
-                if (!in_array($this->mappings['invoices'][$transaction->invoiceid], $invoice_ids)) {
-                    $invoice_ids[] = $this->mappings['invoices'][$transaction->invoiceid];
-                }
+            if (
+                isset($transaction_id)
+                && isset($this->mappings['invoices'][$transaction->invoiceid])
+                && $transaction->amountin > 0
+            ) {
+                $invoice_id = $this->mappings['invoices'][$transaction->invoiceid];
+                $this->applyImportedTransaction(
+                    $transaction_id,
+                    $invoice_id,
+                    $transaction->amountin - ($transaction->refund > 0 ? $transaction->refund : 0),
+                    $this->getValidDate($transaction->date, 'c')
+                );
+                $invoice_ids[$invoice_id] = true;
             }
+            unset($transaction_id);
         }
         $this->local->commit();
         unset($transactions);
@@ -1042,22 +1083,106 @@ class WhmcsMigrator extends Migrator
                 'status' => 'approved',
                 'date_added' => $this->Companies->dateToUtc(date('c'))
             ];
-            $transaction_id = $this->addTransaction($vars, $transaction->id);
+            $this->addImportedTransaction($vars);
         }
         $this->local->commit();
         unset($credits);
 
         // Update paid totals
-        $this->local->begin();
-        foreach ($invoice_ids as $invoice_id) {
-            // Update paid total
-            $paid = $this->Invoices->getPaid($invoice_id);
-            $this->local->where('id', '=', $invoice_id)->
-                update('invoices', ['paid' => $paid]);
-        }
-        $this->local->commit();
+        $this->updateImportedInvoicePaidTotals(array_keys($invoice_ids));
 
         $this->balanceClientCredit();
+    }
+
+    /**
+     * Adds an imported WHMCS transaction without running Blesta's per-transaction event and validation pipeline.
+     *
+     * @param array $vars Transaction fields
+     * @param mixed $remote_id The remote transaction ID
+     * @return int The local transaction ID
+     */
+    private function addImportedTransaction(array $vars, $remote_id = null)
+    {
+        $vars = array_merge(
+            [
+                'type' => 'other',
+                'transaction_type_id' => null,
+                'account_id' => null,
+                'gateway_id' => null,
+                'parent_transaction_id' => null,
+                'reference_id' => null,
+                'message' => null,
+                'status' => 'approved',
+                'date_added' => date('c')
+            ],
+            $vars
+        );
+
+        if (isset($vars['transaction_id']) && strlen($vars['transaction_id']) > 128) {
+            $vars['transaction_id'] = substr($vars['transaction_id'], 0, 128);
+        }
+
+        $fields = [
+            'client_id', 'amount', 'currency', 'type', 'transaction_type_id',
+            'account_id', 'gateway_id', 'transaction_id', 'parent_transaction_id',
+            'reference_id', 'message', 'status', 'date_added'
+        ];
+
+        $this->local->insert('transactions', $vars, $fields);
+        $transaction_id = $this->local->lastInsertId();
+
+        if ($remote_id !== null) {
+            $this->mappings['transactions'][$remote_id] = $transaction_id;
+        }
+
+        return $transaction_id;
+    }
+
+    /**
+     * Applies an imported transaction directly to an invoice.
+     *
+     * @param int $transaction_id The local transaction ID
+     * @param int $invoice_id The local invoice ID
+     * @param float $amount The amount applied
+     * @param string $date The apply date
+     */
+    private function applyImportedTransaction($transaction_id, $invoice_id, $amount, $date)
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $vars = [
+            'transaction_id' => $transaction_id,
+            'invoice_id' => $invoice_id,
+            'amount' => $amount,
+            'date' => $date
+        ];
+
+        $this->local->duplicate('amount', '=', "amount + '" . ((float)$amount) . "'", false, false)
+            ->insert('transaction_applied', $vars, ['transaction_id', 'invoice_id', 'amount', 'date']);
+    }
+
+    /**
+     * Updates invoice paid totals in bulk after importing transactions.
+     *
+     * @param array $invoice_ids The local invoice IDs touched by imported transactions
+     */
+    private function updateImportedInvoicePaidTotals(array $invoice_ids)
+    {
+        if (empty($invoice_ids)) {
+            return;
+        }
+
+        $this->local->query(
+            'UPDATE `invoices`
+                INNER JOIN (
+                    SELECT `invoice_id`, SUM(`amount`) AS `paid`
+                    FROM `transaction_applied`
+                    GROUP BY `invoice_id`
+                ) AS `applied` ON `applied`.`invoice_id` = `invoices`.`id`
+                SET `invoices`.`paid` = `applied`.`paid`'
+        );
     }
 
     /**

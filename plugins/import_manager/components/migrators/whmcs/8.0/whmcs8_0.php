@@ -303,18 +303,22 @@ class Whmcs8_0 extends WhmcsMigrator
             // Create user
             $user_id = null;
             try {
-                $email = in_array($client->user_email, $client_emails)
-                    ? (in_array($client->email, $client_emails)
-                        ? $client->id . md5($client->id)
-                        : $this->decode($client->email)
-                    )
-                    : $this->decode($client->user_email);
+                $owner_email = $this->normalizeImportedText($client->user_email, 255);
+                $client_email = $this->normalizeImportedText($client->email, 255);
+                $email = $owner_email ?: $client_email;
+
+                if (!$email || isset($client_emails[$email])) {
+                    $email = $client_email && !isset($client_emails[$client_email])
+                        ? $client_email
+                        : $client->id . md5($client->id);
+                }
+
                 $user_id = $this->createUser([
                     'username' => $email,
                     'password' => substr($client->password, 0, 64),
                     'date_added' => $this->getValidDate($client->datecreated)
                 ]);
-                $client_emails[] = $email;
+                $client_emails[$email] = true;
             } catch (Throwable $e) {
                 $this->logException($e);
             }
@@ -348,22 +352,24 @@ class Whmcs8_0 extends WhmcsMigrator
                 $vars = [
                     'client_id' => $client_id,
                     'contact_type' => 'primary',
-                    'first_name' => $this->decode(
-                        trim($client->firstname) != '' ? $client->firstname : $this->default_firstname
+                    'first_name' => $this->normalizeImportedText(
+                        trim($client->firstname) != '' ? $client->firstname : $this->default_firstname,
+                        128
                     ),
-                    'last_name' => $this->decode(
-                        trim($client->lastname) != '' ? $client->lastname : $this->default_lastname
+                    'last_name' => $this->normalizeImportedText(
+                        trim($client->lastname) != '' ? $client->lastname : $this->default_lastname,
+                        128
                     ),
-                    'company' => $this->decode($client->companyname != '' ? $client->companyname : null),
-                    'email' => $this->decode($client->email),
-                    'address1' => $this->decode($client->address1),
-                    'address2' => $this->decode($client->address2 != '' ? $client->address2 : null),
-                    'city' => $this->decode($client->city),
+                    'company' => $this->normalizeImportedText($client->companyname != '' ? $client->companyname : null, 128),
+                    'email' => $this->normalizeImportedText($client->email, 255),
+                    'address1' => $this->normalizeImportedText($client->address1, 255),
+                    'address2' => $this->normalizeImportedText($client->address2 != '' ? $client->address2 : null, 255),
+                    'city' => $this->normalizeImportedText($client->city, 255),
                     'state' => $this->getValidState(
                         $client->country,
                         $this->decode($client->state != '' ? $client->state : null)
                     ),
-                    'zip' => $this->decode($client->postcode != '' ? $client->postcode : null),
+                    'zip' => $this->normalizeImportedText($client->postcode != '' ? $client->postcode : null, 128),
                     'country' => $client->country != '' ? $client->country : $this->default_country,
                     'date_added' => $this->getValidDate($client->datecreated)
                 ];
@@ -387,7 +393,7 @@ class Whmcs8_0 extends WhmcsMigrator
                 'tax_id' => null,
                 'username_type' => 'email'
             ];
-            $this->Clients->setSettings($client_id, $settings);
+            $this->setImportedClientSettings($client_id, $settings);
 
             // Add contact phone number
             if ($client->phonenumber != '') {
@@ -417,20 +423,22 @@ class Whmcs8_0 extends WhmcsMigrator
             if ($client->cardnum != '') {
                 $vars = [
                     'contact_id' => $this->mappings['primary_contacts'][$client->id],
-                    'first_name' => $this->decode(
-                        trim($client->firstname) != '' ? $client->firstname : $this->default_firstname
+                    'first_name' => $this->normalizeImportedText(
+                        trim($client->firstname) != '' ? $client->firstname : $this->default_firstname,
+                        128
                     ),
-                    'last_name' => $this->decode(
-                        trim($client->lastname) != '' ? $client->lastname : $this->default_lastname
+                    'last_name' => $this->normalizeImportedText(
+                        trim($client->lastname) != '' ? $client->lastname : $this->default_lastname,
+                        128
                     ),
-                    'address1' => $this->decode($client->address1 != '' ? $client->address1 : null),
-                    'address2' => $this->decode($client->address2 != '' ? $client->address2 : null),
-                    'city' => $this->decode($client->city != '' ? $client->city : null),
+                    'address1' => $this->normalizeImportedText($client->address1 != '' ? $client->address1 : null, 255),
+                    'address2' => $this->normalizeImportedText($client->address2 != '' ? $client->address2 : null, 255),
+                    'city' => $this->normalizeImportedText($client->city != '' ? $client->city : null, 255),
                     'state' => $this->getValidState(
                         $client->country,
                         $this->decode($client->state != '' ? $client->state : null)
                     ),
-                    'zip' => $this->decode($client->postcode != '' ? $client->postcode : null),
+                    'zip' => $this->normalizeImportedText($client->postcode != '' ? $client->postcode : null, 128),
                     'country' => $client->country != '' ? $client->country : $this->default_country,
                     'number' => $client->cardnum,
                     'expiration' => '20' . substr($client->expdate, 2, 2) . substr($client->expdate, 0, 2)
