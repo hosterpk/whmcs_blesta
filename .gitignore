@@ -9,6 +9,7 @@
 .rnd
 
 # Runtime files
+error_log
 /cache/*
 !/cache/.htaccess
 !/cache/.gitkeep
