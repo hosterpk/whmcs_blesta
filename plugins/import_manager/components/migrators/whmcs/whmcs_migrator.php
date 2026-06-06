@@ -1025,7 +1025,7 @@ class WhmcsMigrator extends Migrator
                     'currency' => $currency,
                     'transaction_id' => $transaction->transid,
                     'status' => $status,
-                    'date_added' => $this->getValidDate($transaction->date, 'c')
+                    'date_added' => $this->getValidDate($transaction->date)
                 ];
                 $transaction_id = $this->addImportedTransaction($vars, $transaction->id);
 
@@ -1037,7 +1037,7 @@ class WhmcsMigrator extends Migrator
                         'currency' => $currency,
                         'transaction_id' => $transaction->transid,
                         'status' => 'approved',
-                        'date_added' => $this->getValidDate($transaction->date, 'c')
+                        'date_added' => $this->getValidDate($transaction->date)
                     ];
                     $transaction_id = $this->addImportedTransaction($vars, $transaction->id);
                 }
@@ -1054,7 +1054,7 @@ class WhmcsMigrator extends Migrator
                     $transaction_id,
                     $invoice_id,
                     $transaction->amountin - ($transaction->refund > 0 ? $transaction->refund : 0),
-                    $this->getValidDate($transaction->date, 'c')
+                    $this->getValidDate($transaction->date)
                 );
                 $invoice_ids[$invoice_id] = true;
             }
@@ -1081,7 +1081,7 @@ class WhmcsMigrator extends Migrator
                 'transaction_type_id' => $this->getTransactionTypeId('in_house_credit'),
                 'transaction_id' => null,
                 'status' => 'approved',
-                'date_added' => $this->Companies->dateToUtc(date('c'))
+                'date_added' => $this->Companies->dateToUtc(date('c'), 'Y-m-d H:i:s')
             ];
             $this->addImportedTransaction($vars);
         }
@@ -1113,10 +1113,12 @@ class WhmcsMigrator extends Migrator
                 'reference_id' => null,
                 'message' => null,
                 'status' => 'approved',
-                'date_added' => date('c')
+                'date_added' => date('Y-m-d H:i:s')
             ],
             $vars
         );
+
+        $vars['date_added'] = $this->formatImportedDate($vars['date_added']);
 
         if (isset($vars['transaction_id']) && strlen($vars['transaction_id']) > 128) {
             $vars['transaction_id'] = substr($vars['transaction_id'], 0, 128);
@@ -1156,7 +1158,7 @@ class WhmcsMigrator extends Migrator
             'transaction_id' => $transaction_id,
             'invoice_id' => $invoice_id,
             'amount' => $amount,
-            'date' => $date
+            'date' => $this->formatImportedDate($date)
         ];
 
         $this->local->duplicate('amount', '=', "amount + '" . ((float)$amount) . "'", false, false)
@@ -1183,6 +1185,25 @@ class WhmcsMigrator extends Migrator
                 ) AS `applied` ON `applied`.`invoice_id` = `invoices`.`id`
                 SET `invoices`.`paid` = `applied`.`paid`'
         );
+    }
+
+    /**
+     * Formats a date for direct MySQL datetime inserts.
+     *
+     * @param string $date The date
+     * @return string The formatted date
+     */
+    private function formatImportedDate($date)
+    {
+        if ($date === null || $date === '' || substr($date, 0, 10) == '0000-00-00') {
+            return date('Y-m-d H:i:s');
+        }
+
+        try {
+            return (new DateTime($date))->format('Y-m-d H:i:s');
+        } catch (Throwable $e) {
+            return date('Y-m-d H:i:s');
+        }
     }
 
     /**
@@ -3124,21 +3145,47 @@ class WhmcsMigrator extends Migrator
         $decoded = html_entity_decode($str, ENT_QUOTES, 'UTF-8');
 
         if (function_exists('mb_detect_encoding') && mb_detect_encoding($decoded) == 'UTF-8') {
-            return $decoded;
+            return $this->cleanUtf8($decoded);
         }
 
         if (function_exists('mb_convert_encoding')) {
-            return mb_convert_encoding($decoded, 'UTF-8', 'ISO-8859-1');
+            return $this->cleanUtf8(mb_convert_encoding($decoded, 'UTF-8', 'ISO-8859-1'));
         }
 
         if (function_exists('iconv')) {
             $converted = iconv('ISO-8859-1', 'UTF-8//IGNORE', $decoded);
             if ($converted !== false) {
+                return $this->cleanUtf8($converted);
+            }
+        }
+
+        return $this->cleanUtf8($decoded);
+    }
+
+    /**
+     * Removes malformed UTF-8 bytes from imported text.
+     *
+     * @param string $str The text to clean
+     * @return string The cleaned text
+     */
+    protected function cleanUtf8($str)
+    {
+        if ($str === null || $str === '') {
+            return $str;
+        }
+
+        if (function_exists('mb_check_encoding') && mb_check_encoding($str, 'UTF-8')) {
+            return $str;
+        }
+
+        if (function_exists('iconv')) {
+            $converted = iconv('UTF-8', 'UTF-8//IGNORE', $str);
+            if ($converted !== false) {
                 return $converted;
             }
         }
 
-        return $decoded;
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $str);
     }
 
     /**
