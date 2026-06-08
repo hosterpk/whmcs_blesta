@@ -4,7 +4,7 @@ user_name: 'Israr'
 date: '2026-06-09'
 sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'quality_rules', 'workflow_rules', 'anti_patterns']
 status: 'complete'
-rule_count: 82
+rule_count: 85
 optimized_for_llm: true
 existing_patterns_found: 9
 existing_context_found: false
@@ -92,7 +92,10 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Development Workflow Rules
 
 - Do not invent CI/CD, Docker, Makefile, or deployment workflows. This checkout has no `.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`, `Dockerfile`, Compose file, Makefile, or task runner; use Composer/PHP commands and documented Blesta runtime flows unless new automation is explicitly requested.
-- Follow the repo's lightweight git style: branch from `main`/`origin/main` as needed and use concise descriptive commits. Do not introduce Conventional Commits, release automation, or branch policy unless explicitly requested.
+- Follow the repo's lightweight git style: branch from `main`/`origin/main` as needed and use concise descriptive commits.
+- Commit messages must follow `<type>(<scope>): <summary>`.
+- Allowed commit types are `feat`, `fix`, `docs`, `test`, `refactor`, and `chore`.
+- Keep commit summaries imperative, lowercase, and under 72 characters.
 - Treat `docs/` and `_bmad-output/` as generated/project-planning artifacts unless the task explicitly targets them. Do not mix BMAD/generated docs changes with runtime implementation changes unless the task explicitly asks for both.
 - Before changing an area, check the nearest available project documentation and metadata: `docs/development-guide.md`, `docs/architecture.md`, the owning `README.md`, `composer.json`, `config.json`, and local configs.
 - Use a normal PHP web stack for route-sensitive manual verification. The PHP built-in server may be useful for limited smoke checks, but it may not match `.htaccess` or production rewrite behavior.
