@@ -171,7 +171,6 @@ class KuickPayReconcileService
         $new_status = $this->mappedStatus((string) $voucher->status, $evidence, $retry_count);
 
         $vars = [
-            'company_id' => $company_id,
             'status' => $new_status,
             'date_last_checked' => date('Y-m-d H:i:s'),
             'raw_status' => $evidence->rawStatus(),
@@ -191,7 +190,7 @@ class KuickPayReconcileService
         }
 
         // Story 3.3 stops at confirmed_unposted evidence. Posting and invoice mutation belong to Stories 3.4/3.5.
-        $this->voucherRepository->edit((int) $voucher->id, $vars);
+        $this->voucherRepository->edit((int) $voucher->id, $company_id, $vars);
 
         return $new_status;
     }

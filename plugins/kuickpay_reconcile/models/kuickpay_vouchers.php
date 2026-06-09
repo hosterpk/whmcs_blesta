@@ -77,16 +77,11 @@ class KuickpayVouchers extends KuickpayReconcileModel
      * Updates an existing voucher.
      *
      * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
      * @param array $vars Voucher fields
      */
-    public function edit(int $voucher_id, array $vars)
+    public function edit(int $voucher_id, int $company_id, array $vars)
     {
-        if (!isset($vars['company_id'])) {
-            $this->Input->setErrors(['company_id'=> ['scope'=>$this->_('KuickpayVouchers.!error.company_id.scope')]]);
-            return;
-        }
-
-        $company_id = (int) $vars['company_id'];
         unset($vars['company_id']);
 
         $vars['date_updated'] = date('Y-m-d H:i:s');

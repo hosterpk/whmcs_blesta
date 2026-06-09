@@ -213,8 +213,9 @@ class KuickPayReconcileFakeVoucherRepository
         return $this->vouchers;
     }
 
-    public function edit(int $voucher_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): void
     {
+        $vars['company_id_scope'] = $company_id;
         $this->edits[] = $vars;
     }
 }

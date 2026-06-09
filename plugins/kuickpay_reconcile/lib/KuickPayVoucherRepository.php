@@ -145,10 +145,11 @@ class KuickPayVoucherRepository
      * Updates a voucher through the company-scoped model mutator.
      *
      * @param int $voucher_id The voucher ID
-     * @param array $vars Voucher fields including company_id
+     * @param int $company_id The company ID scope
+     * @param array $vars Voucher fields
      */
-    public function edit(int $voucher_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): void
     {
-        $this->KuickpayVouchers->edit($voucher_id, $vars);
+        $this->KuickpayVouchers->edit($voucher_id, $company_id, $vars);
     }
 }
