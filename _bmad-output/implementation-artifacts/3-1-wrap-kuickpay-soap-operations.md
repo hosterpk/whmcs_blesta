@@ -4,7 +4,7 @@ baseline_commit: 3668b622171191ca23bfb2c01cb59096d729594d
 
 # Story 3.1: Wrap KuickPay SOAP Operations
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -229,3 +229,29 @@ GPT-5 Codex
 ### Change Log
 
 - 2026-06-09: Implemented KuickPay SOAP transport wrapper, redaction boundary, gateway factory, component-local tests, and verification; story moved to review.
+- 2026-06-09: Code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor). Applied 7 patches across 8 logical-unit commits (fault-PII redaction, bulk `*Result` blanking in `raw_envelope`, `extractRawResult` DOCTYPE/size guard, https-scheme enforcement, empty-envelope crash guard, redactor object/array hardening, timeout ceiling, plus the throwable-with-body test). All 6 touched PHP files pass `php -l` on PHP 8.3.31; a 26-scenario direct-PHP fallback suite passes (no live calls; PHPUnit not installed in this checkout). 3 items deferred (see Review Findings); story moved to done. Pre-merge action outstanding: run `php -l` + the component suite under PHP 8.2 + PHPUnit ~8.5.
+
+### Review Findings
+
+_Adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor), 2026-06-09. Baseline `3668b622`..`HEAD`. 1 decision-needed, 6 patch, 3 defer, 10 dismissed as noise._
+
+**Decision-needed:** _(resolved 2026-06-09 → reclassified as patch below)_
+
+**Patch:**
+
+- [x] [Review][Patch] Bulk-inquiry `raw_envelope` leaks embedded `institution_id` (+ consumer/invoice identifiers) — The bulk `*Result` wraps `<NewDataSet>…<Consumer_Number>INSTITUTION_ID…</Consumer_Number>…` inside `<![CDATA[…]]>` (fixture `bill-payment-bulk-inquiry/matched-paid.xml`); `redactEnvelope()` matches DOM elements by local-name and cannot descend into CDATA text, so `institution_id` survives unmasked in the `raw_envelope` diagnostic (AC5 lists `InstitutionID` as must-redact). **Resolution (Israr, Option 1):** blank the `*Result` element's text content in `raw_envelope` (replace with the `xxxx` token) — the functional copy stays in `raw_result` for the 3.2 parser. [components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php:77]
+
+- [x] [Review][Patch] `fault` diagnostic field leaks PII and incompletely redacts credentials — `redactedDiagnosticText()` only masks XML-shaped text, 5 configured credential values, and a `userName|password|InstitutionID`-keyed regex whose `[^,\s<]+` stops at the first space. A plain-text fault echoing customer `Name`/`Mobile`/`Email`/`Branch`, or a credential containing whitespace/quotes, leaks into the returned `fault`. AC5. Fix: strip the current request's sensitive values (the client already holds `$params`) and route through a PII-aware redactor. [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php:434]
+- [x] [Review][Patch] `extractRawResult()` parses the untrusted response envelope without the DOCTYPE/size guard — `loadXML($response, LIBXML_NONET)` lacks the `<!DOCTYPE`-reject + `MAX_ENVELOPE_BYTES` bound that `redactEnvelope()` enforces, leaving an XML-entity-expansion (billion-laughs) DoS asymmetry on the fault-with-body path. Fix: apply the same guard (or a shared safe-load helper). [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php:371]
+- [x] [Review][Patch] `hasUsableWsdlUrl()` does not enforce the `https` scheme — it rejects userinfo but `FILTER_VALIDATE_URL` accepts `http://`, `file://`, and SSRF-internal hosts. Fix: require `parse_url($wsdl_url, PHP_URL_SCHEME) === 'https'` at call time (mirrors the story's "fail-closed / mirror the settings guard at call time" intent; AC3 spirit). [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php:333]
+- [x] [Review][Patch] `redactEnvelope('')` crashes on PHP 8 — the size/DOCTYPE guards pass for `''`, so `loadXML('')` is reached, which throws `ValueError` on PHP 8.0+ (no longer returns false) and escapes uncaught from this public method. Fix: guard empty input → return `ENVELOPE_UNPARSEABLE`. [components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php:77]
+- [x] [Review][Patch] Low/defensive redaction hardening (not triggerable under the confirmed scalar contract, but cheap + clearly correct): (a) `maskValue()` casts `(string) $value` on a possibly non-stringable object → `Error`; guard objects. (b) `maskDataRecursive()` recurses into arrays before checking the key, so an array-valued sensitive key (`password => [...]`) bypasses masking. (c) `timeout()` has a floor/default but no ceiling — a huge `soap_timeout` (digit-only rule allows it) yields an unbounded connection timeout; add a sane cap. [components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php:138,167; KuickPaySoapClient.php:318]
+- [x] [Review][Patch] Test coverage gaps (AC9) — add tests for: the non-`SoapFault` `Throwable`-with-response-body branch; DOCTYPE/oversize/empty driven through the real `call()`→`raw_envelope` path; PII-in-plain-text-fault redaction (pairs with the `fault` patch); `http://` WSDL rejection (pairs with the scheme patch). [components/gateways/nonmerchant/kuickpay/tests/KuickPaySoapClientTest.php]
+
+**Defer:**
+
+- [x] [Review][Defer] `isTimeout()` classification is message-text/locale-dependent [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php] — deferred; only the `error_class` label is affected (timeout and transport_error retry identically), acceptable until alerting/branching depends on the exact class.
+- [x] [Review][Defer] Redaction completeness vs an expanded provider contract — element-name redactor won't mask sensitive values carried in XML *attributes*, and the denylist is exact-local-name (misses aliases like `CustomerName`/`MobileNo`) [components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php:77] — deferred; not triggerable under the confirmed element-based contract, revisit if the provider contract changes.
+- [x] [Review][Defer] Verification record is internally contradictory and tests never ran under the target toolchain [_bmad-output/implementation-artifacts/3-1-wrap-kuickpay-soap-operations.md] — deferred; Risks say "php/ext-soap ABSENT" while the Completion note says "PHP 8.3.31 present with soap loaded" (verified: `php` = 8.3.31 with ext-soap, i.e. `php -l` ran on 8.3 not the 8.2 target, and the suite was only exercised by a "direct PHP fallback script", never an actual PHPUnit). Run `php -l` + the component suite under PHP 8.2 + PHPUnit ~8.5 before merge and reconcile the contradictory story statements.
+
+**Dismissed as noise (10):** Blind Hunter's "SOAP-fault-with-body ⇒ ok=true is a bug" (×2) — **false positive, AC6/AC7 mandate exactly this** (`05 INVALID_CREDENTIALS` is the parser's `credential_error` to make, not the client's); `assertRegExp` "errors under PHPUnit 10" — correct for the project's PHPUnit ~8.5 target, commit `5b686273` deliberately chose it; `ini_set` restore (self-confirmed correct); XPath operation-name interpolation (operation names are internal constants); inquiry retry breadth (inquiries idempotent; InsertVoucher correctly never retried); `traceId` collision (effectively impossible); `maskValue` negative-unmask (dead path, all call sites use length 0); `cache_wsdl` fallback `2` (== `WSDL_CACHE_MEMORY`); same-as-voucher strict `=== 'true'` (matches the stored `'true'/'false'` contract); `extractRawResult` first-of-multiple `*Result` (adversarial-only, defensible default).
