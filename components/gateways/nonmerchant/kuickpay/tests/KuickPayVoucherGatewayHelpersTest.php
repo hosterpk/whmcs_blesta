@@ -205,6 +205,19 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame([], $gateway->logs);
     }
 
+    public function testReferencePatternLanguageNotesDocumentLiveTokens()
+    {
+        $lang = [];
+        require __DIR__ . '/../language/en_us/kuickpay.php';
+
+        $this->assertStringContainsString('{random_prefix}', $lang['Kuickpay.registration_number_pattern_note']);
+        $this->assertStringContainsString('{invoice_id}', $lang['Kuickpay.registration_number_pattern_note']);
+        $this->assertStringContainsString('{institution_id}', $lang['Kuickpay.consumer_number_pattern_note']);
+        $this->assertStringContainsString('{registration_number}', $lang['Kuickpay.consumer_number_pattern_note']);
+        $this->assertStringNotContainsString('later workflow', $lang['Kuickpay.registration_number_pattern_note']);
+        $this->assertStringNotContainsString('later workflow', $lang['Kuickpay.consumer_number_pattern_note']);
+    }
+
     private function gateway()
     {
         $reflection = new ReflectionClass(KuickPayVoucherGatewayHelpers::class);
