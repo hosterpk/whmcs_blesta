@@ -4,7 +4,7 @@ baseline_commit: a065c59f
 
 # Story 2.2: Generate Registration Number and Consumer Number
 
-Status: review
+Status: done
 
 ## Story
 
@@ -439,7 +439,7 @@ git status --porcelain
 
 _Adversarial code review (bmad-code-review) — 2026-06-10, baseline `a065c59f`. Three parallel layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor). **All 3 ACs and all 9 Non-Negotiables PASS** against the actual code + tests; results independently verified. 1 patch, 4 deferred, 11 dismissed as noise (false positives / by-design / unreachable inputs)._
 
-- [ ] [Review][Patch] Log `invoice` diagnostic key with an `(int)` cast to match the pinned contract [components/gateways/nonmerchant/kuickpay/kuickpay.php:671] — spec Task 4.2 prescribes `'invoice' => (int) ($invoice_amounts[0]['id'] ?? 0)`; as-built emits `?? null` with no cast. Functionally equivalent in the live flow (`normalizeInvoiceAmounts()` preserves the integer `id`), but the cast makes the logged value type-stable regardless of upstream id type and restores the contract round-1 triage pinned. (blind + auditor)
+- [x] [Review][Patch] Log `invoice` diagnostic key with an `(int)` cast to match the pinned contract [components/gateways/nonmerchant/kuickpay/kuickpay.php:671] — spec Task 4.2 prescribes `'invoice' => (int) ($invoice_amounts[0]['id'] ?? 0)`; as-built emitted `?? null` with no cast. Functionally equivalent in the live flow (`normalizeInvoiceAmounts()` preserves the integer `id`), but the cast makes the logged value type-stable regardless of upstream id type and restores the contract round-1 triage pinned. (blind + auditor) **APPLIED 2026-06-10 (commit `9859b17a`); suite green at 120 tests / 631 assertions.**
 - [x] [Review][Defer] `expandPattern()` length check counts bytes, not characters, vs `varchar(64)` [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:233] — deferred, pre-existing (carried from 2.1's `strlen` guard; unreachable via the ASCII-enforced pattern charset; if ever hit it fails closed, never corrupts). (edge)
 - [x] [Review][Defer] `company_id` mismatch: collision lookup uses `(int) … ?? 0` (L59/72) while the insert uses `… ?? null` (L90) [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:59] — deferred, low-risk (only triggers on an abnormal null-company context that cannot occur in an authenticated HTTP pay flow; fails closed without a bad write). (edge)
 - [x] [Review][Defer] Throwable-catch and benign null-return paths record no admin diagnostic [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:119] — deferred, by design (spec Task 2.4/2.5 forbids setting `lastError` in the catch → benign `not_ready`); durable audit of swallowed DB failures is owned by Epic 4 / Story 4.5. (edge)
