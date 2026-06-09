@@ -1,0 +1,9 @@
+<?php if (!$this->Html->ifSet($companion_installed)) { ?>
+    <div class="alert alert-danger" role="alert">
+        <?php echo $this->_('Kuickpay.!error.companion_missing'); ?>
+    </div>
+<?php } else { ?>
+    <div class="alert alert-info" role="alert">
+        <?php echo $this->_('Kuickpay.settings.scaffold_note'); ?>
+    </div>
+<?php } ?>

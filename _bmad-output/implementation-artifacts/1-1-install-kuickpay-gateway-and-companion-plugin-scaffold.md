@@ -56,10 +56,10 @@ _Reproduced verbatim from [Source: epics.md#Story 1.1] (lines 311–326)._
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Create the gateway scaffold** under `components/gateways/nonmerchant/kuickpay/` (AC: #1, #2, #3)
-  - [ ] 1.1 Create `config.json` mirroring `components/gateways/nonmerchant/offline/config.json`: `version` `"1.0.0"`, `name` `"Kuickpay.name"`, `description` `"Kuickpay.description"`, an `authors` array, and **`"currencies": ["PKR"]`** (PKR-only by declaration — see Dev Notes "PKR-only at scaffold stage"). Keys `name`/`description` are language keys, not literal strings.
-  - [ ] 1.2 Create `composer.json` mirroring `offline/composer.json`: `"name": "blesta/kuickpay"`, `"description": "KuickPay"`, `"type": "blesta-gateway-nonmerchant"`, `"license": "proprietary"`, `"require": {"blesta/composer-installer": "~1.0"}`. (`offline`/`shared_login` both carry a `description`; it is a cosmetic Composer label, **not** a path/class-derivation source, so brand casing is fine here.) No `autoload` block (no `lib/` in this story).
-  - [ ] 1.3 Create `kuickpay.php` with `class Kuickpay extends NonmerchantGateway` (legacy global class, no namespace). Implement the minimal non-merchant contract, modeled on `offline.php`:
+- [x] **Task 1 — Create the gateway scaffold** under `components/gateways/nonmerchant/kuickpay/` (AC: #1, #2, #3)
+  - [x] 1.1 Create `config.json` mirroring `components/gateways/nonmerchant/offline/config.json`: `version` `"1.0.0"`, `name` `"Kuickpay.name"`, `description` `"Kuickpay.description"`, an `authors` array, and **`"currencies": ["PKR"]`** (PKR-only by declaration — see Dev Notes "PKR-only at scaffold stage"). Keys `name`/`description` are language keys, not literal strings.
+  - [x] 1.2 Create `composer.json` mirroring `offline/composer.json`: `"name": "blesta/kuickpay"`, `"description": "KuickPay"`, `"type": "blesta-gateway-nonmerchant"`, `"license": "proprietary"`, `"require": {"blesta/composer-installer": "~1.0"}`. (`offline`/`shared_login` both carry a `description`; it is a cosmetic Composer label, **not** a path/class-derivation source, so brand casing is fine here.) No `autoload` block (no `lib/` in this story).
+  - [x] 1.3 Create `kuickpay.php` with `class Kuickpay extends NonmerchantGateway` (legacy global class, no namespace). Implement the minimal non-merchant contract, modeled on `offline.php`:
     - `__construct()` → `loadConfig(dirname(__FILE__) . DS . 'config.json')`; `Loader::loadComponents($this, ['Input'])`; `Language::loadLang('kuickpay', null, dirname(__FILE__) . DS . 'language' . DS)`.
     - `setCurrency($currency)` → `$this->currency = $currency;`.
     - `setMeta(array $meta = null)` → store in a private `$meta`.
@@ -70,10 +70,10 @@ _Reproduced verbatim from [Source: epics.md#Story 1.1] (lines 311–326)._
     - `validate(array $get, array $post)` → `$this->Input->setErrors($this->getCommonError('unsupported')); return null;`.
     - `success(array $get, array $post)` → `$this->Input->setErrors($this->getCommonError('unsupported')); return null;`.
     - ⚠️ **Wrap `getCommonError` in `setErrors` — do not call it bare.** `offline.php` does `$this->getCommonError('unsupported'); return null;` and discards the return value, so the error is never registered. It is the **lone outlier**: every other nonmerchant gateway (`btcpay_server`, `paypal_checkout`, `square`, `bitpay`, `gocardless`, `pagseguro`, `alipay`, …) uses `$this->Input->setErrors($this->getCommonError('unsupported'))`. The wrapped form is what actually surfaces the failure — i.e. the fail-closed behavior this story requires — and matches the base-class contract. [Source: components/gateways/lib/nonmerchant_gateway.php:210-220 — getCommonError return is "to be set using Input::setErrors()"]
-  - [ ] 1.4 Create `views/default/settings.pdt`: a thin template that, when `companion_installed` is false, renders the clear admin setup-error banner (AC3) using `$this->_('Kuickpay.!error.companion_missing')`; otherwise renders the `$this->_('Kuickpay.settings.scaffold_note')` note. Mirror `offline/views/default/settings.pdt` helper usage (`$this->Form`, `$this->Html`, `$this->_()`). No real setting fields.
-  - [ ] 1.5 Create `views/default/process.pdt`: a thin placeholder that displays the neutral `$this->_('Kuickpay.process.not_ready')` message (no voucher, no amount, no "paid" language, no success styling). Mirror `offline/views/default/process.pdt` structure.
-  - [ ] 1.6 Implement the **AC3 companion-plugin guard** inside the gateway: load `PluginManager` (`Loader::loadModels($this, ['PluginManager'])`) and check `$this->PluginManager->isInstalled('kuickpay_reconcile', Configure::get('Blesta.company_id'))`. Use the result to (a) drive the `settings.pdt` admin error and (b) fail-close `buildProcess()`. See Dev Notes "AC3 guard — the exact API."
-  - [ ] 1.7 Create `language/en_us/kuickpay.php` using the **locked en_us copy below — this is the final, approved wording; use it verbatim, do not paraphrase.** Keep the two audiences separate: the admin "install the plugin" instruction must **never** render on the customer process path. All admin/customer text lives here — no hard-coded strings in PHP or `.pdt`. [Source: project-context.md "Keep user-facing text in language files"]
+  - [x] 1.4 Create `views/default/settings.pdt`: a thin template that, when `companion_installed` is false, renders the clear admin setup-error banner (AC3) using `$this->_('Kuickpay.!error.companion_missing')`; otherwise renders the `$this->_('Kuickpay.settings.scaffold_note')` note. Mirror `offline/views/default/settings.pdt` helper usage (`$this->Form`, `$this->Html`, `$this->_()`). No real setting fields.
+  - [x] 1.5 Create `views/default/process.pdt`: a thin placeholder that displays the neutral `$this->_('Kuickpay.process.not_ready')` message (no voucher, no amount, no "paid" language, no success styling). Mirror `offline/views/default/process.pdt` structure.
+  - [x] 1.6 Implement the **AC3 companion-plugin guard** inside the gateway: load `PluginManager` (`Loader::loadModels($this, ['PluginManager'])`) and check `$this->PluginManager->isInstalled('kuickpay_reconcile', Configure::get('Blesta.company_id'))`. Use the result to (a) drive the `settings.pdt` admin error and (b) fail-close `buildProcess()`. See Dev Notes "AC3 guard — the exact API."
+  - [x] 1.7 Create `language/en_us/kuickpay.php` using the **locked en_us copy below — this is the final, approved wording; use it verbatim, do not paraphrase.** Keep the two audiences separate: the admin "install the plugin" instruction must **never** render on the customer process path. All admin/customer text lives here — no hard-coded strings in PHP or `.pdt`. [Source: project-context.md "Keep user-facing text in language files"]
     ```php
     $lang['Kuickpay.name'] = 'KuickPay';
     $lang['Kuickpay.description'] = 'Accept invoice payments in PKR using KuickPay payment references.';
@@ -272,15 +272,31 @@ GPT-5 Codex
 
 ### Debug Log References
 
+- 2026-06-09: Gateway scaffold JSON parsed with `python3.12 -m json.tool`; PHP lint could not run because no `php` binary is installed or on PATH.
+
+### Implementation Plan
+
+- Implement the scaffold in two runtime units: gateway first, companion plugin second; then run story-level validation and complete BMAD tracking.
+
 ### Completion Notes List
 
+- Gateway scaffold added under `components/gateways/nonmerchant/kuickpay/` with PKR-only metadata, Blesta installer metadata, locked en_us language copy, admin settings banner, neutral customer process placeholder, companion-plugin guard, and fail-closed `validate()`/`success()` paths.
+
 ### File List
+
+- `components/gateways/nonmerchant/kuickpay/composer.json`
+- `components/gateways/nonmerchant/kuickpay/config.json`
+- `components/gateways/nonmerchant/kuickpay/kuickpay.php`
+- `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php`
+- `components/gateways/nonmerchant/kuickpay/views/default/process.pdt`
+- `components/gateways/nonmerchant/kuickpay/views/default/settings.pdt`
 
 ## Change Log
 
 - 2026-06-09: Story drafted (ready-for-dev) via bmad-create-story. Comprehensive context engine analysis completed — comprehensive developer guide created.
 - 2026-06-09: Multi-agent validation triage applied; story remains **ready-for-dev**. Each change was re-verified against live Blesta source before inclusion. Folded in: `validate()`/`success()` now wrap the error in `$this->Input->setErrors($this->getCommonError('unsupported'))` (offline.php's bare call is the lone outlier among nonmerchant gateways and suppresses the error — defeating fail-closed intent); added the exact `makeView()` view-resolution idiom (`str_replace(ROOTWEBDIR, '', dirname(__FILE__) . DS)`), the explicit `loadHelpers` calls, and the full `buildProcess()` signature; added `description` to both `composer.json` specs; separated admin vs customer companion-missing copy (admin "install the plugin" text must never reach the customer process path); sourced `upgrade()`'s signature from the `Plugin` base class (shared_login omits it); documented `isInstalled` disabled/null-company semantics as a conscious scaffold-scope decision; flagged the cosmetic gateway-logo gap (broken admin image, AC1 unaffected) with an optional placeholder; and stated the install/upgrade/uninstall override-vs-inherit rule. Citation/line-number drift and Dev-Notes verbosity flagged by validation were reviewed and intentionally left unchanged (no effect on generated code; redundancy is deliberate defense-in-depth for a safety-critical scaffold).
 - 2026-06-09: Locked final en_us microcopy (Open Question #3 resolved). Task 1.7 now carries verbatim approved strings for `Kuickpay.name`, `Kuickpay.description`, `Kuickpay.!error.companion_missing` (admin), `Kuickpay.process.not_ready` (customer), and `Kuickpay.settings.scaffold_note`; Tasks 1.4/1.5 reference the exact keys. Admin instruction kept off the customer process path.
+- 2026-06-09: Implemented Task 1 gateway scaffold.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
