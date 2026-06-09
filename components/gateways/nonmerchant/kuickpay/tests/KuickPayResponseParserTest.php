@@ -299,6 +299,33 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame('1234INVOICE_ID', $evidence[1]->consumerNumber());
     }
 
+    public function testBulkBlankConsumerNumberNeverMatchesBlankExpected()
+    {
+        // A blank expected consumer (e.g. a null voucher value coerced to '') must not match a
+        // blank Consumer_Number row and confirm a payment; it fails closed to unmatched.
+        $row = '<Table>'
+            . '<Consumer_Number></Consumer_Number>'
+            . '<Registration_Number>1234INVOICE_ID</Registration_Number>'
+            . '<Transaction_Date>20260609</Transaction_Date>'
+            . '<Paid_Amount>1000.00</Paid_Amount>'
+            . '<Transaction_Reference>KP-BULK-PAID-0001</Transaction_Reference>'
+            . '<Currency>PKR</Currency>'
+            . '</Table>';
+
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', '<NewDataSet>' . $row . '</NewDataSet>'),
+            [
+                'expected_consumer_numbers' => ['', 'INSTITUTION_ID1234INVOICE_ID'],
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+            ]
+        );
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('manual_review', 'unmatched_reference', $evidence[0]);
+        $this->assertSame(['unmatched_reference'], $evidence[0]->validationErrors());
+    }
+
     public function testBulkMalformedDatasetReturnsSingleManualReviewEvidence()
     {
         $evidence = $this->parser()->parseBulk(

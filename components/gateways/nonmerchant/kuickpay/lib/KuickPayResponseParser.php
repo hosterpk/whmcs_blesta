@@ -184,8 +184,16 @@ class KuickPayResponseParser
         libxml_use_internal_errors($previous);
 
         $evidence = [];
+        // Drop empty expected consumer numbers: a blank value must never match a blank
+        // Consumer_Number row (in_array('', [''], true) === true) and confirm a payment. An
+        // absent/empty expected set leaves every row unmatched, per the fail-closed contract.
         $expectedConsumers = isset($context['expected_consumer_numbers']) && is_array($context['expected_consumer_numbers'])
-            ? array_map('strval', $context['expected_consumer_numbers'])
+            ? array_values(array_filter(
+                array_map('strval', $context['expected_consumer_numbers']),
+                function ($value) {
+                    return $value !== '';
+                }
+            ))
             : [];
 
         foreach ($rows as $row) {
