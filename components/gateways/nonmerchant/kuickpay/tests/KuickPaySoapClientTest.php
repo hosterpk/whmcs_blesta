@@ -77,6 +77,27 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertFalse($contextOptions['ssl']['allow_self_signed']);
     }
 
+    public function testTimeoutIsCappedAtUpperBound()
+    {
+        $capturedOptions = null;
+        $fake = new KuickPaySoapClientFake();
+        $fake->return = (object) ['InsertVoucherResult' => '00 X'];
+
+        $client = new KuickPaySoapClient($this->config(['soap_timeout' => '99999']), function ($wsdl, $options) use (
+            &$capturedOptions,
+            $fake
+        ) {
+            $capturedOptions = $options;
+            return $fake;
+        });
+
+        $this->callPrivate($client, 'InsertVoucher', []);
+
+        $this->assertSame(120, $capturedOptions['connection_timeout']);
+        $contextOptions = stream_context_get_options($capturedOptions['stream_context']);
+        $this->assertSame(120, $contextOptions['http']['timeout']);
+    }
+
     public function testSuccessfulCallReturnsRawResultAndNoBusinessDecision()
     {
         $fake = new KuickPaySoapClientFake();

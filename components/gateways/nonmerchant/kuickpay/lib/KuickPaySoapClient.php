@@ -12,6 +12,7 @@ class KuickPaySoapClient
 {
     private const DEFAULT_TIMEOUT = 30;
     private const MIN_TIMEOUT = 5;
+    private const MAX_TIMEOUT = 120;
 
     /**
      * @var array Gateway SOAP configuration
@@ -322,7 +323,9 @@ class KuickPaySoapClient
             $timeout = self::DEFAULT_TIMEOUT;
         }
 
-        return max(self::MIN_TIMEOUT, $timeout);
+        // Bound both ends: a sane floor, and a ceiling so a misconfigured huge value
+        // cannot pin a connection open far longer than any reasonable transport.
+        return min(self::MAX_TIMEOUT, max(self::MIN_TIMEOUT, $timeout));
     }
 
     /**
