@@ -83,3 +83,7 @@ $lang['Kuickpay.!error.instruction_agent_franchise.valid'] = 'The agent or franc
 $lang['Kuickpay.!error.instruction_mobile_app.valid'] = 'The mobile app instruction setting is invalid.';
 $lang['Kuickpay.!error.logging_enabled.valid'] = 'The logging setting is invalid.';
 $lang['Kuickpay.!error.reconciliation_enabled.valid'] = 'The reconciliation setting is invalid.';
+$lang['Kuickpay.!error.connection.unreachable'] = 'Could not reach KuickPay at the configured endpoint. Check the WSDL URL and try again. No voucher was created and no invoice was changed.';
+$lang['Kuickpay.!error.connection.timeout'] = 'The connection to KuickPay timed out. Check the endpoint and the SOAP timeout setting, then try again. No voucher was created and no invoice was changed.';
+$lang['Kuickpay.!error.connection.url_userinfo'] = 'Remove the username and password embedded in the WSDL URL before testing the connection.';
+$lang['Kuickpay.!error.connection.unavailable'] = 'The connection test could not run in this environment.';

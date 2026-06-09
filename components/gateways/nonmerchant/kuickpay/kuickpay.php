@@ -266,6 +266,12 @@ class Kuickpay extends NonmerchantGateway
         $this->Input->setRules($rules);
         $this->Input->validates($meta);
 
+        if (!$this->Input->errors() && (($meta['run_connection_test'] ?? 'false') === 'true')) {
+            $this->runConnectionTest($meta);
+        }
+
+        unset($meta['run_connection_test']);
+
         return $meta;
     }
 
@@ -291,6 +297,102 @@ class Kuickpay extends NonmerchantGateway
     protected function maskCredentials(array $data)
     {
         return $this->maskDataRecursive($data, $this->credential_mask_fields);
+    }
+
+    /**
+     * Runs the safe settings-time connection test.
+     *
+     * This probe intentionally fetches only the configured WSDL document. It sends no credentials, logs nothing,
+     * creates no voucher, and does not validate server-side credential failures. The authenticated safe-op test
+     * and live labeled-voucher test are deferred to Story 5-1 / Epic 3 after the KuickPay contract is confirmed.
+     *
+     * @param array $meta The settings data being tested
+     */
+    private function runConnectionTest(array $meta)
+    {
+        if (!function_exists('curl_init')) {
+            $this->Input->setErrors([
+                'connection' => [
+                    'unavailable' => Language::_('Kuickpay.!error.connection.unavailable', true),
+                ],
+            ]);
+            return;
+        }
+
+        $url = (string) ($meta['wsdl_url'] ?? '');
+        if (
+            strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https'
+            || parse_url($url, PHP_URL_USER) !== null
+            || parse_url($url, PHP_URL_PASS) !== null
+        ) {
+            $this->Input->setErrors([
+                'connection' => [
+                    'url_userinfo' => Language::_('Kuickpay.!error.connection.url_userinfo', true),
+                ],
+            ]);
+            return;
+        }
+
+        $timeout = (int) ($meta['soap_timeout'] ?? 0);
+        if ($timeout < 1) {
+            $timeout = 30;
+        }
+        $timeout = min(120, $timeout);
+
+        $result = $this->executeConnectionProbe($url, [
+            CURLOPT_CONNECTTIMEOUT => $timeout,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_NOBODY => false,
+        ]);
+
+        if ((int) ($result['errno'] ?? 0) === 0 && (int) ($result['response_code'] ?? 0) > 0) {
+            return;
+        }
+
+        if ((int) ($result['errno'] ?? 0) === CURLE_OPERATION_TIMEDOUT) {
+            $this->Input->setErrors([
+                'connection' => [
+                    'timeout' => Language::_('Kuickpay.!error.connection.timeout', true),
+                ],
+            ]);
+            return;
+        }
+
+        $this->Input->setErrors([
+            'connection' => [
+                'unreachable' => Language::_('Kuickpay.!error.connection.unreachable', true),
+            ],
+        ]);
+    }
+
+    /**
+     * Executes the cURL transport probe.
+     *
+     * Broader SSRF host allowlisting is deferred until the production KuickPay endpoint set is confirmed.
+     *
+     * @param string $url The HTTPS WSDL URL to fetch
+     * @param array $options cURL options for the bounded reachability request
+     * @return array The cURL errno and HTTP response code
+     */
+    protected function executeConnectionProbe($url, array $options)
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, $options);
+        curl_exec($ch);
+
+        $result = [
+            'errno' => curl_errno($ch),
+            'response_code' => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE),
+        ];
+
+        curl_close($ch);
+
+        return $result;
     }
 
     /**
