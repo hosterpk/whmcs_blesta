@@ -107,6 +107,12 @@ class Kuickpay extends NonmerchantGateway
         }
 
         $same = (($meta['inquiry_same_as_voucher'] ?? 'false') === 'true');
+        // When inquiry credentials reuse voucher credentials, store exactly one credential pair.
+        // Inquiry operations must read voucher_* when inquiry_same_as_voucher === 'true'.
+        if ($same) {
+            unset($meta['inquiry_username'], $meta['inquiry_password']);
+        }
+
         $optionalNumericRule = ['matches', '/^([0-9]+)?$/D'];
         $referencePatternRule = ['matches', '/^[A-Za-z0-9_{}+\-]+$/D'];
 
