@@ -337,6 +337,12 @@ class KuickPaySoapClient
             return false;
         }
 
+        // Enforce TLS at call time too (mirrors the editSettings guard); filter_var alone
+        // accepts http://, file://, and other non-HTTPS schemes that would bypass TLS.
+        if (strtolower((string) parse_url($wsdl_url, PHP_URL_SCHEME)) !== 'https') {
+            return false;
+        }
+
         return parse_url($wsdl_url, PHP_URL_USER) === null
             && parse_url($wsdl_url, PHP_URL_PASS) === null;
     }

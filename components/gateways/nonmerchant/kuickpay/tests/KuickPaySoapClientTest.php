@@ -218,6 +218,24 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertFalse($factoryCalled);
     }
 
+    public function testNonHttpsWsdlUrlIsBlocked()
+    {
+        $factoryCalled = false;
+        $client = new KuickPaySoapClient(
+            $this->config(['wsdl_url' => 'http://example.com/api.asmx?WSDL']),
+            function () use (&$factoryCalled) {
+                $factoryCalled = true;
+                return new KuickPaySoapClientFake();
+            }
+        );
+
+        $outcome = $this->callPrivate($client, 'InsertVoucher', []);
+
+        $this->assertFalse($outcome['ok']);
+        $this->assertSame('transport_error', $outcome['error_class']);
+        $this->assertFalse($factoryCalled);
+    }
+
     public function testInsertVoucherInjectsVoucherCredentialsAndNeverRetries()
     {
         $fake = new KuickPaySoapClientFake();
