@@ -1,6 +1,10 @@
+---
+baseline_commit: a4ab3265ac72363a355d497ea34c987aaf1c5029
+---
+
 # Story 1.3: Encrypt and Mask KuickPay Credentials
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
