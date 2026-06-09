@@ -4,7 +4,7 @@ baseline_commit: 25d1ca3901ebf37fb050439bfbba42237c30b3fa
 
 # Story 1.1: Install KuickPay Gateway and Companion Plugin Scaffold
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -268,7 +268,7 @@ If a running Blesta + MySQL dev instance is **not** available, root PHPUnit / in
 
 ### Agent Model Used
 
-_To be filled by the dev agent._
+GPT-5 Codex
 
 ### Debug Log References
 

@@ -79,7 +79,7 @@ development_status:
 
   # --- Epic 1: Safe KuickPay Gateway Enablement (parallel with Phase 0) ---
   epic-1: in-progress
-  1-1-install-kuickpay-gateway-and-companion-plugin-scaffold: ready-for-dev
+  1-1-install-kuickpay-gateway-and-companion-plugin-scaffold: in-progress
   1-2-configure-kuickpay-gateway-settings: backlog
   1-3-encrypt-and-mask-kuickpay-credentials: backlog
   1-4-run-safe-kuickpay-connection-tests: backlog
