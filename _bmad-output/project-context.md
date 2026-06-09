@@ -27,6 +27,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Templates: Use existing `.pdt` template conventions. Do not introduce Twig, Blade, or a second view engine.
 - Package layout: Composer installer paths place Blesta extensions directly into runtime folders such as `plugins/`, `components/modules/`, `components/gateways/*/`, `components/messengers/`, `components/reports/`, invoice folders, and language root paths.
 - Testing/tooling: Composer scripts call PHPUnit against `../tests`; this checkout does not include that tests directory. Dev tooling includes PHPUnit `~8.5`, PHPCS `~4.0`, and Slevomat `~8.24.0`.
+- Python tasks: When a task needs Python, use Python `3.11`; if Python 3.11 is not available, fall back to Python `3.6.8`. Do not silently use another interpreter version.
+- Python `tomllib` exception: tasks that need stdlib `tomllib` (e.g. `_bmad/scripts/resolve_config.py`, `_bmad/scripts/resolve_customization.py`, the `bmad-customize` scripts) require Python `3.11+` and cannot use the `3.6.8` fallback, because `tomllib` was only added to the standard library in Python 3.11.
 - Frontend tooling: No root Node app. `plugins/order/package-lock.json` is plugin-local and should not be treated as a repo-wide frontend stack.
 - Sensitive config: `config/blesta.php` contains database credentials; do not expose, copy, or normalize it into docs, logs, examples, or commits.
 
