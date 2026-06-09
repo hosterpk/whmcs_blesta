@@ -52,13 +52,13 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Create plugin base model and schema in `install()`** (AC: #1)
-  - [ ] 1.1 Create `plugins/kuickpay_reconcile/kuickpay_reconcile_model.php` with `class KuickpayReconcileModel extends AppModel`. Follow the `webhooks_model.php` pattern: `parent::__construct()`, `Loader::loadHelpers($this, ['Form'])`, and auto-load language for the calling model. This base gives all plugin models access to `Record`, `Input`, `Form`, and language helpers.
-  - [ ] 1.2 Update `plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php` `install($plugin_id)` to create the two plugin-owned tables idempotently using `$this->Record->setField(...)->create('table', true)`. Wrap in `try/catch`; on exception, set `$this->Input->setErrors(['db'=> ['create'=>$e->getMessage()]])` and return. Follow `cms_plugin.php` and `support_manager_plugin.php` conventions. Load `Record` component if not set: `if (!isset($this->Record)) { Loader::loadComponents($this, ['Input', 'Record']); }`
-  - [ ] 1.3 Create `kuickpay_vouchers` table schema (exact fields below in Dev Notes → Database Schema). Use `setField` for every column, `setKey` for primary/unique/index keys, then `create('kuickpay_vouchers', true)`. Key constraints: PRIMARY KEY (`id`), UNIQUE KEY `uniq_kuickpay_vouchers_consumer` (`company_id`, `consumer_number`), UNIQUE KEY `uniq_kuickpay_vouchers_reg` (`company_id`, `registration_number`), KEY `idx_kuickpay_vouchers_status` (`status`), KEY `idx_kuickpay_vouchers_client` (`client_id`), KEY `idx_kuickpay_vouchers_txn` (`blesta_transaction_id`).
-  - [ ] 1.4 Create `kuickpay_voucher_invoices` table schema. PRIMARY KEY (`id`), UNIQUE KEY `uniq_kuickpay_voucher_invoices_link` (`voucher_id`, `invoice_id`), KEY `idx_kuickpay_voucher_invoices_inv` (`invoice_id`).
-  - [ ] 1.5 Update `upgrade($current_version, $plugin_id)` as a safe no-op placeholder with docblock. No versioned migrations needed yet (first schema version).
-  - [ ] 1.6 Keep `uninstall($plugin_id, $last_instance)` as a safe no-op that drops **nothing** (NN#6). Add a docblock explaining that Voucher evidence tables are preserved per architecture rollback policy. Do NOT drop tables even when `$last_instance === true`.
+- [x] **Task 1 — Create plugin base model and schema in `install()`** (AC: #1)
+  - [x] 1.1 Create `plugins/kuickpay_reconcile/kuickpay_reconcile_model.php` with `class KuickpayReconcileModel extends AppModel`. Follow the `webhooks_model.php` pattern: `parent::__construct()`, `Loader::loadHelpers($this, ['Form'])`, and auto-load language for the calling model. This base gives all plugin models access to `Record`, `Input`, `Form`, and language helpers.
+  - [x] 1.2 Update `plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php` `install($plugin_id)` to create the two plugin-owned tables idempotently using `$this->Record->setField(...)->create('table', true)`. Wrap in `try/catch`; on exception, set `$this->Input->setErrors(['db'=> ['create'=>$e->getMessage()]])` and return. Follow `cms_plugin.php` and `support_manager_plugin.php` conventions. Load `Record` component if not set: `if (!isset($this->Record)) { Loader::loadComponents($this, ['Input', 'Record']); }`
+  - [x] 1.3 Create `kuickpay_vouchers` table schema (exact fields below in Dev Notes → Database Schema). Use `setField` for every column, `setKey` for primary/unique/index keys, then `create('kuickpay_vouchers', true)`. Key constraints: PRIMARY KEY (`id`), UNIQUE KEY `uniq_kuickpay_vouchers_consumer` (`company_id`, `consumer_number`), UNIQUE KEY `uniq_kuickpay_vouchers_reg` (`company_id`, `registration_number`), KEY `idx_kuickpay_vouchers_status` (`status`), KEY `idx_kuickpay_vouchers_client` (`client_id`), KEY `idx_kuickpay_vouchers_txn` (`blesta_transaction_id`).
+  - [x] 1.4 Create `kuickpay_voucher_invoices` table schema. PRIMARY KEY (`id`), UNIQUE KEY `uniq_kuickpay_voucher_invoices_link` (`voucher_id`, `invoice_id`), KEY `idx_kuickpay_voucher_invoices_inv` (`invoice_id`).
+  - [x] 1.5 Update `upgrade($current_version, $plugin_id)` as a safe no-op placeholder with docblock. No versioned migrations needed yet (first schema version).
+  - [x] 1.6 Keep `uninstall($plugin_id, $last_instance)` as a safe no-op that drops **nothing** (NN#6). Add a docblock explaining that Voucher evidence tables are preserved per architecture rollback policy. Do NOT drop tables even when `$last_instance === true`.
 
 - [ ] **Task 2 — Create plugin models** (AC: #1)
   - [ ] 2.1 Create `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php` with `class KuickpayVouchers extends KuickpayReconcileModel`. Minimum methods:
@@ -511,15 +511,23 @@ git status --porcelain
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+GPT-5 Codex
 
 ### Debug Log References
 
+- 2026-06-10: Task 1 syntax checks passed for `kuickpay_reconcile_model.php` and `kuickpay_reconcile_plugin.php`; structural grep confirmed required voucher unique keys and idempotent table creation calls.
+
 ### Completion Notes List
 
+- Task 1 complete: added the plugin base model, idempotent voucher/invoice-link schema creation in `install()`, safe no-op upgrade, and non-destructive uninstall documentation preserving evidence tables.
+
 ### File List
+
+- plugins/kuickpay_reconcile/kuickpay_reconcile_model.php
+- plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
 
 ## Change Log
 
 - 2026-06-09: Story created (ready-for-dev) via bmad-create-story. Comprehensive context engine analysis completed — comprehensive developer guide created.
 - 2026-06-10: Validation triage applied (story remains ready-for-dev). Pinned the voucher data contract (service returns a flat array; view stops mis-accessing a `stdClass`); relocated model error language keys into the per-model files the base model actually auto-loads; made reference generation deterministic and aligned to the confirmed KuickPay shape so the company-scoped unique keys become the schema-level AC2 race guard; mandated atomic transactional create with rollback plus a race-recovery re-query; added invoice-link validation, `lastInsertId()` returns, an inline status allowlist, and string-only fail-closed amount normalization; gated voucher create/reuse behind the no-errors branch (the guard has no early-return); corrected the "prove no mutation" grep (dropped the self-matching `->add(`); added a unit-test task and a `setGatewayId()` ordering check; and added Dev Notes for the data contract and the AC2 idempotency strategy. Verified against source: `buildProcess()` control flow, base-model language auto-load, `Record->insert()`/`lastInsertId()`, the 3.1 confirmed reference formula, and the existing test harness.
+- 2026-06-10: Implemented Task 1 plugin base model and durable voucher schema.
