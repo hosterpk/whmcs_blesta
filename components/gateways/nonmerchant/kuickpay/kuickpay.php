@@ -16,6 +16,11 @@ class Kuickpay extends NonmerchantGateway
     private $meta;
 
     /**
+     * @var int The gateway ID assigned by Blesta
+     */
+    protected $kuickpay_gateway_id;
+
+    /**
      * @var array Credential-bearing fields that must be redacted from gateway-owned diagnostics
      */
     private $credential_mask_fields = [
@@ -51,6 +56,20 @@ class Kuickpay extends NonmerchantGateway
     public function setCurrency($currency)
     {
         $this->currency = $currency;
+    }
+
+    /**
+     * Sets this gateway's ID.
+     *
+     * @param int $id The gateway ID
+     */
+    public function setGatewayId($id)
+    {
+        if (is_callable('parent::setGatewayId')) {
+            parent::setGatewayId($id);
+        }
+
+        $this->kuickpay_gateway_id = $id;
     }
 
     /**
@@ -563,7 +582,72 @@ class Kuickpay extends NonmerchantGateway
             $this->Input->setErrors($this->getCommonError('unsupported'));
         }
 
+        if (!$this->Input->errors()) {
+            Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherReferenceService.php');
+
+            $service = new KuickPayVoucherReferenceService();
+            $meta = is_array($this->meta) ? $this->meta : [];
+            $voucher = $service->getOrCreateForInvoiceContext([
+                'company_id' => Configure::get('Blesta.company_id'),
+                'gateway_id' => $this->kuickpay_gateway_id,
+                'client_id' => $contact_info['client_id'] ?? null,
+                'currency' => $this->currency,
+                'amount' => $this->normalizeAmount((string) $amount),
+                'invoice_amounts' => $this->normalizeInvoiceAmounts((array) $invoice_amounts),
+                'institution_id' => $meta['institution_id'] ?? '',
+                'due_date_offset_days' => (int) ($meta['due_date_offset_days'] ?? 0),
+                'expiry_date_offset_days' => (int) ($meta['expiry_date_offset_days'] ?? 0),
+            ]);
+
+            if ($voucher !== null) {
+                $this->view->set('voucher', $voucher);
+            }
+        }
+
         return $this->view->fetch();
+    }
+
+    /**
+     * Normalizes an amount as a decimal string without float math.
+     *
+     * @param string $amount The amount to normalize
+     * @return string The normalized amount, or original trimmed input when invalid
+     */
+    protected function normalizeAmount(string $amount): string
+    {
+        $amount = trim($amount);
+        $normalized = str_replace(',', '', $amount);
+
+        if (!preg_match('/^\d+(?:\.\d+)?$/', $normalized)) {
+            return $amount;
+        }
+
+        $parts = explode('.', $normalized, 2);
+        $integer = ltrim($parts[0], '0');
+        if ($integer === '') {
+            $integer = '0';
+        }
+        $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2);
+
+        return $integer . '.' . $fraction;
+    }
+
+    /**
+     * Normalizes invoice amount allocations as decimal strings.
+     *
+     * @param array $invoice_amounts Invoice amount allocations
+     * @return array Normalized invoice amount allocations
+     */
+    protected function normalizeInvoiceAmounts(array $invoice_amounts): array
+    {
+        foreach ($invoice_amounts as &$invoice_amount) {
+            if (isset($invoice_amount['amount'])) {
+                $invoice_amount['amount'] = $this->normalizeAmount((string) $invoice_amount['amount']);
+            }
+        }
+        unset($invoice_amount);
+
+        return $invoice_amounts;
     }
 
     /**

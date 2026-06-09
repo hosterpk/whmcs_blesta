@@ -95,8 +95,8 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
   - [x] 4.3 **Consumer Number (deterministic):** concatenate `institution_id` + `registration_number` (yielding the confirmed `institution_id + <4-digit prefix> + invoice_id` shape). If `institution_id` is empty, fall back to `registration_number` alone so the value is never null/empty (the DB column is NOT NULL). This is likewise deterministic per invoice, so the `(company_id, consumer_number)` unique key is a second schema-level race guard.
   - [x] 4.4 Total length of both references must not exceed the `varchar(64)` column size. Truncate or error if needed. Document that Story 2.2 replaces this algorithm with configurable patterns.
 
-- [ ] **Task 5 — Wire gateway `buildProcess()` to plugin reference service** (AC: #1, #2)
-  - [ ] 5.1 In `components/gateways/nonmerchant/kuickpay/kuickpay.php`, add a `protected $kuickpay_gateway_id;` property and override `setGatewayId($id)`:
+- [x] **Task 5 — Wire gateway `buildProcess()` to plugin reference service** (AC: #1, #2)
+  - [x] 5.1 In `components/gateways/nonmerchant/kuickpay/kuickpay.php`, add a `protected $kuickpay_gateway_id;` property and override `setGatewayId($id)`:
     ```php
     public function setGatewayId($id)
     {
@@ -105,7 +105,7 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     }
     ```
     This is necessary because the base `Gateway::$gateway_id` is private with no getter (see Dev Notes).
-  - [ ] 5.2 Load the plugin reference service in `buildProcess()` **only when the currency and companion guards produced no errors**. The current guard (`kuickpay.php:558-564`) is an `if/elseif` that *sets* errors but does NOT early-return — it always falls through to `return $this->view->fetch()`. So the voucher create/reuse must be explicitly gated (e.g. `if (!$this->Input->errors()) { … }` immediately after the guard block) so an ineligible currency or missing companion can never create a Voucher (NN#1):
+  - [x] 5.2 Load the plugin reference service in `buildProcess()` **only when the currency and companion guards produced no errors**. The current guard (`kuickpay.php:558-564`) is an `if/elseif` that *sets* errors but does NOT early-return — it always falls through to `return $this->view->fetch()`. So the voucher create/reuse must be explicitly gated (e.g. `if (!$this->Input->errors()) { … }` immediately after the guard block) so an ineligible currency or missing companion can never create a Voucher (NN#1):
     ```php
     if (!$this->Input->errors()) {
         Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherReferenceService.php');
@@ -114,7 +114,7 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     }
     ```
     Alternatively, lazy-load via a private `getVoucherReferenceService()` helper if preferred — but keep the no-errors gate.
-  - [ ] 5.3 Build the context array from `buildProcess()` parameters and gateway state:
+  - [x] 5.3 Build the context array from `buildProcess()` parameters and gateway state:
     ```php
     $context = [
         'company_id' => Configure::get('Blesta.company_id'),
@@ -129,9 +129,9 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     ];
     ```
     Note: `amount` from Blesta may be a float; cast to string and normalize (see Task 5.5). `client_id` is the documented `$contact_info['client_id']` field (see the `buildProcess()` docblock at `kuickpay.php:512`), so it is populated in the normal client pay flow; the `?? null` is only a defensive guard. If it ever resolves null, voucher creation fails its required-field rule and the view falls back to `not_ready` — correct fail-closed behavior, not a silent bad write.
-  - [ ] 5.4 Call `$voucher = $service->getOrCreateForInvoiceContext($context);`. If `$voucher` is not null, pass it to the view: `$this->view->set('voucher', $voucher);`. If null, do NOT set the voucher variable (the view shows the fallback `not_ready` message).
-  - [ ] 5.5 Add a `protected function normalizeAmount(string $amount): string` helper in the gateway that returns a normalized decimal string with exactly 2 fractional digits (e.g., `'1500.00'`) using **string operations only — no float math and no `(float)` cast** (a `(float)` cast reintroduces the binary-float representation NN#4 forbids; do not use `number_format((float) …)` here). Algorithm: trim surrounding whitespace and strip thousands separators (commas) only; then **fail closed** — if the remaining value does not match `/^\d+(?:\.\d+)?$/` (no leading sign, no exponent, no other characters), do NOT fabricate an amount: return the trimmed value unchanged so the model's amount rule rejects it (rather than silently coercing garbage into a stored amount). For a valid value: `$parts = explode('.', $amount, 2); $integer = ltrim($parts[0], '0'); if ($integer === '') $integer = '0'; $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2); return $integer . '.' . $fraction;`. Negative or signed amounts are invalid input here and must never normalize to a positive value.
-  - [ ] 5.6 Add a `protected function normalizeInvoiceAmounts(array $invoice_amounts): array` helper that maps each invoice amount through the same normalization.
+  - [x] 5.4 Call `$voucher = $service->getOrCreateForInvoiceContext($context);`. If `$voucher` is not null, pass it to the view: `$this->view->set('voucher', $voucher);`. If null, do NOT set the voucher variable (the view shows the fallback `not_ready` message).
+  - [x] 5.5 Add a `protected function normalizeAmount(string $amount): string` helper in the gateway that returns a normalized decimal string with exactly 2 fractional digits (e.g., `'1500.00'`) using **string operations only — no float math and no `(float)` cast** (a `(float)` cast reintroduces the binary-float representation NN#4 forbids; do not use `number_format((float) …)` here). Algorithm: trim surrounding whitespace and strip thousands separators (commas) only; then **fail closed** — if the remaining value does not match `/^\d+(?:\.\d+)?$/` (no leading sign, no exponent, no other characters), do NOT fabricate an amount: return the trimmed value unchanged so the model's amount rule rejects it (rather than silently coercing garbage into a stored amount). For a valid value: `$parts = explode('.', $amount, 2); $integer = ltrim($parts[0], '0'); if ($integer === '') $integer = '0'; $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2); return $integer . '.' . $fraction;`. Negative or signed amounts are invalid input here and must never normalize to a positive value.
+  - [x] 5.6 Add a `protected function normalizeInvoiceAmounts(array $invoice_amounts): array` helper that maps each invoice amount through the same normalization.
 
 - [ ] **Task 6 — Update gateway process view** (AC: #1)
   - [ ] 6.1 Update `components/gateways/nonmerchant/kuickpay/views/default/process.pdt` to conditionally show voucher info when `$voucher` is set:
@@ -518,12 +518,14 @@ GPT-5 Codex
 - 2026-06-10: Task 1 syntax checks passed for `kuickpay_reconcile_model.php` and `kuickpay_reconcile_plugin.php`; structural grep confirmed required voucher unique keys and idempotent table creation calls.
 - 2026-06-10: Task 2 syntax checks passed for both plugin model files; method-surface grep confirmed the required voucher and invoice-link APIs exist.
 - 2026-06-10: Tasks 3-4 red/green unit coverage added and passed: `KuickPayVoucherReferenceServiceTest` covers reuse without create, deterministic placeholder references, and create-null race recovery.
+- 2026-06-10: Task 5 syntax check passed for `kuickpay.php`; voucher service call is gated behind `!$this->Input->errors()`.
 
 ### Completion Notes List
 
 - Task 1 complete: added the plugin base model, idempotent voucher/invoice-link schema creation in `install()`, safe no-op upgrade, and non-destructive uninstall documentation preserving evidence tables.
 - Task 2 complete: added voucher and voucher-invoice models with required CRUD/query APIs, required-field/status/currency/amount validation, automatic timestamps, and `lastInsertId()` returns after successful inserts.
 - Tasks 3-4 complete: added the repository transaction boundary, reference service reuse/create/race-recovery gate, flat view-facing voucher contract, and deterministic Story 2.1 placeholder references.
+- Task 5 complete: wired gateway `buildProcess()` to the plugin reference service behind the existing currency/companion guards, captured gateway ID via setter shadowing, and added string-only amount normalization helpers.
 
 ### File List
 
@@ -534,6 +536,7 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherReferenceServiceTest.php
+- components/gateways/nonmerchant/kuickpay/kuickpay.php
 
 ## Change Log
 
@@ -542,3 +545,4 @@ GPT-5 Codex
 - 2026-06-10: Implemented Task 1 plugin base model and durable voucher schema.
 - 2026-06-10: Implemented Task 2 plugin voucher models.
 - 2026-06-10: Implemented Tasks 3-4 voucher repository, reference service, deterministic references, and focused unit tests.
+- 2026-06-10: Implemented Task 5 gateway voucher service integration.
