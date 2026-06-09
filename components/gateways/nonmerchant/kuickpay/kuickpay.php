@@ -16,6 +16,20 @@ class Kuickpay extends NonmerchantGateway
     private $meta;
 
     /**
+     * @var array Credential-bearing fields that must be redacted from gateway-owned diagnostics
+     */
+    private $credential_mask_fields = [
+        'voucher_password',
+        'inquiry_password',
+        'voucher_username',
+        'inquiry_username',
+        'password',
+        'userName',
+        'Password',
+        'UserName',
+    ];
+
+    /**
      * Construct a new non-merchant gateway
      */
     public function __construct()
@@ -263,6 +277,20 @@ class Kuickpay extends NonmerchantGateway
     public function encryptableFields()
     {
         return ['voucher_password', 'inquiry_password'];
+    }
+
+    /**
+     * Masks credential-bearing fields before gateway-owned logging, diagnostics, or error messages.
+     *
+     * All KuickPay credential-bearing data the gateway itself logs, embeds in an exception/error message,
+     * or writes to a diagnostic must pass through this first.
+     *
+     * @param array $data Credential-bearing data to mask
+     * @return array The masked data
+     */
+    protected function maskCredentials(array $data)
+    {
+        return $this->maskDataRecursive($data, $this->credential_mask_fields);
     }
 
     /**
