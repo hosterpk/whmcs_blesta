@@ -15,6 +15,24 @@
 
 RewriteEngine on
 
+# Do not expose project, documentation, repository, or agent artifacts.
+# These files are for local development only and should never be served.
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "(\.(md|markdown|ya?ml|toml|lock|log|sql|bak|old|orig|dist|ini|env|sh|py|pl|rb)$|^AGENTS\.md$|^README\.md$|^composer\.(json|lock)$)">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "(\.(md|markdown|ya?ml|toml|lock|log|sql|bak|old|orig|dist|ini|env|sh|py|pl|rb)$|^AGENTS\.md$|^README\.md$|^composer\.(json|lock)$)">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+
+RewriteRule ^(\.git|\.agents|\.claude|_bmad|_bmad-output|docs|logs|scripts|config)(/|$) - [F,L]
+
 # Disable Apache MultiViews since it
 # may conflict with the GUI installer
 <IfModule mod_negotiation.c>
@@ -31,3 +49,9 @@ RewriteRule ^(.*)$ index.php
 
 RewriteCond %{REQUEST_URI} ^(.*)/install.php$
 RewriteRule install.php %1/install/ [R=301,L]
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php83” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
