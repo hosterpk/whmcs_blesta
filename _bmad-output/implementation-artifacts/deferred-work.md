@@ -1,0 +1,9 @@
+# Deferred Work
+
+Items deferred during reviews. Each entry notes its origin and a one-line reason.
+
+## Deferred from: code review of 0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures (2026-06-09)
+
+- **Fixture coverage gaps for Story 3.2 hardening** [docs/kuickpay/fixtures/] — add fixtures the Story 3.2 parser should be forced to handle but that are beyond this story's AC2-enumerated set: a non-2-char `InsertVoucher` status; an inquiry amount with differing precision/trailing zeros (decimal/minor-unit comparison trap); an empty / short (`<6` field) inquiry result; a non-PKR / empty currency on an otherwise-paid row; a multi-row bulk dataset mixing matched + unmatched + a duplicate Consumer Number; an overpayment and a late/partial (`AmountAfterDueDate`) case; and a Consumer-Number pair where one value is a suffix/substring of another (to prove exact-match discrimination). Reason: out of scope for the AC2 gate set; correct home is the Story 3.2 canonical test tree.
+- **`registration_number = random_prefix + invoice_id` idempotency risk** [docs/kuickpay/phase-0-contract.md:27] — a random prefix on the reconciliation reference defeats retry de-duplication and conflicts with the "never blindly retry InsertVoucher" rule, because a retry cannot be recognized as the same voucher. Reason: candidate formula is `UNCONFIRMED`; reference-generation determinism is an Epic 2/3 design decision, not a Phase-0 doc concern.
+- **Mixed redaction placeholder style** [docs/kuickpay/testing-fixtures.md:73] — placeholders mix `REDACTED_*` tokens with masked-PII forms (`0300XXXXXXX`, `customer@example.invalid`), so an automated leak-scan keyed on `REDACTED_` would miss the masked values. Reason: cosmetic consistency only; current forbidden-value and redaction scans both pass, so no leak exists today.

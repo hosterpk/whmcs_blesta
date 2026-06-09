@@ -1,6 +1,10 @@
+---
+baseline_commit: bbb49f7c540b5853e3503434dcdafb3b0f896ec4
+---
+
 # Story 0.1: Confirm KuickPay Contract and Capture Sanitized Fixtures
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -51,39 +55,39 @@ so that voucher issuance and payment posting rely on verified evidence rather th
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Create the contract-confirmation document** `docs/kuickpay/phase-0-contract.md` (AC: #1, #3, #4)
-  - [ ] 1.1 Document the **production Blesta version** decision: record repo evidence (this checkout is `6.0.0-b1`) and the research finding that 6.0.0 Beta 1 is non-production/unsupported while 5.13 is current stable. Add a field `production_blesta_version` with status `APPROVED` or `UNCONFIRMED — requires operations confirmation`. Do NOT silently assume; this is an operator decision.
-  - [ ] 1.2 Document the **KuickPay endpoint and WSDL** as **two separate configurable fields** for production AND sandbox: `kuickpay_soap_endpoint` (the SOAP service URL) and `kuickpay_wsdl_url` (the WSDL document a `SoapClient` consumes — typically the ASMX URL with `?WSDL`). The public ASMX base `https://app.kuickpay.com/kuickpaycoreapi/api.asmx` is an **example only**, not a production default. State that the real production endpoint/WSDL is an Admin Setting, never hard-coded.
-  - [ ] 1.3 Document **accepted date formats** for `DueDate`, `ExpiryDate`, `IssueDate`, and `TransactionDate`. Mark each `confirmed` (with the format string) or `UNCONFIRMED` with a conservative default and a note that the format must be centrally normalized until KuickPay confirms.
-  - [ ] 1.4 Document the **Consumer Number formula** for this merchant: confirm whether `consumer_number = institution_id + registration_number` and `registration_number = random_prefix + invoice_id` hold for HosterPK's KuickPay account. Mark `confirmed`/`UNCONFIRMED`. Keep both formats described as configurable.
-  - [ ] 1.5 Document **credential separation**: whether voucher and inquiry credentials are separate pairs or one pair serves both, plus the same-as-voucher policy. Mark `confirmed`/`UNCONFIRMED`.
-  - [ ] 1.6 Document **rate limits and polling/backoff guidance** (AC3): record any KuickPay-stated limits, OR explicitly flag `rate_limits: UNAVAILABLE` and record a **conservative default** to use until confirmed (e.g., single-reference inquiry on a bounded schedule with jitter/backoff, bounded bulk batch by date, no unbounded polling loops — consistent with NFR7).
-  - [ ] 1.7 Add a **"No hard-coding" assertion**: confirm this story introduces no PHP business logic, therefore no production credential / Institution ID / endpoint / fallback phone / fee / conversion rate is hard-coded. All such values are future Admin Settings.
+- [x] **Task 1 — Create the contract-confirmation document** `docs/kuickpay/phase-0-contract.md` (AC: #1, #3, #4)
+  - [x] 1.1 Document the **production Blesta version** decision: record repo evidence (this checkout is `6.0.0-b1`) and the research finding that 6.0.0 Beta 1 is non-production/unsupported while 5.13 is current stable. Add a field `production_blesta_version` with status `APPROVED` or `UNCONFIRMED — requires operations confirmation`. Do NOT silently assume; this is an operator decision.
+  - [x] 1.2 Document the **KuickPay endpoint and WSDL** as **two separate configurable fields** for production AND sandbox: `kuickpay_soap_endpoint` (the SOAP service URL) and `kuickpay_wsdl_url` (the WSDL document a `SoapClient` consumes — typically the ASMX URL with `?WSDL`). The public ASMX base `https://app.kuickpay.com/kuickpaycoreapi/api.asmx` is an **example only**, not a production default. State that the real production endpoint/WSDL is an Admin Setting, never hard-coded.
+  - [x] 1.3 Document **accepted date formats** for `DueDate`, `ExpiryDate`, `IssueDate`, and `TransactionDate`. Mark each `confirmed` (with the format string) or `UNCONFIRMED` with a conservative default and a note that the format must be centrally normalized until KuickPay confirms.
+  - [x] 1.4 Document the **Consumer Number formula** for this merchant: confirm whether `consumer_number = institution_id + registration_number` and `registration_number = random_prefix + invoice_id` hold for HosterPK's KuickPay account. Mark `confirmed`/`UNCONFIRMED`. Keep both formats described as configurable.
+  - [x] 1.5 Document **credential separation**: whether voucher and inquiry credentials are separate pairs or one pair serves both, plus the same-as-voucher policy. Mark `confirmed`/`UNCONFIRMED`.
+  - [x] 1.6 Document **rate limits and polling/backoff guidance** (AC3): record any KuickPay-stated limits, OR explicitly flag `rate_limits: UNAVAILABLE` and record a **conservative default** to use until confirmed (e.g., single-reference inquiry on a bounded schedule with jitter/backoff, bounded bulk batch by date, no unbounded polling loops — consistent with NFR7).
+  - [x] 1.7 Add a **"No hard-coding" assertion**: confirm this story introduces no PHP business logic, therefore no production credential / Institution ID / endpoint / fallback phone / fee / conversion rate is hard-coded. All such values are future Admin Settings.
 
-- [ ] **Task 2 — Capture sanitized fixtures** under `docs/kuickpay/fixtures/` (AC: #2)
-  - [ ] 2.1 `InsertVoucher` cases → `docs/kuickpay/fixtures/insert-voucher/`: `success.xml`, `duplicate.xml`, `invalid-credentials.xml`, `malformed.xml`, and `timeout.md` (transport-outcome descriptor — timeout has no response body; capture the `SoapFault`/connection-timeout shape and expected handling instead of an envelope).
-  - [ ] 2.2 `BillPaymentInquiry` cases → `docs/kuickpay/fixtures/bill-payment-inquiry/`: `pending.xml`, `paid-exact.xml`, `amount-mismatch.xml`, `expired.xml`, `unknown.xml`.
-  - [ ] 2.3 `BillPaymentBulkInquiry` cases → `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/`: `matched-paid.xml`, `unmatched.xml`, `malformed-xml.xml`.
-  - [ ] 2.4 Each `.xml` fixture must be the **full sanitized SOAP response envelope** as the SOAP client would receive it, preserving the exact `*Result` payload (the comma-separated string for inquiry, the raw status string for InsertVoucher, the XML dataset for bulk) so Story 3.2's parser can be developed and tested against faithful inputs.
-  - [ ] 2.4a **Every `.xml` fixture file MUST itself be well-formed XML** (it passes Task 4.1). The "malformed" cases (`malformed.xml`, `malformed-xml.xml`) represent **malformed KuickPay payload semantics _inside_ a well-formed SOAP envelope** — e.g., a truncated/empty/garbage `*Result` value, missing required result fields, or an inner bulk dataset string that the parser cannot parse. They are NOT broken/unparseable fixture files. If you genuinely need a transport-level invalid-XML response sample (no valid envelope at all), capture it as a `.md` transport descriptor instead, so it stays outside the XML well-formedness loop.
-  - [ ] 2.5 **Sanitize every fixture**: redact/remove `userName`, `password`, real customer mobile/email/name, real Institution ID, and any environment-specific value. Replace with obvious placeholders (e.g., `REDACTED`, `0300XXXXXXX`, `INSTITUTION_ID`). If a fixture was NOT obtained from a live/sandbox source, mark it `provisional: true` (unverified) in the index so it is usable for parser development but does not satisfy the approval gate.
-  - [ ] 2.6 Create the **fixture index** `docs/kuickpay/testing-fixtures.md` containing: (a) the expected normalized-status / `error_class` / `decision_rule` mapping table (see Dev Notes "Fixture → Expected Evidence Mapping"), (b) the sanitization rules, (c) the **category mapping** that Story 3.2 will use to relocate fixtures into the architecture's canonical plugin test tree, and (d) **per-fixture provenance metadata** (see below).
-  - [ ] 2.6a Each fixture row in `testing-fixtures.md` must carry provenance fields so verification cannot be overclaimed: `source_type` (`live` | `sandbox` | `synthetic_from_observed_format`), `captured_at`, `captured_by`, `redacted_by`, `verification_status` (`verified` | `provisional`), `provisional_reason` (blank if verified), `approval_status` (`PENDING_HUMAN_APPROVAL` until human sign-off), and a sanitized `evidence_hash`/`redacted_trace_id`. **Only `live` or `sandbox` fixtures with complete provenance can satisfy the gate**; `synthetic_from_observed_format` rows are always `provisional`.
-  - [ ] 2.7 Create one **redaction sample** `docs/kuickpay/fixtures/redaction/credentials.xml` — a sanitized SOAP envelope demonstrating the redaction approach for credential/PII fields (`userName`, `password`, `Mobile`, `Email`, `Name`, `InstitutionID` → placeholders). This is a Phase 0 deliverable (evidence of the sanitization method) and the relocation source for the architecture's `redaction/credentials.xml` slot in Story 3.2.
+- [x] **Task 2 — Capture sanitized fixtures** under `docs/kuickpay/fixtures/` (AC: #2)
+  - [x] 2.1 `InsertVoucher` cases → `docs/kuickpay/fixtures/insert-voucher/`: `success.xml`, `duplicate.xml`, `invalid-credentials.xml`, `malformed.xml`, and `timeout.md` (transport-outcome descriptor — timeout has no response body; capture the `SoapFault`/connection-timeout shape and expected handling instead of an envelope).
+  - [x] 2.2 `BillPaymentInquiry` cases → `docs/kuickpay/fixtures/bill-payment-inquiry/`: `pending.xml`, `paid-exact.xml`, `amount-mismatch.xml`, `expired.xml`, `unknown.xml`.
+  - [x] 2.3 `BillPaymentBulkInquiry` cases → `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/`: `matched-paid.xml`, `unmatched.xml`, `malformed-xml.xml`.
+  - [x] 2.4 Each `.xml` fixture must be the **full sanitized SOAP response envelope** as the SOAP client would receive it, preserving the exact `*Result` payload (the comma-separated string for inquiry, the raw status string for InsertVoucher, the XML dataset for bulk) so Story 3.2's parser can be developed and tested against faithful inputs.
+  - [x] 2.4a **Every `.xml` fixture file MUST itself be well-formed XML** (it passes Task 4.1). The "malformed" cases (`malformed.xml`, `malformed-xml.xml`) represent **malformed KuickPay payload semantics _inside_ a well-formed SOAP envelope** — e.g., a truncated/empty/garbage `*Result` value, missing required result fields, or an inner bulk dataset string that the parser cannot parse. They are NOT broken/unparseable fixture files. If you genuinely need a transport-level invalid-XML response sample (no valid envelope at all), capture it as a `.md` transport descriptor instead, so it stays outside the XML well-formedness loop.
+  - [x] 2.5 **Sanitize every fixture**: redact/remove `userName`, `password`, real customer mobile/email/name, real Institution ID, and any environment-specific value. Replace with obvious placeholders (e.g., `REDACTED`, `0300XXXXXXX`, `INSTITUTION_ID`). If a fixture was NOT obtained from a live/sandbox source, mark it `provisional: true` (unverified) in the index so it is usable for parser development but does not satisfy the approval gate.
+  - [x] 2.6 Create the **fixture index** `docs/kuickpay/testing-fixtures.md` containing: (a) the expected normalized-status / `error_class` / `decision_rule` mapping table (see Dev Notes "Fixture → Expected Evidence Mapping"), (b) the sanitization rules, (c) the **category mapping** that Story 3.2 will use to relocate fixtures into the architecture's canonical plugin test tree, and (d) **per-fixture provenance metadata** (see below).
+  - [x] 2.6a Each fixture row in `testing-fixtures.md` must carry provenance fields so verification cannot be overclaimed: `source_type` (`live` | `sandbox` | `synthetic_from_observed_format`), `captured_at`, `captured_by`, `redacted_by`, `verification_status` (`verified` | `provisional`), `provisional_reason` (blank if verified), `approval_status` (`PENDING_HUMAN_APPROVAL` until human sign-off), and a sanitized `evidence_hash`/`redacted_trace_id`. **Only `live` or `sandbox` fixtures with complete provenance can satisfy the gate**; `synthetic_from_observed_format` rows are always `provisional`.
+  - [x] 2.7 Create one **redaction sample** `docs/kuickpay/fixtures/redaction/credentials.xml` — a sanitized SOAP envelope demonstrating the redaction approach for credential/PII fields (`userName`, `password`, `Mobile`, `Email`, `Name`, `InstitutionID` → placeholders). This is a Phase 0 deliverable (evidence of the sanitization method) and the relocation source for the architecture's `redaction/credentials.xml` slot in Story 3.2.
 
-- [ ] **Task 3 — Record the gate posture and approval checklist** (AC: #4)
-  - [ ] 3.1 Add a **Gate Status** section to `phase-0-contract.md` with **two distinct fields** so "files present" is never mistaken for "release approved":
+- [x] **Task 3 — Record the gate posture and approval checklist** (AC: #4)
+  - [x] 3.1 Add a **Gate Status** section to `phase-0-contract.md` with **two distinct fields** so "files present" is never mistaken for "release approved":
     - `artifact_status: COMPLETE | INCOMPLETE` — the dev MAY set this to `COMPLETE` once all deliverables exist and pass verification.
     - `gate_approval_status: PENDING_HUMAN_APPROVAL | APPROVED` — the dev MUST leave this `PENDING_HUMAN_APPROVAL`. Also state that **payment posting remains DISABLED** until `gate_approval_status` is `APPROVED`, and that unknown/unverified KuickPay status codes map to `retry` or `manual_review`, never `posted`.
-  - [ ] 3.2 Add an **operator approval checklist** (Blesta version confirmed, SOAP endpoint + WSDL confirmed, date formats confirmed, Consumer Number formula confirmed, credential separation confirmed, all required fixtures present and `verification_status: verified` from live/sandbox, rate-limit guidance recorded). The dev agent must NOT self-mark the gate approved — leave the approval field and date blank for human sign-off.
+  - [x] 3.2 Add an **operator approval checklist** (Blesta version confirmed, SOAP endpoint + WSDL confirmed, date formats confirmed, Consumer Number formula confirmed, credential separation confirmed, all required fixtures present and `verification_status: verified` from live/sandbox, rate-limit guidance recorded). The dev agent must NOT self-mark the gate approved — leave the approval field and date blank for human sign-off.
 
-- [ ] **Task 4 — Verify and self-audit** (AC: #1, #2)
-  - [ ] 4.1 Validate every fixture `.xml` is **well-formed XML** using a recursive enumerator that does NOT rely on bash `globstar` (which is off by default and would silently skip nested files). Use `find` (see Verification section), not `fixtures/**/*.xml`.
-  - [ ] 4.2 **Secret check — two explicit steps** (a single grep is insufficient because sanitized envelopes legitimately contain placeholder `userName`/`password` fields):
+- [x] **Task 4 — Verify and self-audit** (AC: #1, #2)
+  - [x] 4.1 Validate every fixture `.xml` is **well-formed XML** using a recursive enumerator that does NOT rely on bash `globstar` (which is off by default and would silently skip nested files). Use `find` (see Verification section), not `fixtures/**/*.xml`.
+  - [x] 4.2 **Secret check — two explicit steps** (a single grep is insufficient because sanitized envelopes legitimately contain placeholder `userName`/`password` fields):
     - **(a) Forbidden-real-value scan** — flag values that look real and must NOT appear: a numeric `<InstitutionID>`, a real-looking email, a real-looking Pakistani mobile, or a `password`/`userName` element whose value is anything other than an obvious placeholder (`REDACTED`, `XXXX`, etc.). Any hit = fail. Document the command and that it returned nothing real.
     - **(b) Redaction-confirmation review** — list every occurrence of sensitive field names (`userName`, `password`, `Mobile`, `Email`, `Name`, `InstitutionID`) and confirm each holds a placeholder. Record the expected placeholder matches so a reviewer can see they were intentional, not overlooked.
-  - [ ] 4.3 Confirm all Phase 0 artifacts live under **`docs/kuickpay/`** (web-blocked) and that **nothing** was written under web-served `plugins/` or `components/`.
-  - [ ] 4.4 No runtime PHP changed → `php -l` is N/A. State this explicitly in the completion notes and list the fallback checks actually run (XML well-formedness + secret scan).
+  - [x] 4.3 Confirm all Phase 0 artifacts live under **`docs/kuickpay/`** (web-blocked) and that **nothing** was written under web-served `plugins/` or `components/`.
+  - [x] 4.4 No runtime PHP changed → `php -l` is N/A. State this explicitly in the completion notes and list the fallback checks actually run (XML well-formedness + secret scan).
 
 ## Dev Notes
 
@@ -242,14 +246,80 @@ grep -rniE '<(userName|password|Mobile|Email|Name|InstitutionID)>' docs/kuickpay
 
 ### Agent Model Used
 
+GPT-5 Codex
+
 ### Debug Log References
+
+- 2026-06-09: Resolved workflow customization manually because default `python3` lacks `tomllib`.
+- 2026-06-09: Captured baseline commit `bbb49f7c540b5853e3503434dcdafb3b0f896ec4`.
+- 2026-06-09: Red phase check confirmed `docs/kuickpay/fixtures` was absent before implementation.
+- 2026-06-09: Ran fixture XML well-formedness check with `find docs/kuickpay/fixtures -name '*.xml' -print -exec xmllint --noout {} \;`.
+- 2026-06-09: Ran forbidden-real-value secret scan; result: `no forbidden real values`.
+- 2026-06-09: Ran redaction-confirmation grep and confirmed all sensitive field occurrences use placeholders.
+- 2026-06-09: Confirmed changed Phase 0 artifacts are under `docs/kuickpay/`; no runtime PHP was added or edited.
 
 ### Completion Notes List
 
+- Created `docs/kuickpay/phase-0-contract.md` with contract fields, status posture, conservative rate-limit/backoff guidance, no-hard-coding assertion, and human approval checklist.
+- Created operation-keyed provisional sanitized fixtures for InsertVoucher, BillPaymentInquiry, BillPaymentBulkInquiry, and credential redaction.
+- Created `docs/kuickpay/testing-fixtures.md` with normalized evidence mapping, sanitization rules, Story 3.2 relocation mapping, and per-fixture provenance.
+- All generated fixture XML is well-formed.
+- All fixtures are marked provisional from `synthetic_from_observed_format`; the gate remains `PENDING_HUMAN_APPROVAL` and cannot be considered approved without live/sandbox evidence.
+- No runtime PHP changed, so `php -l` is N/A. Verification used XML well-formedness and secret/redaction scans.
+
 ### File List
+
+- `docs/kuickpay/phase-0-contract.md`
+- `docs/kuickpay/testing-fixtures.md`
+- `docs/kuickpay/fixtures/insert-voucher/success.xml`
+- `docs/kuickpay/fixtures/insert-voucher/duplicate.xml`
+- `docs/kuickpay/fixtures/insert-voucher/invalid-credentials.xml`
+- `docs/kuickpay/fixtures/insert-voucher/malformed.xml`
+- `docs/kuickpay/fixtures/insert-voucher/timeout.md`
+- `docs/kuickpay/fixtures/bill-payment-inquiry/pending.xml`
+- `docs/kuickpay/fixtures/bill-payment-inquiry/paid-exact.xml`
+- `docs/kuickpay/fixtures/bill-payment-inquiry/amount-mismatch.xml`
+- `docs/kuickpay/fixtures/bill-payment-inquiry/expired.xml`
+- `docs/kuickpay/fixtures/bill-payment-inquiry/unknown.xml`
+- `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/matched-paid.xml`
+- `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/unmatched.xml`
+- `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/malformed-xml.xml`
+- `docs/kuickpay/fixtures/redaction/credentials.xml`
+- `_bmad-output/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+## Change Log
+
+- 2026-06-09: Implemented Phase 0 KuickPay contract and sanitized fixture gate artifacts.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
 1. **Live/sandbox access:** Are real KuickPay sandbox or production credentials available to capture *verified* fixtures during this story? If not, fixtures will be `provisional` (built from the addendum's observed formats) and the gate stays UNAPPROVED until real captures replace them — which is the correct fail-closed posture, but the team should know the gate cannot be closed without live evidence.
 2. **Fixture home confirmation:** This story stages fixtures under `docs/kuickpay/fixtures/` (web-blocked, scaffold-independent) and defers relocation to `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/` to Story 3.2. Confirm this is acceptable vs. waiting for the Story 1.1 scaffold and writing fixtures directly into the plugin tree (with added `.htaccess` protection).
 3. **Production Blesta version:** Operations must decide 5.13 stable vs 6.0 beta. The repo is `6.0.0-b1`; research flags 6.0 beta as non-production. Whoever owns the production target should fill this before the gate is approved.
+
+## Review Findings
+
+_Code review (bmad-code-review, YOLO) — 2026-06-09. Diff vs baseline `bbb49f7c`. Layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor (all ran; none failed). Outcome: 1 decision-needed, 2 patches (applied in-doc), 3 deferred, 11 dismissed as noise/context-resolved. Acceptance Auditor confirmed all 4 ACs and all 6 Non-Negotiables SATISFIED; XML well-formedness + both secret scans re-verified clean; nothing written under `plugins/`/`components/`._
+
+### Review Findings
+
+- [ ] [Review][Decision] `InsertVoucherResult` format unresolved — comma-delimited fixture vs documented `substr(result,3,14)` offset — `success.xml` encodes `00,KP-VOUCHER-0001,INSTITUTION_ID,REG-0000001` (comma-delimited), but Dev Notes "Observed raw formats" reads the voucher id at fixed offset `substr(result,3,14)`, which yields `KP-VOUCHER-000` and drops the trailing `1`. Both representations are unverified and mutually inconsistent. **KuickPay/merchant must confirm the authoritative delimiter/offset before Story 3.2 builds the parser.** Interim: review patched `testing-fixtures.md` + `phase-0-contract.md` to flag the contradiction and mandate defensive, fail-closed parsing; the real format is still pending external confirmation (this is the gate's tracked external dependency, see Open Question #1). [docs/kuickpay/fixtures/insert-voucher/success.xml:5]
+- [x] [Review][Patch] Added fail-closed "Paid-Classification Preconditions" — `00` status / bulk row-presence is necessary-but-NOT-sufficient; paid classification additionally requires amount equality in minor units, `currency == PKR`, exact full Consumer Number equality (never suffix/substring), and structural validation before row extraction — applied [docs/kuickpay/testing-fixtures.md]
+- [x] [Review][Patch] Added explicit fail-closed default for unenumerated inquiry status codes — anything outside the provisional `{00,01,02,99}` examples maps to `manual_review`/`unknown_status` — applied [docs/kuickpay/testing-fixtures.md]
+- [x] [Review][Defer] Fixture coverage gaps for Story 3.2 hardening (non-2-char status; amount precision/trailing-zero; empty/short result; non-PKR currency; multi-row bulk with matched+unmatched+duplicate mix; overpayment/late-partial; Consumer-Number suffix-discriminating pair) [docs/kuickpay/fixtures/] — deferred to Story 3.2 fixture expansion; beyond this story's AC2-enumerated set
+- [x] [Review][Defer] `registration_number = random_prefix + invoice_id` idempotency risk — a random component defeats retry de-dup and conflicts with "never blindly retry InsertVoucher" [docs/kuickpay/phase-0-contract.md:27] — deferred to Epic 2/3 reference-generation design
+- [x] [Review][Defer] Mixed redaction placeholder style (`REDACTED_*` vs `0300XXXXXXX` vs `customer@example.invalid`) — a leak-scan keying on `REDACTED_` won't catch masked PII [docs/kuickpay/testing-fixtures.md:73] — deferred; cosmetic consistency, current scans pass
+
+### Dismissed (context-resolved / false positive)
+
+- Status `review` + `artifact_status: COMPLETE` "contradict" the UNCONFIRMED body — **by design**: Task 3.1 separates `artifact_status` (dev MAY set COMPLETE) from `gate_approval_status` (left PENDING). Not a defect.
+- "Example only" SOAP endpoint / WSDL — **by design** (AC1: Admin Setting, never hard-coded).
+- Blesta `6.0.0-b1` vs `5.13` conflict — already surfaced as `UNCONFIRMED` + Open Question #3; operator decision, working as intended.
+- `malformed.xml` / `malformed-xml.xml` are well-formed XML — **by design** (Task 2.4a: malformed payload semantics inside a well-formed envelope; CDATA keeps the envelope valid).
+- "Validated evidence" wording / synthetic provenance "theater" — provenance is unambiguously `synthetic_from_observed_format`/`provisional`; Auditor found no overclaiming.
+- Blind Hunter "literal `...` committed in `unmatched.xml`" — **false positive** from the reviewer's summary shorthand; the actual file carries full fields.
+
+## Change Log
+
+- 2026-06-09: Code review (YOLO). Applied 2 fail-closed doc-hardening patches to `testing-fixtures.md`; added `insert_voucher_result_format` contradiction row to `phase-0-contract.md`. 1 decision-needed (authoritative `InsertVoucherResult` format) left open pending KuickPay confirmation; 3 items deferred. Status moved `review` -> `in-progress`. Gate remains `PENDING_HUMAN_APPROVAL`; payment posting stays DISABLED.
