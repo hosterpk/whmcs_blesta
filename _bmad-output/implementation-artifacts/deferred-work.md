@@ -2,6 +2,10 @@
 
 Items deferred during reviews. Each entry notes its origin and a one-line reason.
 
+## Deferred from: code review of 1-5-enforce-pkr-only-gateway-eligibility (2026-06-10)
+
+- **No integration coverage of the production `getCurrencies()`→`config.json` wiring** [components/gateways/nonmerchant/kuickpay/tests/KuickPayCurrencyEligibilityTest.php] — the self-contained harness (spec Task 5.2/5.4) stubs `NonmerchantGateway` as an empty class, so the test must override `getCurrencies()` and cannot exercise the framework's `Gateway::loadConfig()`→`$this->config->currencies` path that production actually reads. `testConfigDeclaresOnlyPkr()` covers config.json's *content*, but the content→`getCurrencies()` wiring (inherited Blesta base code) is unverified by this suite. Reason: exercising it requires the absent `../tests` Blesta framework, which is out of this story's scope and spec-prohibited; the override is now documented as load-bearing (commit `96305301`). Revisit when the sibling Blesta PHPUnit suite is available.
+
 ## Deferred from: code review of 3-1-wrap-kuickpay-soap-operations (2026-06-09)
 
 - **`isTimeout()` classification is message-text/locale-dependent** [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php] — timeout vs transport_error is decided by substring-matching the exception message (`/timeout|timed out|temporarily unavailable/i`). Reason: only the `error_class` *label* is affected — both classes retry identically and neither is a payment signal (AC6), so behavior is correct; revisit if alerting or caller branching ever depends on the exact class.

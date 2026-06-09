@@ -4,7 +4,7 @@ baseline_commit: 45926c5e41114ad147968f6ed3ffe43226be40bb
 
 # Story 1.5: Enforce PKR-Only Gateway Eligibility
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -300,11 +300,36 @@ GPT-5 Codex
 
 ## Change Log
 
+- 2026-06-10: **Code review passed (bmad-code-review).** Three adversarial layers (Blind Hunter / Edge Case Hunter / Acceptance Auditor); all three ACs and all six Non-Negotiables PASS, no production defect, guard confirmed fail-closed; component-local suite re-verified green (37 tests, 151 assertions). Applied 1 doc-only test clarification (load-bearing `getCurrencies()` override, commit `96305301`), deferred 1 environment-limited integration-coverage item, dismissed 9 (by-design/handled/safe). Story moved `review` → `done`. See **Review Findings**.
 - 2026-06-09: Implemented PKR-only gateway eligibility guard, localized blocked-currency copy, and focused unit coverage. Verified with PHP syntax checks, component-local PHPUnit (37 tests, 151 assertions), guard/config/no-conversion greps, and config unchanged check. Root Blesta PHPUnit was not run because the sibling `../tests` suite is absent.
 
 - 2026-06-09: Story **created** (ready-for-dev) via bmad-create-story against baseline `45926c5e` (post-1.4). Exhaustive context-engine analysis across epics (Story 1.5 ACs, FR5/UX-DR2/NFR9/NFR10), PRD (FR-5 PKR-First Currency Policy), architecture (gateway owns "PKR eligibility", no hard-coded conversion, ownership boundaries), the predecessor 1.1–1.4 stories + 3.1, and **verified Blesta internals** — `Gateway::getCurrencies()`/`loadConfig`/`#[\AllowDynamicProperties]`, `GatewayManager::currencyExists`/`getAllInstalledNonmerchant`/`getInstalledNonmerchant` (the `gateway_currencies` inner-join), and `GatewayPayments::initGateway`/`getBuildProcess` (currency set via `setCurrency()` before `buildProcess()`). **Load-bearing design decision:** Blesta already *hides* KuickPay from non-PKR invoices natively (config `currencies: ["PKR"]` + the currency-filtered listing), so 1.5's net-new work is a **fail-closed PKR-eligibility guard inside `buildProcess()`** (defense-in-depth, sourcing PKR from `getCurrencies()` so nothing is hard-coded) plus confirming AC3 settings visibility and the absence of conversion constants. Voucher creation is explicitly deferred to **Epic 2 (Story 2.3)**, which must wire `InsertVoucher` **behind** this guard. Confirmed: the `currency_policy` save rule already locks the value to `pkr_only` (no conversion policy is configurable in MVP), and no USD-to-PKR/exchange-rate constant exists in gateway/`lib/` business logic.
 
 - 2026-06-09: **Multi-agent validation triage applied** (round 1 synthesis; every finding re-verified against the live code before editing). All reviews returned ready-for-dev with **0 critical code blockers**. Net changes: (1) **extracted a pure `protected currencyEligible()` helper** as the eligibility decision and the Task 5 unit-test target — `buildProcess()` builds a view and calls the `private` `companionInstalled()`, so testing it directly would need view/`Loader`/`PluginManager`/`Configure` stubs with no repo precedent; the helper needs only `$this->currency` + `getCurrencies()`, making AC1/AC2 cleanly testable (the existing 1.4/3.1 tests exercise view-free `protected` seams only). (2) **Reconciled the error-ordering wording** — the `elseif` is canonical (on non-PKR **and** companion-missing, only the currency error shows; do not stack), and documented that the two valid `setErrors()` field-key shapes (`''` vs `'currency'`) differ deliberately. (3) **Fixed Task 6.3's `grep "PKR"` expectation** — `PKR` legitimately appears in `tests/` fixtures (verified `KuickPaySoapClientTest.php`), so the hard-coded-currency check is scoped to `kuickpay.php` + `lib/` only. (4) **Hedged the PHP-runtime assumptions** (no host-version claim; explicit "if no `php` on PATH, state it"). (5) **Test bootstrap guidance** — the eligibility test follows the 1.4 **self-contained** pattern (`require_once ../kuickpay.php`; no `tests/bootstrap.php`) and must override `getCurrencies()` since the in-test `NonmerchantGateway` stub is empty. (6) **Added the empty-`getCurrencies()` fail-closed note** (config-load failure blocks all incl. PKR — correct; do **not** add a PKR fallback). (7) **Corrected** the claim that an "explicit gateway-id call" bypasses native filtering — `getBuildProcess()` passes `$currency` to both listing paths, so it is filtered too; residual reach-paths narrowed to DB misconfig / multi-currency edge / unit seam / Epic 2 wiring. (8) Added the exact `$lang[…]` line for Task 4.1 and fixed the language-file line count (90, not 91). Pure token-trimming suggestions (collapse References, "quick-ref summary") were **declined** — the exhaustive context-engineering style is intentional and matches the Epic 1 precedent. No design change; the guard logic was confirmed correct and fail-closed by all reviewers.
+
+## Review Findings
+
+_Adversarial code review (bmad-code-review), 2026-06-10. Baseline `45926c5e`..HEAD. Three layers — Blind Hunter (diff-only), Edge Case Hunter (diff + project access), Acceptance Auditor (diff + spec + context). **Result: all three ACs and all six Non-Negotiables PASS; no production defect found; the guard fails closed across every input walked.** Component-local suite verified green (37 tests, 151 assertions; PHPUnit 8.5.52). Triage: 1 patch applied, 1 deferred, 9 dismissed (by-design / handled / safe)._
+
+### Patch (applied)
+
+- [x] [Review][Patch] Document the load-bearing `getCurrencies()` override in the eligibility test [components/gateways/nonmerchant/kuickpay/tests/KuickPayCurrencyEligibilityTest.php:27] — Blind + Edge both flagged that the self-contained harness stubs `NonmerchantGateway` as empty, so the subclass override is the *only* `getCurrencies()` the test has; silently removing it would make every case fail closed and mislead a future maintainer. Added a comment marking the override load-bearing. Doc-only, no behavior change. Applied in commit `96305301`.
+
+### Deferred
+
+- [x] [Review][Defer] No integration coverage of the production `getCurrencies()`→`config.json` wiring [components/gateways/nonmerchant/kuickpay/tests/KuickPayCurrencyEligibilityTest.php] — deferred, environment-limited. The spec-mandated self-contained harness (Task 5.2/5.4) cannot exercise `Gateway::loadConfig()`→`$this->config->currencies` without the absent `../tests` Blesta framework. `testConfigDeclaresOnlyPkr()` covers config.json content; the content→`getCurrencies()` wiring is inherited Blesta code, out of this story's scope. Recorded in `deferred-work.md`. Revisit when the sibling Blesta PHPUnit suite is available.
+
+### Dismissed (9 — by-design / handled / safe)
+
+- **`buildProcess()` does not early-return after `setErrors()`** (Blind, Medium) → HANDLED: the caller `gateway_payments.php:164` reads `$gateway_obj->errors()` immediately after `buildProcess()` and blocks the payment; no voucher code exists downstream in 1.5 (deferred to Epic 2, which must sit behind this guard); the spec explicitly requires keeping the single `return $this->view->fetch()` ("do not invent a new return shape").
+- **`if/elseif` suppresses the companion error on double failure** (Blind, Low) → BY DESIGN (Task 1.3: currency-first, no error stacking — customer gets the most relevant message).
+- **Strict `in_array` rejects `pkr` / ` PKR ` case/whitespace variants** (Edge, Medium) → BY DESIGN (Open Question #4: keep the strict compare; Blesta passes canonical upper-case ISO 4217 codes; mismatch fails closed = safe, never fails open).
+- **Cast asymmetry — a non-string `getCurrencies()` element fails closed silently** (Blind, Low) → safe direction; requires a malformed `config.json`; out of scope.
+- **`(array)` cast of a scalar `getCurrencies()`** (Edge, Low) → always lands on the safe result (verified); no real config produces it.
+- **`assertSame(['PKR'], …)` is "brittle"** (Blind, Low) → intended: Task 5.3 locks the native-join contract; adding a second currency *should* break this test.
+- **Test `Language` stub ignores `$return`** (Blind, Low) → harness-only; `currencyEligible()` never calls `Language`, so production wiring is unaffected.
+- **`$this->currency` dynamic-property null-safe read** (Edge, N/A) → verified necessary and sufficient (`#[\AllowDynamicProperties]` on base `Gateway`; `?? ''` handles unset/null).
+- **Task 1.4 comment dropped two source-citation strings** (Auditor, cosmetic) → substance preserved (names the Epic 2 gate, Story 2.3 / `InsertVoucher`, the no-Voucher guarantee); non-blocking.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
