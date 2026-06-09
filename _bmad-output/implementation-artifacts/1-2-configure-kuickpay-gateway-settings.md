@@ -4,7 +4,7 @@ baseline_commit: dbee701de838a7dc6c52cf1a506ff16e98cc9de7
 
 # Story 1.2: Configure KuickPay Gateway Settings
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -371,7 +371,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+GPT-5 Codex
 
 ### Debug Log References
 
@@ -389,6 +389,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - 2026-06-09: Task 6 scope checks: `git status --porcelain` was clean before story-only verification updates; `find components/gateways/nonmerchant/kuickpay -type d -name lib` returned no output; no plugin files were changed.
 - 2026-06-09: Task 6 test/runtime availability check found `../tests` missing and no KuickPay-local PHPUnit/PHPCS config. No running Blesta + MySQL admin workflow was exercised; verification is limited to lint, grep, and structural checks.
 - 2026-06-09: Task 6 accessibility check confirmed all form controls pass explicit `id` attributes and matching labels; literal fields were checked with grep and the fixed instruction checkbox loop was inspected to use the same `$field` for `id` and `for`.
+- 2026-06-09: Completion gate found no unchecked task boxes; final syntax checks passed for all changed gateway files; final hard-coded-value grep found only Blesta license links and field/language-key names; final password secret-echo grep found no `$meta[...]` password usage and no `value` attribute in `settings.pdt`; final scope check showed no `lib/` directory and no plugin changes.
 
 ### Completion Notes List
 
@@ -397,6 +398,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - Task 3: Implemented `editSettings()` validation using Blesta `Input` rules, including checkbox defaults, select normalization, HTTPS URL validation, required fields, optional non-negative integer checks, reference-pattern shape checks, conditional inquiry credentials, and checkbox/select allowlists.
 - Task 5: Added `voucher_password` and `inquiry_password` to `encryptableFields()` for Blesta-managed encrypted storage.
 - Task 6: Completed fallback verification with PHP syntax checks, structural grep checks, password non-echo proof, scope containment checks, and accessibility label/id inspection. Root PHPUnit and runtime admin/DB verification were not available in this checkout.
+- Story ready for review: all acceptance criteria are covered by the settings form, Blesta validation rules, localized strings, encrypted credential metadata, and fallback verification. Runtime admin/DB verification remains pending because no running Blesta + MySQL workflow was exercised.
 
 ### File List
 
@@ -413,6 +415,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - 2026-06-09: Added KuickPay gateway settings validation in `editSettings()`.
 - 2026-06-09: Added encrypted storage metadata for KuickPay credential fields.
 - 2026-06-09: Completed fallback verification for KuickPay settings configuration.
+- 2026-06-09: Marked Story 1.2 ready for review after completion gate validation.
 - 2026-06-09: Story drafted (ready-for-dev) via bmad-create-story. Exhaustive context-engine analysis across epics, PRD (FR-2/3/5/7), addendum SOAP mapping, architecture, UX (UX-DR8/9/25/28), the Story 1.1 scaffold + learnings, deferred-work log, and the canonical in-repo coingate/paypal gateway settings idioms.
 - 2026-06-09: Validation triage (multi-agent) applied, all findings verified against the codebase. Corrected the `fieldPassword` call to the 2-arg attributes signature (`$attributes` is the 2nd param, not a value) and fixed the Task 6.2 grep proof accordingly; switched optional-numeric rules to the empty-tolerant `/^([0-9]+)?$/` idiom (a blank input submits `''`; `if_set` skips only absent keys); added an authoritative **Default meta values** table and made the checkbox render use each field's real default (fixes `inquiry_same_as_voucher` first-save forcing inquiry credentials); made the reference-pattern illustrative defaults space-free/regex-consistent and explicitly non-prefilled; added single-option select normalization; documented the interim credential re-save limitation (owned by 1.3); and added smaller guards (no `<form>` tag, `encryptableFields()` auto-encrypt/decrypt, `process.pdt` do-not-touch, `scaffold_note` removal ordering, group `pad` wrapper, accessibility check 6.5, downgraded the `matches` caution to confirmed).
 
