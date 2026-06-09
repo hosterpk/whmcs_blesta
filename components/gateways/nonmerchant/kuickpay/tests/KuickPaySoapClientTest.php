@@ -158,6 +158,28 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertFalse($factoryCalled);
     }
 
+    public function testInsertVoucherInjectsVoucherCredentialsAndNeverRetries()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->throw = new SoapFault('HTTP', 'connection timed out');
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $client->insertVoucher(['RegistrationNumber' => 'REG-1', 'Name' => 'Customer Name']);
+
+        $this->assertSame(1, $outcome['attempts']);
+        $this->assertCount(1, $fake->calls);
+        $this->assertSame('InsertVoucher', $fake->calls[0][0]);
+        $params = $fake->calls[0][1][0];
+        $this->assertSame('voucher-user', $params['userName']);
+        $this->assertSame('voucher-secret', $params['password']);
+        $this->assertSame('KP01', $params['InstitutionID']);
+        $this->assertSame('REG-1', $params['RegistrationNumber']);
+        $this->assertSame('timeout', $outcome['error_class']);
+    }
+
     private function callPrivate(KuickPaySoapClient $client, $operation, array $params)
     {
         $method = new ReflectionMethod($client, 'call');

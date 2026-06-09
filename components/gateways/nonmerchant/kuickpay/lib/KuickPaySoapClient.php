@@ -52,6 +52,23 @@ class KuickPaySoapClient
     }
 
     /**
+     * Create a KuickPay voucher through one transport attempt.
+     *
+     * @param array $voucherParams Caller-supplied voucher field map
+     * @return array Structured transport outcome
+     */
+    public function insertVoucher(array $voucherParams): array
+    {
+        $params = $this->withCredentials($voucherParams, false);
+
+        // InsertVoucher is never auto-retried: idempotency is unproven and a retry can double-issue a payable voucher.
+        $outcome = $this->call('InsertVoucher', $params);
+        $outcome['attempts'] = 1;
+
+        return $outcome;
+    }
+
+    /**
      * Perform one SOAP transport attempt and return transport facts only.
      *
      * Outcome shape:
@@ -159,6 +176,25 @@ class KuickPaySoapClient
                 ini_set('default_socket_timeout', $previous_timeout);
             }
         }
+    }
+
+    /**
+     * Merge operation credentials and institution id into caller params.
+     *
+     * @param array $params Caller-supplied operation params
+     * @param bool $inquiry True for inquiry credentials, false for voucher credentials
+     * @return array Params with SOAP credentials
+     */
+    private function withCredentials(array $params, bool $inquiry): array
+    {
+        $same_as_voucher = (string) $this->configValue('inquiry_same_as_voucher', 'false') === 'true';
+        $prefix = ($inquiry && !$same_as_voucher) ? 'inquiry' : 'voucher';
+
+        return array_merge($params, [
+            'userName' => (string) $this->configValue($prefix . '_username', ''),
+            'password' => (string) $this->configValue($prefix . '_password', ''),
+            'InstitutionID' => (string) $this->configValue('institution_id', ''),
+        ]);
     }
 
     /**
