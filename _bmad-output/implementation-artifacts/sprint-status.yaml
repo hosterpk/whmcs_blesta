@@ -1,0 +1,128 @@
+# generated: 2026-06-09
+# last_updated: 2026-06-09
+# project: whmcs_blesta
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+# =====================================================================
+# BUILD ORDER / SEQUENCING (enforced per implementation-readiness report
+# 2026-06-09 + sprint-change-proposal-2026-06-09). Epic numbering reflects
+# user-value grouping, NOT strict build order. Honor these constraints:
+# ---------------------------------------------------------------------
+# 1. PHASE 0 GATE: 0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures
+#    must be APPROVED before 2-3 success-path handling and before all of Epic 3.
+#    Payment posting stays DISABLED until 0-1 is approved.
+# 2. PARALLELISM: Epic 1 (1-1..1-5: scaffold, settings, credentials, connection
+#    test, PKR eligibility) may run IN PARALLEL with Phase 0 (0-1). Epic 1 is
+#    fully unblocked today.
+# 3. CROSS-EPIC PREREQUISITES OF 2-3 (map-invoice-data-and-issue-voucher):
+#    - 0-1 approved (fixtures + contract), AND
+#    - 3-1 InsertVoucher slice (KuickPay SOAP client wrapper) delivered, AND
+#    - 3-2 creation-response slice (normalized parser + creation fixtures).
+#    Do NOT start 2-3 until these three exist. (FR10 posts "according to parser
+#    rules"; FR15 supplies the client.) Inquiry/bulk slices of 3-1/3-2 may
+#    follow with the rest of Epic 3.
+# 4. POSTING BOUNDARY: only KuickPayPostingService (Epic 3 / 3-5) may create or
+#    apply a Blesta transaction; gateway-plus-plugin ownership per architecture.
+# ---------------------------------------------------------------------
+# RECOMMENDED EXECUTION TRACKS:
+#   Track A (parallel, start now): 1-1 -> 1-2 -> 1-3 -> 1-4 -> 1-5
+#   Track B (gate, start now):     0-1
+#   Then: 3-1(InsertVoucher) + 3-2(creation parser) -> 2-1 -> 2-2 -> 2-3 -> 2-4 -> 2-5 -> 2-6
+#   Then: 3-1(rest) -> 3-2(rest) -> 3-3 -> 3-4 -> 3-5 -> 3-6 -> 3-7 -> 3-8
+#   Then: 4-1 -> 4-2 -> 4-3 -> 4-4 -> 4-5
+#   Then: 5-1 -> 5-2 -> 5-3 -> 5-4
+# =====================================================================
+
+generated: 2026-06-09
+last_updated: 2026-06-09
+project: whmcs_blesta
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # --- Epic 0: Phase 0 - KuickPay Contract Validation and Fixture Gate ---
+  epic-0: backlog
+  0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures: backlog
+  epic-0-retrospective: optional
+
+  # --- Epic 1: Safe KuickPay Gateway Enablement (parallel with Phase 0) ---
+  epic-1: backlog
+  1-1-install-kuickpay-gateway-and-companion-plugin-scaffold: backlog
+  1-2-configure-kuickpay-gateway-settings: backlog
+  1-3-encrypt-and-mask-kuickpay-credentials: backlog
+  1-4-run-safe-kuickpay-connection-tests: backlog
+  1-5-enforce-pkr-only-gateway-eligibility: backlog
+  epic-1-retrospective: optional
+
+  # --- Epic 2: Customer Voucher Payment Reference ---
+  # NOTE: 2-3 is gated by 0-1, 3-1(InsertVoucher), 3-2(creation parser). See BUILD ORDER.
+  epic-2: backlog
+  2-1-create-durable-customer-voucher-records: backlog
+  2-2-generate-registration-number-and-consumer-number: backlog
+  2-3-map-invoice-data-and-issue-kuickpay-voucher: backlog
+  2-4-gate-changed-amounts-and-multi-invoice-attempts: backlog
+  2-5-display-customer-payment-reference-panel: backlog
+  2-6-display-configurable-payment-instructions-and-status-expectations: backlog
+  epic-2-retrospective: optional
+
+  # --- Epic 3: Trusted Reconciliation and Safe Posting ---
+  # NOTE: 3-1(InsertVoucher) and 3-2(creation parser) slices precede 2-3.
+  epic-3: backlog
+  3-1-wrap-kuickpay-soap-operations: backlog
+  3-2-normalize-kuickpay-evidence-with-fixtures: backlog
+  3-3-reconcile-pending-vouchers-by-single-inquiry: backlog
+  3-4-validate-confirmed-payment-evidence: backlog
+  3-5-post-safe-blesta-transactions: backlog
+  3-6-handle-expiry-late-partial-and-overpayment-cases: backlog
+  3-7-run-bulk-reconciliation-safety-net: backlog
+  3-8-verify-payment-safety-contracts: backlog
+  epic-3-retrospective: optional
+
+  # --- Epic 4: Admin Support and Manual Review Operations ---
+  epic-4: backlog
+  4-1-search-and-filter-kuickpay-vouchers: backlog
+  4-2-inspect-voucher-details-and-safe-diagnostics: backlog
+  4-3-run-safe-manual-voucher-actions: backlog
+  4-4-manage-manual-review-queue-and-run-results: backlog
+  4-5-record-structured-logs-and-audit-events: backlog
+  epic-4-retrospective: optional
+
+  # --- Epic 5: Launch Validation and Operational Handoff ---
+  epic-5: backlog
+  5-1-add-opt-in-live-and-sandbox-kuickpay-tests: backlog
+  5-2-document-deployment-and-configuration: backlog
+  5-3-document-reconciliation-and-support-operations: backlog
+  5-4-document-rollback-upgrade-and-production-launch: backlog
+  epic-5-retrospective: optional
