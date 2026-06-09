@@ -68,7 +68,7 @@ class KuickPayRedactorTest extends TestCase
 
         $traceId = $redactor->traceId();
 
-        $this->assertMatchesRegularExpression('/^kp_[a-f0-9]{16}$/', $traceId);
+        $this->assertRegExp('/^kp_[a-f0-9]{16}$/', $traceId);
         $this->assertStringNotContainsString('user', $traceId);
         $this->assertStringNotContainsString('password', $traceId);
     }
