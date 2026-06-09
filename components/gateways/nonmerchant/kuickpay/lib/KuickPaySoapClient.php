@@ -1,0 +1,404 @@
+<?php
+/**
+ * KuickPay SOAP transport wrapper.
+ *
+ * @package blesta
+ * @subpackage blesta.components.gateways.kuickpay
+ * @copyright Copyright (c) 2010, Phillips Data, Inc.
+ * @license http://www.blesta.com/license/ The Blesta License Agreement
+ * @link http://www.blesta.com/ Blesta
+ */
+class KuickPaySoapClient
+{
+    private const DEFAULT_TIMEOUT = 30;
+    private const MIN_TIMEOUT = 5;
+
+    /**
+     * @var array Gateway SOAP configuration
+     */
+    private $config;
+
+    /**
+     * @var callable Factory with signature function(string $wsdl, array $options): object
+     */
+    private $soap_client_factory;
+
+    /**
+     * @var object|null Lazily constructed SOAP client or test double
+     */
+    private $soap_client;
+
+    /**
+     * @var array|null Lazily built SoapClient options
+     */
+    private $soap_options;
+
+    /**
+     * @var KuickPayRedactor
+     */
+    private $redactor;
+
+    /**
+     * @param array $config Gateway SOAP configuration
+     * @param callable|null $soapClientFactory Optional factory for testable SOAP construction
+     */
+    public function __construct(array $config, callable $soapClientFactory = null)
+    {
+        $this->config = $config;
+        $this->soap_client_factory = $soapClientFactory ?: function (string $wsdl, array $options): object {
+            return new SoapClient($wsdl, $options);
+        };
+        $this->redactor = new KuickPayRedactor();
+    }
+
+    /**
+     * Perform one SOAP transport attempt and return transport facts only.
+     *
+     * Outcome shape:
+     * - ok: bool transport reachability only; true when a response body arrived
+     * - operation: string SOAP operation name
+     * - raw_result: ?string unredacted parser-only operation result payload
+     * - raw_envelope: ?string redacted response envelope diagnostic
+     * - error_class: ?string null|timeout|transport_error
+     * - fault: ?string redacted fault/transport summary
+     * - redacted_request: array redacted request params
+     * - redacted_trace_id: string non-PII trace id
+     * - attempts: int attempt count supplied by public wrappers
+     *
+     * @param string $operation SOAP operation name
+     * @param array $params SOAP operation params
+     * @return array Structured transport outcome
+     */
+    private function call(string $operation, array $params): array
+    {
+        $trace_id = $this->redactor->traceId();
+        $redacted_request = $this->redactor->redactArray($params);
+
+        if (!$this->hasUsableWsdlUrl()) {
+            return $this->outcome(
+                false,
+                $operation,
+                null,
+                null,
+                'transport_error',
+                'Invalid or unsafe WSDL URL',
+                $redacted_request,
+                $trace_id
+            );
+        }
+
+        $previous_timeout = ini_set('default_socket_timeout', (string) $this->timeout());
+
+        try {
+            $client = $this->soapClient();
+            $result = $client->__soapCall($operation, [$params]);
+            $response = $this->lastEnvelope($client, 'response');
+
+            return $this->outcome(
+                true,
+                $operation,
+                $this->extractRawResult($operation, $result, $response),
+                $this->redactEnvelope($response),
+                null,
+                null,
+                $redacted_request,
+                $trace_id
+            );
+        } catch (SoapFault $e) {
+            $response = isset($client) ? $this->lastEnvelope($client, 'response') : '';
+            if ($response !== '') {
+                return $this->outcome(
+                    true,
+                    $operation,
+                    $this->extractRawResult($operation, null, $response),
+                    $this->redactEnvelope($response),
+                    null,
+                    $this->redactedDiagnosticText($e->getMessage()),
+                    $redacted_request,
+                    $trace_id
+                );
+            }
+
+            return $this->outcome(
+                false,
+                $operation,
+                null,
+                null,
+                $this->isTimeout($e) ? 'timeout' : 'transport_error',
+                $this->redactedDiagnosticText($e->getMessage()),
+                $redacted_request,
+                $trace_id
+            );
+        } catch (Throwable $e) {
+            $response = isset($client) ? $this->lastEnvelope($client, 'response') : '';
+            if ($response !== '') {
+                return $this->outcome(
+                    true,
+                    $operation,
+                    $this->extractRawResult($operation, null, $response),
+                    $this->redactEnvelope($response),
+                    null,
+                    $this->redactedDiagnosticText($e->getMessage()),
+                    $redacted_request,
+                    $trace_id
+                );
+            }
+
+            return $this->outcome(
+                false,
+                $operation,
+                null,
+                null,
+                $this->isTimeout($e) ? 'timeout' : 'transport_error',
+                $this->redactedDiagnosticText($e->getMessage()),
+                $redacted_request,
+                $trace_id
+            );
+        } finally {
+            if ($previous_timeout !== false) {
+                ini_set('default_socket_timeout', $previous_timeout);
+            }
+        }
+    }
+
+    /**
+     * Lazily construct the configured SoapClient or test double.
+     *
+     * @return object SOAP client/test double
+     */
+    private function soapClient(): object
+    {
+        if ($this->soap_client === null) {
+            $factory = $this->soap_client_factory;
+            $this->soap_client = $factory((string) $this->configValue('wsdl_url'), $this->soapOptions());
+        }
+
+        return $this->soap_client;
+    }
+
+    /**
+     * Build SoapClient options once.
+     *
+     * @return array SoapClient options
+     */
+    private function soapOptions(): array
+    {
+        if ($this->soap_options === null) {
+            $timeout = $this->timeout();
+            $this->soap_options = [
+                'connection_timeout' => $timeout,
+                'exceptions' => true,
+                'trace' => true,
+                'cache_wsdl' => defined('WSDL_CACHE_MEMORY') ? WSDL_CACHE_MEMORY : 2,
+                'stream_context' => stream_context_create([
+                    'http' => [
+                        'timeout' => $timeout,
+                    ],
+                    'ssl' => [
+                        'verify_peer' => true,
+                        'verify_peer_name' => true,
+                        'allow_self_signed' => false,
+                    ],
+                ]),
+            ];
+        }
+
+        return $this->soap_options;
+    }
+
+    /**
+     * Derive bounded connection/read timeout seconds.
+     *
+     * @return int Timeout seconds
+     */
+    private function timeout(): int
+    {
+        $timeout = (int) $this->configValue('soap_timeout', self::DEFAULT_TIMEOUT);
+        if ($timeout <= 0) {
+            $timeout = self::DEFAULT_TIMEOUT;
+        }
+
+        return max(self::MIN_TIMEOUT, $timeout);
+    }
+
+    /**
+     * Validate WSDL URL at call time, including userinfo rejection.
+     *
+     * @return bool True when the URL is safe enough to attempt
+     */
+    private function hasUsableWsdlUrl(): bool
+    {
+        $wsdl_url = (string) $this->configValue('wsdl_url', '');
+        if ($wsdl_url === '' || filter_var($wsdl_url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        return parse_url($wsdl_url, PHP_URL_USER) === null
+            && parse_url($wsdl_url, PHP_URL_PASS) === null;
+    }
+
+    /**
+     * Extract operation result payload without business parsing.
+     *
+     * @param string $operation SOAP operation name
+     * @param mixed $result SoapClient return value
+     * @param string $response Raw response envelope
+     * @return string|null Raw result payload
+     */
+    private function extractRawResult(string $operation, $result, string $response): ?string
+    {
+        $property = $operation . 'Result';
+        if (is_object($result) && isset($result->{$property})) {
+            return (string) $result->{$property};
+        }
+
+        if (is_array($result) && isset($result[$property])) {
+            return (string) $result[$property];
+        }
+
+        if ($response === '') {
+            return null;
+        }
+
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
+        $document = new DOMDocument();
+        if (!$document->loadXML($response, LIBXML_NONET)) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+            return null;
+        }
+
+        $xpath = new DOMXPath($document);
+        $nodes = $xpath->query('//*[local-name() = "' . $property . '"]');
+        $value = ($nodes !== false && $nodes->length > 0) ? $nodes->item(0)->textContent : null;
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        return $value;
+    }
+
+    /**
+     * Read the last request/response envelope from a SOAP client if exposed.
+     *
+     * @param object $client SOAP client/test double
+     * @param string $type response or request
+     * @return string Raw envelope or an empty string
+     */
+    private function lastEnvelope(object $client, string $type): string
+    {
+        $method = $type === 'request' ? '__getLastRequest' : '__getLastResponse';
+        if (!method_exists($client, $method)) {
+            return '';
+        }
+
+        $value = $client->{$method}();
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * Redact an envelope only when present.
+     *
+     * @param string $envelope Raw SOAP envelope
+     * @return string|null Redacted SOAP envelope
+     */
+    private function redactEnvelope(string $envelope): ?string
+    {
+        return $envelope === '' ? null : $this->redactor->redactEnvelope($envelope);
+    }
+
+    /**
+     * Classify timeout-like transport exceptions.
+     *
+     * @param Throwable $e Transport exception
+     * @return bool True when exception text indicates timeout
+     */
+    private function isTimeout(Throwable $e): bool
+    {
+        return preg_match('/timeout|timed out|temporarily unavailable/i', $e->getMessage()) === 1;
+    }
+
+    /**
+     * Return a redacted diagnostic string without raw credentials.
+     *
+     * @param string $text Raw diagnostic text
+     * @return string Redacted diagnostic text
+     */
+    private function redactedDiagnosticText(string $text): string
+    {
+        if (strpos($text, '<') !== false && strpos($text, '>') !== false) {
+            $redacted = $this->redactor->redactEnvelope($text);
+            if ($redacted !== KuickPayRedactor::ENVELOPE_UNPARSEABLE) {
+                $text = $redacted;
+            }
+        }
+
+        foreach ([
+            'voucher_username',
+            'voucher_password',
+            'inquiry_username',
+            'inquiry_password',
+            'institution_id',
+        ] as $key) {
+            $value = (string) $this->configValue($key, '');
+            if ($value !== '') {
+                $text = str_replace($value, 'xxxx', $text);
+            }
+        }
+
+        $text = preg_replace('/(userName|username|UserName|password|Password|InstitutionID)\s*[:=]\s*[^,\s<]+/i', '$1=xxxx', $text);
+
+        return is_string($text) ? $text : '';
+    }
+
+    /**
+     * Fetch a config value with default.
+     *
+     * @param string $key Config key
+     * @param mixed $default Default value
+     * @return mixed Config value
+     */
+    private function configValue(string $key, $default = null)
+    {
+        return $this->config[$key] ?? $default;
+    }
+
+    /**
+     * Build the canonical transport outcome.
+     *
+     * @param bool $ok True when response body arrived
+     * @param string $operation SOAP operation name
+     * @param string|null $raw_result Parser-only raw result payload
+     * @param string|null $raw_envelope Redacted response envelope
+     * @param string|null $error_class Transport error class
+     * @param string|null $fault Redacted fault summary
+     * @param array $redacted_request Redacted request params
+     * @param string $trace_id Redacted trace id
+     * @return array Structured outcome
+     */
+    private function outcome(
+        bool $ok,
+        string $operation,
+        ?string $raw_result,
+        ?string $raw_envelope,
+        ?string $error_class,
+        ?string $fault,
+        array $redacted_request,
+        string $trace_id
+    ): array {
+        return [
+            'ok' => $ok,
+            'operation' => $operation,
+            'raw_result' => $raw_result,
+            'raw_envelope' => $raw_envelope,
+            'error_class' => $error_class,
+            'fault' => $fault,
+            'redacted_request' => $redacted_request,
+            'redacted_trace_id' => $trace_id,
+            'attempts' => 1,
+        ];
+    }
+}
