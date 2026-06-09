@@ -82,8 +82,8 @@ so that production-specific values are controlled without code changes.
   - [x] 4.4 Add the select-option label keys (`Kuickpay.currency_policy.pkr_only`, `Kuickpay.fee_policy.none`). Remove the obsolete `Kuickpay.settings.scaffold_note` key — but **only after/with** Task 2.2 removes its template usage, never before, or the template would reference a missing key. Keep `Kuickpay.name`, `Kuickpay.description`, `Kuickpay.!error.companion_missing`, `Kuickpay.process.not_ready` untouched.
   - [x] 4.5 Preserve the existing file's single-quote / one-key-per-line style; do not rewrap or reorder existing keys (project-context language-file rule).
 
-- [ ] **Task 5 — Encrypt credentials at rest (AC3 secret-safety; fail-safe for Story 1.3)** [Source: prd.md FR-3 line 113; coingate encryptableFields]
-  - [ ] 5.1 Update `encryptableFields()` to `return ['voucher_password', 'inquiry_password'];` (replacing the scaffold `return [];`). This guarantees no plaintext password is written to gateway meta even before Story 1.3 lands. Blesta auto-encrypts these listed fields on save and auto-decrypts them into `$meta` on load — do **not** hand-encrypt in `editSettings()` or hand-decrypt in `getSettings()` (that would double-encrypt). Do **not** add masking/redaction logic here either — that is Story 1.3.
+- [x] **Task 5 — Encrypt credentials at rest (AC3 secret-safety; fail-safe for Story 1.3)** [Source: prd.md FR-3 line 113; coingate encryptableFields]
+  - [x] 5.1 Update `encryptableFields()` to `return ['voucher_password', 'inquiry_password'];` (replacing the scaffold `return [];`). This guarantees no plaintext password is written to gateway meta even before Story 1.3 lands. Blesta auto-encrypts these listed fields on save and auto-decrypts them into `$meta` on load — do **not** hand-encrypt in `editSettings()` or hand-decrypt in `getSettings()` (that would double-encrypt). Do **not** add masking/redaction logic here either — that is Story 1.3.
 
 - [ ] **Task 6 — Verification (no overstating; AC1–AC3)** [Source: project-context.md#Testing Rules, #Development Workflow Rules; NFR12]
   - [ ] 6.1 `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` and `php -l` the changed `.pdt`/language files (templates: `php -l` is fine for syntax).
@@ -381,12 +381,15 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - 2026-06-09: Task 2/4 green checks `php -l` passed for `settings.pdt` and `language/en_us/kuickpay.php`; `scaffold_note` grep returned no matches; password-field grep confirmed both `fieldPassword()` calls omit stored meta/value attributes; label/id inspection covered literal fields and the fixed instruction checkbox loop.
 - 2026-06-09: Task 3 red check confirmed `editSettings()` still returned `$meta` without validation before implementation.
 - 2026-06-09: Task 3 green checks `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed; structural grep confirmed HTTPS URL callback, empty-tolerant numeric rule, reference-pattern rule, conditional inquiry credential rules, select allowlists, checkbox allowlists, and Blesta `setRules`/`validates` flow.
+- 2026-06-09: Task 5 red check confirmed `encryptableFields()` returned an empty array before implementation.
+- 2026-06-09: Task 5 green checks `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed; grep confirmed `encryptableFields()` returns `voucher_password` and `inquiry_password`.
 
 ### Completion Notes List
 
 - Task 1: Extended `getSettings()` with localized `currency_policy` and `fee_policy` option arrays while preserving the existing companion check, view-resolution idiom, helper loading, and existing view variables.
 - Task 2/4: Replaced the scaffold info alert with five grouped settings sections, preserved the companion-missing branch, rendered password fields empty by omission, applied field-specific checkbox defaults, and added all language-driven labels, help notes, option labels, and validation messages.
 - Task 3: Implemented `editSettings()` validation using Blesta `Input` rules, including checkbox defaults, select normalization, HTTPS URL validation, required fields, optional non-negative integer checks, reference-pattern shape checks, conditional inquiry credentials, and checkbox/select allowlists.
+- Task 5: Added `voucher_password` and `inquiry_password` to `encryptableFields()` for Blesta-managed encrypted storage.
 
 ### File List
 
@@ -400,6 +403,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - 2026-06-09: Added localized KuickPay settings option arrays to `getSettings()` for currency and fee policy.
 - 2026-06-09: Built the grouped KuickPay gateway settings form and added the language keys it renders.
 - 2026-06-09: Added KuickPay gateway settings validation in `editSettings()`.
+- 2026-06-09: Added encrypted storage metadata for KuickPay credential fields.
 - 2026-06-09: Story drafted (ready-for-dev) via bmad-create-story. Exhaustive context-engine analysis across epics, PRD (FR-2/3/5/7), addendum SOAP mapping, architecture, UX (UX-DR8/9/25/28), the Story 1.1 scaffold + learnings, deferred-work log, and the canonical in-repo coingate/paypal gateway settings idioms.
 - 2026-06-09: Validation triage (multi-agent) applied, all findings verified against the codebase. Corrected the `fieldPassword` call to the 2-arg attributes signature (`$attributes` is the 2nd param, not a value) and fixed the Task 6.2 grep proof accordingly; switched optional-numeric rules to the empty-tolerant `/^([0-9]+)?$/` idiom (a blank input submits `''`; `if_set` skips only absent keys); added an authoritative **Default meta values** table and made the checkbox render use each field's real default (fixes `inquiry_same_as_voucher` first-save forcing inquiry credentials); made the reference-pattern illustrative defaults space-free/regex-consistent and explicitly non-prefilled; added single-option select normalization; documented the interim credential re-save limitation (owned by 1.3); and added smaller guards (no `<form>` tag, `encryptableFields()` auto-encrypt/decrypt, `process.pdt` do-not-touch, `scaffold_note` removal ordering, group `pad` wrapper, accessibility check 6.5, downgraded the `matches` caution to confirmed).
 

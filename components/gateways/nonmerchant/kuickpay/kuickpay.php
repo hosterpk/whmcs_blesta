@@ -246,7 +246,7 @@ class Kuickpay extends NonmerchantGateway
      */
     public function encryptableFields()
     {
-        return [];
+        return ['voucher_password', 'inquiry_password'];
     }
 
     /**
