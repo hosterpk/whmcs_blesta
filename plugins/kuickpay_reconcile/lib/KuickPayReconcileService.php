@@ -57,13 +57,15 @@ class KuickPayReconcileService
             return ['status' => 'skipped', 'reason' => 'lock_held'];
         }
 
-        $cursor = $this->runRepository->getResumeCursor($company_id);
+        $cursor = 0;
         $run_id = 0;
         $counts = $this->initialCounts();
         $status = 'completed';
         $start = time();
 
         try {
+            // Resolve the resume cursor inside the try so any failure still releases the lock below.
+            $cursor = $this->runRepository->getResumeCursor($company_id);
             $run_id = $this->runRepository->open($company_id, $trigger_type, $cursor);
             $this->auditService->record('reconciliation.run.started', [
                 'company_id' => $company_id,
@@ -95,14 +97,18 @@ class KuickPayReconcileService
             $status = 'failed';
             $counts['total_errors']++;
         } finally {
-            if ($run_id > 0) {
-                $summary = json_encode(['status' => $status, 'counts' => $counts]);
-                $this->runRepository->close($run_id, $status, $counts, $cursor, $summary);
-                $this->auditService->record('reconciliation.run.completed', [
-                    'company_id' => $company_id,
-                    'run_id' => $run_id,
-                    'payload' => ['status' => $status, 'counts' => $counts],
-                ]);
+            try {
+                if ($run_id > 0) {
+                    $summary = json_encode(['status' => $status, 'counts' => $counts]);
+                    $this->runRepository->close($run_id, $status, $counts, $cursor, $summary);
+                    $this->auditService->record('reconciliation.run.completed', [
+                        'company_id' => $company_id,
+                        'run_id' => $run_id,
+                        'payload' => ['status' => $status, 'counts' => $counts],
+                    ]);
+                }
+            } catch (Throwable $closeError) {
+                // Closing the run / writing audit is best-effort; the lock MUST still be released below.
             }
 
             $this->lockRepository->release($company_id, self::LOCK_NAME, $owner_token);
