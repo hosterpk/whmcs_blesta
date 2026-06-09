@@ -144,14 +144,19 @@ class KuickPayReconcileService
         } catch (Throwable $e) {
             $error = true;
             $new_status = $prior_status;
-            $this->itemRepository->record([
-                'run_id' => $run_id,
-                'voucher_id' => (int) $voucher->id,
-                'prior_status' => $prior_status,
-                'new_status' => $new_status,
-                'error_class' => 'reconcile_exception',
-                'date_created' => date('Y-m-d H:i:s'),
-            ]);
+
+            try {
+                $this->itemRepository->record([
+                    'run_id' => $run_id,
+                    'voucher_id' => (int) $voucher->id,
+                    'prior_status' => $prior_status,
+                    'new_status' => $new_status,
+                    'error_class' => 'reconcile_exception',
+                    'date_created' => date('Y-m-d H:i:s'),
+                ]);
+            } catch (Throwable $recordError) {
+                // One voucher's failed item write must not abort the rest of the batch.
+            }
         }
 
         return ['new_status' => $new_status, 'error' => $error];
