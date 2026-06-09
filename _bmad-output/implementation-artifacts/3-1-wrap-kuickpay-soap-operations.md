@@ -4,7 +4,7 @@ baseline_commit: 3668b622171191ca23bfb2c01cb59096d729594d
 
 # Story 3.1: Wrap KuickPay SOAP Operations
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -192,6 +192,8 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 
 ### Agent Model Used
 
+GPT-5 Codex
+
 ### Debug Log References
 
 - Task 1: Added redactor PHPUnit coverage first; `phpunit` is not installed on PATH, so direct PHP fallback checks were used. `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php` passed. Direct checks covered array redaction, default-namespace envelope redaction, and unparseable envelope placeholder behavior.
@@ -201,6 +203,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Task 5: Added inquiry/bulk PHPUnit coverage before implementation; `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport checks covered inquiry credential selection, bounded retry to success, and three-attempt timeout give-up.
 - Task 6: `php -l` passed for `KuickPayRedactor.php`, `KuickPaySoapClient.php`, `kuickpay.php`, `tests/bootstrap.php`, `KuickPayRedactorTest.php`, and `KuickPaySoapClientTest.php`. `phpunit` is not installed on PATH and `../tests` is absent, so root/component PHPUnit was not executed. A direct PHP fake-transport fallback script passed coverage for redaction, TLS/timeout options, credential selection, same-as-voucher fallback, timeout, transport_error, SOAP fault with body, construction failure, userinfo WSDL guard, InsertVoucher no retry, bounded inquiry retry, raw payload passthrough, and no payment-decision fields.
 - Task 7: `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport check covered `echoTest()` -> `Echo` and `getInstitutionsList()` -> `GetInstitutionsList` returning the same transport outcome shape.
+- Completion: Final validation found no unchecked story tasks. `rg` confirmed no KuickPay runtime `SoapClient` construction outside `KuickPaySoapClient.php`; `kuickpay.php` only exposes the `getSoapClient()` factory. `phpunit` remains unavailable on PATH and `../tests` is absent, but PHP CLI 8.3.31 is present here with `dom`, `libxml`, and `soap` loaded.
 
 ### Completion Notes List
 
@@ -211,6 +214,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Added `billPaymentInquiry()` and `billPaymentBulkInquiry()` with inquiry credential selection, same-as-voucher fallback, bounded retry for transport-only failures, and raw payload passthrough with no bulk XML parsing.
 - Added component-local PHPUnit test files and executed available lint/fallback behavior checks. No live KuickPay endpoint was called.
 - Added optional safe setup wrappers `echoTest()` and `getInstitutionsList()` without wiring them into settings or the Story 1.4 connection test.
+- Final validation completed with all tasks/subtasks checked, all acceptance criteria covered by implementation/tests or fallback checks, and no live KuickPay calls made.
 
 ### File List
 
@@ -221,3 +225,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - components/gateways/nonmerchant/kuickpay/tests/bootstrap.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayRedactorTest.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPaySoapClientTest.php
+
+### Change Log
+
+- 2026-06-09: Implemented KuickPay SOAP transport wrapper, redaction boundary, gateway factory, component-local tests, and verification; story moved to review.

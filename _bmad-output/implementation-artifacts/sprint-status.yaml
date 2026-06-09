@@ -100,7 +100,7 @@ development_status:
   # --- Epic 3: Trusted Reconciliation and Safe Posting ---
   # NOTE: 3-1(InsertVoucher) and 3-2(creation parser) slices precede 2-3.
   epic-3: in-progress
-  3-1-wrap-kuickpay-soap-operations: in-progress
+  3-1-wrap-kuickpay-soap-operations: review
   3-2-normalize-kuickpay-evidence-with-fixtures: backlog
   3-3-reconcile-pending-vouchers-by-single-inquiry: backlog
   3-4-validate-confirmed-payment-evidence: backlog
