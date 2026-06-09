@@ -4,6 +4,8 @@ use PHPUnit\Framework\TestCase;
 
 class KuickPayResponseParserTest extends TestCase
 {
+    private const FIXTURE_DIR = __DIR__ . '/../../../../../plugins/kuickpay_reconcile/tests/fixtures/kuickpay';
+
     public function testParseRejectsBulkOperation()
     {
         $this->expectException(InvalidArgumentException::class);
@@ -351,6 +353,132 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame(['amount_mismatch'], $evidence[0]->validationErrors());
     }
 
+    /**
+     * @dataProvider insertVoucherFixtureProvider
+     */
+    public function testInsertVoucherFixtureMappings(string $fixture, string $status, ?string $errorClass)
+    {
+        $evidence = $this->parser()->parse(
+            $this->outcome('InsertVoucher', $this->fixtureResult($fixture)),
+            ['expected_registration_number' => 'REG-0000001']
+        );
+
+        $this->assertEvidence($status, $errorClass, $evidence);
+    }
+
+    public function insertVoucherFixtureProvider(): array
+    {
+        return [
+            ['valid/insert-voucher-success.xml', 'pending', null],
+            ['malformed/insert-voucher-malformed.xml', 'manual_review', 'malformed_response'],
+            ['ambiguous/insert-voucher-duplicate.xml', 'manual_review', 'duplicate_reference'],
+            ['malformed/insert-voucher-invalid-credentials.xml', 'failed', 'credential_error'],
+            ['malformed/insert-voucher-non-2-char-status.xml', 'manual_review', 'malformed_response'],
+        ];
+    }
+
+    /**
+     * @dataProvider inquiryFixtureProvider
+     */
+    public function testInquiryFixtureMappings(
+        string $fixture,
+        string $status,
+        ?string $errorClass,
+        array $validationErrors = []
+    ) {
+        $evidence = $this->parser()->parse(
+            $this->outcome('BillPaymentInquiry', $this->fixtureResult($fixture)),
+            [
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+                'expected_registration_number' => 'REG-0000001',
+            ]
+        );
+
+        $this->assertEvidence($status, $errorClass, $evidence);
+        $this->assertSame($validationErrors, $evidence->validationErrors());
+    }
+
+    public function inquiryFixtureProvider(): array
+    {
+        return [
+            ['valid/bill-payment-inquiry-pending.xml', 'pending', null],
+            ['valid/bill-payment-inquiry-paid-exact.xml', 'confirmed_unposted', null],
+            ['valid/bill-payment-inquiry-paid-trailing-zero.xml', 'confirmed_unposted', null],
+            ['valid/bill-payment-inquiry-expired.xml', 'expired', null],
+            ['ambiguous/bill-payment-inquiry-amount-mismatch.xml', 'manual_review', 'amount_mismatch', ['amount_mismatch']],
+            ['ambiguous/bill-payment-inquiry-unknown.xml', 'manual_review', 'unknown_status', ['unknown_status']],
+            ['ambiguous/bill-payment-inquiry-non-pkr.xml', 'manual_review', null, ['currency_mismatch']],
+            ['ambiguous/bill-payment-inquiry-empty-currency.xml', 'manual_review', null, ['currency_mismatch']],
+            ['malformed/bill-payment-inquiry-short.xml', 'manual_review', 'malformed_response', ['malformed_result']],
+        ];
+    }
+
+    public function testBulkFixtureMappings()
+    {
+        $context = [
+            'expected_consumer_numbers' => ['INSTITUTION_ID1234INVOICE_ID'],
+            'expected_amount' => '1000.00',
+            'expected_currency' => 'PKR',
+        ];
+
+        $matched = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('valid/bill-payment-bulk-matched-paid.xml')),
+            $context
+        );
+        $unmatched = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('ambiguous/bill-payment-bulk-unmatched.xml')),
+            $context
+        );
+        $malformed = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('malformed/bill-payment-bulk-malformed-xml.xml')),
+            $context
+        );
+
+        $this->assertEvidence('confirmed_unposted', null, $matched[0]);
+        $this->assertEvidence('manual_review', 'unmatched_reference', $unmatched[0]);
+        $this->assertEvidence('manual_review', 'malformed_response', $malformed[0]);
+        $this->assertNull($malformed[0]->consumerNumber());
+    }
+
+    public function testBulkHardeningFixtures()
+    {
+        $context = [
+            'expected_consumer_numbers' => ['INSTITUTION_ID1234INVOICE_ID'],
+            'expected_amount' => '1000.00',
+            'expected_currency' => 'PKR',
+        ];
+
+        $mixed = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('valid/bill-payment-bulk-mixed-multi-row.xml')),
+            $context
+        );
+        $overpayment = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('ambiguous/bill-payment-bulk-overpayment.xml')),
+            $context
+        );
+        $latePartial = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('ambiguous/bill-payment-bulk-late-partial.xml')),
+            $context
+        );
+        $suffix = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $this->fixtureResult('valid/bill-payment-bulk-suffix-pair.xml')),
+            [
+                'expected_consumer_numbers' => ['1234INVOICE_ID'],
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+            ]
+        );
+
+        $this->assertSame(['confirmed_unposted', 'manual_review', 'confirmed_unposted'], array_map(function ($evidence) {
+            return $evidence->status();
+        }, $mixed));
+        $this->assertEvidence('manual_review', 'amount_mismatch', $overpayment[0]);
+        $this->assertEvidence('manual_review', 'amount_mismatch', $latePartial[0]);
+        $this->assertEvidence('manual_review', 'unmatched_reference', $suffix[0]);
+        $this->assertEvidence('confirmed_unposted', null, $suffix[1]);
+    }
+
     public function testEvidenceHashIsDeterministicAndExcludesTrace()
     {
         $first = $this->parser()->parse($this->outcome('InsertVoucher', '00 VOUCHERID00001', 'kp_first'));
@@ -383,6 +511,19 @@ class KuickPayResponseParserTest extends TestCase
             'error_class' => null,
             'redacted_trace_id' => $traceId,
         ];
+    }
+
+    private function fixtureResult(string $relativePath): string
+    {
+        $document = new DOMDocument();
+        $this->assertTrue($document->load(self::FIXTURE_DIR . '/' . $relativePath));
+
+        $xpath = new DOMXPath($document);
+        $nodes = $xpath->query('//*[substring(local-name(), string-length(local-name()) - 5) = "Result"]');
+        $this->assertNotFalse($nodes);
+        $this->assertGreaterThan(0, $nodes->length);
+
+        return trim($nodes->item(0)->textContent);
     }
 
     private function bulkRow(

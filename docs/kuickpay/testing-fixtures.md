@@ -25,9 +25,17 @@ Date: 2026-06-09
 | BillPaymentInquiry | `bill-payment-inquiry/amount-mismatch.xml` | `manual_review` | `amount_mismatch` | Compare as decimal strings or integer minor units, never floats. |
 | BillPaymentInquiry | `bill-payment-inquiry/expired.xml` | `expired` |  | If real expired semantics are ambiguous, map to `manual_review` and record the reason. |
 | BillPaymentInquiry | `bill-payment-inquiry/unknown.xml` | `manual_review` | `unknown_status` | Unknown status fails closed. |
+| BillPaymentInquiry | `bill-payment-inquiry/paid-trailing-zero.xml` | `confirmed_unposted` |  | Decimal normalization treats `1000.0` and `1000.00` as equal. |
+| BillPaymentInquiry | `bill-payment-inquiry/short.xml` | `manual_review` | `malformed_response` | Too few fields is malformed, not partial success. |
+| BillPaymentInquiry | `bill-payment-inquiry/non-pkr.xml` | `manual_review` |  | Paid candidate with non-PKR currency fails closed with `currency_mismatch`. |
+| BillPaymentInquiry | `bill-payment-inquiry/empty-currency.xml` | `manual_review` |  | Paid candidate with empty currency fails closed with `currency_mismatch`. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/matched-paid.xml` | `confirmed_unposted` |  | Match by stored Consumer Number only; never infer from suffix. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/unmatched.xml` | `manual_review` | `unmatched_reference` | Record as a run item for manual review. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/malformed-xml.xml` | `manual_review` | `malformed_response` | Bounded retry only for transient transport truncation; malformed dataset maps to manual review. |
+| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/mixed-multi-row.xml` | mixed | mixed | Matched rows confirm, unmatched rows fail closed; duplicate Consumer rows remain separate evidence rows. |
+| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/overpayment.xml` | `manual_review` | `amount_mismatch` | Overpayment is not auto-confirmed by the parser. |
+| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/late-partial.xml` | `manual_review` | `amount_mismatch` | Late/partial amount remains manual-review evidence. |
+| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/suffix-pair.xml` | mixed | mixed | Exact Consumer Number matching distinguishes suffix pairs. |
 
 ## Paid-Classification Preconditions (fail-closed) — added by code review 2026-06-09
 
@@ -70,9 +78,17 @@ The provisional fixtures have been adjusted to match this implementation shape w
 | `bill-payment-inquiry/amount-mismatch.xml` | `ambiguous/bill-payment-inquiry-amount-mismatch.xml` |
 | `bill-payment-inquiry/expired.xml` | `valid/bill-payment-inquiry-expired.xml` |
 | `bill-payment-inquiry/unknown.xml` | `ambiguous/bill-payment-inquiry-unknown.xml` |
+| `bill-payment-inquiry/paid-trailing-zero.xml` | `valid/bill-payment-inquiry-paid-trailing-zero.xml` |
+| `bill-payment-inquiry/short.xml` | `malformed/bill-payment-inquiry-short.xml` |
+| `bill-payment-inquiry/non-pkr.xml` | `ambiguous/bill-payment-inquiry-non-pkr.xml` |
+| `bill-payment-inquiry/empty-currency.xml` | `ambiguous/bill-payment-inquiry-empty-currency.xml` |
 | `bill-payment-bulk-inquiry/matched-paid.xml` | `valid/bill-payment-bulk-matched-paid.xml` |
 | `bill-payment-bulk-inquiry/unmatched.xml` | `ambiguous/bill-payment-bulk-unmatched.xml` |
 | `bill-payment-bulk-inquiry/malformed-xml.xml` | `malformed/bill-payment-bulk-malformed-xml.xml` |
+| `bill-payment-bulk-inquiry/mixed-multi-row.xml` | `valid/bill-payment-bulk-mixed-multi-row.xml` |
+| `bill-payment-bulk-inquiry/overpayment.xml` | `ambiguous/bill-payment-bulk-overpayment.xml` |
+| `bill-payment-bulk-inquiry/late-partial.xml` | `ambiguous/bill-payment-bulk-late-partial.xml` |
+| `bill-payment-bulk-inquiry/suffix-pair.xml` | `valid/bill-payment-bulk-suffix-pair.xml` |
 | `redaction/credentials.xml` | `redaction/credentials.xml` |
 
 ## Fixture Provenance
@@ -95,6 +111,15 @@ All fixture rows below are provisional because no sanitized KuickPay response ca
 | `bill-payment-bulk-inquiry/unmatched.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Unmatched row semantics require real capture confirmation. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-bulk-unmatched` |
 | `bill-payment-bulk-inquiry/malformed-xml.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Inner dataset is intentionally malformed while SOAP envelope remains well-formed. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-bulk-malformed` |
 | `redaction/credentials.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Redaction method sample, not operational evidence. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-redaction-credentials` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/insert-voucher-non-2-char-status.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for malformed InsertVoucher status shape. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-insert-non-2-char-status` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-paid-trailing-zero.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for trailing-zero amount normalization. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-inquiry-trailing-zero` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/bill-payment-inquiry-short.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for too-few inquiry fields. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-inquiry-short` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-non-pkr.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for non-PKR paid candidate. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-inquiry-non-pkr` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-empty-currency.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for empty-currency paid candidate. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-inquiry-empty-currency` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-mixed-multi-row.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for mixed matched/unmatched/duplicate bulk rows. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-mixed` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-overpayment.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for overpayment amount mismatch. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-overpayment` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-late-partial.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for late/partial amount mismatch. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-late-partial` |
+| `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-suffix-pair.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for exact-match Consumer Number suffix discrimination. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-suffix-pair` |
 
 ## Redaction Confirmation
 

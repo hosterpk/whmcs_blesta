@@ -98,10 +98,10 @@ Derived from Epic 3 Story 3.2 (epics.md:600-617), FR16, FR17, FR28, the architec
     ```
   - [x] These fixtures are still `provisional`/`PENDING_HUMAN_APPROVAL` (gate approved on WHMCS-derived evidence, fixtures are `synthetic_from_observed_format`). Preserve that status; do not relabel them `verified`. The relocated copies are for parser development/testing, consistent with 3.1. [Source: testing-fixtures.md:78-97]
 
-- [ ] **Task 7 — Add Story-3.2 hardening fixtures and parser tests (AC: 8) and wire the suite**
-  - [ ] Add the **deferred Story-3.2 hardening fixtures** (deferred-work.md:13) under the canonical tree, each as a well-formed SOAP envelope (malformed semantics live inside the `*Result`, per the Phase 0 convention): a **non-2-char InsertVoucher status**; an **inquiry amount with differing precision/trailing zeros** (e.g. `1000.0` vs expected `1000.00` — proves minor-unit/decimal comparison, must classify as paid-equal, not mismatch); an **empty / short (`<6` field) inquiry result**; a **non-PKR / empty currency** on an otherwise-paid row (→ `manual_review`); a **multi-row bulk dataset** mixing matched + unmatched + a duplicate Consumer Number; an **overpayment** and a **late/partial** row; and a **Consumer-Number suffix/substring pair** (one value is a suffix of another) to prove exact-match discrimination. Add provenance rows for them in `docs/kuickpay/testing-fixtures.md`. [Source: deferred-work.md:13]
-  - [ ] Add component-local parser tests in the existing gateway test tree `components/gateways/nonmerchant/kuickpay/tests/`: `KuickPayResponseParserTest.php` and `KuickPayEvidenceTest.php` (CamelCase, matching lib files and the 3.1 test naming). Extend `tests/bootstrap.php` to `require_once` the two new lib files (`KuickPayEvidence.php`, `KuickPayResponseParser.php`). Resolve the fixture directory via a path constant pointing at the canonical plugin tree (`__DIR__ . '/../../../../../plugins/kuickpay_reconcile/tests/fixtures/kuickpay/'`) — see Project Structure Notes for why fixtures live plugin-side while gateway-lib tests live gateway-side. [Source: tests/bootstrap.php; build/phpunit.xml; architecture.md:826-831]
-  - [ ] Required cases — assert `status` + `error_class` for **every** mapping-table row across all three operations, plus: transport `ok=false` timeout/transport_error → `manual_review` (insert) / `retry` (inquiry/bulk); `00`-without-expected-context → `manual_review` (fail closed, no confirmation); amount mismatch / trailing-zero equality; non-PKR currency → manual_review; exact vs suffix Consumer-Number match; bulk structure-first malformed → zero matched rows; DOCTYPE/oversize bulk dataset rejected; `evidence_hash` deterministic for identical evidence and differs on differing evidence; no PII/credential/raw-envelope field on any evidence object. No live KuickPay call (NFR11) — fixtures only. [Source: epics.md:614-617; FR28; testing-fixtures.md:32-45]
+- [x] **Task 7 — Add Story-3.2 hardening fixtures and parser tests (AC: 8) and wire the suite**
+  - [x] Add the **deferred Story-3.2 hardening fixtures** (deferred-work.md:13) under the canonical tree, each as a well-formed SOAP envelope (malformed semantics live inside the `*Result`, per the Phase 0 convention): a **non-2-char InsertVoucher status**; an **inquiry amount with differing precision/trailing zeros** (e.g. `1000.0` vs expected `1000.00` — proves minor-unit/decimal comparison, must classify as paid-equal, not mismatch); an **empty / short (`<6` field) inquiry result**; a **non-PKR / empty currency** on an otherwise-paid row (→ `manual_review`); a **multi-row bulk dataset** mixing matched + unmatched + a duplicate Consumer Number; an **overpayment** and a **late/partial** row; and a **Consumer-Number suffix/substring pair** (one value is a suffix of another) to prove exact-match discrimination. Add provenance rows for them in `docs/kuickpay/testing-fixtures.md`. [Source: deferred-work.md:13]
+  - [x] Add component-local parser tests in the existing gateway test tree `components/gateways/nonmerchant/kuickpay/tests/`: `KuickPayResponseParserTest.php` and `KuickPayEvidenceTest.php` (CamelCase, matching lib files and the 3.1 test naming). Extend `tests/bootstrap.php` to `require_once` the two new lib files (`KuickPayEvidence.php`, `KuickPayResponseParser.php`). Resolve the fixture directory via a path constant pointing at the canonical plugin tree (`__DIR__ . '/../../../../../plugins/kuickpay_reconcile/tests/fixtures/kuickpay/'`) — see Project Structure Notes for why fixtures live plugin-side while gateway-lib tests live gateway-side. [Source: tests/bootstrap.php; build/phpunit.xml; architecture.md:826-831]
+  - [x] Required cases — assert `status` + `error_class` for **every** mapping-table row across all three operations, plus: transport `ok=false` timeout/transport_error → `manual_review` (insert) / `retry` (inquiry/bulk); `00`-without-expected-context → `manual_review` (fail closed, no confirmation); amount mismatch / trailing-zero equality; non-PKR currency → manual_review; exact vs suffix Consumer-Number match; bulk structure-first malformed → zero matched rows; DOCTYPE/oversize bulk dataset rejected; `evidence_hash` deterministic for identical evidence and differs on differing evidence; no PII/credential/raw-envelope field on any evidence object. No live KuickPay call (NFR11) — fixtures only. [Source: epics.md:614-617; FR28; testing-fixtures.md:32-45]
 
 - [ ] **Task 8 — Verification and regression guard (AC: 11)**
   - [ ] Confirm **no change** to `kuickpay.php` payment/settings methods, `KuickPaySoapClient.php`, or `KuickPayRedactor.php` public behavior. The parser is a new consumer of the 3.1 transport outcome; it does not modify the client. (You MAY add the two new `Loader::load`s where a future caller wires the parser, but no caller is required by this story — 2.3/3.3 wire it.)
@@ -270,6 +270,10 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: `php -l` passed for `KuickPayResponseParser.php` and `KuickPayResponseParserTest.php` after bulk implementation.
 - 2026-06-10: Copied all Phase 0 fixtures to `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/` using the Story 3.2 category mapping; `cmp` verified relocated copies match source fixtures.
 - 2026-06-10: Added `plugins/kuickpay_reconcile/tests/.htaccess` with Apache 2.2/2.4 deny directives to block web access to plugin-side fixtures.
+- 2026-06-10: Added Story 3.2 hardening fixtures and provenance rows in `docs/kuickpay/testing-fixtures.md`.
+- 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayResponseParserTest.php` passed with fixture-backed cases (49 tests, 367 assertions).
+- 2026-06-10: `find plugins/kuickpay_reconcile/tests/fixtures/kuickpay -name '*.xml' -print0 | xargs -0 xmllint --noout` passed.
+- 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` passed after fixture-backed tests (88 tests, 537 assertions).
 
 ### Completion Notes List
 
@@ -278,6 +282,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - Implemented BillPaymentInquiry parsing, including field normalization, pending/expired/unknown status mapping, fail-closed `00` paid preconditions, exact identity matching, currency mismatch handling, and float-free amount normalization.
 - Implemented BillPaymentBulkInquiry parsing with bounded/DOCTYPE-safe XML parsing, structure-first validation, row cap, exact Consumer Number matching, empty-dataset handling, and matched/unmatched row evidence.
 - Relocated Phase 0 KuickPay fixtures into the canonical plugin test fixture tree and added web protection without changing the original docs fixture provenance.
+- Added Story 3.2 hardening fixtures, documented provisional provenance, and expanded parser tests to read canonical plugin fixtures for all mapping-table operations and fail-closed hardening cases.
 
 ### File List
 
@@ -288,19 +293,29 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - components/gateways/nonmerchant/kuickpay/tests/bootstrap.php
 - plugins/kuickpay_reconcile/tests/.htaccess
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-unmatched.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-late-partial.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-overpayment.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-empty-currency.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-amount-mismatch.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-non-pkr.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-unknown.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/insert-voucher-duplicate.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/insert-voucher-timeout.md
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/bill-payment-bulk-malformed-xml.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/bill-payment-inquiry-short.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/insert-voucher-invalid-credentials.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/insert-voucher-malformed.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/insert-voucher-non-2-char-status.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/redaction/credentials.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-matched-paid.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-mixed-multi-row.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-suffix-pair.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-expired.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-paid-exact.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-paid-trailing-zero.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-pending.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/insert-voucher-success.xml
+- docs/kuickpay/testing-fixtures.md
 - _bmad-output/implementation-artifacts/3-2-normalize-kuickpay-evidence-with-fixtures.md
 
 ### Change Log
@@ -310,6 +325,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Added BillPaymentInquiry parsing and fail-closed paid classification.
 - 2026-06-10: Added BillPaymentBulkInquiry parsing and structure-first safety checks.
 - 2026-06-10: Relocated Phase 0 fixtures to the plugin test tree and blocked web access.
+- 2026-06-10: Added hardening fixtures, provenance, and fixture-backed parser tests.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
