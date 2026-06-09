@@ -83,9 +83,9 @@ Derived from Epic 3 Story 3.2 (epics.md:600-617), FR16, FR17, FR28, the architec
   - [x] **libxml hygiene:** capture the prior `libxml_use_internal_errors()` value, set it `true` for the parse, then `libxml_clear_errors()` and restore the prior value — do not leave error suppression enabled for downstream code.
   - [x] **Empty-but-well-formed dataset is NOT malformed.** A valid `<NewDataSet/>` (or zero `<Table>` rows) means "no payments for that date" → return an empty list, not a `malformed_response`. Reserve `malformed_response` for parse failure / structural truncation (the `malformed-xml.xml` case). Keep this distinction explicit so a quiet day does not register as a provider error.
 
-- [ ] **Task 6 — Relocate Phase 0 fixtures to the canonical test tree and web-protect it (AC: 10)**
-  - [ ] Copy the Phase 0 fixtures from `docs/kuickpay/fixtures/` into `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/{valid,malformed,ambiguous,redaction}/` using the exact target names in the testing-fixtures.md **Story 3.2 Category Mapping** (testing-fixtures.md:59-76), e.g. `insert-voucher/success.xml`→`valid/insert-voucher-success.xml`, `insert-voucher/malformed.xml`→`malformed/insert-voucher-malformed.xml`, `insert-voucher/duplicate.xml`→`ambiguous/insert-voucher-duplicate.xml`, `bill-payment-bulk-inquiry/malformed-xml.xml`→`malformed/bill-payment-bulk-malformed-xml.xml`, `redaction/credentials.xml`→`redaction/credentials.xml`, etc. **Copy, do not move** — the `docs/kuickpay/fixtures/` originals remain the Phase 0 provenance record (testing-fixtures.md indexes them) and 3.1's tests reference them. `timeout.md` stays a `.md` descriptor (map to `ambiguous/insert-voucher-timeout.md`). [Source: testing-fixtures.md:59-76; 0-1 Dev Notes "Handoff to Story 3.2"]
-  - [ ] **Add web protection** to the new plugin test tree: the repo root `.htaccess` blocks `docs`/`_bmad-output` but **not** `plugins/`, and `.xml` is not in the extension deny-list, so these fixtures would be publicly fetchable. First ensure the parent path exists (create `plugins/kuickpay_reconcile/tests/` and the four category subdirs `fixtures/kuickpay/{valid,malformed,ambiguous,redaction}/`), then add `plugins/kuickpay_reconcile/tests/.htaccess` with the exact dual-directive content below. The **root `.htaccess:24-30` already uses this Apache 2.2/2.4-portable pattern** — cite that as the precedent; note `plugins/phpids/lib/IDS/.htaccess` is weaker (bare `deny from all`, Apache-2.2 only) so do not copy it verbatim. Verify no fixture path is web-reachable. [Source: ./.htaccess:24-30,34; 0-1 Dev Notes security rationale; PRD secret-safety]
+- [x] **Task 6 — Relocate Phase 0 fixtures to the canonical test tree and web-protect it (AC: 10)**
+  - [x] Copy the Phase 0 fixtures from `docs/kuickpay/fixtures/` into `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/{valid,malformed,ambiguous,redaction}/` using the exact target names in the testing-fixtures.md **Story 3.2 Category Mapping** (testing-fixtures.md:59-76), e.g. `insert-voucher/success.xml`→`valid/insert-voucher-success.xml`, `insert-voucher/malformed.xml`→`malformed/insert-voucher-malformed.xml`, `insert-voucher/duplicate.xml`→`ambiguous/insert-voucher-duplicate.xml`, `bill-payment-bulk-inquiry/malformed-xml.xml`→`malformed/bill-payment-bulk-malformed-xml.xml`, `redaction/credentials.xml`→`redaction/credentials.xml`, etc. **Copy, do not move** — the `docs/kuickpay/fixtures/` originals remain the Phase 0 provenance record (testing-fixtures.md indexes them) and 3.1's tests reference them. `timeout.md` stays a `.md` descriptor (map to `ambiguous/insert-voucher-timeout.md`). [Source: testing-fixtures.md:59-76; 0-1 Dev Notes "Handoff to Story 3.2"]
+  - [x] **Add web protection** to the new plugin test tree: the repo root `.htaccess` blocks `docs`/`_bmad-output` but **not** `plugins/`, and `.xml` is not in the extension deny-list, so these fixtures would be publicly fetchable. First ensure the parent path exists (create `plugins/kuickpay_reconcile/tests/` and the four category subdirs `fixtures/kuickpay/{valid,malformed,ambiguous,redaction}/`), then add `plugins/kuickpay_reconcile/tests/.htaccess` with the exact dual-directive content below. The **root `.htaccess:24-30` already uses this Apache 2.2/2.4-portable pattern** — cite that as the precedent; note `plugins/phpids/lib/IDS/.htaccess` is weaker (bare `deny from all`, Apache-2.2 only) so do not copy it verbatim. Verify no fixture path is web-reachable. [Source: ./.htaccess:24-30,34; 0-1 Dev Notes security rationale; PRD secret-safety]
 
     ```apache
     <IfModule mod_authz_core.c>
@@ -96,7 +96,7 @@ Derived from Epic 3 Story 3.2 (epics.md:600-617), FR16, FR17, FR28, the architec
         Deny from all
     </IfModule>
     ```
-  - [ ] These fixtures are still `provisional`/`PENDING_HUMAN_APPROVAL` (gate approved on WHMCS-derived evidence, fixtures are `synthetic_from_observed_format`). Preserve that status; do not relabel them `verified`. The relocated copies are for parser development/testing, consistent with 3.1. [Source: testing-fixtures.md:78-97]
+  - [x] These fixtures are still `provisional`/`PENDING_HUMAN_APPROVAL` (gate approved on WHMCS-derived evidence, fixtures are `synthetic_from_observed_format`). Preserve that status; do not relabel them `verified`. The relocated copies are for parser development/testing, consistent with 3.1. [Source: testing-fixtures.md:78-97]
 
 - [ ] **Task 7 — Add Story-3.2 hardening fixtures and parser tests (AC: 8) and wire the suite**
   - [ ] Add the **deferred Story-3.2 hardening fixtures** (deferred-work.md:13) under the canonical tree, each as a well-formed SOAP envelope (malformed semantics live inside the `*Result`, per the Phase 0 convention): a **non-2-char InsertVoucher status**; an **inquiry amount with differing precision/trailing zeros** (e.g. `1000.0` vs expected `1000.00` — proves minor-unit/decimal comparison, must classify as paid-equal, not mismatch); an **empty / short (`<6` field) inquiry result**; a **non-PKR / empty currency** on an otherwise-paid row (→ `manual_review`); a **multi-row bulk dataset** mixing matched + unmatched + a duplicate Consumer Number; an **overpayment** and a **late/partial** row; and a **Consumer-Number suffix/substring pair** (one value is a suffix of another) to prove exact-match discrimination. Add provenance rows for them in `docs/kuickpay/testing-fixtures.md`. [Source: deferred-work.md:13]
@@ -268,6 +268,8 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayResponseParserTest.php --filter Bulk` passed (9 tests, 50 assertions).
 - 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` passed after bulk implementation (72 tests, 400 assertions).
 - 2026-06-10: `php -l` passed for `KuickPayResponseParser.php` and `KuickPayResponseParserTest.php` after bulk implementation.
+- 2026-06-10: Copied all Phase 0 fixtures to `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/` using the Story 3.2 category mapping; `cmp` verified relocated copies match source fixtures.
+- 2026-06-10: Added `plugins/kuickpay_reconcile/tests/.htaccess` with Apache 2.2/2.4 deny directives to block web access to plugin-side fixtures.
 
 ### Completion Notes List
 
@@ -275,6 +277,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - Implemented parser core dispatch, transport short-circuit, empty-body malformed handling, allowed status/error fail-closed guardrails, trace-id carry-through, deterministic evidence hashes, and InsertVoucher creation parsing.
 - Implemented BillPaymentInquiry parsing, including field normalization, pending/expired/unknown status mapping, fail-closed `00` paid preconditions, exact identity matching, currency mismatch handling, and float-free amount normalization.
 - Implemented BillPaymentBulkInquiry parsing with bounded/DOCTYPE-safe XML parsing, structure-first validation, row cap, exact Consumer Number matching, empty-dataset handling, and matched/unmatched row evidence.
+- Relocated Phase 0 KuickPay fixtures into the canonical plugin test fixture tree and added web protection without changing the original docs fixture provenance.
 
 ### File List
 
@@ -283,6 +286,21 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayResponseParserTest.php
 - components/gateways/nonmerchant/kuickpay/tests/bootstrap.php
+- plugins/kuickpay_reconcile/tests/.htaccess
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-unmatched.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-amount-mismatch.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-inquiry-unknown.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/insert-voucher-duplicate.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/insert-voucher-timeout.md
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/bill-payment-bulk-malformed-xml.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/insert-voucher-invalid-credentials.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/malformed/insert-voucher-malformed.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/redaction/credentials.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-matched-paid.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-expired.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-paid-exact.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-pending.xml
+- plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/insert-voucher-success.xml
 - _bmad-output/implementation-artifacts/3-2-normalize-kuickpay-evidence-with-fixtures.md
 
 ### Change Log
@@ -291,6 +309,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Added parser core and InsertVoucher creation-response mappings.
 - 2026-06-10: Added BillPaymentInquiry parsing and fail-closed paid classification.
 - 2026-06-10: Added BillPaymentBulkInquiry parsing and structure-first safety checks.
+- 2026-06-10: Relocated Phase 0 fixtures to the plugin test tree and blocked web access.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 

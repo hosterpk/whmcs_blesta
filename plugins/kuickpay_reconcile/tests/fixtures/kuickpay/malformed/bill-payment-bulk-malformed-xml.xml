@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <BillPaymentBulkInquiryResponse xmlns="https://app.kuickpay.com/kuickpaycoreapi/">
+      <BillPaymentBulkInquiryResult><![CDATA[<NewDataSet><Table><Consumer_Number>INSTITUTION_ID1234INVOICE_ID</Consumer_Number><Paid_Amount>]]></BillPaymentBulkInquiryResult>
+    </BillPaymentBulkInquiryResponse>
+  </soap:Body>
+</soap:Envelope>
