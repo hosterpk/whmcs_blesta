@@ -85,18 +85,18 @@ _Reproduced verbatim from [Source: epics.md#Story 1.1] (lines 311–326)._
     $lang['Kuickpay.settings.scaffold_note'] = 'KuickPay is installed. Payment settings will become available in a later update.';
     ```
 
-- [ ] **Task 2 — Create the companion plugin scaffold** under `plugins/kuickpay_reconcile/` (AC: #1, #2)
-  - [ ] 2.1 Create `config.json` mirroring `plugins/shared_login/config.json`: `version` `"1.0.0"`, `name` `"KuickpayReconcilePlugin.name"`, `description` `"KuickpayReconcilePlugin.description"`, an `authors` array. (Optional `"icon"` like `auto_cancel`'s `"bi bi-..."`.)
-  - [ ] 2.2 Create `composer.json` mirroring `shared_login/composer.json`: `"name": "blesta/kuickpay_reconcile"`, `"type": "blesta-plugin"`, `"license": "proprietary"`, `"require": {"blesta/composer-installer": "~1.0"}`.
-  - [ ] 2.3 Create `kuickpay_reconcile_plugin.php` with `class KuickpayReconcilePlugin extends Plugin` (legacy global class). Model on `shared_login_plugin.php`:
+- [x] **Task 2 — Create the companion plugin scaffold** under `plugins/kuickpay_reconcile/` (AC: #1, #2)
+  - [x] 2.1 Create `config.json` mirroring `plugins/shared_login/config.json`: `version` `"1.0.0"`, `name` `"KuickpayReconcilePlugin.name"`, `description` `"KuickpayReconcilePlugin.description"`, an `authors` array. (Optional `"icon"` like `auto_cancel`'s `"bi bi-..."`.)
+  - [x] 2.2 Create `composer.json` mirroring `shared_login/composer.json`: `"name": "blesta/kuickpay_reconcile"`, `"type": "blesta-plugin"`, `"license": "proprietary"`, `"require": {"blesta/composer-installer": "~1.0"}`.
+  - [x] 2.3 Create `kuickpay_reconcile_plugin.php` with `class KuickpayReconcilePlugin extends Plugin` (legacy global class). Model on `shared_login_plugin.php`:
     - `__construct()` → `Language::loadLang('kuickpay_reconcile_plugin', null, dirname(__FILE__) . DS . 'language' . DS)`; `loadConfig(dirname(__FILE__) . DS . 'config.json')`.
     - `install($plugin_id)` → **safe no-op** at scaffold stage: create **no** tables. Add a docblock noting that voucher schema is owned by Story 2.1 and reconciliation cron by Epic 3. (Defining it explicitly gives later stories an insertion point and documents intent; the inherited base method is already an empty no-op.)
     - `upgrade($current_version, $plugin_id)` → safe no-op placeholder with a docblock for future versioned migrations. Note: `shared_login_plugin.php` does **not** define `upgrade()`, so take this exact signature from the `Plugin` base class (`components/plugins/lib/plugin.php` → `upgrade($current_version, $plugin_id)`), not from the reference plugin.
     - `uninstall($plugin_id, $last_instance)` → **safe no-op**: drop nothing, remove nothing. Add a docblock noting it must only ever remove plugin-owned data (none yet) and must honor `$last_instance` when schema is added in Story 2.1. This is the line AC2 hinges on.
     - Do **not** override `getEvents()`, `getActions()`, `getPermissions()`, `cron()` — inherit the empty defaults. No events/cron at scaffold stage.
     - **The override rule (so the asymmetry above isn't confusing):** define `install`/`upgrade`/`uninstall` as explicit no-ops because later stories (2.1+) will fill real bodies there — having the method present documents intent and gives a clean insertion point. Leave `getEvents`/`getActions`/`getPermissions`/`cron` **un-overridden** because they gain bodies only when the matching feature ships (Epic 3+); an empty override of those would just be dead code now.
-  - [ ] 2.4 Create `language/en_us/kuickpay_reconcile_plugin.php` with `$lang['KuickpayReconcilePlugin.name']` and `$lang['KuickpayReconcilePlugin.description']`.
-  - [ ] 2.5 Do **not** create `controllers/`, `models/`, `lib/`, admin `views/`, or `tests/fixtures/` in this story — those belong to Epics 2–4 with their owning stories. Keep the scaffold to the four files above. (See Non-Negotiable #4, #6.)
+  - [x] 2.4 Create `language/en_us/kuickpay_reconcile_plugin.php` with `$lang['KuickpayReconcilePlugin.name']` and `$lang['KuickpayReconcilePlugin.description']`.
+  - [x] 2.5 Do **not** create `controllers/`, `models/`, `lib/`, admin `views/`, or `tests/fixtures/` in this story — those belong to Epics 2–4 with their owning stories. Keep the scaffold to the four files above. (See Non-Negotiable #4, #6.)
 
 - [ ] **Task 3 — Verify detectability, lifecycle safety, and the AC3 guard** (AC: #1, #2, #3)
   - [ ] 3.1 Lint every new PHP file (architecture's exact baseline):
@@ -273,6 +273,7 @@ GPT-5 Codex
 ### Debug Log References
 
 - 2026-06-09: Gateway scaffold JSON parsed with `python3.12 -m json.tool`; PHP lint could not run because no `php` binary is installed or on PATH.
+- 2026-06-09: Companion plugin scaffold JSON parsed with `python3.12 -m json.tool`; confirmed plugin tree contains only the four scaffold files.
 
 ### Implementation Plan
 
@@ -281,6 +282,7 @@ GPT-5 Codex
 ### Completion Notes List
 
 - Gateway scaffold added under `components/gateways/nonmerchant/kuickpay/` with PKR-only metadata, Blesta installer metadata, locked en_us language copy, admin settings banner, neutral customer process placeholder, companion-plugin guard, and fail-closed `validate()`/`success()` paths.
+- Companion plugin scaffold added under `plugins/kuickpay_reconcile/` with Blesta plugin metadata, installer metadata, language copy, and explicit no-op `install()`, `upgrade()`, and `uninstall()` lifecycle hooks. No schema, events, actions, permissions, cron, controllers, models, lib, views, or fixtures were added.
 
 ### File List
 
@@ -290,6 +292,10 @@ GPT-5 Codex
 - `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php`
 - `components/gateways/nonmerchant/kuickpay/views/default/process.pdt`
 - `components/gateways/nonmerchant/kuickpay/views/default/settings.pdt`
+- `plugins/kuickpay_reconcile/composer.json`
+- `plugins/kuickpay_reconcile/config.json`
+- `plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php`
+- `plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php`
 
 ## Change Log
 
@@ -297,6 +303,7 @@ GPT-5 Codex
 - 2026-06-09: Multi-agent validation triage applied; story remains **ready-for-dev**. Each change was re-verified against live Blesta source before inclusion. Folded in: `validate()`/`success()` now wrap the error in `$this->Input->setErrors($this->getCommonError('unsupported'))` (offline.php's bare call is the lone outlier among nonmerchant gateways and suppresses the error — defeating fail-closed intent); added the exact `makeView()` view-resolution idiom (`str_replace(ROOTWEBDIR, '', dirname(__FILE__) . DS)`), the explicit `loadHelpers` calls, and the full `buildProcess()` signature; added `description` to both `composer.json` specs; separated admin vs customer companion-missing copy (admin "install the plugin" text must never reach the customer process path); sourced `upgrade()`'s signature from the `Plugin` base class (shared_login omits it); documented `isInstalled` disabled/null-company semantics as a conscious scaffold-scope decision; flagged the cosmetic gateway-logo gap (broken admin image, AC1 unaffected) with an optional placeholder; and stated the install/upgrade/uninstall override-vs-inherit rule. Citation/line-number drift and Dev-Notes verbosity flagged by validation were reviewed and intentionally left unchanged (no effect on generated code; redundancy is deliberate defense-in-depth for a safety-critical scaffold).
 - 2026-06-09: Locked final en_us microcopy (Open Question #3 resolved). Task 1.7 now carries verbatim approved strings for `Kuickpay.name`, `Kuickpay.description`, `Kuickpay.!error.companion_missing` (admin), `Kuickpay.process.not_ready` (customer), and `Kuickpay.settings.scaffold_note`; Tasks 1.4/1.5 reference the exact keys. Admin instruction kept off the customer process path.
 - 2026-06-09: Implemented Task 1 gateway scaffold.
+- 2026-06-09: Implemented Task 2 companion plugin scaffold.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 

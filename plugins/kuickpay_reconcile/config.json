@@ -1,0 +1,11 @@
+{
+    "version": "1.0.0",
+    "name": "KuickpayReconcilePlugin.name",
+    "description": "KuickpayReconcilePlugin.description",
+    "authors": [
+        {
+            "name": "Phillips Data, Inc.",
+            "url": "https://www.blesta.com"
+        }
+    ]
+}

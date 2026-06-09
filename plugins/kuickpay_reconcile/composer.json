@@ -1,0 +1,9 @@
+{
+    "name": "blesta/kuickpay_reconcile",
+    "description": "KuickPay Reconcile",
+    "license": "proprietary",
+    "type": "blesta-plugin",
+    "require": {
+        "blesta/composer-installer": "~1.0"
+    }
+}
