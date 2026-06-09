@@ -60,8 +60,8 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
   - [x] 1.5 Update `upgrade($current_version, $plugin_id)` as a safe no-op placeholder with docblock. No versioned migrations needed yet (first schema version).
   - [x] 1.6 Keep `uninstall($plugin_id, $last_instance)` as a safe no-op that drops **nothing** (NN#6). Add a docblock explaining that Voucher evidence tables are preserved per architecture rollback policy. Do NOT drop tables even when `$last_instance === true`.
 
-- [ ] **Task 2 — Create plugin models** (AC: #1)
-  - [ ] 2.1 Create `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php` with `class KuickpayVouchers extends KuickpayReconcileModel`. Minimum methods:
+- [x] **Task 2 — Create plugin models** (AC: #1)
+  - [x] 2.1 Create `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php` with `class KuickpayVouchers extends KuickpayReconcileModel`. Minimum methods:
     - `add(array $vars)` — validate with `Input->setRules()`/`validates()`, then `$this->Record->insert('kuickpay_vouchers', $vars, $fields)`. **`Record->insert()` does not return the new id** — after a successful insert (guard with `if (!$this->Input->errors())`) `return $this->Record->lastInsertId();`; return void/null on validation error. Set `date_created` and `date_updated` to current time if not provided.
     - `edit(int $voucher_id, array $vars)` — update allowed fields by `$voucher_id`, set `date_updated` automatically.
     - `get(int $voucher_id)` — select from `kuickpay_vouchers` where `id = $voucher_id`, `fetch()` single row.
@@ -69,11 +69,11 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     - `getByRegistrationNumber(string $registration_number, int $company_id)` — similar.
     - `getPendingByInvoiceId(int $invoice_id, int $company_id)` — inner join `kuickpay_voucher_invoices` on `voucher_id`, where `invoice_id = $invoice_id` AND `company_id = $company_id` AND `status = 'pending'`, return single row (the voucher). This is the AC2 reuse lookup.
     - `getList(array $filters, int $page = 1, array $order_by = ['date_created' => 'DESC'])` — select with optional filters (status, client_id, company_id), paginate with `limit()`/`offset()`, return array of rows.
-  - [ ] 2.2 Create `plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php` with `class KuickpayVoucherInvoices extends KuickpayReconcileModel`. Minimum methods:
+  - [x] 2.2 Create `plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php` with `class KuickpayVoucherInvoices extends KuickpayReconcileModel`. Minimum methods:
     - `add(array $vars)` — validate required fields with `Input->setRules()`/`validates()` (`voucher_id` present + numeric, `invoice_id` present + numeric, `amount` matching the same decimal-string pattern as the voucher amount), set `date_created` if not provided, then insert into `kuickpay_voucher_invoices`. After a successful insert return `$this->Record->lastInsertId()` (not the `Record` object); return void/null on error.
     - `getByVoucherId(int $voucher_id)` — select all where `voucher_id = $voucher_id`, `fetchAll()`.
     - `getByInvoiceId(int $invoice_id)` — select all where `invoice_id = $invoice_id`, `fetchAll()`.
-  - [ ] 2.3 Add validation rules to `KuickpayVouchers::add()` ensuring required fields: `company_id`, `client_id`, `gateway_id`, `currency`, `amount`, `status`, `registration_number`, `consumer_number`. Status must be `in_array` of the exact 8 allowed states (`pending`, `retry`, `confirmed_unposted`, `posted`, `failed`, `expired`, `manual_review`, `cancelled`) — the same set as the schema `enum`, so the validation allowlist and the column definition cannot drift. Currency must be `maxLength` 3. Amount must match a safe decimal string pattern (e.g., `/^\d+(?:\.\d{1,2})?$/`). Use `$this->_('KuickpayVouchers.!error.*')` language keys.
+  - [x] 2.3 Add validation rules to `KuickpayVouchers::add()` ensuring required fields: `company_id`, `client_id`, `gateway_id`, `currency`, `amount`, `status`, `registration_number`, `consumer_number`. Status must be `in_array` of the exact 8 allowed states (`pending`, `retry`, `confirmed_unposted`, `posted`, `failed`, `expired`, `manual_review`, `cancelled`) — the same set as the schema `enum`, so the validation allowlist and the column definition cannot drift. Currency must be `maxLength` 3. Amount must match a safe decimal string pattern (e.g., `/^\d+(?:\.\d{1,2})?$/`). Use `$this->_('KuickpayVouchers.!error.*')` language keys.
 
 - [ ] **Task 3 — Create plugin lib services** (AC: #1, #2)
   - [ ] 3.1 Create `plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php` — plain PHP class (NOT framework-instantiated, no namespace, legacy global). Constructor loads plugin models via `Loader::loadModels($this, ['KuickpayReconcile.KuickpayVouchers', 'KuickpayReconcile.KuickpayVoucherInvoices']);`. Methods:
@@ -516,18 +516,23 @@ GPT-5 Codex
 ### Debug Log References
 
 - 2026-06-10: Task 1 syntax checks passed for `kuickpay_reconcile_model.php` and `kuickpay_reconcile_plugin.php`; structural grep confirmed required voucher unique keys and idempotent table creation calls.
+- 2026-06-10: Task 2 syntax checks passed for both plugin model files; method-surface grep confirmed the required voucher and invoice-link APIs exist.
 
 ### Completion Notes List
 
 - Task 1 complete: added the plugin base model, idempotent voucher/invoice-link schema creation in `install()`, safe no-op upgrade, and non-destructive uninstall documentation preserving evidence tables.
+- Task 2 complete: added voucher and voucher-invoice models with required CRUD/query APIs, required-field/status/currency/amount validation, automatic timestamps, and `lastInsertId()` returns after successful inserts.
 
 ### File List
 
 - plugins/kuickpay_reconcile/kuickpay_reconcile_model.php
 - plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
+- plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php
 
 ## Change Log
 
 - 2026-06-09: Story created (ready-for-dev) via bmad-create-story. Comprehensive context engine analysis completed — comprehensive developer guide created.
 - 2026-06-10: Validation triage applied (story remains ready-for-dev). Pinned the voucher data contract (service returns a flat array; view stops mis-accessing a `stdClass`); relocated model error language keys into the per-model files the base model actually auto-loads; made reference generation deterministic and aligned to the confirmed KuickPay shape so the company-scoped unique keys become the schema-level AC2 race guard; mandated atomic transactional create with rollback plus a race-recovery re-query; added invoice-link validation, `lastInsertId()` returns, an inline status allowlist, and string-only fail-closed amount normalization; gated voucher create/reuse behind the no-errors branch (the guard has no early-return); corrected the "prove no mutation" grep (dropped the self-matching `->add(`); added a unit-test task and a `setGatewayId()` ordering check; and added Dev Notes for the data contract and the AC2 idempotency strategy. Verified against source: `buildProcess()` control flow, base-model language auto-load, `Record->insert()`/`lastInsertId()`, the 3.1 confirmed reference formula, and the existing test harness.
 - 2026-06-10: Implemented Task 1 plugin base model and durable voucher schema.
+- 2026-06-10: Implemented Task 2 plugin voucher models.
