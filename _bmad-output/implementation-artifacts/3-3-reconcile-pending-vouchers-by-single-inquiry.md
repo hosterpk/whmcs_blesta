@@ -4,7 +4,7 @@ baseline_commit: 69d001cba05653f6ac5473990225571791923d30
 
 # Story 3.3: Reconcile Pending Vouchers by Single Inquiry
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -319,3 +319,22 @@ GPT-5 Codex
 
 ### Change Log
 - 2026-06-10: Implemented pending voucher reconciliation by single inquiry and moved story to review.
+- 2026-06-10: Code review (bmad-code-review) — applied 2 robustness patches (lock release, batch isolation), deferred 6 low/latent items, moved to done.
+
+## Review Findings
+
+_Code review 2026-06-10 (bmad-code-review: Blind Hunter + Edge Case Hunter + Acceptance Auditor; no layer failed). Triage: 0 decision-needed, 2 patch (applied), 6 defer, ~20 dismissed as false positives / by-design. The highest-risk ACs (AC4 single-identity context, AC8 lock release + atomic stale reclaim, AC11/12 idempotent schema + company-scoped edit(), AC2 cron run-add idempotency, AC6/7 never-posts) were audited and confirmed correct._
+
+### Patches (applied)
+
+- [x] [Review][Patch] Always release the reconcile lock on run failure [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php] — `getResumeCursor()` ran outside the try/finally, and in the `finally` `close()`/audit ran before `release()`; either throwing leaked the per-company lock for the full 600s TTL. Fixed in commit `b6780101`.
+- [x] [Review][Patch] Keep one voucher's error from aborting the batch [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php] — the per-voucher `catch` block's own `itemRepository->record()` could throw and escape `processVoucher()`, marking the whole run failed. Wrapped best-effort. Fixed in commit `6844ced3`.
+
+### Deferred (logged in deferred-work.md → "code review of 3-3-… (2026-06-10)")
+
+- [x] [Review][Defer] `getResumeCursor` resumes only `trigger_type='cron'`/`status='aborted'` runs but `run()` calls it for every trigger [plugins/kuickpay_reconcile/models/kuickpay_reconciliation_runs.php:47] — deferred, latent for manual/bulk callers (Story 3.7 / Epic 4); unreachable from this story's cron path.
+- [x] [Review][Defer] No DB transaction wraps the per-voucher writes (voucher edit + item + audit) [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php] — deferred, partial-write trail possible on mid-voucher crash; voucher state self-heals next run.
+- [x] [Review][Defer] AC13 enablement-gate skip path has no automated test [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php] — deferred, production gate verified correct by review; clean coverage needs a `GatewayManager` stub (AC14 honesty gap).
+- [x] [Review][Defer] Per-voucher processing exception records an item row but emits no audit event [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php] — deferred, partial AC9; the item row already captures the error; audit-event naming better batched with Story 4.5.
+- [x] [Review][Defer] `insertLock()` swallows all exceptions as `lock_held` [plugins/kuickpay_reconcile/models/kuickpay_reconcile_locks.php:23] — deferred, fail-safe (skipping is safe) but masks genuine DB/infra errors with no surfaced trace.
+- [x] [Review][Defer] `gatewayConfigForCompany()` defaults missing meta keys to `''` [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php] — deferred, low risk (gateway settings validated at save time); absent creds would burn retry counters toward `manual_review` instead of cleanly skipping.
