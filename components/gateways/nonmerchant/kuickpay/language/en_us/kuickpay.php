@@ -5,6 +5,13 @@ $lang['Kuickpay.description'] = 'Accept invoice payments in PKR using KuickPay p
 $lang['Kuickpay.!error.companion_missing'] = 'KuickPay requires its companion plugin. Install and activate the KuickPay Reconcile plugin, then reload this page to configure the gateway.';
 // Customer-facing — neutral process-view placeholder (no voucher, no amount, no paid/success language)
 $lang['Kuickpay.process.not_ready'] = 'A KuickPay payment reference is not available for this invoice yet. Please choose another payment method or contact support for assistance.';
+// Customer process view — Story 2.1 voucher display
+$lang['Kuickpay.process.consumer_number_label'] = 'Consumer Number';
+$lang['Kuickpay.process.amount_label'] = 'Amount';
+$lang['Kuickpay.process.status_label'] = 'Status';
+$lang['Kuickpay.process.due_date_label'] = 'Due date';
+$lang['Kuickpay.process.expiry_date_label'] = 'Expiry date';
+$lang['Kuickpay.process.status.pending'] = 'Payment reference created — awaiting payment';
 $lang['Kuickpay.group.endpoints_credentials'] = 'Endpoints & Credentials';
 $lang['Kuickpay.group.institution_reference'] = 'Institution & Reference';
 $lang['Kuickpay.group.payment_behavior'] = 'Payment Behavior Policies';

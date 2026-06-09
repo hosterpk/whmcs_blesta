@@ -133,8 +133,8 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
   - [x] 5.5 Add a `protected function normalizeAmount(string $amount): string` helper in the gateway that returns a normalized decimal string with exactly 2 fractional digits (e.g., `'1500.00'`) using **string operations only — no float math and no `(float)` cast** (a `(float)` cast reintroduces the binary-float representation NN#4 forbids; do not use `number_format((float) …)` here). Algorithm: trim surrounding whitespace and strip thousands separators (commas) only; then **fail closed** — if the remaining value does not match `/^\d+(?:\.\d+)?$/` (no leading sign, no exponent, no other characters), do NOT fabricate an amount: return the trimmed value unchanged so the model's amount rule rejects it (rather than silently coercing garbage into a stored amount). For a valid value: `$parts = explode('.', $amount, 2); $integer = ltrim($parts[0], '0'); if ($integer === '') $integer = '0'; $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2); return $integer . '.' . $fraction;`. Negative or signed amounts are invalid input here and must never normalize to a positive value.
   - [x] 5.6 Add a `protected function normalizeInvoiceAmounts(array $invoice_amounts): array` helper that maps each invoice amount through the same normalization.
 
-- [ ] **Task 6 — Update gateway process view** (AC: #1)
-  - [ ] 6.1 Update `components/gateways/nonmerchant/kuickpay/views/default/process.pdt` to conditionally show voucher info when `$voucher` is set:
+- [x] **Task 6 — Update gateway process view** (AC: #1)
+  - [x] 6.1 Update `components/gateways/nonmerchant/kuickpay/views/default/process.pdt` to conditionally show voucher info when `$voucher` is set:
     ```php
     <?php
     if (!empty($voucher)) {
@@ -156,10 +156,10 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     }
     ?>
     ```
-  - [ ] 6.2 Keep the display minimal and honest: show `pending` status with neutral language. No "Payment received", no green checks, no success styling (UX-DR20; NFR9). The full styled reference panel with copy action and instruction groups comes in Stories 2.5/2.6. Note: 2.1 only ever creates `pending` vouchers, so `Kuickpay.process.status.pending` is the only status label needed now; the view's dynamic `status.<status>` lookup must degrade gracefully (fall back to the raw status or a neutral default) rather than print a missing language key if a non-`pending` status is ever passed.
+  - [x] 6.2 Keep the display minimal and honest: show `pending` status with neutral language. No "Payment received", no green checks, no success styling (UX-DR20; NFR9). The full styled reference panel with copy action and instruction groups comes in Stories 2.5/2.6. Note: 2.1 only ever creates `pending` vouchers, so `Kuickpay.process.status.pending` is the only status label needed now; the view's dynamic `status.<status>` lookup must degrade gracefully (fall back to the raw status or a neutral default) rather than print a missing language key if a non-`pending` status is ever passed.
 
-- [ ] **Task 7 — Add language strings** (AC: #1)
-  - [ ] 7.1 Append to `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php` (preserve existing keys/order/quoting):
+- [x] **Task 7 — Add language strings** (AC: #1)
+  - [x] 7.1 Append to `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php` (preserve existing keys/order/quoting):
     ```php
     // Customer process view — Story 2.1 voucher display
     $lang['Kuickpay.process.consumer_number_label'] = 'Consumer Number';
@@ -169,7 +169,7 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     $lang['Kuickpay.process.expiry_date_label'] = 'Expiry date';
     $lang['Kuickpay.process.status.pending'] = 'Payment reference created — awaiting payment';
     ```
-  - [ ] 7.2 **Model error keys go in per-model language files, not in the plugin handler file.** The plugin base model (Task 1.1, mirroring `webhooks_model.php:20`) auto-loads language via `Language::loadLang([Loader::fromCamelCase(get_class($this))], …, dirname(__FILE__) . DS . 'language' . DS)`. For class `KuickpayVouchers` that resolves to `plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php`; for `KuickpayVoucherInvoices` to `kuickpay_voucher_invoices.php`. The plugin-handler file (`kuickpay_reconcile_plugin.php`) is **never constructed during the gateway `buildProcess()` flow**, so keys placed there will NOT be loaded when model validation fires — `$this->_('KuickpayVouchers.!error.*')` would render the raw key (violating NN#7). Therefore:
+  - [x] 7.2 **Model error keys go in per-model language files, not in the plugin handler file.** The plugin base model (Task 1.1, mirroring `webhooks_model.php:20`) auto-loads language via `Language::loadLang([Loader::fromCamelCase(get_class($this))], …, dirname(__FILE__) . DS . 'language' . DS)`. For class `KuickpayVouchers` that resolves to `plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php`; for `KuickpayVoucherInvoices` to `kuickpay_voucher_invoices.php`. The plugin-handler file (`kuickpay_reconcile_plugin.php`) is **never constructed during the gateway `buildProcess()` flow**, so keys placed there will NOT be loaded when model validation fires — `$this->_('KuickpayVouchers.!error.*')` would render the raw key (violating NN#7). Therefore:
     - **`plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php`** — leave `KuickpayReconcilePlugin.name`/`.description` only. These already exist; if you want the richer description ("Durable voucher state, reconciliation, and admin review for KuickPay."), **update the existing line in place — do not append a duplicate `$lang[...]` assignment**.
     - **`plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php`** (NEW) — voucher model validation errors:
     ```php
@@ -519,6 +519,7 @@ GPT-5 Codex
 - 2026-06-10: Task 2 syntax checks passed for both plugin model files; method-surface grep confirmed the required voucher and invoice-link APIs exist.
 - 2026-06-10: Tasks 3-4 red/green unit coverage added and passed: `KuickPayVoucherReferenceServiceTest` covers reuse without create, deterministic placeholder references, and create-null race recovery.
 - 2026-06-10: Task 5 syntax check passed for `kuickpay.php`; voucher service call is gated behind `!$this->Input->errors()`.
+- 2026-06-10: Tasks 6-7 syntax checks passed for the process template and language files; grep confirmed model validation keys were not added to the plugin handler language file.
 
 ### Completion Notes List
 
@@ -526,6 +527,7 @@ GPT-5 Codex
 - Task 2 complete: added voucher and voucher-invoice models with required CRUD/query APIs, required-field/status/currency/amount validation, automatic timestamps, and `lastInsertId()` returns after successful inserts.
 - Tasks 3-4 complete: added the repository transaction boundary, reference service reuse/create/race-recovery gate, flat view-facing voucher contract, and deterministic Story 2.1 placeholder references.
 - Task 5 complete: wired gateway `buildProcess()` to the plugin reference service behind the existing currency/companion guards, captured gateway ID via setter shadowing, and added string-only amount normalization helpers.
+- Tasks 6-7 complete: added the minimal voucher display with safe status-label fallback and added gateway/model language strings in their owning files.
 
 ### File List
 
@@ -537,6 +539,10 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherReferenceServiceTest.php
 - components/gateways/nonmerchant/kuickpay/kuickpay.php
+- components/gateways/nonmerchant/kuickpay/views/default/process.pdt
+- components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php
+- plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php
+- plugins/kuickpay_reconcile/language/en_us/kuickpay_voucher_invoices.php
 
 ## Change Log
 
@@ -546,3 +552,4 @@ GPT-5 Codex
 - 2026-06-10: Implemented Task 2 plugin voucher models.
 - 2026-06-10: Implemented Tasks 3-4 voucher repository, reference service, deterministic references, and focused unit tests.
 - 2026-06-10: Implemented Task 5 gateway voucher service integration.
+- 2026-06-10: Implemented Tasks 6-7 customer voucher display and language strings.

@@ -1,2 +1,23 @@
 <?php
-echo $this->_('Kuickpay.process.not_ready');
+if (!empty($voucher)) {
+    $status_key = 'Kuickpay.process.status.' . $voucher['status'];
+    $status_label = $this->_($status_key);
+    if ($status_label === $status_key) {
+        $status_label = $voucher['status'];
+    }
+?>
+<div class="kuickpay-voucher-info">
+    <p><?php echo $this->_('Kuickpay.process.consumer_number_label'); ?>: <strong class="kuickpay-consumer-number"><?php echo $this->Html->safe($voucher['consumer_number']); ?></strong></p>
+    <p><?php echo $this->_('Kuickpay.process.amount_label'); ?>: <strong><?php echo $this->Html->safe($voucher['amount']); ?></strong></p>
+    <p><?php echo $this->_('Kuickpay.process.status_label'); ?>: <strong><?php echo $this->Html->safe($status_label); ?></strong></p>
+    <?php if (!empty($voucher['date_due'])) { ?>
+    <p><?php echo $this->_('Kuickpay.process.due_date_label'); ?>: <?php echo $this->Html->safe($voucher['date_due']); ?></p>
+    <?php } ?>
+    <?php if (!empty($voucher['date_expires'])) { ?>
+    <p><?php echo $this->_('Kuickpay.process.expiry_date_label'); ?>: <?php echo $this->Html->safe($voucher['date_expires']); ?></p>
+    <?php } ?>
+</div>
+<?php
+} else {
+    echo $this->_('Kuickpay.process.not_ready');
+}
