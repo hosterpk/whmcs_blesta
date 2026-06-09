@@ -81,7 +81,7 @@ development_status:
   epic-1: in-progress
   1-1-install-kuickpay-gateway-and-companion-plugin-scaffold: done
   1-2-configure-kuickpay-gateway-settings: done
-  1-3-encrypt-and-mask-kuickpay-credentials: backlog
+  1-3-encrypt-and-mask-kuickpay-credentials: ready-for-dev
   1-4-run-safe-kuickpay-connection-tests: backlog
   1-5-enforce-pkr-only-gateway-eligibility: backlog
   epic-1-retrospective: optional
