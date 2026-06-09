@@ -88,3 +88,4 @@ $lang['Kuickpay.!error.connection.timeout'] = 'The connection to KuickPay timed 
 $lang['Kuickpay.!error.connection.url_userinfo'] = 'Remove the username and password embedded in the WSDL URL before testing the connection.';
 $lang['Kuickpay.!error.connection.url_blocked'] = 'The WSDL URL must point to a public KuickPay endpoint. Private, local, or reserved network addresses are not allowed.';
 $lang['Kuickpay.!error.connection.unavailable'] = 'The connection test could not run in this environment.';
+$lang['Kuickpay.!error.currency_ineligible'] = 'KuickPay can only be used to pay invoices in Pakistani Rupees (PKR). Please choose another payment method for this invoice.';
