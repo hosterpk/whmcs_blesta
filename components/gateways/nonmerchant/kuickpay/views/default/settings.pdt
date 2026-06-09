@@ -36,6 +36,9 @@
             <?php
             $this->Form->fieldPassword('voucher_password', ['id' => 'voucher_password', 'class' => 'form-control']);
             ?>
+            <?php if (!empty($voucher_password_stored)) { ?>
+                <div class="form-text">••••••••&nbsp;<?php $this->_('Kuickpay.voucher_password_stored'); ?></div>
+            <?php } ?>
         </div>
         <div class="mb-3">
             <div class="form-check">
@@ -68,6 +71,9 @@
             <?php
             $this->Form->fieldPassword('inquiry_password', ['id' => 'inquiry_password', 'class' => 'form-control']);
             ?>
+            <?php if (!empty($inquiry_password_stored)) { ?>
+                <div class="form-text">••••••••&nbsp;<?php $this->_('Kuickpay.inquiry_password_stored'); ?></div>
+            <?php } ?>
         </div>
     </div>
 

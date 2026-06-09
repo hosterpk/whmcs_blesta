@@ -65,6 +65,8 @@ class Kuickpay extends NonmerchantGateway
         $this->view->set('companion_installed', $companion_installed);
         $this->view->set('currency_policy', $currencyPolicyOptions);
         $this->view->set('fee_policy', $feePolicyOptions);
+        $this->view->set('voucher_password_stored', !empty($meta['voucher_password']));
+        $this->view->set('inquiry_password_stored', !empty($meta['inquiry_password']));
 
         return $this->view->fetch();
     }
