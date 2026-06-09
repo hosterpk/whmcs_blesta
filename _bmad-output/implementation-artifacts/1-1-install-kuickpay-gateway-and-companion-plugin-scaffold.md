@@ -4,7 +4,7 @@ baseline_commit: 25d1ca3901ebf37fb050439bfbba42237c30b3fa
 
 # Story 1.1: Install KuickPay Gateway and Companion Plugin Scaffold
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -277,6 +277,7 @@ GPT-5 Codex
 - 2026-06-09: Pulled and used Docker `php:8.2-cli` for required PHP lint because host PHP is unavailable; all new PHP files passed `php -l`.
 - 2026-06-09: Live Blesta admin/runtime verification was not run because no local PHP/web/database stack was detected; fallback validation used PHP lint, JSON parsing, class-name inspection, no-core-change allowlist, and mutation-surface grep.
 - 2026-06-09: Root regression suite was not run because `../tests` is not checked out and host `composer` is unavailable.
+- 2026-06-09: Re-ran story validation on this host with PHP 8.3 CLI: all new PHP files passed `php -l`; both extension `config.json` files parsed via PHP; mutation-surface grep returned no matches; `../tests`, `composer`, and `vendors/bin/phpunit` are unavailable, so Composer/PHPUnit regression scripts could not be run here.
 
 ### Implementation Plan
 
@@ -286,7 +287,7 @@ GPT-5 Codex
 
 - Gateway scaffold added under `components/gateways/nonmerchant/kuickpay/` with PKR-only metadata, Blesta installer metadata, locked en_us language copy, admin settings banner, neutral customer process placeholder, companion-plugin guard, and fail-closed `validate()`/`success()` paths.
 - Companion plugin scaffold added under `plugins/kuickpay_reconcile/` with Blesta plugin metadata, installer metadata, language copy, and explicit no-op `install()`, `upgrade()`, and `uninstall()` lifecycle hooks. No schema, events, actions, permissions, cron, controllers, models, lib, views, or fixtures were added.
-- Story-level validation completed with Docker PHP lint, PHP/Python JSON parsing, class-name round-trip inspection, no-core-change allowlist against `baseline_commit`, mutation-surface grep, and `git diff --check`. Live Blesta install/runtime verification and root regression tests were not available in this environment.
+- Story-level validation completed with Docker PHP lint, host PHP lint, PHP/Python JSON parsing, class-name round-trip inspection, no-core-change allowlist against `baseline_commit`, mutation-surface grep, and `git diff --check`. Live Blesta install/runtime verification and root Composer/PHPUnit regression tests were not available in this environment.
 
 ### File List
 
@@ -315,3 +316,12 @@ GPT-5 Codex
 1. **PKR-only via `config.json` currencies vs Story 1.5:** This story declares `"currencies": ["PKR"]` so Blesta only offers the gateway for PKR (declarative FR5 support). Story 1.5 then owns the dynamic customer-facing eligibility/messaging. Confirm this split is acceptable, or whether you'd prefer 1.1 to allow all currencies and defer the entire PKR restriction to 1.5. (Recommended: keep `["PKR"]` now — it's static metadata, fail-safe, and matches FR5.)
 2. **Optional `phpcs.xml.dist` per extension:** add one to each new extension (mirroring `paystack/phpcs.xml.dist`) for local style enforcement, or keep the scaffold to functional files only? Not required by any AC.
 3. **Companion-plugin "missing" UX wording — RESOLVED (2026-06-09).** Final approved en_us copy is locked verbatim in Task 1.7: admin setup error (`Kuickpay.!error.companion_missing`), neutral customer process message (`Kuickpay.process.not_ready`), gateway `name`/`description`, and the scaffold settings note (`Kuickpay.settings.scaffold_note`). Admin "install the plugin" instruction is kept off the customer path. No further copy decision needed for this story; Story 1.2 may add settings-field labels as it introduces fields.
+
+## Review Findings
+
+_BMAD adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) — 2026-06-09. Baseline `25d1ca39`. **Outcome: 0 decision-needed, 0 patch, 2 deferred, 11 dismissed** (noise / false-positive / spec-intended). All three Acceptance Criteria and all seven Non-Negotiables **PASS**. The two validation-triage fixes the spec emphasized are confirmed applied: `getCommonError('unsupported')` is wrapped in `$this->Input->setErrors(...)` across `validate()`/`success()`/`buildProcess()` (the `offline.php` bare-call anomaly was deliberately not copied), and the exact `makeView('…','default', str_replace(ROOTWEBDIR, '', dirname(__FILE__) . DS))` view-resolution idiom is used. Class names round-trip-safe (`Kuickpay`, `KuickpayReconcilePlugin`); locked en_us copy matches verbatim with admin/customer separation intact; plugin lifecycle is provably non-destructive._
+
+- [x] [Review][Defer] Cross-company companion detection when `Blesta.company_id` is null falls back to "installed under any company" [components/gateways/nonmerchant/kuickpay/kuickpay.php:246] — deferred; this is the conscious scaffold-scope decision already documented in Dev Notes "isInstalled semantics (scaffold scope, decide consciously)". Edge Case Hunter rated it High in the abstract, but real impact in this story is nil: no live path is enabled in any branch, and the user-facing `getSettings`/`buildProcess` are HTTP-only with `company_id` always set. Enforce company-scoped + `enabled` state in the story that first exposes a real plugin service/action.
+- [x] [Review][Defer] Gateway logo `views/default/images/logo.png` is absent → admin extension card renders a broken image [components/gateways/nonmerchant/kuickpay/views/default/images/logo.png] — deferred; the spec lists the logo as optional and AC1 detectability is unaffected (`getGatewayInfo()` builds the logo URL unconditionally). Add real branding (or a plain placeholder PNG) in a later pass.
+
+**Dismissed (11) — recorded for audit:** stale `2010` copyright header (matches `offline.php` brownfield convention, NN#7); `Phillips Data, Inc.` author attribution (mirrors prescribed reference); `@subpackage` without `nonmerchant` (matches the `offline` reference it was told to mirror; convention is inconsistent codebase-wide); `$this->currency` dynamic-property assignment (byte-identical to `offline.php`; base declares `abstract setCurrency()`); `getCommonError('unsupported')` "fail-open" (false positive — confirmed real base error at `nonmerchant_gateway.php:236`); `buildProcess()` returns view while setting error (spec-mandated "still return the rendered process view"; placeholder is neutral, no voucher/mutation); `validate()`/`success()` unconditional hard-fail (spec-mandated fail-closed core design, NN#1); `PluginManager` re-load per call (`Loader` is idempotent); `settings.pdt` `ifSet()` on a boolean (verified correct for both branches, safe default); `process.pdt` unescaped echo (static developer-controlled language string, no user input, matches reference); empty `install`/`upgrade`/`uninstall` (spec-mandated no-ops, NN#4).
