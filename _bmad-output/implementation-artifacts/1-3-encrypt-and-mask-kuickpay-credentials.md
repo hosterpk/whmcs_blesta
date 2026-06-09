@@ -4,7 +4,7 @@ baseline_commit: a4ab3265ac72363a355d497ea34c987aaf1c5029
 
 # Story 1.3: Encrypt and Mask KuickPay Credentials
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -67,10 +67,10 @@ Two 1.2 follow-up fixes are already in place and **must be preserved**: whitespa
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Lock credential encryption at rest + regression guard (AC1)** [Source: app/models/gateway_manager.php:626-633; coingate encryptableFields]
-  - [ ] 1.1 Confirm `encryptableFields()` (lines 255-258) still returns exactly `['voucher_password', 'inquiry_password']` and leave it intact. (1.2 delivered this; 1.3 locks it with the Task 6.1 regression test.)
-  - [ ] 1.2 Do **not** add `voucher_username`/`inquiry_username` to `encryptableFields()` — usernames are not the AC1-encrypted set, and adding them changes 1.2's stored shape. (Username log-masking is handled separately in Task 4; see Dev Notes "Which fields are 'credentials'.")
-  - [ ] 1.3 Add the regression assertion in Task 6 that both password keys are present and no plaintext password is written to `gateway_meta`.
+- [x] **Task 1 — Lock credential encryption at rest + regression guard (AC1)** [Source: app/models/gateway_manager.php:626-633; coingate encryptableFields]
+  - [x] 1.1 Confirm `encryptableFields()` (lines 255-258) still returns exactly `['voucher_password', 'inquiry_password']` and leave it intact. (1.2 delivered this; 1.3 locks it with the Task 6.1 regression test.)
+  - [x] 1.2 Do **not** add `voucher_username`/`inquiry_username` to `encryptableFields()` — usernames are not the AC1-encrypted set, and adding them changes 1.2's stored shape. (Username log-masking is handled separately in Task 4; see Dev Notes "Which fields are 'credentials'.")
+  - [x] 1.3 Add the regression assertion in Task 6 that both password keys are present and no plaintext password is written to `gateway_meta`.
 
 - [x] **Task 2 — Avoid duplicate credential storage for same-as-voucher (AC3)** [Source: epics.md Story 1.3 lines 368-371; 1-2 editSettings]
   - [x] 2.1 In `editSettings()`, `$same` is **already computed at line 109** — reuse it; do not recompute.
@@ -96,15 +96,15 @@ Two 1.2 follow-up fixes are already in place and **must be preserved**: whitespa
   - [x] 5.2 `Kuickpay.voucher_password_note` (line 18) already says "Re-enter it when saving settings." — leave it. Optionally align `Kuickpay.inquiry_password_note` (line 24) to note the value is encrypted and re-entered; only if it reads cleanly — no churn.
   - [x] 5.3 Preserve every existing key and the file's single-quote / one-key-per-line style; do not reorder or rewrap 1.2's block.
 
-- [ ] **Task 6 — Tests (AC1, AC2, AC3) — targeted, no live external calls** [Source: project-context.md#Testing Rules; architecture.md:751-752 redaction test fixture]
-  - [ ] 6.1 **encryptableFields regression (AC1):** assert `(new Kuickpay())->encryptableFields()` returns **exactly** `['voucher_password', 'inquiry_password']` — both password keys present, **no** username keys, and no extra keys (assert `count() === 2`). (Pure, no DB.)
-  - [ ] 6.2 **same-as-voucher dedupe (AC3):** call `editSettings()` with `inquiry_same_as_voucher='true'` + a full valid meta set, assert the returned `$meta` has **no** `inquiry_username`/`inquiry_password` keys and **no** validation errors; call again with the toggle `'false'` and blank inquiry creds, assert validation errors are set (required path preserved).
-  - [ ] 6.3 **credential redaction (AC2):** call `maskCredentials(['voucher_password'=>'s3cr3t','userName'=>'kp_user','InstitutionID'=>'123'])` and assert the password/username values are fully masked while non-credential keys (`InstitutionID`) pass through unchanged. Because `maskCredentials()` is **`protected`** (Task 4.2), a tiny test subclass of `Kuickpay` can expose it via a public pass-through (`public function exposeMask($d) { return $this->maskCredentials($d); }`); reflection is an equally valid alternative. (A `private` method would be invisible to the subclass and force reflection — another reason 4.2 declares it `protected`.) Add one **nested**-input assertion (e.g. `['Envelope'=>['Body'=>['password'=>'s3cr3t']]]`) proving the recursive variant masks deep credential keys. Confirms the boundary works before any consumer exists.
-  - [ ] 6.4 **Where these tests live (no committed test files in 1.3's scope):** this checkout has **no** sibling `../tests` suite and **no** `components/gateways/nonmerchant/kuickpay/tests/` layout. Do **not** create a root `tests/` directory (project-context.md#Testing Rules forbids it) and do **not** commit a new test file — Task 7.5's scope gate allows only the three gateway files + the story file + `sprint-status.yaml`. If a PHP runtime is available, run the 6.1–6.3 checks from a **disposable** script (e.g. `temp/kuickpay-1.3-tests.php`) via `php` from the project root, then **delete it** before finishing. If the runtime is unavailable, run the narrowest safe fallback (`php -l` + the grep proofs in Task 7) and **state explicitly** that DB/runtime coverage did not run. Do not overstate, and do not present lint/grep as full coverage. [Source: project-context.md#Testing Rules lines 68, 76]
+- [x] **Task 6 — Tests (AC1, AC2, AC3) — targeted, no live external calls** [Source: project-context.md#Testing Rules; architecture.md:751-752 redaction test fixture]
+  - [x] 6.1 **encryptableFields regression (AC1):** assert `(new Kuickpay())->encryptableFields()` returns **exactly** `['voucher_password', 'inquiry_password']` — both password keys present, **no** username keys, and no extra keys (assert `count() === 2`). (Pure, no DB.)
+  - [x] 6.2 **same-as-voucher dedupe (AC3):** call `editSettings()` with `inquiry_same_as_voucher='true'` + a full valid meta set, assert the returned `$meta` has **no** `inquiry_username`/`inquiry_password` keys and **no** validation errors; call again with the toggle `'false'` and blank inquiry creds, assert validation errors are set (required path preserved).
+  - [x] 6.3 **credential redaction (AC2):** call `maskCredentials(['voucher_password'=>'s3cr3t','userName'=>'kp_user','InstitutionID'=>'123'])` and assert the password/username values are fully masked while non-credential keys (`InstitutionID`) pass through unchanged. Because `maskCredentials()` is **`protected`** (Task 4.2), a tiny test subclass of `Kuickpay` can expose it via a public pass-through (`public function exposeMask($d) { return $this->maskCredentials($d); }`); reflection is an equally valid alternative. (A `private` method would be invisible to the subclass and force reflection — another reason 4.2 declares it `protected`.) Add one **nested**-input assertion (e.g. `['Envelope'=>['Body'=>['password'=>'s3cr3t']]]`) proving the recursive variant masks deep credential keys. Confirms the boundary works before any consumer exists.
+  - [x] 6.4 **Where these tests live (no committed test files in 1.3's scope):** this checkout has **no** sibling `../tests` suite and **no** `components/gateways/nonmerchant/kuickpay/tests/` layout. Do **not** create a root `tests/` directory (project-context.md#Testing Rules forbids it) and do **not** commit a new test file — Task 7.5's scope gate allows only the three gateway files + the story file + `sprint-status.yaml`. If a PHP runtime is available, run the 6.1–6.3 checks from a **disposable** script (e.g. `temp/kuickpay-1.3-tests.php`) via `php` from the project root, then **delete it** before finishing. If the runtime is unavailable, run the narrowest safe fallback (`php -l` + the grep proofs in Task 7) and **state explicitly** that DB/runtime coverage did not run. Do not overstate, and do not present lint/grep as full coverage. [Source: project-context.md#Testing Rules lines 68, 76]
 
-- [ ] **Task 7 — Verification (no overstating)** [Source: project-context.md#Development Workflow Rules]
-  - [ ] 7.1 `php -l` the three touched files (`.php`, `.pdt`, language `.php`).
-  - [ ] 7.2 **No secret echo / no value leak.** A blanket grep for `$meta['*_password']` would also match the **intended** `!empty(...)` presence tests Task 3.1 adds — so split the proof so it cannot flag its own safe reads:
+- [x] **Task 7 — Verification (no overstating)** [Source: project-context.md#Development Workflow Rules]
+  - [x] 7.1 `php -l` the three touched files (`.php`, `.pdt`, language `.php`).
+  - [x] 7.2 **No secret echo / no value leak.** A blanket grep for `$meta['*_password']` would also match the **intended** `!empty(...)` presence tests Task 3.1 adds — so split the proof so it cannot flag its own safe reads:
     ```sh
     # (a) Leak check — any password-value read NOT guarded by empty(): expect NO output
     grep -nE "\$meta\['(voucher|inquiry)_password'\]" \
@@ -119,10 +119,10 @@ Two 1.2 follow-up fixes are already in place and **must be preserved**: whitespa
       components/gateways/nonmerchant/kuickpay/views/default/settings.pdt
     ```
     Confirm (a) is empty, (b) returns exactly two lines, and the `.pdt` never references a password value — only the `*_stored` booleans.
-  - [ ] 7.3 **Mask boundary present:** `grep -nE "maskCredentials|maskData|credential_mask_fields" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm the wrapper exists and lists the password keys.
-  - [ ] 7.4 **Dedupe present:** `grep -nE "unset\(\\\$meta\['inquiry_(username|password)'\]\)" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm the same-as-voucher unset.
-  - [ ] 7.5 **Scope containment:** `git status --porcelain` shows only the three gateway files + this story file + `sprint-status.yaml`; **no** `plugins/kuickpay_reconcile/` changes, **no** new `lib/` files. `find components/gateways/nonmerchant/kuickpay -type d -name lib` → expect no output.
-  - [ ] 7.6 If a running Blesta + MySQL stack is available: open Settings → Payment Gateways → KuickPay; save with same-as-voucher ON → confirm `gateway_meta` has **no** `inquiry_password` row and the voucher password row is **encrypted** (ciphertext, not plaintext); reopen → password fields blank, masked "stored" note shown; toggle same-as-voucher OFF, save blank inquiry creds → rejected. If no runtime/DB, **state that explicitly** and rely on lint + grep + unit tests. [Source: NFR12 line 109]
+  - [x] 7.3 **Mask boundary present:** `grep -nE "maskCredentials|maskData|credential_mask_fields" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm the wrapper exists and lists the password keys.
+  - [x] 7.4 **Dedupe present:** `grep -nE "unset\(\\\$meta\['inquiry_(username|password)'\]\)" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm the same-as-voucher unset.
+  - [x] 7.5 **Scope containment:** `git status --porcelain` shows only the three gateway files + this story file + `sprint-status.yaml`; **no** `plugins/kuickpay_reconcile/` changes, **no** new `lib/` files. `find components/gateways/nonmerchant/kuickpay -type d -name lib` → expect no output.
+  - [x] 7.6 If a running Blesta + MySQL stack is available: open Settings → Payment Gateways → KuickPay; save with same-as-voucher ON → confirm `gateway_meta` has **no** `inquiry_password` row and the voucher password row is **encrypted** (ciphertext, not plaintext); reopen → password fields blank, masked "stored" note shown; toggle same-as-voucher OFF, save blank inquiry creds → rejected. If no runtime/DB, **state that explicitly** and rely on lint + grep + unit tests. [Source: NFR12 line 109]
 
 ## Dev Notes
 
@@ -242,15 +242,25 @@ No new libraries. This story uses only: PHP 8.2; Blesta's `NonmerchantGateway`/`
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Codex GPT-5
 
 ### Debug Log References
+
+- `php -d display_errors=1 -d error_reporting='E_ALL & ~E_DEPRECATED' temp/kuickpay_credentials_story_check.php` passed before the disposable script was deleted.
+- `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed.
+- `php -l components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php` passed.
+- `php -l components/gateways/nonmerchant/kuickpay/views/default/settings.pdt` passed.
+- Negative grep confirmed no `value` is passed to voucher/inquiry password fields.
+- Negative grep confirmed no `$this->log(...)` or `throw new` path exists in the KuickPay gateway.
+- Root/sibling PHPUnit suite was not run because `../tests` is missing in this checkout.
 
 ### Completion Notes List
 
 - Implemented AC3 same-as-voucher dedupe in `editSettings()` by unsetting inquiry credential keys before validation/storage when the toggle is enabled; separate inquiry credentials remain required when the toggle is disabled.
 - Added presence-only masked password indicators to the settings form and honest re-entry language that never exposes stored credential values or lengths.
 - Added a gateway-owned recursive credential masking boundary and verified existing error paths do not log, throw, or concatenate credential values.
+- Verified the encryption contract remains exactly `['voucher_password', 'inquiry_password']`; username fields are not added to the at-rest encryption set.
+- Runtime DB verification was not performed because no running Blesta/MySQL stack or sibling `../tests` suite is available in this checkout.
 
 ### File List
 
@@ -263,6 +273,7 @@ No new libraries. This story uses only: PHP 8.2; Blesta's `NonmerchantGateway`/`
 - 2026-06-09: Added masked password presence indicators and supporting language strings for settings display.
 - 2026-06-09: Added recursive credential redaction boundary for gateway-owned diagnostics.
 - 2026-06-09: Implemented same-as-voucher credential dedupe so inquiry username/password are not persisted when voucher credentials are reused.
+- 2026-06-09: Completed targeted credential story validations and moved story to review.
 - 2026-06-09: Story drafted (ready-for-dev) via bmad-create-story. Exhaustive context-engine analysis across epics (Story 1.3 ACs, FR3/NFR1/UX-DR9/UX-DR28), PRD FR-3, architecture (single redaction boundary, gateway-vs-protocol ownership, encryptableFields), the predecessor 1.2 story (scope boundary + interim limitation), the 1.1 scaffold, and the verified Blesta gateway-edit internals (`gateway_manager::edit/getMeta/setMeta`, `admin_company_gateways::manage`, base `Gateway::maskData/log`, and the eway/payflow/paypal masking idiom). Resolved three load-bearing design points against the codebase: (1) AC1 is delivered by 1.2 — 1.3 locks it + regression-tests it; (2) **keep-if-blank credential rotation is architecturally infeasible** (editSettings gets POST-only on an id-less instance; setMeta wipes+reinserts) — documented with proof, passwords stay required; (3) the gateway credential-redaction boundary is a thin wrapper over base `maskData()` (not a new redactor — Epic 3 owns the SOAP redactor), established now for 1.4/Epic 3 to consume. Masked "is-stored" indicator uses a presence-only boolean from the GET-time decrypted meta, never the value or its length.
 - 2026-06-09: Re-aligned to as-built code after Story 1.2 was merged mid-authoring (sprint-status flipped 1-2 → done). Corrected the starting-state section (post-1.2, not scaffold), the AC3 diff (reuse existing `$same` at line 109 rather than recompute), the masked-note insertion points (after `fieldPassword` at lines 38/70), and the inquiry-note gating (1.2 renders the inquiry block unconditionally — no JS show/hide; gate on `$inquiry_password_stored`). Noted that `voucher_password_note` already states the re-entry behavior, and that the two 1.2 follow-up fixes (whitespace-trim, `/D` anchors) must be preserved.
 - 2026-06-09: Applied multi-agent validation triage (round 1), each finding re-verified against the live code before editing. Substantive corrections: (1) **`maskCredentials()` declared `protected`** (not `private`) and wrapped over **`maskDataRecursive`** (not flat `maskData`) — base `maskData`/`maskDataRecursive` are both `protected` (`gateway.php:307,342`), so the wrapper is reachable from the Task 6.3 test subclass and the recursive variant safely covers nested SOAP payloads; reframed the contract so it is the *gateway-owned* boundary and dropped the inaccurate claim that Epic 3's separate SOAP-client/redactor class consumes this `protected` method (it is a separate, consistent layer — architecture.md:405,778). (2) **Fixed the masked "stored" indicator's honesty on a failed-POST re-render** — verified the controller re-feeds `$this->post` into `getSettings()` (`admin_company_gateways.php:215-216,287`), which (passwords being required) makes `!empty($meta['password'])` true on values that were never persisted; the gateway has no request context to gate GET-only, so the language copy must not assert "currently stored." Corrected Task 3.5, Task 5.1 copy, and the Dev Notes masked-display rationale. (3) **Reconciled Task 6 tests with the 3-file scope gate** (disposable `temp/` script, no committed test files; honest fallback reporting) and **split the Task 7.2 leak grep** so it no longer flags its own safe `!empty()` presence reads (added a negative-leak check, an exactly-two presence check, and a `*_stored` render check). (4) Doc-accuracy/clarity: repointed `architecture.md` citations (`:715`→`:751-752`; redactor→`:778`), noted the `lib/` ban is **1.3-scoped** (Epic 3 adds `kuickpay/lib/`), flagged Story 0.1 fixtures as `in-progress` (not done), clarified the masked-note insertion point (before the field's closing `</div>`), the `unset()` no-op safety, the exactly-two-keys `encryptableFields` assertion, and a nested-input redaction test. Story remains `ready-for-dev`.
