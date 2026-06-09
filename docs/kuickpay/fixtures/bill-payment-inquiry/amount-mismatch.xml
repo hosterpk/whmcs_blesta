@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <BillPaymentInquiryResponse xmlns="https://app.kuickpay.com/kuickpaycoreapi/">
+      <BillPaymentInquiryResult>00,REG-0000001,20260609,900.00,KP-TXN-0002,KP-REF-MISMATCH,PKR,INSTITUTION_ID</BillPaymentInquiryResult>
+    </BillPaymentInquiryResponse>
+  </soap:Body>
+</soap:Envelope>

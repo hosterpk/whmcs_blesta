@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <BillPaymentBulkInquiryResponse xmlns="https://app.kuickpay.com/kuickpaycoreapi/">
+      <BillPaymentBulkInquiryResult><![CDATA[<NewDataSet><Table><Consumer_Number>INSTITUTION_IDREG-0000001</Consumer_Number><Registration_Number>REG-0000001</Registration_Number><Transaction_Date>20260609</Transaction_Date><Paid_Amount>1000.00</Paid_Amount><Transaction_Reference>KP-BULK-PAID-0001</Transaction_Reference><Currency>PKR</Currency></Table></NewDataSet>]]></BillPaymentBulkInquiryResult>
+    </BillPaymentBulkInquiryResponse>
+  </soap:Body>
+</soap:Envelope>
