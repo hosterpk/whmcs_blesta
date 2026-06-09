@@ -4,7 +4,7 @@ baseline_commit: 25d1ca3901ebf37fb050439bfbba42237c30b3fa
 
 # Story 1.1: Install KuickPay Gateway and Companion Plugin Scaffold
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -98,18 +98,18 @@ _Reproduced verbatim from [Source: epics.md#Story 1.1] (lines 311–326)._
   - [x] 2.4 Create `language/en_us/kuickpay_reconcile_plugin.php` with `$lang['KuickpayReconcilePlugin.name']` and `$lang['KuickpayReconcilePlugin.description']`.
   - [x] 2.5 Do **not** create `controllers/`, `models/`, `lib/`, admin `views/`, or `tests/fixtures/` in this story — those belong to Epics 2–4 with their owning stories. Keep the scaffold to the four files above. (See Non-Negotiable #4, #6.)
 
-- [ ] **Task 3 — Verify detectability, lifecycle safety, and the AC3 guard** (AC: #1, #2, #3)
-  - [ ] 3.1 Lint every new PHP file (architecture's exact baseline):
+- [x] **Task 3 — Verify detectability, lifecycle safety, and the AC3 guard** (AC: #1, #2, #3)
+  - [x] 3.1 Lint every new PHP file (architecture's exact baseline):
     ```sh
     php -l components/gateways/nonmerchant/kuickpay/kuickpay.php
     php -l plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
     find components/gateways/nonmerchant/kuickpay plugins/kuickpay_reconcile -name '*.php' -print -exec php -l {} \;
     ```
-  - [ ] 3.2 Validate both `config.json` files parse as JSON (e.g. `php -r 'json_decode(file_get_contents($argv[1]), false) ?: exit(1);' <file>` or `python3 -m json.tool <file>`).
-  - [ ] 3.3 Confirm class-name round-trip correctness by inspection: gateway file `kuickpay.php` → class `Kuickpay`; plugin file `kuickpay_reconcile_plugin.php` → handler class `KuickpayReconcilePlugin`. Cross-check against `coin_payments.php`→`CoinPayments` and `shared_login_plugin.php`→`SharedLoginPlugin`.
-  - [ ] 3.4 Confirm **no core files changed**: `git status --porcelain` shows only new files under the two extension dirs plus this story file and `sprint-status.yaml`. Any other path = stop and fix (AC2).
-  - [ ] 3.5 **Live verification (preferred, if a Blesta dev instance + DB is available):** in Admin → Settings → Payment Gateways, confirm "KuickPay" appears in the Available (non-merchant) list (AC1); install/uninstall the gateway and the `kuickpay_reconcile` plugin and confirm no errors and no unrelated data change (AC2); with the plugin **not** installed, open the gateway's Manage/settings screen and confirm the clear setup-error banner appears (AC3). **Fallback if no running stack:** state that explicitly per NFR12 and rely on lint + JSON validation + structural parity with `offline`/`shared_login`; do not claim install/runtime coverage that wasn't run.
-  - [ ] 3.6 Confirm the customer-facing fail-closed paths by reading the code: `validate()`/`success()` return `null` after `$this->Input->setErrors($this->getCommonError('unsupported'))` (wrapped, not a bare call); `buildProcess()` creates no voucher and mutates nothing. Grep the new tree to prove the negative: `grep -rinE 'recordPayment|markPaid|->add\(|Transactions|setStatus' components/gateways/nonmerchant/kuickpay plugins/kuickpay_reconcile` returns nothing.
+  - [x] 3.2 Validate both `config.json` files parse as JSON (e.g. `php -r 'json_decode(file_get_contents($argv[1]), false) ?: exit(1);' <file>` or `python3 -m json.tool <file>`).
+  - [x] 3.3 Confirm class-name round-trip correctness by inspection: gateway file `kuickpay.php` → class `Kuickpay`; plugin file `kuickpay_reconcile_plugin.php` → handler class `KuickpayReconcilePlugin`. Cross-check against `coin_payments.php`→`CoinPayments` and `shared_login_plugin.php`→`SharedLoginPlugin`.
+  - [x] 3.4 Confirm **no core files changed**: `git status --porcelain` shows only new files under the two extension dirs plus this story file and `sprint-status.yaml`. Any other path = stop and fix (AC2).
+  - [x] 3.5 **Live verification (preferred, if a Blesta dev instance + DB is available):** in Admin → Settings → Payment Gateways, confirm "KuickPay" appears in the Available (non-merchant) list (AC1); install/uninstall the gateway and the `kuickpay_reconcile` plugin and confirm no errors and no unrelated data change (AC2); with the plugin **not** installed, open the gateway's Manage/settings screen and confirm the clear setup-error banner appears (AC3). **Fallback if no running stack:** state that explicitly per NFR12 and rely on lint + JSON validation + structural parity with `offline`/`shared_login`; do not claim install/runtime coverage that wasn't run.
+  - [x] 3.6 Confirm the customer-facing fail-closed paths by reading the code: `validate()`/`success()` return `null` after `$this->Input->setErrors($this->getCommonError('unsupported'))` (wrapped, not a bare call); `buildProcess()` creates no voucher and mutates nothing. Grep the new tree to prove the negative: `grep -rinE 'recordPayment|markPaid|->add\(|Transactions|setStatus' components/gateways/nonmerchant/kuickpay plugins/kuickpay_reconcile` returns nothing.
 
 ## Dev Notes
 
@@ -272,8 +272,11 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 2026-06-09: Gateway scaffold JSON parsed with `python3.12 -m json.tool`; PHP lint could not run because no `php` binary is installed or on PATH.
+- 2026-06-09: Gateway scaffold JSON parsed with `python3.12 -m json.tool`; host PHP was unavailable, so PHP lint was deferred to Docker validation.
 - 2026-06-09: Companion plugin scaffold JSON parsed with `python3.12 -m json.tool`; confirmed plugin tree contains only the four scaffold files.
+- 2026-06-09: Pulled and used Docker `php:8.2-cli` for required PHP lint because host PHP is unavailable; all new PHP files passed `php -l`.
+- 2026-06-09: Live Blesta admin/runtime verification was not run because no local PHP/web/database stack was detected; fallback validation used PHP lint, JSON parsing, class-name inspection, no-core-change allowlist, and mutation-surface grep.
+- 2026-06-09: Root regression suite was not run because `../tests` is not checked out and host `composer` is unavailable.
 
 ### Implementation Plan
 
@@ -283,6 +286,7 @@ GPT-5 Codex
 
 - Gateway scaffold added under `components/gateways/nonmerchant/kuickpay/` with PKR-only metadata, Blesta installer metadata, locked en_us language copy, admin settings banner, neutral customer process placeholder, companion-plugin guard, and fail-closed `validate()`/`success()` paths.
 - Companion plugin scaffold added under `plugins/kuickpay_reconcile/` with Blesta plugin metadata, installer metadata, language copy, and explicit no-op `install()`, `upgrade()`, and `uninstall()` lifecycle hooks. No schema, events, actions, permissions, cron, controllers, models, lib, views, or fixtures were added.
+- Story-level validation completed with Docker PHP lint, PHP/Python JSON parsing, class-name round-trip inspection, no-core-change allowlist against `baseline_commit`, mutation-surface grep, and `git diff --check`. Live Blesta install/runtime verification and root regression tests were not available in this environment.
 
 ### File List
 
@@ -304,6 +308,7 @@ GPT-5 Codex
 - 2026-06-09: Locked final en_us microcopy (Open Question #3 resolved). Task 1.7 now carries verbatim approved strings for `Kuickpay.name`, `Kuickpay.description`, `Kuickpay.!error.companion_missing` (admin), `Kuickpay.process.not_ready` (customer), and `Kuickpay.settings.scaffold_note`; Tasks 1.4/1.5 reference the exact keys. Admin instruction kept off the customer process path.
 - 2026-06-09: Implemented Task 1 gateway scaffold.
 - 2026-06-09: Implemented Task 2 companion plugin scaffold.
+- 2026-06-09: Completed Task 3 validation and moved story to review.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
