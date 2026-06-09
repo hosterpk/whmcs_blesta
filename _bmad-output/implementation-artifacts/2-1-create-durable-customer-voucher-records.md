@@ -4,7 +4,7 @@ baseline_commit: f851a0e8
 
 # Story 2.1: Create Durable Customer Voucher Records
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -546,6 +546,8 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_voucher_invoices.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php
+- _bmad-output/implementation-artifacts/2-1-create-durable-customer-voucher-records.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
 
 ## Change Log
 
@@ -557,3 +559,4 @@ GPT-5 Codex
 - 2026-06-10: Implemented Task 5 gateway voucher service integration.
 - 2026-06-10: Implemented Tasks 6-7 customer voucher display and language strings.
 - 2026-06-10: Completed Task 8 verification and gateway helper tests.
+- 2026-06-10: Story marked ready for review after all tasks and verification passed.
