@@ -98,6 +98,14 @@ class Kuickpay extends NonmerchantGateway
             $meta['fee_policy'] = 'none';
         }
 
+        // Trim required identifier fields so whitespace-only input is treated as empty.
+        // Blesta's isEmpty() rule only checks string length, so " " would otherwise pass.
+        foreach (['voucher_username', 'inquiry_username', 'institution_id'] as $textField) {
+            if (isset($meta[$textField]) && is_string($meta[$textField])) {
+                $meta[$textField] = trim($meta[$textField]);
+            }
+        }
+
         $same = (($meta['inquiry_same_as_voucher'] ?? 'false') === 'true');
         $optionalNumericRule = ['matches', '/^([0-9]+)?$/D'];
         $referencePatternRule = ['matches', '/^[A-Za-z0-9_{}+\-]+$/D'];
