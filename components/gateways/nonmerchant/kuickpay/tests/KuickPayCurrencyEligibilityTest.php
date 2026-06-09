@@ -24,6 +24,12 @@ class KuickPayCurrencyEligibilityGateway extends Kuickpay
 {
     public $configuredCurrencies = ['PKR'];
 
+    // Load-bearing: this self-contained harness stubs NonmerchantGateway as an
+    // empty class, so the framework's config-backed Gateway::getCurrencies()
+    // (which reads config.json via loadConfig()) is unavailable here. This
+    // override supplies the configured currencies the guard reads. Do not
+    // remove it, or getCurrencies() becomes undefined and every case fails
+    // closed. testConfigDeclaresOnlyPkr() separately locks config.json's value.
     public function getCurrencies()
     {
         return $this->configuredCurrencies;
