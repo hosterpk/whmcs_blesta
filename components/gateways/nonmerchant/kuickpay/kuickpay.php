@@ -493,9 +493,9 @@ class Kuickpay extends NonmerchantGateway
     /**
      * Determines whether the active payment currency is eligible for KuickPay.
      *
-     * Eligibility is read from getCurrencies() (config.json) so no currency or
-     * conversion value is hard-coded. This mirrors GatewayManager::currencyExists()
-     * and fails closed for non-configured, unset, empty, or unloaded currencies.
+     * Eligibility is read from getCurrencies() (config.json) so no currency value
+     * is hard-coded. This mirrors GatewayManager::currencyExists() and fails closed
+     * for non-configured, unset, empty, or unloaded currencies.
      *
      * @return bool True when the active currency is configured for this gateway
      */
@@ -552,9 +552,9 @@ class Kuickpay extends NonmerchantGateway
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Html']);
 
-        // Blesta's gateway_currencies join is the primary PKR-only listing gate.
+        // Blesta's gateway_currencies join is the primary currency listing gate.
         // This backstop protects buildProcess() before Story 2.3 adds voucher creation;
-        // InsertVoucher/voucher persistence must stay behind it so non-PKR can never create a Voucher.
+        // InsertVoucher/voucher persistence must stay behind it so ineligible currency can never create a Voucher.
         if (!$this->currencyEligible()) {
             $this->Input->setErrors(
                 ['currency' => ['ineligible' => Language::_('Kuickpay.!error.currency_ineligible', true)]]
