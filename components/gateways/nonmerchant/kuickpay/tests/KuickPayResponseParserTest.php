@@ -222,6 +222,135 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame('2026-06-09', $evidence->paidAt());
     }
 
+    public function testBulkTransportFailureReturnsSingleRetryEvidence()
+    {
+        $evidence = $this->parser()->parseBulk([
+            'ok' => false,
+            'operation' => 'BillPaymentBulkInquiry',
+            'raw_result' => null,
+            'error_class' => 'timeout',
+            'redacted_trace_id' => 'kp_bulk_transport',
+        ]);
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('retry', 'timeout', $evidence[0]);
+    }
+
+    public function testBulkMatchedPaidRowConfirmsUnposted()
+    {
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', '<NewDataSet>' . $this->bulkRow() . '</NewDataSet>'),
+            [
+                'expected_consumer_numbers' => ['INSTITUTION_ID1234INVOICE_ID'],
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+            ]
+        );
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('confirmed_unposted', null, $evidence[0]);
+        $this->assertSame('INSTITUTION_ID1234INVOICE_ID', $evidence[0]->consumerNumber());
+        $this->assertSame('1234INVOICE_ID', $evidence[0]->registrationNumber());
+        $this->assertSame('KP-BULK-PAID-0001', $evidence[0]->reference());
+        $this->assertSame('1000.00', $evidence[0]->amount());
+        $this->assertSame('PKR', $evidence[0]->currency());
+        $this->assertSame('2026-06-09', $evidence[0]->paidAt());
+    }
+
+    public function testBulkUnmatchedRowFailsClosed()
+    {
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', '<NewDataSet>' . $this->bulkRow() . '</NewDataSet>'),
+            [
+                'expected_consumer_numbers' => ['INSTITUTION_ID9999OTHER'],
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+            ]
+        );
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('manual_review', 'unmatched_reference', $evidence[0]);
+        $this->assertSame(['unmatched_reference'], $evidence[0]->validationErrors());
+    }
+
+    public function testBulkExactMatchDoesNotUseSuffix()
+    {
+        $dataset = '<NewDataSet>'
+            . $this->bulkRow('INSTITUTION_ID1234INVOICE_ID', 'KP-LONG')
+            . $this->bulkRow('1234INVOICE_ID', 'KP-SHORT')
+            . '</NewDataSet>';
+
+        $evidence = $this->parser()->parseBulk($this->outcome('BillPaymentBulkInquiry', $dataset), [
+            'expected_consumer_numbers' => ['1234INVOICE_ID'],
+            'expected_amount' => '1000.00',
+            'expected_currency' => 'PKR',
+        ]);
+
+        $this->assertCount(2, $evidence);
+        $this->assertEvidence('manual_review', 'unmatched_reference', $evidence[0]);
+        $this->assertSame('INSTITUTION_ID1234INVOICE_ID', $evidence[0]->consumerNumber());
+        $this->assertEvidence('confirmed_unposted', null, $evidence[1]);
+        $this->assertSame('1234INVOICE_ID', $evidence[1]->consumerNumber());
+    }
+
+    public function testBulkMalformedDatasetReturnsSingleManualReviewEvidence()
+    {
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome(
+                'BillPaymentBulkInquiry',
+                '<NewDataSet><Table><Consumer_Number>INSTITUTION_ID1234INVOICE_ID</Consumer_Number><Paid_Amount>'
+            ),
+            ['expected_consumer_numbers' => ['INSTITUTION_ID1234INVOICE_ID']]
+        );
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('manual_review', 'malformed_response', $evidence[0]);
+        $this->assertNull($evidence[0]->consumerNumber());
+        $this->assertSame(['malformed_dataset'], $evidence[0]->validationErrors());
+    }
+
+    public function testBulkEmptyDatasetReturnsNoEvidenceRows()
+    {
+        $this->assertSame([], $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', '<NewDataSet/>')
+        ));
+    }
+
+    public function testBulkRejectsDoctypeAndOversizeDatasets()
+    {
+        $doctype = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', '<!DOCTYPE x [<!ENTITY a "x">]><NewDataSet/>')
+        );
+        $oversize = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', str_repeat('x', KuickPayRedactor::MAX_ENVELOPE_BYTES + 1))
+        );
+
+        $this->assertEvidence('manual_review', 'malformed_response', $doctype[0]);
+        $this->assertSame(['malformed_dataset'], $doctype[0]->validationErrors());
+        $this->assertEvidence('manual_review', 'malformed_response', $oversize[0]);
+        $this->assertSame(['malformed_dataset'], $oversize[0]->validationErrors());
+    }
+
+    public function testBulkAmountMismatchFailsClosedForMatchedRow()
+    {
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', '<NewDataSet>' . $this->bulkRow(
+                'INSTITUTION_ID1234INVOICE_ID',
+                'KP-BULK-PAID-0001',
+                '900.00'
+            ) . '</NewDataSet>'),
+            [
+                'expected_consumer_numbers' => ['INSTITUTION_ID1234INVOICE_ID'],
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+            ]
+        );
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('manual_review', 'amount_mismatch', $evidence[0]);
+        $this->assertSame(['amount_mismatch'], $evidence[0]->validationErrors());
+    }
+
     public function testEvidenceHashIsDeterministicAndExcludesTrace()
     {
         $first = $this->parser()->parse($this->outcome('InsertVoucher', '00 VOUCHERID00001', 'kp_first'));
@@ -254,5 +383,21 @@ class KuickPayResponseParserTest extends TestCase
             'error_class' => null,
             'redacted_trace_id' => $traceId,
         ];
+    }
+
+    private function bulkRow(
+        string $consumerNumber = 'INSTITUTION_ID1234INVOICE_ID',
+        string $transactionReference = 'KP-BULK-PAID-0001',
+        string $amount = '1000.00',
+        string $currency = 'PKR'
+    ): string {
+        return '<Table>'
+            . '<Consumer_Number>' . $consumerNumber . '</Consumer_Number>'
+            . '<Registration_Number>1234INVOICE_ID</Registration_Number>'
+            . '<Transaction_Date>20260609</Transaction_Date>'
+            . '<Paid_Amount>' . $amount . '</Paid_Amount>'
+            . '<Transaction_Reference>' . $transactionReference . '</Transaction_Reference>'
+            . '<Currency>' . $currency . '</Currency>'
+            . '</Table>';
     }
 }

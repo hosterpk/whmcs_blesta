@@ -29,6 +29,7 @@ class KuickPayResponseParser
     private const OP_INSERT_VOUCHER = 'InsertVoucher';
     private const OP_INQUIRY = 'BillPaymentInquiry';
     private const OP_BULK = 'BillPaymentBulkInquiry';
+    private const MAX_BULK_ROWS = 10000;
 
     private const ALLOWED_STATUSES = [
         self::STATUS_PENDING,
@@ -113,26 +114,138 @@ class KuickPayResponseParser
 
     public function parseBulk(array $transportOutcome, array $context = []): array
     {
-        $operation = isset($transportOutcome['operation']) ? (string) $transportOutcome['operation'] : self::OP_BULK;
-
         if (($transportOutcome['ok'] ?? false) === false) {
             return [$this->transportFailure($transportOutcome, self::OP_BULK)];
         }
 
-        return [$this->evidence(
-            $operation,
-            self::STATUS_MANUAL_REVIEW,
-            self::ERROR_MALFORMED,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            $this->traceId($transportOutcome),
-            ['bulk_parser_not_implemented']
-        )];
+        $rawResult = $transportOutcome['raw_result'] ?? null;
+        if (!is_string($rawResult) || trim($rawResult) === '') {
+            return [$this->malformedBulkEvidence($transportOutcome, ['empty_result'])];
+        }
+
+        if (strlen($rawResult) > KuickPayRedactor::MAX_ENVELOPE_BYTES || stripos($rawResult, '<!DOCTYPE') !== false) {
+            return [$this->malformedBulkEvidence($transportOutcome, ['malformed_dataset'])];
+        }
+
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
+        $document = new DOMDocument();
+        $loaded = $document->loadXML($rawResult, LIBXML_NONET);
+
+        if (!$loaded || !$document->documentElement || $document->documentElement->localName !== 'NewDataSet') {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+            return [$this->malformedBulkEvidence($transportOutcome, ['malformed_dataset'])];
+        }
+
+        $tables = [];
+        foreach ($document->documentElement->childNodes as $child) {
+            if ($child instanceof DOMElement && $child->localName === 'Table') {
+                $tables[] = $child;
+            }
+        }
+
+        if (count($tables) > self::MAX_BULK_ROWS) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+            return [$this->malformedBulkEvidence($transportOutcome, ['malformed_dataset', 'row_limit_exceeded'])];
+        }
+
+        if (count($tables) === 0) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+            return [];
+        }
+
+        $rows = [];
+        foreach ($tables as $table) {
+            $row = [
+                'consumer_number' => $this->bulkText($table, 'Consumer_Number'),
+                'registration_number' => $this->bulkText($table, 'Registration_Number'),
+                'paid_at' => $this->bulkText($table, 'Transaction_Date'),
+                'amount' => $this->bulkText($table, 'Paid_Amount'),
+                'reference' => $this->bulkText($table, 'Transaction_Reference'),
+                'currency' => $this->bulkText($table, 'Currency'),
+            ];
+
+            foreach ($row as $value) {
+                if ($value === null) {
+                    libxml_clear_errors();
+                    libxml_use_internal_errors($previous);
+                    return [$this->malformedBulkEvidence($transportOutcome, ['malformed_dataset'])];
+                }
+            }
+
+            $rows[] = $row;
+        }
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        $evidence = [];
+        $expectedConsumers = isset($context['expected_consumer_numbers']) && is_array($context['expected_consumer_numbers'])
+            ? array_map('strval', $context['expected_consumer_numbers'])
+            : [];
+
+        foreach ($rows as $row) {
+            $matched = in_array($row['consumer_number'], $expectedConsumers, true);
+            if (!$matched) {
+                $evidence[] = $this->bulkEvidence(
+                    self::STATUS_MANUAL_REVIEW,
+                    self::ERROR_UNMATCHED,
+                    $row,
+                    $transportOutcome,
+                    [self::ERROR_UNMATCHED]
+                );
+                continue;
+            }
+
+            $errors = [];
+            $errorClass = null;
+            $expectedAmount = isset($context['expected_amount'])
+                ? $this->normalizeAmount((string) $context['expected_amount'])
+                : null;
+            $expectedCurrency = isset($context['expected_currency'])
+                ? strtoupper(trim((string) $context['expected_currency']))
+                : 'PKR';
+            $amount = $this->normalizeAmount($row['amount']);
+            $currency = $row['currency'] === '' ? null : strtoupper($row['currency']);
+
+            if ($expectedAmount === null || $expectedCurrency === '') {
+                $errors[] = 'missing_expected_context';
+            }
+
+            if ($expectedAmount !== null && $amount !== $expectedAmount) {
+                $errorClass = self::ERROR_AMOUNT;
+                $errors[] = self::ERROR_AMOUNT;
+            }
+
+            if ($expectedCurrency !== '' && $currency !== $expectedCurrency) {
+                $errors[] = 'currency_mismatch';
+            }
+
+            if (!empty($errors)) {
+                $evidence[] = $this->bulkEvidence(
+                    self::STATUS_MANUAL_REVIEW,
+                    $errorClass,
+                    $row,
+                    $transportOutcome,
+                    $errors
+                );
+                continue;
+            }
+
+            $evidence[] = $this->bulkEvidence(
+                self::STATUS_CONFIRMED_UNPOSTED,
+                null,
+                $row,
+                $transportOutcome,
+                []
+            );
+        }
+
+        return $evidence;
     }
 
     private function transportFailure(array $transportOutcome, string $operation): KuickPayEvidence
@@ -412,6 +525,58 @@ class KuickPayResponseParser
             $this->traceId($transportOutcome),
             $validationErrors
         );
+    }
+
+    private function malformedBulkEvidence(array $transportOutcome, array $validationErrors): KuickPayEvidence
+    {
+        return $this->evidence(
+            self::OP_BULK,
+            self::STATUS_MANUAL_REVIEW,
+            self::ERROR_MALFORMED,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $this->traceId($transportOutcome),
+            $validationErrors
+        );
+    }
+
+    private function bulkEvidence(
+        string $status,
+        ?string $errorClass,
+        array $row,
+        array $transportOutcome,
+        array $validationErrors
+    ): KuickPayEvidence {
+        return $this->evidence(
+            self::OP_BULK,
+            $status,
+            $errorClass,
+            $row['reference'] === '' ? null : $row['reference'],
+            $row['consumer_number'] === '' ? null : $row['consumer_number'],
+            $row['registration_number'] === '' ? null : $row['registration_number'],
+            $this->normalizeAmount($row['amount']),
+            $row['currency'] === '' ? null : strtoupper($row['currency']),
+            $this->normalizeDate($row['paid_at']),
+            null,
+            $this->traceId($transportOutcome),
+            $validationErrors
+        );
+    }
+
+    private function bulkText(DOMElement $table, string $localName): ?string
+    {
+        foreach ($table->childNodes as $child) {
+            if ($child instanceof DOMElement && $child->localName === $localName) {
+                return trim($child->textContent);
+            }
+        }
+
+        return null;
     }
 
     private function parseInquiryFields(string $rawResult): array
