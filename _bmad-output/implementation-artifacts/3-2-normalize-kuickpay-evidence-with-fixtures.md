@@ -46,11 +46,11 @@ Derived from Epic 3 Story 3.2 (epics.md:600-617), FR16, FR17, FR28, the architec
 
 > **Delivery order:** Tasks 1–3 (evidence object + parser core + InsertVoucher creation cases) are the Story-2.3 unblock slice — build and verify them first. Tasks 4–5 (inquiry, bulk) follow. Task 6 (relocation + web-block), Task 7 (tests), Task 8 (verification) finalize. [Source: epics.md:606; sprint-status.yaml:51,61-62]
 
-- [ ] **Task 1 — Create the evidence value object `lib/KuickPayEvidence.php` (AC: 1, 3, 9)**
-  - [ ] Create `components/gateways/nonmerchant/kuickpay/lib/KuickPayEvidence.php`. Global namespace (no `namespace`), plain class `KuickPayEvidence`, matching `KuickPaySoapClient`/`KuickPayRedactor` style. **Typing:** PHP 8.2 parameter/return type hints (the lib-file convention 3.1 established — `?string`, `string`, `array`, `bool`); do **not** add `declare(strict_types=1)`; do **not** retrofit types onto legacy `kuickpay.php`.
-  - [ ] Hold exactly the 12 normalized fields (AC1): `status`, `error_class`, `reference`, `consumer_number`, `registration_number`, `amount`, `currency`, `paid_at`, `raw_status`, `redacted_trace_id`, `evidence_hash`, `validation_errors`. Make it immutable (constructor-assigned, read-only getters or public readonly-style accessors). Provide `toArray(): array` and a small helper such as `isConfirmedUnposted(): bool` (`status === 'confirmed_unposted'`). Add `operation` as an internal field if useful, but it is not one of the 12 contract fields. **`toArray()` returns exactly the 12 contract keys in contract-table order — `status`, `error_class`, `reference`, `consumer_number`, `registration_number`, `amount`, `currency`, `paid_at`, `raw_status`, `redacted_trace_id`, `evidence_hash`, `validation_errors` — using these exact snake_case names; the internal `operation` field must NOT appear in `toArray()`** (downstream 2.3/3.3/3.5 rely on this shape).
-  - [ ] **`amount` is always a canonical decimal string or null — never a PHP float/int** (NFR13). `currency` is an uppercased code (e.g. `PKR`) or null. `validation_errors` is a `string[]` of machine-readable reasons (e.g. `amount_mismatch`, `missing_voucher_id`, `malformed_dataset`). `raw_status` is the provider code string (`00`,`94`,…) — a status code, not a secret.
-  - [ ] **No secret/PII members** (AC9): no raw envelope, no raw fault, no `Name`/`Mobile`/`Email`/`Branch`, no credentials. The object IS the redacted, normalized contract product code consumes.
+- [x] **Task 1 — Create the evidence value object `lib/KuickPayEvidence.php` (AC: 1, 3, 9)**
+  - [x] Create `components/gateways/nonmerchant/kuickpay/lib/KuickPayEvidence.php`. Global namespace (no `namespace`), plain class `KuickPayEvidence`, matching `KuickPaySoapClient`/`KuickPayRedactor` style. **Typing:** PHP 8.2 parameter/return type hints (the lib-file convention 3.1 established — `?string`, `string`, `array`, `bool`); do **not** add `declare(strict_types=1)`; do **not** retrofit types onto legacy `kuickpay.php`.
+  - [x] Hold exactly the 12 normalized fields (AC1): `status`, `error_class`, `reference`, `consumer_number`, `registration_number`, `amount`, `currency`, `paid_at`, `raw_status`, `redacted_trace_id`, `evidence_hash`, `validation_errors`. Make it immutable (constructor-assigned, read-only getters or public readonly-style accessors). Provide `toArray(): array` and a small helper such as `isConfirmedUnposted(): bool` (`status === 'confirmed_unposted'`). Add `operation` as an internal field if useful, but it is not one of the 12 contract fields. **`toArray()` returns exactly the 12 contract keys in contract-table order — `status`, `error_class`, `reference`, `consumer_number`, `registration_number`, `amount`, `currency`, `paid_at`, `raw_status`, `redacted_trace_id`, `evidence_hash`, `validation_errors` — using these exact snake_case names; the internal `operation` field must NOT appear in `toArray()`** (downstream 2.3/3.3/3.5 rely on this shape).
+  - [x] **`amount` is always a canonical decimal string or null — never a PHP float/int** (NFR13). `currency` is an uppercased code (e.g. `PKR`) or null. `validation_errors` is a `string[]` of machine-readable reasons (e.g. `amount_mismatch`, `missing_voucher_id`, `malformed_dataset`). `raw_status` is the provider code string (`00`,`94`,…) — a status code, not a secret.
+  - [x] **No secret/PII members** (AC9): no raw envelope, no raw fault, no `Name`/`Mobile`/`Email`/`Branch`, no credentials. The object IS the redacted, normalized contract product code consumes.
 
 - [ ] **Task 2 — Create the parser core `lib/KuickPayResponseParser.php` (AC: 1, 2, 4, 9)**
   - [ ] Create `components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php`. Global namespace, plain class `KuickPayResponseParser`, CamelCase filename per architecture (architecture.md:545,685) — matches the 3.1 lib-file naming variance; do not rename to snake_case.
@@ -256,11 +256,24 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 
 ### Debug Log References
 
+- 2026-06-10: Added `KuickPayEvidenceTest` first; bootstrap failed on missing `KuickPayEvidence.php` as the expected RED phase.
+- 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayEvidenceTest.php` passed after implementation (2 tests, 19 assertions).
+- 2026-06-10: `php -l` passed for `KuickPayEvidence.php`, `tests/bootstrap.php`, and `KuickPayEvidenceTest.php`.
+
 ### Completion Notes List
+
+- Implemented immutable `KuickPayEvidence` value object with typed constructor/getters, exact 12-key `toArray()` contract, internal-only operation field, uppercase currency normalization, string validation errors, and `isConfirmedUnposted()`.
 
 ### File List
 
+- components/gateways/nonmerchant/kuickpay/lib/KuickPayEvidence.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPayEvidenceTest.php
+- components/gateways/nonmerchant/kuickpay/tests/bootstrap.php
+- _bmad-output/implementation-artifacts/3-2-normalize-kuickpay-evidence-with-fixtures.md
+
 ### Change Log
+
+- 2026-06-10: Added normalized evidence value object and contract tests.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
