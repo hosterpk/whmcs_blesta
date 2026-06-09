@@ -24,7 +24,7 @@ class KuickpayReconcilePlugin extends Plugin
      * Performs install actions.
      *
      * Creates the durable voucher evidence tables used by KuickPay customer
-     * payment references. Reconciliation cron is owned by later stories.
+     * payment references and reconciliation.
      *
      * @param int $plugin_id The ID of the plugin being installed
      */
@@ -54,7 +54,9 @@ class KuickpayReconcilePlugin extends Plugin
                 ->setField('date_created', ['type'=>'datetime'])
                 ->setField('date_updated', ['type'=>'datetime'])
                 ->setField('date_posted', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
+                ->setField('date_paid', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
                 ->setField('date_last_checked', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
+                ->setField('retry_count', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
                 ->setField('error_class', ['type'=>'varchar', 'size'=>32, 'is_null'=>true, 'default'=>null])
                 ->setField('raw_status', ['type'=>'varchar', 'size'=>8, 'is_null'=>true, 'default'=>null])
                 ->setField('evidence_hash', ['type'=>'varchar', 'size'=>24, 'is_null'=>true, 'default'=>null])
@@ -80,6 +82,9 @@ class KuickpayReconcilePlugin extends Plugin
                 ->setKey(['voucher_id', 'invoice_id'], 'unique')
                 ->setKey(['invoice_id'], 'index')
                 ->create('kuickpay_voucher_invoices', true);
+
+            $this->createReconcileTables();
+            $this->addCronTasks();
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['create'=>$e->getMessage()]]);
             return;
@@ -89,13 +94,27 @@ class KuickpayReconcilePlugin extends Plugin
     /**
      * Performs upgrade actions.
      *
-     * This is the first schema version, so there are no versioned migrations yet.
-     *
      * @param string $current_version The current installed version of this plugin
      * @param int $plugin_id The ID of plugin being upgraded
      */
     public function upgrade($current_version, $plugin_id)
     {
+        if (version_compare($current_version, '1.1.0', '>=')) {
+            return;
+        }
+
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Input', 'Record']);
+        }
+
+        try {
+            $this->addVoucherEvidenceColumns();
+            $this->createReconcileTables();
+            $this->addCronTasks();
+        } catch (Exception $e) {
+            $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
+            return;
+        }
     }
 
     /**
@@ -110,5 +129,223 @@ class KuickpayReconcilePlugin extends Plugin
      */
     public function uninstall($plugin_id, $last_instance)
     {
+        if (!isset($this->Input)) {
+            Loader::loadComponents($this, ['Input']);
+        }
+
+        $this->addCronTasks(true, $last_instance);
+    }
+
+    /**
+     * Runs plugin cron tasks.
+     *
+     * @param string $key The cron task key
+     */
+    public function cron($key)
+    {
+        if ($key !== 'reconcile_pending') {
+            return;
+        }
+
+        Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayReconcileService.php');
+
+        $service = new KuickPayReconcileService();
+        $service->runCron((int) Configure::get('Blesta.company_id'));
+    }
+
+    /**
+     * Adds reconciliation-only columns to the existing voucher table.
+     */
+    private function addVoucherEvidenceColumns()
+    {
+        if (!$this->columnExists('kuickpay_vouchers', 'retry_count')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_vouchers` ADD `retry_count` INT UNSIGNED NOT NULL DEFAULT 0'
+            );
+        }
+
+        if (!$this->columnExists('kuickpay_vouchers', 'date_paid')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_vouchers` ADD `date_paid` DATETIME NULL DEFAULT NULL AFTER `date_posted`'
+            );
+        }
+    }
+
+    /**
+     * Creates reconciliation run, item, lock, and audit tables.
+     */
+    private function createReconcileTables()
+    {
+        $this->Record
+            ->setField('id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>true])
+            ->setField('company_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true])
+            ->setField('trigger_type', ['type'=>'enum', 'size'=>"'cron','manual'"])
+            ->setField('status', ['type'=>'enum', 'size'=>"'running','completed','aborted','failed'"])
+            ->setField('date_started', ['type'=>'datetime'])
+            ->setField('date_completed', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
+            ->setField('cursor', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
+            ->setField('total_eligible', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_checked', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_confirmed', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_retry', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_manual_review', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_expired', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_failed', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_errors', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('summary', ['type'=>'text', 'is_null'=>true, 'default'=>null])
+            ->setKey(['id'], 'primary')
+            ->setKey(['company_id'], 'index', 'idx_kuickpay_runs_company')
+            ->setKey(['status'], 'index', 'idx_kuickpay_runs_status')
+            ->create('kuickpay_reconciliation_runs', true);
+
+        $this->Record
+            ->setField('id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>true])
+            ->setField('run_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true])
+            ->setField('voucher_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true])
+            ->setField('prior_status', ['type'=>'varchar', 'size'=>32])
+            ->setField('new_status', ['type'=>'varchar', 'size'=>32])
+            ->setField('error_class', ['type'=>'varchar', 'size'=>32, 'is_null'=>true, 'default'=>null])
+            ->setField('evidence_hash', ['type'=>'varchar', 'size'=>24, 'is_null'=>true, 'default'=>null])
+            ->setField('redacted_trace_id', ['type'=>'varchar', 'size'=>32, 'is_null'=>true, 'default'=>null])
+            ->setField('date_created', ['type'=>'datetime'])
+            ->setKey(['id'], 'primary')
+            ->setKey(['run_id', 'voucher_id'], 'unique', 'uniq_kuickpay_items_run_voucher')
+            ->setKey(['voucher_id'], 'index', 'idx_kuickpay_items_voucher')
+            ->create('kuickpay_reconciliation_items', true);
+
+        $this->Record
+            ->setField('id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>true])
+            ->setField('lock_name', ['type'=>'varchar', 'size'=>64])
+            ->setField('company_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true])
+            ->setField('owner_token', ['type'=>'varchar', 'size'=>64])
+            ->setField('date_acquired', ['type'=>'datetime'])
+            ->setField('date_expires', ['type'=>'datetime'])
+            ->setField('date_heartbeat', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
+            ->setKey(['id'], 'primary')
+            ->setKey(['company_id', 'lock_name'], 'unique', 'uniq_kuickpay_locks_company_name')
+            ->create('kuickpay_reconcile_locks', true);
+
+        $this->Record
+            ->setField('id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>true])
+            ->setField('company_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true])
+            ->setField('voucher_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
+            ->setField('run_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
+            ->setField('event_name', ['type'=>'varchar', 'size'=>64])
+            ->setField('redacted_trace_id', ['type'=>'varchar', 'size'=>32, 'is_null'=>true, 'default'=>null])
+            ->setField('evidence_hash', ['type'=>'varchar', 'size'=>24, 'is_null'=>true, 'default'=>null])
+            ->setField('payload', ['type'=>'text', 'is_null'=>true, 'default'=>null])
+            ->setField('date_created', ['type'=>'datetime'])
+            ->setKey(['id'], 'primary')
+            ->setKey(['company_id'], 'index', 'idx_kuickpay_audit_company')
+            ->setKey(['voucher_id'], 'index', 'idx_kuickpay_audit_voucher')
+            ->setKey(['event_name'], 'index', 'idx_kuickpay_audit_event')
+            ->create('kuickpay_audit_events', true);
+    }
+
+    /**
+     * Checks whether a column exists on a table.
+     *
+     * @param string $table The table name
+     * @param string $column The column name
+     * @return bool True when present
+     */
+    private function columnExists($table, $column)
+    {
+        $statement = $this->Record->query('SHOW COLUMNS FROM `' . $table . '` LIKE ?', $column);
+
+        return (bool) $statement->fetch();
+    }
+
+    /**
+     * Adds or removes cron tasks.
+     *
+     * @param bool $undo True to remove the cron task
+     * @param bool $last_instance True if the plugin is being completely uninstalled
+     * @return bool True on success
+     */
+    private function addCronTasks($undo = false, $last_instance = false)
+    {
+        Loader::loadModels($this, ['CronTasks']);
+
+        foreach ($this->getCronTasks() as $task) {
+            if ($undo) {
+                $this->deleteCronTask($task, $last_instance);
+            } elseif (!$this->addCronTask($task)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Creates a cron task and task run idempotently.
+     *
+     * @param array $task Cron task fields
+     * @return bool True on success
+     */
+    private function addCronTask(array $task)
+    {
+        if (($cron_task = $this->CronTasks->getByKey($task['key'], $task['dir'], $task['task_type']))) {
+            $task_id = $cron_task->id;
+        } else {
+            $task_id = $this->CronTasks->add($task);
+
+            if (($errors = $this->CronTasks->errors())) {
+                $this->Input->setErrors($errors);
+                return false;
+            }
+        }
+
+        if ($task_id && !$this->CronTasks->getTaskRunByKey($task['key'], $task['dir'], false, $task['task_type'])) {
+            $this->CronTasks->addTaskRun($task_id, ['enabled'=>$task['enabled'], $task['type']=>$task['type_value']]);
+
+            if (($errors = $this->CronTasks->errors())) {
+                $this->Input->setErrors($errors);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Deletes a cron task run and optionally the shared task definition.
+     *
+     * @param array $task Cron task fields
+     * @param bool $last_instance True if the plugin is being completely uninstalled
+     */
+    private function deleteCronTask(array $task, $last_instance = false)
+    {
+        if (($task_run = $this->CronTasks->getTaskRunByKey($task['key'], $task['dir'], false, $task['task_type']))) {
+            $this->CronTasks->deleteTaskRun($task_run->task_run_id);
+        }
+
+        if ($last_instance &&
+            ($cron_task = $this->CronTasks->getByKey($task['key'], $task['dir'], $task['task_type']))
+        ) {
+            $this->CronTasks->deleteTask($cron_task->id, $task['task_type'], $task['dir']);
+        }
+    }
+
+    /**
+     * Gets installable cron task definitions.
+     *
+     * @return array Cron task definitions
+     */
+    private function getCronTasks()
+    {
+        return [
+            [
+                'key'=>'reconcile_pending',
+                'dir'=>'kuickpay_reconcile',
+                'task_type'=>'plugin',
+                'name'=>Language::_('KuickpayReconcilePlugin.cron.reconcile_pending_name', true),
+                'description'=>Language::_('KuickpayReconcilePlugin.cron.reconcile_pending_desc', true),
+                'type'=>'interval',
+                'type_value'=>5,
+                'enabled'=>1
+            ],
+        ];
     }
 }

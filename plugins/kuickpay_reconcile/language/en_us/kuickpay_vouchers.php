@@ -1,6 +1,7 @@
 <?php
 // KuickpayVouchers model validation errors (Story 2.1)
 $lang['KuickpayVouchers.!error.company_id.empty'] = 'Company ID is required.';
+$lang['KuickpayVouchers.!error.company_id.scope'] = 'Company ID is required to update a voucher.';
 $lang['KuickpayVouchers.!error.client_id.empty'] = 'Client ID is required.';
 $lang['KuickpayVouchers.!error.gateway_id.empty'] = 'Gateway ID is required.';
 $lang['KuickpayVouchers.!error.currency.empty'] = 'Currency is required.';

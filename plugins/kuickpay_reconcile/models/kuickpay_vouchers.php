@@ -35,7 +35,9 @@ class KuickpayVouchers extends KuickpayReconcileModel
         'date_created',
         'date_updated',
         'date_posted',
+        'date_paid',
         'date_last_checked',
+        'retry_count',
         'error_class',
         'raw_status',
         'evidence_hash',
@@ -79,6 +81,14 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function edit(int $voucher_id, array $vars)
     {
+        if (!isset($vars['company_id'])) {
+            $this->Input->setErrors(['company_id'=> ['scope'=>$this->_('KuickpayVouchers.!error.company_id.scope')]]);
+            return;
+        }
+
+        $company_id = (int) $vars['company_id'];
+        unset($vars['company_id']);
+
         $vars['date_updated'] = date('Y-m-d H:i:s');
 
         $fields = array_values(array_intersect(array_keys($vars), self::FIELDS));
@@ -86,7 +96,10 @@ class KuickpayVouchers extends KuickpayReconcileModel
             return;
         }
 
-        $this->Record->where('id', '=', $voucher_id)->update('kuickpay_vouchers', $vars, $fields);
+        $this->Record
+            ->where('id', '=', $voucher_id)
+            ->where('company_id', '=', $company_id)
+            ->update('kuickpay_vouchers', $vars, $fields);
     }
 
     /**
@@ -179,6 +192,60 @@ class KuickpayVouchers extends KuickpayReconcileModel
 
         return $this->Record->order($order_by)
             ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
+            ->fetchAll();
+    }
+
+    /**
+     * Fetches vouchers eligible for single-reference reconciliation.
+     *
+     * @param int $company_id The company ID
+     * @param int $limit Maximum records to return
+     * @param int $after_id Resume cursor; only IDs greater than this are returned
+     * @param string|null $pending_min_recheck_before Pending min recheck timestamp
+     * @return array Voucher rows
+     */
+    public function getReconcilable(
+        int $company_id,
+        int $limit,
+        int $after_id = 0,
+        string $pending_min_recheck_before = null
+    ): array {
+        $pending_min_recheck_before = $pending_min_recheck_before ?: date('Y-m-d H:i:s', strtotime('-30 minutes'));
+
+        return $this->Record->select()
+            ->from('kuickpay_vouchers')
+            ->where('company_id', '=', $company_id)
+            ->where('currency', '=', 'PKR')
+            ->where('status', 'in', ['pending', 'retry'])
+            ->where('id', '>', max(0, $after_id))
+            ->open()
+                ->where('date_expires', '>=', date('Y-m-d'))
+                ->orWhere('date_expires', '=', null)
+            ->close()
+            ->open()
+                ->open()
+                    ->where('status', '=', 'pending')
+                    ->open()
+                        ->where('date_last_checked', '=', null)
+                        ->orWhere('date_last_checked', '<=', $pending_min_recheck_before)
+                    ->close()
+                ->close()
+                ->open()
+                    ->orWhere('status', '=', 'retry')
+                    ->open()
+                        ->where('date_last_checked', '=', null)
+                        ->orWhere(
+                            'date_last_checked',
+                            '<=',
+                            'DATE_SUB(NOW(), INTERVAL LEAST(360, 30 * POW(2, retry_count)) MINUTE)',
+                            false,
+                            false
+                        )
+                    ->close()
+                ->close()
+            ->close()
+            ->order(['date_last_checked' => 'ASC', 'id' => 'ASC'])
+            ->limit(max(1, $limit))
             ->fetchAll();
     }
 

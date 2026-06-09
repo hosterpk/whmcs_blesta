@@ -117,4 +117,38 @@ class KuickPayVoucherRepository
             'invoices' => $this->KuickpayVoucherInvoices->getByVoucherId($voucher_id),
         ];
     }
+
+    /**
+     * Fetches vouchers eligible for bounded single-inquiry reconciliation.
+     *
+     * @param int $company_id The company ID
+     * @param int $limit Maximum records to return
+     * @param int $afterId Resume cursor; only IDs greater than this are returned
+     * @param string|null $pendingMinRecheckBefore Pending vouchers checked after this timestamp are skipped
+     * @return array Voucher rows
+     */
+    public function getReconcilable(
+        int $company_id,
+        int $limit,
+        int $afterId = 0,
+        string $pendingMinRecheckBefore = null
+    ): array {
+        return $this->KuickpayVouchers->getReconcilable(
+            $company_id,
+            $limit,
+            $afterId,
+            $pendingMinRecheckBefore
+        );
+    }
+
+    /**
+     * Updates a voucher through the company-scoped model mutator.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param array $vars Voucher fields including company_id
+     */
+    public function edit(int $voucher_id, array $vars): void
+    {
+        $this->KuickpayVouchers->edit($voucher_id, $vars);
+    }
 }
