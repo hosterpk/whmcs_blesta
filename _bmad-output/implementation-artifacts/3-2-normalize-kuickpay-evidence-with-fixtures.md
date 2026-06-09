@@ -4,7 +4,7 @@ baseline_commit: 45926c5e41114ad147968f6ed3ffe43226be40bb
 
 # Story 3.2: Normalize KuickPay Evidence with Fixtures
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -337,6 +337,29 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Added hardening fixtures, provenance, and fixture-backed parser tests.
 - 2026-06-10: Completed verification and regression guard for parser evidence story.
 - 2026-06-10: Marked story ready for review after final completion gates.
+- 2026-06-10: Code review applied two fail-closed parser fixes (commits 9350b310, a5ec6b84); suite 89 tests / 543 assertions.
+
+### Review Findings
+
+Adversarial code review (`bmad-code-review`, 2026-06-10, scope `8114d347..HEAD`) ran three parallel Opus-class layers — Blind Hunter (diff-only), Edge Case Hunter (diff + project), and Acceptance Auditor (diff + spec). Outcome: **2 patch, 0 decision-needed, 0 defer, 9 dismissed**. Both patches were applied and verified (`php -l` clean; component suite 89 tests, 543 assertions).
+
+**Patches (applied):**
+
+- [x] [Review][Patch] Unsound inquiry field reconstruction corrupted valid paid rows — `parseInquiryFields()` rebuilt fields from comma counts and mistook a purely numeric transaction-reference (field 4) for a split thousands-separated amount, mismapping `reference`/`currency`; it could confirm a paid row with the wrong reference or downgrade a genuine paid row to manual_review. All three layers converged on it; untested because every fixture used a non-numeric `KP-TXN-*` ref. Removed the reconstruction (result is fixed-position comma-delimited) and added a numeric-txn-ref regression guard. Fixed in `9350b310`. [components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php:582]
+- [x] [Review][Patch] Blank consumer number could match a blank expected entry in bulk — `parseBulk()` used `in_array('', [''], true)`, letting a blank `Consumer_Number` row match a blank expected value and confirm payment (fail-open). Now filters empty expected consumer numbers so an absent/blank identity leaves every row unmatched. Fixed in `a5ec6b84`. [components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php:187]
+
+**Dismissed (spec-compliant or no defect) — recorded for audit:**
+
+- Single-inquiry `expected_consumer_number` matched against the registration field (field 1) — flagged HIGH by the diff-only Blind Hunter, but **spec-mandated**: single inquiry carries no Consumer Number; AC6 / Task 4 require identity matched on field 1. The spec-aware Acceptance Auditor confirmed it is a non-issue.
+- Amount fractional truncation to 2 digits — spec amount-normalization rule step 4 explicitly mandates truncate-to-2; currency is PKR-only (Story 1.5), no sub-paisa.
+- `evidence_hash` excludes `status`/`error_class` — AC2 fixes the hash input to exactly `[operation, raw_status, reference, consumer_number, registration_number, amount, currency, paid_at]`; correlating identical business evidence is the intent.
+- `currency_mismatch` yields `error_class = null` plus a validation error — AC6 mandates exactly this (no currency error class exists; status is known).
+- DOCTYPE substring rejection — AC7 mandates rejecting `<!DOCTYPE` before parsing.
+- InsertVoucher voucher-id via `trim(substr($result, 2))` — spec authorizes defensive, delimiter-tolerant parsing.
+- libxml internal-error state save/restore without try/finally — every current return path restores it; `loadXML()` does not throw.
+- Bulk DOCTYPE literal inside business data, and incidental fail-closed ordering — speculative, no current defect.
+
+**Out-of-scope note:** `kuickpay.php` carries a `buildProcess()` currency backstop at HEAD from Story 1.5 (commits `9380a6a7`/`0534daf8`), already reviewed and `done`. AC11 holds for the 3.2 diff, which touches none of the protected gateway/client/redactor surfaces.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
