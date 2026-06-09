@@ -85,12 +85,12 @@ so that production-specific values are controlled without code changes.
 - [x] **Task 5 — Encrypt credentials at rest (AC3 secret-safety; fail-safe for Story 1.3)** [Source: prd.md FR-3 line 113; coingate encryptableFields]
   - [x] 5.1 Update `encryptableFields()` to `return ['voucher_password', 'inquiry_password'];` (replacing the scaffold `return [];`). This guarantees no plaintext password is written to gateway meta even before Story 1.3 lands. Blesta auto-encrypts these listed fields on save and auto-decrypts them into `$meta` on load — do **not** hand-encrypt in `editSettings()` or hand-decrypt in `getSettings()` (that would double-encrypt). Do **not** add masking/redaction logic here either — that is Story 1.3.
 
-- [ ] **Task 6 — Verification (no overstating; AC1–AC3)** [Source: project-context.md#Testing Rules, #Development Workflow Rules; NFR12]
-  - [ ] 6.1 `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` and `php -l` the changed `.pdt`/language files (templates: `php -l` is fine for syntax).
-  - [ ] 6.2 Prove no hard-coded production values / no secret echo: `grep -rinE "https?://|institution|password|fee|conversion" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm matches are only language keys/field names, never literal URLs/IDs/secrets. Confirm the password fields render empty: `grep -nE "fieldPassword\('(voucher|inquiry)_password'" components/gateways/nonmerchant/kuickpay/views/default/settings.pdt` and verify **no `value` key and no `$meta[` appears on those lines** (empty by omission — do not assert a literal `null` argument, which would be the broken 3-arg shape).
-  - [ ] 6.3 Prove scope containment: `git status --porcelain` shows only the gateway tree + this story file + sprint-status.yaml; **no** `plugins/kuickpay_reconcile/` changes, **no** new `lib/` files.
-  - [ ] 6.4 If a running Blesta + MySQL dev instance is available: in admin, open Settings → Payment Gateways → KuickPay, confirm the grouped form renders, save with a blank required field and a non-HTTPS URL → both rejected with Blesta error messages (AC2); save valid values → persists; reopen → password fields are blank (not echoed); confirm `gateway_meta` stores the password encrypted (not plaintext). If no runtime/DB is available, **state that explicitly** and rely on lint + grep + structural checks; do not claim install/runtime coverage. [Source: NFR12 line 109]
-  - [ ] 6.5 Accessibility (UX-DR9/UX-DR24): confirm every `fieldText`/`fieldPassword`/`fieldSelect`/`fieldCheckbox` has a matching `<label>` whose `for` equals the field's `id` (each field must pass an explicit `'id'` in its attributes). Grep the `.pdt` for `for=` / `id=` pairings or inspect the rendered HTML.
+- [x] **Task 6 — Verification (no overstating; AC1–AC3)** [Source: project-context.md#Testing Rules, #Development Workflow Rules; NFR12]
+  - [x] 6.1 `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` and `php -l` the changed `.pdt`/language files (templates: `php -l` is fine for syntax).
+  - [x] 6.2 Prove no hard-coded production values / no secret echo: `grep -rinE "https?://|institution|password|fee|conversion" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm matches are only language keys/field names, never literal URLs/IDs/secrets. Confirm the password fields render empty: `grep -nE "fieldPassword\('(voucher|inquiry)_password'" components/gateways/nonmerchant/kuickpay/views/default/settings.pdt` and verify **no `value` key and no `$meta[` appears on those lines** (empty by omission — do not assert a literal `null` argument, which would be the broken 3-arg shape).
+  - [x] 6.3 Prove scope containment: `git status --porcelain` shows only the gateway tree + this story file + sprint-status.yaml; **no** `plugins/kuickpay_reconcile/` changes, **no** new `lib/` files.
+  - [x] 6.4 If a running Blesta + MySQL dev instance is available: in admin, open Settings → Payment Gateways → KuickPay, confirm the grouped form renders, save with a blank required field and a non-HTTPS URL → both rejected with Blesta error messages (AC2); save valid values → persists; reopen → password fields are blank (not echoed); confirm `gateway_meta` stores the password encrypted (not plaintext). If no runtime/DB is available, **state that explicitly** and rely on lint + grep + structural checks; do not claim install/runtime coverage. [Source: NFR12 line 109]
+  - [x] 6.5 Accessibility (UX-DR9/UX-DR24): confirm every `fieldText`/`fieldPassword`/`fieldSelect`/`fieldCheckbox` has a matching `<label>` whose `for` equals the field's `id` (each field must pass an explicit `'id'` in its attributes). Grep the `.pdt` for `for=` / `id=` pairings or inspect the rendered HTML.
 
 ## Dev Notes
 
@@ -383,6 +383,12 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - 2026-06-09: Task 3 green checks `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed; structural grep confirmed HTTPS URL callback, empty-tolerant numeric rule, reference-pattern rule, conditional inquiry credential rules, select allowlists, checkbox allowlists, and Blesta `setRules`/`validates` flow.
 - 2026-06-09: Task 5 red check confirmed `encryptableFields()` returned an empty array before implementation.
 - 2026-06-09: Task 5 green checks `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed; grep confirmed `encryptableFields()` returns `voucher_password` and `inquiry_password`.
+- 2026-06-09: Task 6 syntax checks passed for `kuickpay.php`, `views/default/settings.pdt`, and `language/en_us/kuickpay.php`.
+- 2026-06-09: Task 6 grep for hard-coded production values returned only Blesta license links plus field names/language keys; no production URL, Institution ID literal, credential, fee amount, or conversion rate was introduced.
+- 2026-06-09: Task 6 password grep confirmed `fieldPassword('voucher_password', ['id' => ...])` and `fieldPassword('inquiry_password', ['id' => ...])` have no stored `$meta` value and no `value` attribute.
+- 2026-06-09: Task 6 scope checks: `git status --porcelain` was clean before story-only verification updates; `find components/gateways/nonmerchant/kuickpay -type d -name lib` returned no output; no plugin files were changed.
+- 2026-06-09: Task 6 test/runtime availability check found `../tests` missing and no KuickPay-local PHPUnit/PHPCS config. No running Blesta + MySQL admin workflow was exercised; verification is limited to lint, grep, and structural checks.
+- 2026-06-09: Task 6 accessibility check confirmed all form controls pass explicit `id` attributes and matching labels; literal fields were checked with grep and the fixed instruction checkbox loop was inspected to use the same `$field` for `id` and `for`.
 
 ### Completion Notes List
 
@@ -390,6 +396,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - Task 2/4: Replaced the scaffold info alert with five grouped settings sections, preserved the companion-missing branch, rendered password fields empty by omission, applied field-specific checkbox defaults, and added all language-driven labels, help notes, option labels, and validation messages.
 - Task 3: Implemented `editSettings()` validation using Blesta `Input` rules, including checkbox defaults, select normalization, HTTPS URL validation, required fields, optional non-negative integer checks, reference-pattern shape checks, conditional inquiry credentials, and checkbox/select allowlists.
 - Task 5: Added `voucher_password` and `inquiry_password` to `encryptableFields()` for Blesta-managed encrypted storage.
+- Task 6: Completed fallback verification with PHP syntax checks, structural grep checks, password non-echo proof, scope containment checks, and accessibility label/id inspection. Root PHPUnit and runtime admin/DB verification were not available in this checkout.
 
 ### File List
 
@@ -397,6 +404,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - components/gateways/nonmerchant/kuickpay/views/default/settings.pdt
 - components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php
 - _bmad-output/implementation-artifacts/1-2-configure-kuickpay-gateway-settings.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
 
 ## Change Log
 
@@ -404,6 +412,7 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 - 2026-06-09: Built the grouped KuickPay gateway settings form and added the language keys it renders.
 - 2026-06-09: Added KuickPay gateway settings validation in `editSettings()`.
 - 2026-06-09: Added encrypted storage metadata for KuickPay credential fields.
+- 2026-06-09: Completed fallback verification for KuickPay settings configuration.
 - 2026-06-09: Story drafted (ready-for-dev) via bmad-create-story. Exhaustive context-engine analysis across epics, PRD (FR-2/3/5/7), addendum SOAP mapping, architecture, UX (UX-DR8/9/25/28), the Story 1.1 scaffold + learnings, deferred-work log, and the canonical in-repo coingate/paypal gateway settings idioms.
 - 2026-06-09: Validation triage (multi-agent) applied, all findings verified against the codebase. Corrected the `fieldPassword` call to the 2-arg attributes signature (`$attributes` is the 2nd param, not a value) and fixed the Task 6.2 grep proof accordingly; switched optional-numeric rules to the empty-tolerant `/^([0-9]+)?$/` idiom (a blank input submits `''`; `if_set` skips only absent keys); added an authoritative **Default meta values** table and made the checkbox render use each field's real default (fixes `inquiry_same_as_voucher` first-save forcing inquiry credentials); made the reference-pattern illustrative defaults space-free/regex-consistent and explicitly non-prefilled; added single-option select normalization; documented the interim credential re-save limitation (owned by 1.3); and added smaller guards (no `<form>` tag, `encryptableFields()` auto-encrypt/decrypt, `process.pdt` do-not-touch, `scaffold_note` removal ordering, group `pad` wrapper, accessibility check 6.5, downgraded the `matches` caution to confirmed).
 
