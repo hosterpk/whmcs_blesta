@@ -108,20 +108,7 @@ class KuickPayResponseParser
             return $this->parseInsertVoucher($rawResult, $transportOutcome, $context);
         }
 
-        return $this->evidence(
-            $operation,
-            self::STATUS_MANUAL_REVIEW,
-            self::ERROR_UNKNOWN,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            $this->traceId($transportOutcome),
-            ['unsupported_operation']
-        );
+        return $this->parseBillPaymentInquiry($rawResult, $transportOutcome, $context);
     }
 
     public function parseBulk(array $transportOutcome, array $context = []): array
@@ -280,6 +267,213 @@ class KuickPayResponseParser
             $this->traceId($transportOutcome),
             [self::ERROR_UNKNOWN]
         );
+    }
+
+    private function parseBillPaymentInquiry(string $rawResult, array $transportOutcome, array $context): KuickPayEvidence
+    {
+        $fields = $this->parseInquiryFields($rawResult);
+        if (count($fields) < 6) {
+            return $this->evidence(
+                self::OP_INQUIRY,
+                self::STATUS_MANUAL_REVIEW,
+                self::ERROR_MALFORMED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                $this->traceId($transportOutcome),
+                ['malformed_result']
+            );
+        }
+
+        $rawStatus = trim($fields[0]);
+        if (strlen($rawStatus) !== 2 || !ctype_digit($rawStatus)) {
+            return $this->inquiryEvidence(
+                self::STATUS_MANUAL_REVIEW,
+                self::ERROR_MALFORMED,
+                $fields,
+                $rawStatus === '' ? null : $rawStatus,
+                $transportOutcome,
+                ['malformed_status']
+            );
+        }
+
+        if ($rawStatus === '01') {
+            return $this->inquiryEvidence(
+                self::STATUS_PENDING,
+                null,
+                $fields,
+                $rawStatus,
+                $transportOutcome,
+                []
+            );
+        }
+
+        if ($rawStatus === '02') {
+            return $this->inquiryEvidence(
+                self::STATUS_EXPIRED,
+                null,
+                $fields,
+                $rawStatus,
+                $transportOutcome,
+                []
+            );
+        }
+
+        if ($rawStatus !== '00') {
+            return $this->inquiryEvidence(
+                self::STATUS_MANUAL_REVIEW,
+                self::ERROR_UNKNOWN,
+                $fields,
+                $rawStatus,
+                $transportOutcome,
+                [self::ERROR_UNKNOWN]
+            );
+        }
+
+        $errors = [];
+        $errorClass = null;
+        $expectedAmount = isset($context['expected_amount'])
+            ? $this->normalizeAmount((string) $context['expected_amount'])
+            : null;
+        $expectedCurrency = isset($context['expected_currency'])
+            ? strtoupper(trim((string) $context['expected_currency']))
+            : 'PKR';
+        $amount = $this->normalizeAmount($fields[3] ?? '');
+        $currency = isset($fields[6]) && trim($fields[6]) !== '' ? strtoupper(trim($fields[6])) : null;
+        $registrationNumber = trim($fields[1] ?? '');
+
+        if ($expectedAmount === null || $expectedCurrency === '' || (
+            !isset($context['expected_registration_number'])
+            && !isset($context['expected_consumer_number'])
+        )) {
+            $errors[] = 'missing_expected_context';
+        }
+
+        if ($expectedAmount !== null && $amount !== $expectedAmount) {
+            $errorClass = self::ERROR_AMOUNT;
+            $errors[] = self::ERROR_AMOUNT;
+        }
+
+        if ($expectedCurrency !== '' && $currency !== $expectedCurrency) {
+            $errors[] = 'currency_mismatch';
+        }
+
+        foreach (['expected_registration_number', 'expected_consumer_number'] as $key) {
+            if (isset($context[$key]) && (string) $context[$key] !== $registrationNumber) {
+                $errorClass = $errorClass ?? self::ERROR_UNMATCHED;
+                $errors[] = self::ERROR_UNMATCHED;
+            }
+        }
+
+        if (!empty($errors)) {
+            return $this->inquiryEvidence(
+                self::STATUS_MANUAL_REVIEW,
+                $errorClass,
+                $fields,
+                $rawStatus,
+                $transportOutcome,
+                $errors
+            );
+        }
+
+        return $this->inquiryEvidence(
+            self::STATUS_CONFIRMED_UNPOSTED,
+            null,
+            $fields,
+            $rawStatus,
+            $transportOutcome,
+            []
+        );
+    }
+
+    private function inquiryEvidence(
+        string $status,
+        ?string $errorClass,
+        array $fields,
+        ?string $rawStatus,
+        array $transportOutcome,
+        array $validationErrors
+    ): KuickPayEvidence {
+        return $this->evidence(
+            self::OP_INQUIRY,
+            $status,
+            $errorClass,
+            isset($fields[5]) && trim($fields[5]) !== '' ? trim($fields[5]) : null,
+            null,
+            isset($fields[1]) && trim($fields[1]) !== '' ? trim($fields[1]) : null,
+            isset($fields[3]) ? $this->normalizeAmount($fields[3]) : null,
+            isset($fields[6]) && trim($fields[6]) !== '' ? strtoupper(trim($fields[6])) : null,
+            isset($fields[2]) ? $this->normalizeDate($fields[2]) : null,
+            $rawStatus,
+            $this->traceId($transportOutcome),
+            $validationErrors
+        );
+    }
+
+    private function parseInquiryFields(string $rawResult): array
+    {
+        $fields = array_map('trim', explode(',', $rawResult));
+        $count = count($fields);
+
+        if ($count > 8 || ($count === 8 && $this->looksLikeAmountContinuation($fields[4]))) {
+            $suffixCount = $count > 8 ? 4 : 3;
+            $amountEnd = $count - $suffixCount - 1;
+            $amountParts = array_slice($fields, 3, $amountEnd - 2);
+            $fields = [
+                $fields[0],
+                $fields[1] ?? '',
+                $fields[2] ?? '',
+                implode(',', $amountParts),
+                $fields[$amountEnd + 1] ?? '',
+                $fields[$amountEnd + 2] ?? '',
+                $fields[$amountEnd + 3] ?? '',
+            ];
+        }
+
+        return $fields;
+    }
+
+    private function looksLikeAmountContinuation(string $value): bool
+    {
+        return preg_match('/^\d+(?:\.\d+)?$/', trim($value)) === 1;
+    }
+
+    private function normalizeAmount(string $amount): ?string
+    {
+        $amount = str_replace(',', '', trim($amount));
+        if ($amount === '' || preg_match('/^\d+(?:\.\d+)?$/', $amount) !== 1) {
+            return null;
+        }
+
+        $parts = explode('.', $amount, 2);
+        $integer = ltrim($parts[0], '0');
+        if ($integer === '') {
+            $integer = '0';
+        }
+
+        $fraction = $parts[1] ?? '';
+        $fraction = substr(str_pad($fraction, 2, '0'), 0, 2);
+
+        return $integer . '.' . $fraction;
+    }
+
+    private function normalizeDate(string $date): ?string
+    {
+        $date = trim($date);
+        if ($date === '' || preg_match('/^\d{8}$/', $date) !== 1) {
+            return null;
+        }
+
+        $parsed = DateTime::createFromFormat('!Ymd', $date);
+        if (!$parsed || $parsed->format('Ymd') !== $date) {
+            return null;
+        }
+
+        return $parsed->format('Y-m-d');
     }
 
     private function evidence(
