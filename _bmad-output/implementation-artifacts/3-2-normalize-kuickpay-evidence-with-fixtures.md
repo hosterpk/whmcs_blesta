@@ -103,10 +103,10 @@ Derived from Epic 3 Story 3.2 (epics.md:600-617), FR16, FR17, FR28, the architec
   - [x] Add component-local parser tests in the existing gateway test tree `components/gateways/nonmerchant/kuickpay/tests/`: `KuickPayResponseParserTest.php` and `KuickPayEvidenceTest.php` (CamelCase, matching lib files and the 3.1 test naming). Extend `tests/bootstrap.php` to `require_once` the two new lib files (`KuickPayEvidence.php`, `KuickPayResponseParser.php`). Resolve the fixture directory via a path constant pointing at the canonical plugin tree (`__DIR__ . '/../../../../../plugins/kuickpay_reconcile/tests/fixtures/kuickpay/'`) — see Project Structure Notes for why fixtures live plugin-side while gateway-lib tests live gateway-side. [Source: tests/bootstrap.php; build/phpunit.xml; architecture.md:826-831]
   - [x] Required cases — assert `status` + `error_class` for **every** mapping-table row across all three operations, plus: transport `ok=false` timeout/transport_error → `manual_review` (insert) / `retry` (inquiry/bulk); `00`-without-expected-context → `manual_review` (fail closed, no confirmation); amount mismatch / trailing-zero equality; non-PKR currency → manual_review; exact vs suffix Consumer-Number match; bulk structure-first malformed → zero matched rows; DOCTYPE/oversize bulk dataset rejected; `evidence_hash` deterministic for identical evidence and differs on differing evidence; no PII/credential/raw-envelope field on any evidence object. No live KuickPay call (NFR11) — fixtures only. [Source: epics.md:614-617; FR28; testing-fixtures.md:32-45]
 
-- [ ] **Task 8 — Verification and regression guard (AC: 11)**
-  - [ ] Confirm **no change** to `kuickpay.php` payment/settings methods, `KuickPaySoapClient.php`, or `KuickPayRedactor.php` public behavior. The parser is a new consumer of the 3.1 transport outcome; it does not modify the client. (You MAY add the two new `Loader::load`s where a future caller wires the parser, but no caller is required by this story — 2.3/3.3 wire it.)
-  - [ ] Run `php -l` on `KuickPayEvidence.php`, `KuickPayResponseParser.php`, and the edited `tests/bootstrap.php`. Run the component-local suite (`--bootstrap tests/bootstrap.php tests`, per the 1-4 deferred note about the broken `-c build/phpunit.xml` runner). Validate the new fixture XML well-formedness with `xmllint --noout` (available here) or the `simplexml` fallback. State exactly what ran. **Environment reality:** `php`/`ext-soap` may be absent in this checkout (the 3.1 record is contradictory — Risks say absent, completion says PHP 8.3.31 present). If `php` is unavailable, say so and run `php -l` + PHPUnit ~8.5 under **PHP 8.2** before merge; do not claim a lint/suite that never ran. [Source: deferred-work.md:9,40; project-context testing rules; NFR12]
-  - [ ] Secret-safety re-scan on the relocated + new fixtures (the two-step Phase 0 scan: forbidden-real-value scan + redaction-confirmation), since they now sit under web-served `plugins/`. Confirm the `.htaccess` denies access. [Source: 0-1 Task 4.2]
+- [x] **Task 8 — Verification and regression guard (AC: 11)**
+  - [x] Confirm **no change** to `kuickpay.php` payment/settings methods, `KuickPaySoapClient.php`, or `KuickPayRedactor.php` public behavior. The parser is a new consumer of the 3.1 transport outcome; it does not modify the client. (You MAY add the two new `Loader::load`s where a future caller wires the parser, but no caller is required by this story — 2.3/3.3 wire it.)
+  - [x] Run `php -l` on `KuickPayEvidence.php`, `KuickPayResponseParser.php`, and the edited `tests/bootstrap.php`. Run the component-local suite (`--bootstrap tests/bootstrap.php tests`, per the 1-4 deferred note about the broken `-c build/phpunit.xml` runner). Validate the new fixture XML well-formedness with `xmllint --noout` (available here) or the `simplexml` fallback. State exactly what ran. **Environment reality:** `php`/`ext-soap` may be absent in this checkout (the 3.1 record is contradictory — Risks say absent, completion says PHP 8.3.31 present). If `php` is unavailable, say so and run `php -l` + PHPUnit ~8.5 under **PHP 8.2** before merge; do not claim a lint/suite that never ran. [Source: deferred-work.md:9,40; project-context testing rules; NFR12]
+  - [x] Secret-safety re-scan on the relocated + new fixtures (the two-step Phase 0 scan: forbidden-real-value scan + redaction-confirmation), since they now sit under web-served `plugins/`. Confirm the `.htaccess` denies access. [Source: 0-1 Task 4.2]
 
 ## Dev Notes
 
@@ -274,6 +274,11 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayResponseParserTest.php` passed with fixture-backed cases (49 tests, 367 assertions).
 - 2026-06-10: `find plugins/kuickpay_reconcile/tests/fixtures/kuickpay -name '*.xml' -print0 | xargs -0 xmllint --noout` passed.
 - 2026-06-10: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` passed after fixture-backed tests (88 tests, 537 assertions).
+- 2026-06-10: Story-specific diff (`git diff --name-only 8114d3478c1406d8787fda69f3685bcc9ba433e5..HEAD`) confirms no changes to `kuickpay.php`, `KuickPaySoapClient.php`, or `KuickPayRedactor.php`.
+- 2026-06-10: Final syntax check passed for `KuickPayEvidence.php`, `KuickPayResponseParser.php`, `tests/bootstrap.php`, `KuickPayEvidenceTest.php`, and `KuickPayResponseParserTest.php`.
+- 2026-06-10: Final component suite passed: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (88 tests, 537 assertions).
+- 2026-06-10: Secret-safety scan found no known forbidden real values (`voucher-user`, `voucher-secret`, `03001234567`, `john@example.com`, `Customer Name`, `config/blesta.php`, `public_html/clientarea`) in plugin fixtures.
+- 2026-06-10: Redaction-confirmation scan found only expected placeholders (`REDACTED_USERNAME`, `REDACTED_PASSWORD`, `0300XXXXXXX`, `customer@example.invalid`, `REDACTED_CUSTOMER_NAME`, `INSTITUTION_ID`); `plugins/kuickpay_reconcile/tests/.htaccess` contains `Require all denied` plus Apache 2.2 fallback.
 
 ### Completion Notes List
 
@@ -283,6 +288,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - Implemented BillPaymentBulkInquiry parsing with bounded/DOCTYPE-safe XML parsing, structure-first validation, row cap, exact Consumer Number matching, empty-dataset handling, and matched/unmatched row evidence.
 - Relocated Phase 0 KuickPay fixtures into the canonical plugin test fixture tree and added web protection without changing the original docs fixture provenance.
 - Added Story 3.2 hardening fixtures, documented provisional provenance, and expanded parser tests to read canonical plugin fixtures for all mapping-table operations and fail-closed hardening cases.
+- Verified no gateway placeholder/settings/client/redactor regression surface was changed; final lint, PHPUnit, XML validation, fixture secret scan, and web-protection checks passed.
 
 ### File List
 
@@ -326,6 +332,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Added BillPaymentBulkInquiry parsing and structure-first safety checks.
 - 2026-06-10: Relocated Phase 0 fixtures to the plugin test tree and blocked web access.
 - 2026-06-10: Added hardening fixtures, provenance, and fixture-backed parser tests.
+- 2026-06-10: Completed verification and regression guard for parser evidence story.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
