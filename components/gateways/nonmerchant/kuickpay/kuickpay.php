@@ -668,7 +668,7 @@ class Kuickpay extends NonmerchantGateway
             json_encode([
                 'event' => 'reference_generation_failed',
                 'reason' => $reason,
-                'invoice' => $invoice_amounts[0]['id'] ?? null,
+                'invoice' => (int) ($invoice_amounts[0]['id'] ?? 0),
             ]),
             'output',
             false
