@@ -195,25 +195,25 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     $lang['KuickpayVoucherInvoices.!error.amount.format'] = 'Amount must be a valid decimal value.';
     ```
 
-- [ ] **Task 8 — Verification** (AC: #1, #2)
-  - [ ] 8.1 `php -l` every new and modified PHP file:
+- [x] **Task 8 — Verification** (AC: #1, #2)
+  - [x] 8.1 `php -l` every new and modified PHP file:
     ```sh
     find plugins/kuickpay_reconcile -name '*.php' -print -exec php -l {} \;
     php -l components/gateways/nonmerchant/kuickpay/kuickpay.php
     php -l components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php
     ```
-  - [ ] 8.2 Confirm `config.json` files still parse as JSON (no changes expected to existing configs).
-  - [ ] 8.3 Confirm no core files changed: `git status --porcelain` shows only new files under the two extension dirs plus modified gateway files, this story file, and `sprint-status.yaml`.
-  - [ ] 8.4 Prove the negative — no Blesta transaction creation, no `markPaid`, no `recordPayment`, no invoice `setStatus`. Do **not** include a bare `->add\(` alternative: it matches this story's own legitimate model `$this->KuickpayVouchers->add(...)` / `$this->KuickpayVoucherInvoices->add(...)` calls, so the check could never print "clean." Scope the grep to payment-mutation surfaces only:
+  - [x] 8.2 Confirm `config.json` files still parse as JSON (no changes expected to existing configs).
+  - [x] 8.3 Confirm no core files changed: `git status --porcelain` shows only new files under the two extension dirs plus modified gateway files, this story file, and `sprint-status.yaml`.
+  - [x] 8.4 Prove the negative — no Blesta transaction creation, no `markPaid`, no `recordPayment`, no invoice `setStatus`. Do **not** include a bare `->add\(` alternative: it matches this story's own legitimate model `$this->KuickpayVouchers->add(...)` / `$this->KuickpayVoucherInvoices->add(...)` calls, so the check could never print "clean." Scope the grep to payment-mutation surfaces only:
     ```sh
     grep -rinE 'Transactions(->|::)|recordPayment|markPaid|markPaidInvoice|setStatus' \
       components/gateways/nonmerchant/kuickpay plugins/kuickpay_reconcile || echo "clean: no mutation surface"
     ```
     Separately, eyeball that the only `->add(` calls are the expected `KuickpayVouchers`/`KuickpayVoucherInvoices` model inserts.
-  - [ ] 8.5 Confirm schema uniqueness: the `install()` code defines `setKey(['company_id', 'consumer_number'], 'unique')` and `setKey(['company_id', 'registration_number'], 'unique')`.
-  - [ ] 8.6 If a running Blesta + MySQL stack is available: install/enable the plugin, open a PKR invoice pay page, select KuickPay, confirm a Voucher row appears in `kuickpay_vouchers` with status `pending`, and reloading the page reuses the same row (AC2). If no runtime/DB, state that explicitly and rely on lint + structural checks + the unit tests in 8.7.
-  - [ ] 8.7 Add focused unit tests under `components/gateways/nonmerchant/kuickpay/tests/` (gateway-side pure helpers) and/or `plugins/kuickpay_reconcile/tests/`, following the existing `tests/bootstrap.php` + PHPUnit 8.5 pattern used by the current gateway test classes. Cover the pure, DB-free logic: `normalizeAmount()` / `normalizeInvoiceAmounts()` (string-safety, malformed/negative rejected, no float drift), `generateReferences()` (deterministic per invoice — same context yields identical reg/consumer; matches the `<prefix>+invoice_id` shape; ≤64 chars), and the reference service's reuse-vs-create decision against a fake/in-memory repository (reuse returns the existing voucher with no second create; `create()` returning null → race-recovery re-query path). DB-bound paths stay as the runtime check in 8.6. This realizes the `test(kuickpay_reconcile): cover voucher create and reuse paths` commit already listed under Git intelligence.
-  - [ ] 8.8 Confirm framework ordering: `setGatewayId()` is invoked before `buildProcess()` in the client pay flow (so `$this->kuickpay_gateway_id` is populated when the context is built). If a runtime is unavailable, at minimum assert the override exists and that a null `gateway_id` fails the voucher required-field rule (fail-closed → `not_ready`) rather than persisting a voucher with a null gateway.
+  - [x] 8.5 Confirm schema uniqueness: the `install()` code defines `setKey(['company_id', 'consumer_number'], 'unique')` and `setKey(['company_id', 'registration_number'], 'unique')`.
+  - [x] 8.6 If a running Blesta + MySQL stack is available: install/enable the plugin, open a PKR invoice pay page, select KuickPay, confirm a Voucher row appears in `kuickpay_vouchers` with status `pending`, and reloading the page reuses the same row (AC2). If no runtime/DB, state that explicitly and rely on lint + structural checks + the unit tests in 8.7.
+  - [x] 8.7 Add focused unit tests under `components/gateways/nonmerchant/kuickpay/tests/` (gateway-side pure helpers) and/or `plugins/kuickpay_reconcile/tests/`, following the existing `tests/bootstrap.php` + PHPUnit 8.5 pattern used by the current gateway test classes. Cover the pure, DB-free logic: `normalizeAmount()` / `normalizeInvoiceAmounts()` (string-safety, malformed/negative rejected, no float drift), `generateReferences()` (deterministic per invoice — same context yields identical reg/consumer; matches the `<prefix>+invoice_id` shape; ≤64 chars), and the reference service's reuse-vs-create decision against a fake/in-memory repository (reuse returns the existing voucher with no second create; `create()` returning null → race-recovery re-query path). DB-bound paths stay as the runtime check in 8.6. This realizes the `test(kuickpay_reconcile): cover voucher create and reuse paths` commit already listed under Git intelligence.
+  - [x] 8.8 Confirm framework ordering: `setGatewayId()` is invoked before `buildProcess()` in the client pay flow (so `$this->kuickpay_gateway_id` is populated when the context is built). If a runtime is unavailable, at minimum assert the override exists and that a null `gateway_id` fails the voucher required-field rule (fail-closed → `not_ready`) rather than persisting a voucher with a null gateway.
 
 ## Dev Notes
 
@@ -520,6 +520,7 @@ GPT-5 Codex
 - 2026-06-10: Tasks 3-4 red/green unit coverage added and passed: `KuickPayVoucherReferenceServiceTest` covers reuse without create, deterministic placeholder references, and create-null race recovery.
 - 2026-06-10: Task 5 syntax check passed for `kuickpay.php`; voucher service call is gated behind `!$this->Input->errors()`.
 - 2026-06-10: Tasks 6-7 syntax checks passed for the process template and language files; grep confirmed model validation keys were not added to the plugin handler language file.
+- 2026-06-10: Task 8 verification passed: all touched PHP/templates lint clean; KuickPay component PHPUnit suite passed (102 tests, 566 assertions); config JSON parse passed; payment-mutation grep returned clean; schema unique-key grep passed. No running Blesta + MySQL browser flow was available, so DB/runtime behavior was covered by lint, structural checks, and focused unit tests.
 
 ### Completion Notes List
 
@@ -528,6 +529,7 @@ GPT-5 Codex
 - Tasks 3-4 complete: added the repository transaction boundary, reference service reuse/create/race-recovery gate, flat view-facing voucher contract, and deterministic Story 2.1 placeholder references.
 - Task 5 complete: wired gateway `buildProcess()` to the plugin reference service behind the existing currency/companion guards, captured gateway ID via setter shadowing, and added string-only amount normalization helpers.
 - Tasks 6-7 complete: added the minimal voucher display with safe status-label fallback and added gateway/model language strings in their owning files.
+- Task 8 complete: added gateway-helper tests and ran the full available KuickPay component verification suite plus story structural checks; runtime DB/browser verification was not available in this shell.
 
 ### File List
 
@@ -543,6 +545,7 @@ GPT-5 Codex
 - components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_voucher_invoices.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php
 
 ## Change Log
 
@@ -553,3 +556,4 @@ GPT-5 Codex
 - 2026-06-10: Implemented Tasks 3-4 voucher repository, reference service, deterministic references, and focused unit tests.
 - 2026-06-10: Implemented Task 5 gateway voucher service integration.
 - 2026-06-10: Implemented Tasks 6-7 customer voucher display and language strings.
+- 2026-06-10: Completed Task 8 verification and gateway helper tests.
