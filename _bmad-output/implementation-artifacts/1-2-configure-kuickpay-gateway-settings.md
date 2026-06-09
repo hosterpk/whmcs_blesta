@@ -4,7 +4,7 @@ baseline_commit: dbee701de838a7dc6c52cf1a506ff16e98cc9de7
 
 # Story 1.2: Configure KuickPay Gateway Settings
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -426,3 +426,20 @@ GPT-5 Codex
 3. **Default instruction-group enablement (HosterPK).** Which Instruction Groups ship enabled by default — online banking, bank deposit, agent/franchise, mobile app, or a different set? (Open in the UX decision log.) Provisional defaults: online banking + bank deposit ON; agent/franchise + mobile app OFF.
 4. **Fee policy shape.** MVP uses a placeholder `fee_policy` select (`none`) since fee mechanics are a deferred production-gate decision. Confirm no fee fields are required at launch, or specify the minimal fee inputs (percentage/fixed/late surcharge) so 1.2 can add validated decimal-string fields.
 5. **Date-policy representation.** This story models due/expiry as integer **offset-days** settings (`due_date_offset_days`, `expiry_date_offset_days`). Confirm offset-days is the intended policy shape, or whether KuickPay date formats/fixed dates from Phase 0 require a different representation (Phase 0 confirms date formats).
+
+## Review Findings
+
+_Code review 2026-06-09 (bmad-code-review, 3-layer adversarial: Blind Hunter + Edge Case Hunter + Acceptance Auditor). Acceptance Auditor confirmed all 3 ACs and all 7 Non-Negotiables SATISFIED; field-spec, default-meta table, and language-key integrity complete. Findings below are hardening beyond spec — no AC/Non-Negotiable violations._
+
+**Patch (actionable now):**
+
+- [x] [Review][Patch] Validation regexes miss the `/D` (PCRE_DOLLAR_ENDONLY) anchor — a trailing newline bypasses them; e.g. `soap_timeout="30\n"` and `registration_number_pattern="ABC\n"` both validate and persist verbatim (empirically confirmed against minphp `Input::matches`). Add `D` to `/^([0-9]+)?$/` and `/^[A-Za-z0-9_{}+\-]+$/`. Affects `soap_timeout`, `due_date_offset_days`, `expiry_date_offset_days`, `registration_number_pattern`, `consumer_number_pattern`. [components/gateways/nonmerchant/kuickpay/kuickpay.php:102-103] — **FIXED** (commit `38b1f38b`).
+- [x] [Review][Patch] Required text fields accept whitespace-only input — Blesta `isEmpty(" ")` returns false, so a single space passes the required rule for `voucher_username`, `inquiry_username`, `institution_id` and is stored. AC2 intends "reject empty required values." Trim before validating (or add a non-whitespace rule). Note: this matches the canonical coingate/paypal idiom, so it is optional hardening, not a spec violation. [components/gateways/nonmerchant/kuickpay/kuickpay.php:121,135,202] — **FIXED** (commit `7ca04665`); trims the three fields in `$meta` before validation.
+
+**Deferred (owned by a later story / consumer does not exist yet):**
+
+- [x] [Review][Defer] Credential re-entry on every save / blank-overwrite risk — passwords are required-non-empty AND rendered empty by design, so editing any unrelated setting forces re-typing both passwords (a blank submit fails validation; `setMeta` is delete+insert with no keep-if-blank). [components/gateways/nonmerchant/kuickpay/kuickpay.php:247; settings.pdt:37,69] — deferred: explicitly accepted by this story ("Interim credential re-save behavior") and owned by Story 1.3 (keep-if-blank / rotation-on-blank needs current-meta plumbing).
+- [x] [Review][Defer] `wsdl_url` HTTPS check is lenient — `FILTER_VALIDATE_URL` accepts internal hosts and embedded userinfo (`https://user:pass@host/wsdl`), an SSRF / credentials-in-URL surface once the WSDL is fetched server-side. [components/gateways/nonmerchant/kuickpay/kuickpay.php:106-119] — deferred: the SOAP WSDL fetch is Story 3.1 (Epic 3); host-allowlist / userinfo rejection belongs with the consumer that performs the request.
+- [x] [Review][Defer] Numeric settings have no bounds or relational checks — `soap_timeout=0` (instant/no-timeout footgun), unbounded large values, and leading zeros all pass; no `expiry >= due` relation enforced. [components/gateways/nonmerchant/kuickpay/kuickpay.php:102,167-181] — deferred: the consumers (SOAP client timeout, `DueDate`/`ExpiryDate` mapping) are Epic 2/3 and define the meaningful bounds; AC2 only requires non-negative integers.
+
+**Dismissed as noise (12):** label `$this->_()` not echoed (FALSE POSITIVE — minphp `Html::_` echoes by default; refuted by 2 layers); reference-pattern regex "too permissive" (by design — shape-only, generation is Story 2.2); single-option `currency_policy`/`fee_policy` + checkbox `in_array` "decorative" (by design — MVP single option, hardens malformed POST); `editSettings` ignores `validates()` return (correct non-merchant convention — Blesta reads `Input->errors()`); `payment_head_label`/`fallback_mobile` unvalidated (by design — "optional free-text fields carry no shape rule," mobile sanitization is Epic 2); checkbox render-default vs `editSettings` absent-default divergence (by design — browser path consistent, absent='false' is the endorsed "actively unchecked" reading); labels not `Html->safe`-wrapped (negligible — static dev-controlled strings); dead `scaffold_note` key removal (positive note, not a defect); duplicate error on empty `wsdl_url` (cosmetic — standard Blesta multi-rule behavior); instruction defaults duplicated across `.pdt`/`editSettings` (by design per spec, maintenance note); `currency_policy` "required" via normalization not `isEmpty` (compliant per spec skeleton).
