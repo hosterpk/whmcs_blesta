@@ -583,28 +583,96 @@ class Kuickpay extends NonmerchantGateway
         }
 
         if (!$this->Input->errors()) {
-            Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherReferenceService.php');
-
-            $service = new KuickPayVoucherReferenceService();
             $meta = is_array($this->meta) ? $this->meta : [];
-            $voucher = $service->getOrCreateForInvoiceContext([
-                'company_id' => Configure::get('Blesta.company_id'),
-                'gateway_id' => $this->kuickpay_gateway_id,
-                'client_id' => $contact_info['client_id'] ?? null,
-                'currency' => $this->currency,
-                'amount' => $this->normalizeAmount((string) $amount),
-                'invoice_amounts' => $this->normalizeInvoiceAmounts((array) $invoice_amounts),
-                'institution_id' => $meta['institution_id'] ?? '',
-                'due_date_offset_days' => (int) ($meta['due_date_offset_days'] ?? 0),
-                'expiry_date_offset_days' => (int) ($meta['expiry_date_offset_days'] ?? 0),
-            ]);
+            $service = $this->getVoucherReferenceService();
+            $context = $this->buildVoucherReferenceContext(
+                $contact_info,
+                $amount,
+                (array) $invoice_amounts,
+                $meta
+            );
+            $voucher = $service->getOrCreateForInvoiceContext($context);
 
             if ($voucher !== null) {
                 $this->view->set('voucher', $voucher);
+            } else {
+                $this->recordReferenceGenerationFailure($service, $context['invoice_amounts'], $meta);
             }
         }
 
         return $this->view->fetch();
+    }
+
+    /**
+     * Gets the companion plugin voucher reference service.
+     *
+     * @return KuickPayVoucherReferenceService The reference service
+     */
+    protected function getVoucherReferenceService()
+    {
+        Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherReferenceService.php');
+
+        return new KuickPayVoucherReferenceService();
+    }
+
+    /**
+     * Builds the voucher reference context passed to the companion plugin.
+     *
+     * @param array $contact_info Contact data from Blesta
+     * @param mixed $amount Payment amount
+     * @param array $invoice_amounts Invoice amount rows
+     * @param array $meta Gateway settings
+     * @return array Voucher reference context
+     */
+    protected function buildVoucherReferenceContext(
+        array $contact_info,
+        $amount,
+        array $invoice_amounts,
+        array $meta
+    ): array {
+        return [
+            'company_id' => Configure::get('Blesta.company_id'),
+            'gateway_id' => $this->kuickpay_gateway_id,
+            'client_id' => $contact_info['client_id'] ?? null,
+            'currency' => $this->currency,
+            'amount' => $this->normalizeAmount((string) $amount),
+            'invoice_amounts' => $this->normalizeInvoiceAmounts($invoice_amounts),
+            'institution_id' => $meta['institution_id'] ?? '',
+            'registration_number_pattern' => $meta['registration_number_pattern'] ?? '',
+            'consumer_number_pattern' => $meta['consumer_number_pattern'] ?? '',
+            'due_date_offset_days' => (int) ($meta['due_date_offset_days'] ?? 0),
+            'expiry_date_offset_days' => (int) ($meta['expiry_date_offset_days'] ?? 0),
+        ];
+    }
+
+    /**
+     * Records an admin-safe reference generation diagnostic.
+     *
+     * @param mixed $service Reference service exposing getLastError()
+     * @param array $invoice_amounts Normalized invoice amount rows
+     * @param array $meta Gateway settings
+     */
+    protected function recordReferenceGenerationFailure($service, array $invoice_amounts, array $meta): void
+    {
+        if (($meta['logging_enabled'] ?? 'true') !== 'true' || !method_exists($service, 'getLastError')) {
+            return;
+        }
+
+        $reason = $service->getLastError();
+        if ($reason === null) {
+            return;
+        }
+
+        $this->log(
+            'kuickpay:reference_generation',
+            json_encode([
+                'event' => 'reference_generation_failed',
+                'reason' => $reason,
+                'invoice' => $invoice_amounts[0]['id'] ?? null,
+            ]),
+            'output',
+            false
+        );
     }
 
     /**
