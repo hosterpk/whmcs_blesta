@@ -154,6 +154,24 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertStringNotContainsString('voucher-secret', $outcome['fault']);
     }
 
+    public function testResponseEnvelopeWithDoctypeIsNotParsedAndEnvelopeIsPlaceheld()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->throw = new SoapFault('Server', 'fault');
+        $fake->lastResponse = '<!DOCTYPE x [<!ENTITY a "x">]>'
+            . '<Envelope><InsertVoucherResult>&a;</InsertVoucherResult></Envelope>';
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $this->callPrivate($client, 'InsertVoucher', []);
+
+        $this->assertTrue($outcome['ok']);
+        $this->assertNull($outcome['raw_result']);
+        $this->assertSame(KuickPayRedactor::ENVELOPE_UNPARSEABLE, $outcome['raw_envelope']);
+    }
+
     public function testTimeoutWithoutResponseBodyMapsToTimeout()
     {
         $fake = new KuickPaySoapClientFake();

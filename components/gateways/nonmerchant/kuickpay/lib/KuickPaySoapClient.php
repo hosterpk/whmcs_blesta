@@ -364,6 +364,13 @@ class KuickPaySoapClient
             return null;
         }
 
+        // Same fail-closed guard the redactor applies: never feed an oversize or
+        // DOCTYPE-bearing (XML-entity-expansion) envelope to the parser.
+        if (strlen($response) > KuickPayRedactor::MAX_ENVELOPE_BYTES
+            || stripos($response, '<!DOCTYPE') !== false) {
+            return null;
+        }
+
         $previous = libxml_use_internal_errors(true);
         libxml_clear_errors();
 
