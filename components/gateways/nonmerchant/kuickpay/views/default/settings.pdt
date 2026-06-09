@@ -3,7 +3,241 @@
         <?php echo $this->_('Kuickpay.!error.companion_missing'); ?>
     </div>
 <?php } else { ?>
-    <div class="alert alert-info" role="alert">
-        <?php echo $this->_('Kuickpay.settings.scaffold_note'); ?>
+    <div class="title_row">
+        <h3><?php $this->_('Kuickpay.group.endpoints_credentials'); ?></h3>
+    </div>
+    <div class="pad">
+        <div class="mb-3">
+            <label for="wsdl_url" class="form-label">
+                <?php $this->_('Kuickpay.wsdl_url'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.wsdl_url_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('wsdl_url', (isset($meta['wsdl_url']) ? $meta['wsdl_url'] : null), ['id' => 'wsdl_url', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="voucher_username" class="form-label">
+                <?php $this->_('Kuickpay.voucher_username'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.voucher_username_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('voucher_username', (isset($meta['voucher_username']) ? $meta['voucher_username'] : null), ['id' => 'voucher_username', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="voucher_password" class="form-label">
+                <?php $this->_('Kuickpay.voucher_password'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.voucher_password_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldPassword('voucher_password', ['id' => 'voucher_password', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('inquiry_same_as_voucher', 'true', (($meta['inquiry_same_as_voucher'] ?? 'true') === 'true'), ['id' => 'inquiry_same_as_voucher', 'class' => 'form-check-input']);
+                ?>
+                <label for="inquiry_same_as_voucher" class="form-check-label">
+                    <?php $this->_('Kuickpay.inquiry_same_as_voucher'); ?>
+                    <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('Kuickpay.inquiry_same_as_voucher_note', true)); ?>"></i>
+                </label>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="inquiry_username" class="form-label">
+                <?php $this->_('Kuickpay.inquiry_username'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.inquiry_username_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('inquiry_username', (isset($meta['inquiry_username']) ? $meta['inquiry_username'] : null), ['id' => 'inquiry_username', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="inquiry_password" class="form-label">
+                <?php $this->_('Kuickpay.inquiry_password'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.inquiry_password_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldPassword('inquiry_password', ['id' => 'inquiry_password', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+
+    <div class="title_row">
+        <h3><?php $this->_('Kuickpay.group.institution_reference'); ?></h3>
+    </div>
+    <div class="pad">
+        <div class="mb-3">
+            <label for="institution_id" class="form-label">
+                <?php $this->_('Kuickpay.institution_id'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.institution_id_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('institution_id', (isset($meta['institution_id']) ? $meta['institution_id'] : null), ['id' => 'institution_id', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="registration_number_pattern" class="form-label">
+                <?php $this->_('Kuickpay.registration_number_pattern'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.registration_number_pattern_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('registration_number_pattern', (isset($meta['registration_number_pattern']) ? $meta['registration_number_pattern'] : null), ['id' => 'registration_number_pattern', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="consumer_number_pattern" class="form-label">
+                <?php $this->_('Kuickpay.consumer_number_pattern'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.consumer_number_pattern_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('consumer_number_pattern', (isset($meta['consumer_number_pattern']) ? $meta['consumer_number_pattern'] : null), ['id' => 'consumer_number_pattern', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="payment_head_label" class="form-label">
+                <?php $this->_('Kuickpay.payment_head_label'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.payment_head_label_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('payment_head_label', (isset($meta['payment_head_label']) ? $meta['payment_head_label'] : null), ['id' => 'payment_head_label', 'class' => 'form-control']);
+            ?>
+        </div>
+    </div>
+
+    <div class="title_row">
+        <h3><?php $this->_('Kuickpay.group.payment_behavior'); ?></h3>
+    </div>
+    <div class="pad">
+        <div class="mb-3">
+            <label for="due_date_offset_days" class="form-label">
+                <?php $this->_('Kuickpay.due_date_offset_days'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.due_date_offset_days_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('due_date_offset_days', (isset($meta['due_date_offset_days']) ? $meta['due_date_offset_days'] : null), ['id' => 'due_date_offset_days', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="expiry_date_offset_days" class="form-label">
+                <?php $this->_('Kuickpay.expiry_date_offset_days'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.expiry_date_offset_days_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('expiry_date_offset_days', (isset($meta['expiry_date_offset_days']) ? $meta['expiry_date_offset_days'] : null), ['id' => 'expiry_date_offset_days', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="fallback_mobile" class="form-label">
+                <?php $this->_('Kuickpay.fallback_mobile'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.fallback_mobile_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('fallback_mobile', (isset($meta['fallback_mobile']) ? $meta['fallback_mobile'] : null), ['id' => 'fallback_mobile', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="currency_policy" class="form-label">
+                <?php $this->_('Kuickpay.currency_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.currency_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('currency_policy', (isset($currency_policy) ? $currency_policy : []), ($meta['currency_policy'] ?? 'pkr_only'), ['id' => 'currency_policy', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="fee_policy" class="form-label">
+                <?php $this->_('Kuickpay.fee_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.fee_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('fee_policy', (isset($fee_policy) ? $fee_policy : []), ($meta['fee_policy'] ?? 'none'), ['id' => 'fee_policy', 'class' => 'form-select']);
+            ?>
+        </div>
+    </div>
+
+    <div class="title_row">
+        <h3><?php $this->_('Kuickpay.group.instruction_groups'); ?></h3>
+    </div>
+    <div class="pad">
+        <?php
+        $instructionFields = [
+            'instruction_online_banking' => 'true',
+            'instruction_bank_deposit' => 'true',
+            'instruction_agent_franchise' => 'false',
+            'instruction_mobile_app' => 'false',
+        ];
+        foreach ($instructionFields as $field => $default) {
+        ?>
+            <div class="mb-3">
+                <div class="form-check">
+                    <?php
+                    $this->Form->fieldCheckbox($field, 'true', (($meta[$field] ?? $default) === 'true'), ['id' => $field, 'class' => 'form-check-input']);
+                    ?>
+                    <label for="<?php echo $field; ?>" class="form-check-label">
+                        <?php $this->_('Kuickpay.' . $field); ?>
+                        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                           title="<?php echo $this->Html->safe($this->_('Kuickpay.' . $field . '_note', true)); ?>"></i>
+                    </label>
+                </div>
+            </div>
+        <?php } ?>
+    </div>
+
+    <div class="title_row">
+        <h3><?php $this->_('Kuickpay.group.logging_reconciliation'); ?></h3>
+    </div>
+    <div class="pad">
+        <div class="mb-3">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('logging_enabled', 'true', (($meta['logging_enabled'] ?? 'true') === 'true'), ['id' => 'logging_enabled', 'class' => 'form-check-input']);
+                ?>
+                <label for="logging_enabled" class="form-check-label">
+                    <?php $this->_('Kuickpay.logging_enabled'); ?>
+                    <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('Kuickpay.logging_enabled_note', true)); ?>"></i>
+                </label>
+            </div>
+        </div>
+        <div class="mb-3">
+            <div class="form-check">
+                <?php
+                $this->Form->fieldCheckbox('reconciliation_enabled', 'true', (($meta['reconciliation_enabled'] ?? 'true') === 'true'), ['id' => 'reconciliation_enabled', 'class' => 'form-check-input']);
+                ?>
+                <label for="reconciliation_enabled" class="form-check-label">
+                    <?php $this->_('Kuickpay.reconciliation_enabled'); ?>
+                    <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="<?php echo $this->Html->safe($this->_('Kuickpay.reconciliation_enabled_note', true)); ?>"></i>
+                </label>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="soap_timeout" class="form-label">
+                <?php $this->_('Kuickpay.soap_timeout'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.soap_timeout_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('soap_timeout', (isset($meta['soap_timeout']) ? $meta['soap_timeout'] : null), ['id' => 'soap_timeout', 'class' => 'form-control']);
+            ?>
+        </div>
     </div>
 <?php } ?>
