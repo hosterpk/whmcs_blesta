@@ -47,6 +47,20 @@ class KuickPayRedactorTest extends TestCase
         $this->assertStringNotContainsString('03001234567', $redacted);
     }
 
+    public function testRedactEnvelopeBlanksResultPayloadIncludingBulkCdata()
+    {
+        $redactor = new KuickPayRedactor();
+        $xml = file_get_contents(
+            __DIR__ . '/../../../../../docs/kuickpay/fixtures/bill-payment-bulk-inquiry/matched-paid.xml'
+        );
+
+        $redacted = $redactor->redactEnvelope($xml);
+
+        $this->assertStringContainsString('<BillPaymentBulkInquiryResult>xxxx</BillPaymentBulkInquiryResult>', $redacted);
+        $this->assertStringNotContainsString('INSTITUTION_ID', $redacted);
+        $this->assertStringNotContainsString('Consumer_Number', $redacted);
+    }
+
     public function testUnsafeOrUnparseableEnvelopeReturnsPlaceholder()
     {
         $redactor = new KuickPayRedactor();

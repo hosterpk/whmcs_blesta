@@ -124,6 +124,17 @@ class KuickPayRedactor
             }
         }
 
+        // Blank every *Result element. The functional result payload lives, unredacted,
+        // in the outcome's raw_result for the parser; a diagnostic envelope must not also
+        // carry it -- especially the bulk dataset, whose Consumer_Number/InstitutionID sit
+        // inside a CDATA block that element-name matching above cannot reach.
+        $results = $xpath->query('//*[substring(local-name(), string-length(local-name()) - 5) = "Result"]');
+        if ($results !== false) {
+            foreach ($results as $node) {
+                $node->nodeValue = 'xxxx';
+            }
+        }
+
         $redacted = $document->saveXML();
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
