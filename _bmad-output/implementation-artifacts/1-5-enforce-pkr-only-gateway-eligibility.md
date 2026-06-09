@@ -4,7 +4,7 @@ baseline_commit: 45926c5e41114ad147968f6ed3ffe43226be40bb
 
 # Story 1.5: Enforce PKR-Only Gateway Eligibility
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
