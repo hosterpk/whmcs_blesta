@@ -173,14 +173,39 @@ class KuickPayRedactor
         int $unmask_length = 0
     ): array {
         foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->maskDataRecursive($value, $mask_fields, $mask_char, $unmask_length);
+            // Check the key first: a sensitive key holding an array (e.g. a credential
+            // list) must mask every leaf beneath it, not recurse and leak non-sensitive
+            // child keys.
+            if (array_key_exists(strtolower((string) $key), $mask_fields)) {
+                $rule = $mask_fields[strtolower((string) $key)];
+                $data[$key] = is_array($value)
+                    ? $this->maskEverything($value, $rule, $mask_char)
+                    : $this->maskValue($value, $rule, $mask_char, $unmask_length);
                 continue;
             }
 
-            if (array_key_exists(strtolower((string) $key), $mask_fields)) {
-                $data[$key] = $this->maskValue($value, $mask_fields[strtolower((string) $key)], $mask_char, $unmask_length);
+            if (is_array($value)) {
+                $data[$key] = $this->maskDataRecursive($value, $mask_fields, $mask_char, $unmask_length);
             }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Mask every leaf value beneath a sensitive subtree.
+     *
+     * @param array $data Subtree stored under a sensitive key
+     * @param mixed $rule Rule settings or a field marker
+     * @param string $mask_char Mask character
+     * @return array Fully masked subtree
+     */
+    private function maskEverything(array $data, $rule, string $mask_char): array
+    {
+        foreach ($data as $key => $value) {
+            $data[$key] = is_array($value)
+                ? $this->maskEverything($value, $rule, $mask_char)
+                : $this->maskValue($value, $rule, $mask_char, 0);
         }
 
         return $data;
@@ -199,6 +224,12 @@ class KuickPayRedactor
     {
         if ($value === null) {
             return null;
+        }
+
+        // A value that cannot be cast to string (a non-stringable object) still must not
+        // surface raw; collapse it to a fixed token rather than throwing on the cast.
+        if (is_array($value) || (is_object($value) && !method_exists($value, '__toString'))) {
+            return 'xxxx';
         }
 
         $value = (string) $value;

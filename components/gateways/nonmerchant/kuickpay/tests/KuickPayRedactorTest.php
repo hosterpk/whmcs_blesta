@@ -31,6 +31,25 @@ class KuickPayRedactorTest extends TestCase
         $this->assertNull($redacted['nested']['empty']);
     }
 
+    public function testRedactsArrayValuedAndObjectSensitiveValues()
+    {
+        $redactor = new KuickPayRedactor();
+
+        $redacted = $redactor->redactArray([
+            'password' => ['old' => 'oldsecret', 'new' => 'newsecret'],
+            'Name' => ['First', 'Last'],
+            'Mobile' => (object) ['unexpected' => 'shape'],
+            'safe' => 'visible',
+        ]);
+
+        $this->assertSame('xxxxxxxxx', $redacted['password']['old']);
+        $this->assertSame('xxxxxxxxx', $redacted['password']['new']);
+        $this->assertSame('xxxxx', $redacted['Name'][0]);
+        $this->assertSame('xxxx', $redacted['Name'][1]);
+        $this->assertSame('xxxx', $redacted['Mobile']);
+        $this->assertSame('visible', $redacted['safe']);
+    }
+
     public function testRedactsDefaultNamespaceEnvelopeByLocalElementName()
     {
         $redactor = new KuickPayRedactor();
