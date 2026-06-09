@@ -2,7 +2,7 @@
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
     <InsertVoucherResponse xmlns="https://app.kuickpay.com/kuickpaycoreapi/">
-      <InsertVoucherResult>94,DUPLICATE_REFERENCE,INSTITUTION_ID,REG-0000001</InsertVoucherResult>
+      <InsertVoucherResult>94 DUPLICATE_REFERENCE</InsertVoucherResult>
     </InsertVoucherResponse>
   </soap:Body>
 </soap:Envelope>

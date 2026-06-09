@@ -9,6 +9,7 @@ Date: 2026-06-09
 - Preserve full SOAP response envelopes for `.xml` files so parser tests can consume realistic response shape.
 - Keep malformed cases as well-formed XML fixture files; malformed behavior is represented inside the `*Result` payload.
 - Mark all non-live and non-sandbox captures as `synthetic_from_observed_format`, `provisional`, and `PENDING_HUMAN_APPROVAL`.
+- Existing live WHMCS implementation evidence may shape provisional fixtures, but it is not the same as a sanitized KuickPay response capture.
 
 ## Expected Normalized Evidence Mapping
 
@@ -34,7 +35,7 @@ A `00` inquiry status, or the mere presence of a row in a bulk `NewDataSet`, is 
 
 - **Amount equality** — the reported paid amount equals the expected invoice amount, compared as integer minor units (or canonical decimal strings), never floats. A `00` row whose amount differs (see `amount-mismatch.xml`, status `00` / amount `900.00`) maps to `manual_review` / `amount_mismatch`.
 - **Currency match** — `currency == PKR`. A non-PKR or empty currency on an otherwise-paid row maps to `manual_review`.
-- **Exact Consumer Number equality** — match on the full stored Consumer Number by exact string equality only. Never suffix / substring / `contains` matching (fixtures concatenate `institution_id + registration_number` with no delimiter, e.g. `INSTITUTION_IDREG-0000001`, which would defeat a loose matcher).
+- **Exact Consumer Number equality** — match on the full stored Consumer Number by exact string equality only. Never suffix / substring / `contains` matching (current HosterPK shape is `institution_id + four_digit_prefix + invoice_id` with no delimiter; loose matching can misclassify rows).
 - **Structural validation first (bulk)** — validate the inner dataset is well-formed and complete BEFORE extracting any row. `malformed-xml.xml` deliberately embeds a known-good Consumer Number ahead of a truncation; a parser that scans for consumer numbers before validating structure fails open. Malformed/incomplete dataset maps to `manual_review` / `malformed_response`, zero row matches.
 
 Any precondition failure maps to `retry` or `manual_review`. Never `posted`.
@@ -43,9 +44,17 @@ Any precondition failure maps to `retry` or `manual_review`. Never `posted`.
 
 The status codes exemplified by the provisional fixtures (`00`, `01`, `02`, `99`) are unverified examples, not a closed enumeration. Any inquiry status code outside the confirmed allow-list maps to `manual_review` / `unknown_status` by default. Confirm the authoritative code list with KuickPay before narrowing this default.
 
-## Open Contract Contradiction: `InsertVoucherResult` format (fail-closed) — flagged by code review 2026-06-09
+## Existing WHMCS Implementation Evidence Update — 2026-06-09
 
-`insert-voucher/success.xml` encodes `InsertVoucherResult` as a **comma-delimited** string (`00,KP-VOUCHER-0001,INSTITUTION_ID,REG-0000001`). The story's observed-format note instead reads the voucher id at a **fixed offset** `substr(result, 3, 14)`, which on this fixture yields `KP-VOUCHER-000` — it truncates the 15-character id `KP-VOUCHER-0001`. These two representations are mutually inconsistent and BOTH are unverified (`synthetic_from_observed_format`). Story 3.2 MUST NOT hard-code either delimiter or offset until KuickPay confirms the real `InsertVoucherResult` shape; parse defensively and fail closed on any length / field-count ambiguity.
+Existing live WHMCS code under `/home/hosterpk/public_html/clientarea/` confirms the current HosterPK implementation shape:
+
+- `InsertVoucherResult` is parsed as a raw fixed-position string: first two characters are status, voucher id begins at offset 3 and is 14 characters long.
+- `BillPaymentInquiryResult` is parsed as comma-separated fields: status at index 0, transaction/reference components at indexes 1, 4, and 5, paid date at index 2, paid amount at index 3.
+- `BillPaymentBulkInquiryResult['any']` is parsed as an XML dataset whose rows include `Consumer_Number`.
+- HosterPK Consumer Number is built as Institution ID + four-digit random prefix + invoice id.
+- HosterPK Registration Number is built as four-digit random prefix + invoice id.
+
+The provisional fixtures have been adjusted to match this implementation shape where possible, but they remain provisional because they are not captured KuickPay responses. Story 3.2 may use them for parser scaffolding, but approval still requires sanitized live response evidence or explicit human acceptance of the WHMCS-derived fixture shapes.
 
 ## Story 3.2 Category Mapping
 
@@ -68,21 +77,21 @@ The status codes exemplified by the provisional fixtures (`00`, `01`, `02`, `99`
 
 ## Fixture Provenance
 
-All fixture rows below are provisional because no live or sandbox KuickPay captures were available to this agent. They are suitable for parser development but cannot satisfy the approval gate until replaced or confirmed by live/sandbox evidence.
+All fixture rows below are provisional because no sanitized KuickPay response captures were available to this agent. Existing live WHMCS implementation evidence has been reviewed and used to improve fixture shape, but these rows still cannot satisfy the approval gate until replaced with sanitized live captures or explicitly approved by a human gate owner.
 
 | Fixture | source_type | captured_at | captured_by | redacted_by | verification_status | provisional | provisional_reason | approval_status | evidence_hash / redacted_trace_id |
 |---|---|---|---|---|---|---|---|---|---|
-| `insert-voucher/success.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Built from observed raw status format; no live/sandbox capture available. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-insert-success` |
+| `insert-voucher/success.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Shape aligned to existing live WHMCS parser; no sanitized KuickPay response capture available. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-insert-success` |
 | `insert-voucher/duplicate.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Duplicate semantics require merchant confirmation. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-insert-duplicate` |
 | `insert-voucher/invalid-credentials.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Credential error shape is synthetic. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-insert-invalid-credentials` |
 | `insert-voucher/malformed.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Malformed result semantics are synthetic. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-insert-malformed` |
 | `insert-voucher/timeout.md` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Transport timeout descriptor, no response body. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-insert-timeout` |
-| `bill-payment-inquiry/pending.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Built from observed comma-separated result format. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-pending` |
-| `bill-payment-inquiry/paid-exact.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Paid result shape is synthetic from observed format. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-paid-exact` |
+| `bill-payment-inquiry/pending.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Comma-separated shape aligned to existing live WHMCS parser; no sanitized response capture available. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-pending` |
+| `bill-payment-inquiry/paid-exact.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Comma-separated paid shape aligned to existing live WHMCS parser; no sanitized response capture available. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-paid-exact` |
 | `bill-payment-inquiry/amount-mismatch.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Amount mismatch semantics require real capture confirmation. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-amount-mismatch` |
 | `bill-payment-inquiry/expired.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Expired status semantics require real capture confirmation. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-expired` |
 | `bill-payment-inquiry/unknown.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Unknown status deliberately synthetic. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-inquiry-unknown` |
-| `bill-payment-bulk-inquiry/matched-paid.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | XML dataset shape is synthetic from observed row naming. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-bulk-matched-paid` |
+| `bill-payment-bulk-inquiry/matched-paid.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | XML dataset shape aligned to existing live WHMCS parser; no sanitized response capture available. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-bulk-matched-paid` |
 | `bill-payment-bulk-inquiry/unmatched.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Unmatched row semantics require real capture confirmation. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-bulk-unmatched` |
 | `bill-payment-bulk-inquiry/malformed-xml.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Inner dataset is intentionally malformed while SOAP envelope remains well-formed. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-bulk-malformed` |
 | `redaction/credentials.xml` | `synthetic_from_observed_format` | `2026-06-09T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Redaction method sample, not operational evidence. | `PENDING_HUMAN_APPROVAL` | `phase0-synthetic-redaction-credentials` |

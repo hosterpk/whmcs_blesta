@@ -2,7 +2,7 @@
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
     <BillPaymentBulkInquiryResponse xmlns="https://app.kuickpay.com/kuickpaycoreapi/">
-      <BillPaymentBulkInquiryResult><![CDATA[<NewDataSet><Table><Consumer_Number>INSTITUTION_IDREG-UNMATCHED</Consumer_Number><Registration_Number>REG-UNMATCHED</Registration_Number><Transaction_Date>20260609</Transaction_Date><Paid_Amount>1000.00</Paid_Amount><Transaction_Reference>KP-BULK-UNMATCHED-0001</Transaction_Reference><Currency>PKR</Currency></Table></NewDataSet>]]></BillPaymentBulkInquiryResult>
+      <BillPaymentBulkInquiryResult><![CDATA[<NewDataSet><Table><Consumer_Number>INSTITUTION_ID9999UNMATCHED_INVOICE</Consumer_Number><Registration_Number>9999UNMATCHED_INVOICE</Registration_Number><Transaction_Date>20260609</Transaction_Date><Paid_Amount>1000.00</Paid_Amount><Transaction_Reference>KP-BULK-UNMATCHED-0001</Transaction_Reference><Currency>PKR</Currency></Table></NewDataSet>]]></BillPaymentBulkInquiryResult>
     </BillPaymentBulkInquiryResponse>
   </soap:Body>
 </soap:Envelope>
