@@ -14,6 +14,10 @@ class KuickPayVoucherReferenceServiceFakeRepository
     public $records = [];
     public $createReturnsNull = false;
     public $pendingAfterCreateFailure;
+    public $registrationLookups = [];
+    public $consumerLookups = [];
+    public $registrationLookupReturns = [];
+    public $consumerLookupReturns = [];
 
     public function getPendingByInvoiceId(int $invoice_id, int $company_id)
     {
@@ -37,10 +41,50 @@ class KuickPayVoucherReferenceServiceFakeRepository
     {
         return $this->records[$voucher_id] ?? null;
     }
+
+    public function getByRegistrationNumber(string $registration_number, int $company_id)
+    {
+        $this->registrationLookups[] = [$registration_number, $company_id];
+
+        return $this->nextLookupReturn($this->registrationLookupReturns, $registration_number, $company_id);
+    }
+
+    public function getByConsumerNumber(string $consumer_number, int $company_id)
+    {
+        $this->consumerLookups[] = [$consumer_number, $company_id];
+
+        return $this->nextLookupReturn($this->consumerLookupReturns, $consumer_number, $company_id);
+    }
+
+    private function nextLookupReturn(array &$returns, string $reference, int $company_id)
+    {
+        if (empty($returns)) {
+            return null;
+        }
+
+        $return = array_shift($returns);
+        if ($return instanceof Closure) {
+            return $return($reference, $company_id);
+        }
+
+        return $return;
+    }
 }
 
 class TestableKuickPayVoucherReferenceService extends KuickPayVoucherReferenceService
 {
+    public $randomQueue = [1234];
+
+    protected function randomInt(): int
+    {
+        return (int) (array_shift($this->randomQueue) ?? 9999);
+    }
+
+    public function callGenerateRandomPrefix(): string
+    {
+        return $this->generateRandomPrefix();
+    }
+
     public function callExpandPattern(string $pattern, array $values): ?string
     {
         return $this->expandPattern($pattern, $values);
@@ -98,23 +142,196 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame([['invoice_id' => 55, 'amount' => '1500.00']], $voucher['invoices']);
     }
 
-    public function testCreateUsesDeterministicReferencesForInvoiceContext()
+    public function testCreateUsesDefaultRandomPatternReferencesForInvoiceContext()
     {
         $repository = new KuickPayVoucherReferenceServiceFakeRepository();
         $repository->records[101] = [
-            'voucher' => $this->voucherRow(101, '000055', 'KP000055'),
+            'voucher' => $this->voucherRow(101, '123455', 'KP123455'),
             'invoices' => [$this->invoiceRow(55, '1500.00')],
         ];
 
-        $service = new KuickPayVoucherReferenceService($repository);
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1234];
         $voucher = $service->getOrCreateForInvoiceContext($this->context());
 
         $this->assertSame(1, $repository->createCalls);
-        $this->assertSame('000055', $repository->createdVoucherData['registration_number']);
-        $this->assertSame('KP000055', $repository->createdVoucherData['consumer_number']);
+        $this->assertSame('123455', $repository->createdVoucherData['registration_number']);
+        $this->assertSame('KP123455', $repository->createdVoucherData['consumer_number']);
         $this->assertSame('pending', $repository->createdVoucherData['status']);
-        $this->assertSame('000055', $voucher['registration_number']);
-        $this->assertSame('KP000055', $voucher['consumer_number']);
+        $this->assertSame('123455', $voucher['registration_number']);
+        $this->assertSame('KP123455', $voucher['consumer_number']);
+        $this->assertNull($service->getLastError());
+    }
+
+    public function testGenerateRandomPrefixZeroPadsRawRandomInteger()
+    {
+        $service = new TestableKuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+        $service->randomQueue = [42];
+
+        $this->assertSame('0042', $service->callGenerateRandomPrefix());
+    }
+
+    public function testDefaultPatternsPreserveLeadingZeroInstitutionId()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $instId = '01999';
+        $reg = '1111666666';
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, $reg, $instId . $reg),
+            'invoices' => [$this->invoiceRow(666666, '1500.00')],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1111];
+        $context = $this->context([
+            'institution_id' => $instId,
+            'invoice_amounts' => [
+                ['id' => 666666, 'amount' => '1500.00'],
+            ],
+        ]);
+
+        $voucher = $service->getOrCreateForInvoiceContext($context);
+
+        $this->assertSame($reg, $voucher['registration_number']);
+        $this->assertSame($instId . $reg, $voucher['consumer_number']);
+    }
+
+    public function testCustomPatternsCanUseLiterals()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, 'R-1234-55', 'C-KP-R-1234-55'),
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1234];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'registration_number_pattern' => 'R-{random_prefix}-{invoice_id}',
+            'consumer_number_pattern' => 'C-{institution_id}-{registration_number}',
+        ]));
+
+        $this->assertSame('R-1234-55', $voucher['registration_number']);
+        $this->assertSame('C-KP-R-1234-55', $voucher['consumer_number']);
+    }
+
+    public function testInvalidRegistrationPatternFailsClosedWithReason()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'registration_number_pattern' => '{client_id}',
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('invalid_registration_pattern', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+    }
+
+    public function testInvalidConsumerPatternFailsClosedWithReason()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'consumer_number_pattern' => '{client_id}',
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('invalid_consumer_pattern', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+    }
+
+    public function testEmptyInstitutionIdInConsumerPatternFailsClosedWithReason()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'institution_id' => '',
+            'consumer_number_pattern' => '{institution_id}{registration_number}',
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('invalid_consumer_pattern', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+    }
+
+    public function testOverlongGeneratedReferenceFailsClosed()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'registration_number_pattern' => str_repeat('A', 65),
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('invalid_registration_pattern', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+    }
+
+    public function testCollisionRegeneratesAndCreatesWithNextPrefix()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->registrationLookupReturns = [(object) ['id' => 1], null];
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, '222255', 'KP222255'),
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1111, 2222];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context());
+
+        $this->assertSame(1, $repository->createCalls);
+        $this->assertSame('222255', $repository->createdVoucherData['registration_number']);
+        $this->assertSame('KP222255', $repository->createdVoucherData['consumer_number']);
+        $this->assertSame('222255', $voucher['registration_number']);
+        $this->assertSame([
+            ['111155', 1],
+            ['222255', 1],
+        ], $repository->registrationLookups);
+    }
+
+    public function testReferenceCollisionExhaustionFailsClosed()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->registrationLookupReturns = array_fill(0, 5, (object) ['id' => 1]);
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1111, 2222, 3333, 4444, 5555];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context());
+
+        $this->assertNull($voucher);
+        $this->assertSame('uniqueness_exhausted', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+        $this->assertCount(5, $repository->registrationLookups);
+    }
+
+    public function testDuplicateForcingPatternExhaustionFailsClosed()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->registrationLookupReturns = array_fill(0, 5, (object) ['id' => 1]);
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1111, 2222, 3333, 4444, 5555];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'registration_number_pattern' => '{institution_id}',
+            'consumer_number_pattern' => '{institution_id}',
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('uniqueness_exhausted', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+        $this->assertSame([
+            ['KP', 1],
+            ['KP', 1],
+            ['KP', 1],
+            ['KP', 1],
+            ['KP', 1],
+        ], $repository->registrationLookups);
     }
 
     public function testCreateFailureRerunsReuseLookupOnceForRaceRecovery()
@@ -135,9 +352,9 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame('KP000055', $voucher['consumer_number']);
     }
 
-    private function context()
+    private function context(array $overrides = [])
     {
-        return [
+        return array_merge([
             'company_id' => 1,
             'gateway_id' => 2,
             'client_id' => 3,
@@ -149,7 +366,7 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
             'institution_id' => 'KP',
             'due_date_offset_days' => 3,
             'expiry_date_offset_days' => 7,
-        ];
+        ], $overrides);
     }
 
     private function voucherRow($id, $registration_number = '000055', $consumer_number = 'KP000055')

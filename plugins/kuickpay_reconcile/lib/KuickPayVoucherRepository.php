@@ -72,6 +72,34 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches a voucher by registration number.
+     *
+     * @param string $registration_number The KuickPay registration number
+     * @param int $company_id The company ID
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function getByRegistrationNumber(string $registration_number, int $company_id): ?stdClass
+    {
+        $voucher = $this->KuickpayVouchers->getByRegistrationNumber($registration_number, $company_id);
+
+        return $voucher ?: null;
+    }
+
+    /**
+     * Fetches a voucher by consumer number.
+     *
+     * @param string $consumer_number The KuickPay consumer number
+     * @param int $company_id The company ID
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function getByConsumerNumber(string $consumer_number, int $company_id): ?stdClass
+    {
+        $voucher = $this->KuickpayVouchers->getByConsumerNumber($consumer_number, $company_id);
+
+        return $voucher ?: null;
+    }
+
+    /**
      * Fetches a voucher with its invoice links.
      *
      * @param int $voucher_id The voucher ID

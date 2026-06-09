@@ -12,11 +12,17 @@ class KuickPayVoucherReferenceService
 {
     private const DEFAULT_REGISTRATION_PATTERN = '{random_prefix}{invoice_id}';
     private const DEFAULT_CONSUMER_PATTERN = '{institution_id}{registration_number}';
+    private const MAX_REFERENCE_ATTEMPTS = 5;
 
     /**
      * @var KuickPayVoucherRepository Voucher repository
      */
     private $repository;
+
+    /**
+     * @var string|null Last sanitized generation error code
+     */
+    private $lastError = null;
 
     /**
      * Constructs the reference service.
@@ -41,6 +47,8 @@ class KuickPayVoucherReferenceService
      */
     public function getOrCreateForInvoiceContext(array $context): ?array
     {
+        $this->lastError = null;
+
         try {
             $firstInvoice = $context['invoice_amounts'][0] ?? null;
             if (!is_array($firstInvoice) || !isset($firstInvoice['id'])) {
@@ -54,8 +62,27 @@ class KuickPayVoucherReferenceService
                 return $this->flatten($this->repository->getWithInvoices((int) $pending->id));
             }
 
-            $references = $this->generateReferences($context);
-            if (empty($references['registration_number']) || empty($references['consumer_number'])) {
+            $references = null;
+            for ($attempt = 1; $attempt <= self::MAX_REFERENCE_ATTEMPTS; $attempt++) {
+                $refs = $this->generateReferences($context);
+                if ($refs['registration_number'] === '' || $refs['consumer_number'] === '') {
+                    return null;
+                }
+
+                $collision = $this->repository->getByRegistrationNumber($refs['registration_number'], $company_id)
+                    || $this->repository->getByConsumerNumber($refs['consumer_number'], $company_id);
+                if (!$collision) {
+                    $references = $refs;
+                    break;
+                }
+
+                if ($attempt === self::MAX_REFERENCE_ATTEMPTS) {
+                    $this->lastError = 'uniqueness_exhausted';
+                    return null;
+                }
+            }
+
+            if ($references === null) {
                 return null;
             }
 
@@ -97,12 +124,40 @@ class KuickPayVoucherReferenceService
     }
 
     /**
-     * Generates deterministic 2.1 placeholder references.
+     * Gets the last sanitized generation error.
      *
-     * Story 2.2 replaces this fixed `0000` prefix with configurable patterns.
+     * @return string|null Last generation error code, or null
+     */
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
+    /**
+     * Generates a secure random integer for the reference prefix.
+     *
+     * @return int Random integer in the 4-digit prefix range
+     */
+    protected function randomInt(): int
+    {
+        return random_int(0, 9999);
+    }
+
+    /**
+     * Generates a zero-padded 4-digit random prefix.
+     *
+     * @return string The generated random prefix
+     */
+    protected function generateRandomPrefix(): string
+    {
+        return str_pad((string) $this->randomInt(), 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Generates configured voucher references.
      *
      * @param array $context Voucher context
-     * @return array Registration and consumer numbers, or empty values on invalid length
+     * @return array Registration and consumer numbers, or empty values on failure
      */
     private function generateReferences(array $context): array
     {
@@ -111,13 +166,36 @@ class KuickPayVoucherReferenceService
             return ['registration_number' => '', 'consumer_number' => ''];
         }
 
-        $registration_number = '0000' . $invoice_id;
-        $institution_id = (string) ($context['institution_id'] ?? '');
-        $consumer_number = $institution_id === ''
-            ? $registration_number
-            : $institution_id . $registration_number;
+        $registrationPattern = (string) ($context['registration_number_pattern'] ?? self::DEFAULT_REGISTRATION_PATTERN);
+        if ($registrationPattern === '') {
+            $registrationPattern = self::DEFAULT_REGISTRATION_PATTERN;
+        }
 
-        if (strlen($registration_number) > 64 || strlen($consumer_number) > 64) {
+        $consumerPattern = (string) ($context['consumer_number_pattern'] ?? self::DEFAULT_CONSUMER_PATTERN);
+        if ($consumerPattern === '') {
+            $consumerPattern = self::DEFAULT_CONSUMER_PATTERN;
+        }
+
+        $random = $this->generateRandomPrefix();
+        $institution_id = (string) ($context['institution_id'] ?? '');
+        $registration_number = $this->expandPattern($registrationPattern, [
+            'random_prefix' => $random,
+            'invoice_id' => $invoice_id,
+            'institution_id' => $institution_id,
+        ]);
+        if ($registration_number === null) {
+            $this->lastError = 'invalid_registration_pattern';
+            return ['registration_number' => '', 'consumer_number' => ''];
+        }
+
+        $consumer_number = $this->expandPattern($consumerPattern, [
+            'random_prefix' => $random,
+            'invoice_id' => $invoice_id,
+            'institution_id' => $institution_id,
+            'registration_number' => $registration_number,
+        ]);
+        if ($consumer_number === null) {
+            $this->lastError = 'invalid_consumer_pattern';
             return ['registration_number' => '', 'consumer_number' => ''];
         }
 
