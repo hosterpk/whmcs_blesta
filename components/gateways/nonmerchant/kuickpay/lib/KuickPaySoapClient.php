@@ -174,7 +174,7 @@ class KuickPaySoapClient
                     $this->extractRawResult($operation, null, $response),
                     $this->redactEnvelope($response),
                     null,
-                    $this->redactedDiagnosticText($e->getMessage()),
+                    $this->redactedDiagnosticText($e->getMessage(), $params),
                     $redacted_request,
                     $trace_id
                 );
@@ -186,7 +186,7 @@ class KuickPaySoapClient
                 null,
                 null,
                 $this->isTimeout($e) ? 'timeout' : 'transport_error',
-                $this->redactedDiagnosticText($e->getMessage()),
+                $this->redactedDiagnosticText($e->getMessage(), $params),
                 $redacted_request,
                 $trace_id
             );
@@ -199,7 +199,7 @@ class KuickPaySoapClient
                     $this->extractRawResult($operation, null, $response),
                     $this->redactEnvelope($response),
                     null,
-                    $this->redactedDiagnosticText($e->getMessage()),
+                    $this->redactedDiagnosticText($e->getMessage(), $params),
                     $redacted_request,
                     $trace_id
                 );
@@ -211,7 +211,7 @@ class KuickPaySoapClient
                 null,
                 null,
                 $this->isTimeout($e) ? 'timeout' : 'transport_error',
-                $this->redactedDiagnosticText($e->getMessage()),
+                $this->redactedDiagnosticText($e->getMessage(), $params),
                 $redacted_request,
                 $trace_id
             );
@@ -426,12 +426,18 @@ class KuickPaySoapClient
     }
 
     /**
-     * Return a redacted diagnostic string without raw credentials.
+     * Return a redacted diagnostic string without raw credentials or PII.
+     *
+     * A provider fault may echo back submitted credentials or PII (Name/Mobile/Email/
+     * Branch) as free text that never passed through the keyed/element redactors, so the
+     * request-supplied sensitive values are stripped here in addition to configured
+     * credentials. Fail closed: over-masking a diagnostic is preferable to leaking (AC5).
      *
      * @param string $text Raw diagnostic text
+     * @param array $params Request params whose sensitive values must not surface
      * @return string Redacted diagnostic text
      */
-    private function redactedDiagnosticText(string $text): string
+    private function redactedDiagnosticText(string $text, array $params = []): string
     {
         if (strpos($text, '<') !== false && strpos($text, '>') !== false) {
             $redacted = $this->redactor->redactEnvelope($text);
@@ -440,6 +446,7 @@ class KuickPaySoapClient
             }
         }
 
+        $secret_values = $this->redactor->sensitiveValues($params);
         foreach ([
             'voucher_username',
             'voucher_password',
@@ -447,13 +454,25 @@ class KuickPaySoapClient
             'inquiry_password',
             'institution_id',
         ] as $key) {
-            $value = (string) $this->configValue($key, '');
+            $secret_values[] = (string) $this->configValue($key, '');
+        }
+
+        // Strip longest values first so a short value cannot pre-empt a longer overlap.
+        usort($secret_values, function ($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+
+        foreach ($secret_values as $value) {
             if ($value !== '') {
                 $text = str_replace($value, 'xxxx', $text);
             }
         }
 
-        $text = preg_replace('/(userName|username|UserName|password|Password|InstitutionID)\s*[:=]\s*[^,\s<]+/i', '$1=xxxx', $text);
+        $text = preg_replace(
+            '/(userName|username|UserName|password|Password|InstitutionID|Name|Mobile|Email|Branch)\s*[:=]\s*(\'[^\']*\'|"[^"]*"|[^,\s<]+)/i',
+            '$1=xxxx',
+            $text
+        );
 
         return is_string($text) ? $text : '';
     }

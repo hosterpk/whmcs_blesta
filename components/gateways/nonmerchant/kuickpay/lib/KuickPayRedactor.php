@@ -69,6 +69,24 @@ class KuickPayRedactor
     }
 
     /**
+     * Collect the raw values stored under sensitive keys (recursively).
+     *
+     * Free-text diagnostics (a provider fault message) never pass through the keyed
+     * or element redactors, yet a provider may echo submitted credentials/PII back in
+     * one. This exposes those request-supplied values so a caller can strip them out.
+     *
+     * @param array $data Request or response data
+     * @return array Distinct non-empty sensitive string values
+     */
+    public function sensitiveValues(array $data): array
+    {
+        $values = [];
+        $this->collectSensitiveValues($data, $this->sensitiveFields(), $values);
+
+        return array_values(array_unique($values));
+    }
+
+    /**
      * Redact sensitive SOAP envelope element text by local element name.
      *
      * @param string $xml Raw SOAP envelope
@@ -194,6 +212,36 @@ class KuickPayRedactor
         }
 
         return $value;
+    }
+
+    /**
+     * Recursively gather raw values stored under sensitive keys.
+     *
+     * @param array $data Data to scan
+     * @param array $mask_fields Lowercase lookup of sensitive keys
+     * @param array $values Accumulator of sensitive string values (by reference)
+     * @return void
+     */
+    private function collectSensitiveValues(array $data, array $mask_fields, array &$values): void
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $this->collectSensitiveValues($value, $mask_fields, $values);
+                continue;
+            }
+
+            if ($value === null || is_bool($value)
+                || (is_object($value) && !method_exists($value, '__toString'))) {
+                continue;
+            }
+
+            if (array_key_exists(strtolower((string) $key), $mask_fields)) {
+                $string = (string) $value;
+                if ($string !== '') {
+                    $values[] = $string;
+                }
+            }
+        }
     }
 
     /**

@@ -123,6 +123,37 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertStringContainsString('Provider returned a body', $outcome['fault']);
     }
 
+    public function testFaultDiagnosticRedactsPiiAndCredentialsFromRequest()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->throw = new SoapFault(
+            'Server',
+            'Rejected voucher for Name: Customer Name Mobile: 03001234567 Email: john@example.com '
+            . 'userName=voucher-user password=voucher-secret'
+        );
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $this->callPrivate($client, 'InsertVoucher', [
+            'userName' => 'voucher-user',
+            'password' => 'voucher-secret',
+            'Name' => 'Customer Name',
+            'Mobile' => '03001234567',
+            'Email' => 'john@example.com',
+            'Branch' => 'Main Branch',
+        ]);
+
+        $this->assertFalse($outcome['ok']);
+        $this->assertSame('transport_error', $outcome['error_class']);
+        $this->assertStringNotContainsString('Customer Name', $outcome['fault']);
+        $this->assertStringNotContainsString('03001234567', $outcome['fault']);
+        $this->assertStringNotContainsString('john@example.com', $outcome['fault']);
+        $this->assertStringNotContainsString('voucher-user', $outcome['fault']);
+        $this->assertStringNotContainsString('voucher-secret', $outcome['fault']);
+    }
+
     public function testTimeoutWithoutResponseBodyMapsToTimeout()
     {
         $fake = new KuickPaySoapClientFake();
