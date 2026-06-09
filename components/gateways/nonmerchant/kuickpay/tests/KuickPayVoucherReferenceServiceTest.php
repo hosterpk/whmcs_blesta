@@ -295,6 +295,29 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         ], $repository->registrationLookups);
     }
 
+    public function testConsumerNumberCollisionRegeneratesAndCreatesWithNextPrefix()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->consumerLookupReturns = [(object) ['id' => 1], null];
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, '222255', 'KP222255'),
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1111, 2222];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context());
+
+        $this->assertSame(1, $repository->createCalls);
+        $this->assertSame('222255', $repository->createdVoucherData['registration_number']);
+        $this->assertSame('KP222255', $repository->createdVoucherData['consumer_number']);
+        $this->assertSame('222255', $voucher['registration_number']);
+        $this->assertSame([
+            ['KP111155', 1],
+            ['KP222255', 1],
+        ], $repository->consumerLookups);
+    }
+
     public function testReferenceCollisionExhaustionFailsClosed()
     {
         $repository = new KuickPayVoucherReferenceServiceFakeRepository();
