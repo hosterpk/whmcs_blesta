@@ -75,25 +75,25 @@ _Reproduced verbatim from [Source: epics.md#Story 2.1, lines 421–437]._
     - `getByInvoiceId(int $invoice_id)` — select all where `invoice_id = $invoice_id`, `fetchAll()`.
   - [x] 2.3 Add validation rules to `KuickpayVouchers::add()` ensuring required fields: `company_id`, `client_id`, `gateway_id`, `currency`, `amount`, `status`, `registration_number`, `consumer_number`. Status must be `in_array` of the exact 8 allowed states (`pending`, `retry`, `confirmed_unposted`, `posted`, `failed`, `expired`, `manual_review`, `cancelled`) — the same set as the schema `enum`, so the validation allowlist and the column definition cannot drift. Currency must be `maxLength` 3. Amount must match a safe decimal string pattern (e.g., `/^\d+(?:\.\d{1,2})?$/`). Use `$this->_('KuickpayVouchers.!error.*')` language keys.
 
-- [ ] **Task 3 — Create plugin lib services** (AC: #1, #2)
-  - [ ] 3.1 Create `plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php` — plain PHP class (NOT framework-instantiated, no namespace, legacy global). Constructor loads plugin models via `Loader::loadModels($this, ['KuickpayReconcile.KuickpayVouchers', 'KuickpayReconcile.KuickpayVoucherInvoices']);`. Methods:
+- [x] **Task 3 — Create plugin lib services** (AC: #1, #2)
+  - [x] 3.1 Create `plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php` — plain PHP class (NOT framework-instantiated, no namespace, legacy global). Constructor loads plugin models via `Loader::loadModels($this, ['KuickpayReconcile.KuickpayVouchers', 'KuickpayReconcile.KuickpayVoucherInvoices']);`. Methods:
     - `create(array $voucherData, array $invoiceLinks): ?int` — **atomically** create voucher + invoice links. Blesta `Record` supports transactions, so wrap the writes: `$this->KuickpayVouchers->Record->begin();` → `$this->KuickpayVouchers->add($voucherData)` → loop `$invoiceLinks` calling `$this->KuickpayVoucherInvoices->add()` → on any model error or thrown exception `$this->KuickpayVouchers->Record->rollBack()` and return null, otherwise `commit()` and return the voucher ID. There is **no** "sequential / non-transactional" fallback — atomic create of voucher + links is an architecture rule (no orphan voucher without its invoice link). A unique-key violation (a concurrent request won the race) is one of the failure paths that rolls back and returns null; the reference service recovers from null by re-running the reuse lookup (Task 3.2).
     - `getPendingByInvoiceId(int $invoice_id, int $company_id): ?stdClass` — delegate to `$this->KuickpayVouchers->getPendingByInvoiceId(...)`.
     - `getWithInvoices(int $voucher_id): ?array` — fetch voucher via `get()`, then its invoice links via `getByVoucherId()`, return the repository-level nested shape `['voucher' => $voucher (stdClass), 'invoices' => $invoices]`. **The reference service (Task 3.2), not this method, owns flattening into the view-facing contract** — callers above the repository must not assume this nested shape.
-  - [ ] 3.2 Create `plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php` — plain PHP class. Constructor receives or creates a `KuickPayVoucherRepository` instance. The main entry point is the AC2 idempotency gate:
+  - [x] 3.2 Create `plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php` — plain PHP class. Constructor receives or creates a `KuickPayVoucherRepository` instance. The main entry point is the AC2 idempotency gate:
     - `getOrCreateForInvoiceContext(array $context): ?array` where `$context` contains: `company_id`, `gateway_id`, `client_id`, `currency`, `amount`, `invoice_amounts` (array of `['id' => invoice_id, 'amount' => amount]`), `institution_id`, `due_date_offset_days`, `expiry_date_offset_days`.
     - **Return shape (canonical — see "Voucher data contract" in Dev Notes):** on success return a **flat associative array** the service builds from the repository's `stdClass` row: `['id', 'company_id', 'client_id', 'gateway_id', 'currency', 'amount', 'status', 'registration_number', 'consumer_number', 'date_due', 'date_expires', 'invoices' => [['invoice_id'=>…, 'amount'=>…], …]]`. On any failure return `null`. The view and gateway consume only this flat array — never the raw `stdClass` and never the repository's nested `['voucher'=>…, 'invoices'=>…]` shape.
     - **Reuse path (AC2):** Check repository for a pending voucher by `invoice_id` = first invoice in `invoice_amounts`. If found, flatten and return it (with invoices) without creating anything.
     - **Create path (AC1):** If no pending voucher, generate `registration_number` and `consumer_number` (Task 4 — deterministic), compute `date_due` = today + `due_date_offset_days`, `date_expires` = today + `expiry_date_offset_days`, build `$voucherData` and `$invoiceLinks`, call `repository->create()`. On success, fetch the created voucher (via `getWithInvoices()`), flatten, and return it.
     - **Race-recovery path (AC2 hardening):** If `repository->create()` returns `null`, a concurrent request may have created the voucher first and tripped the company-scoped unique key. Re-run the reuse lookup **once**; if a pending voucher now exists, flatten and return it. Only if it is still absent return `null`. This — together with deterministic references (Task 4) and the schema unique keys — is how 2.1 satisfies AC2 "does not create a duplicate active Voucher" without relying on the application check alone (NN#3).
     - **Failure path:** Never throw raw exceptions to the gateway; return `null`. The gateway treats `null` as "voucher unavailable" and renders the fallback.
-  - [ ] 3.3 Keep `KuickPayVoucherReferenceService` decoupled from gateway specifics. It must not know about `$this->meta`, `NonmerchantGateway`, or view rendering. It receives scalar context only.
+  - [x] 3.3 Keep `KuickPayVoucherReferenceService` decoupled from gateway specifics. It must not know about `$this->meta`, `NonmerchantGateway`, or view rendering. It receives scalar context only.
 
-- [ ] **Task 4 — Basic reference generation** (AC: #1)
-  - [ ] 4.1 In `KuickPayVoucherReferenceService`, add a private `generateReferences(array $context): array` method that returns `['registration_number' => ..., 'consumer_number' => ...]`.
-  - [ ] 4.2 **Registration Number (deterministic):** `$prefix = '0000'; $registration_number = $prefix . (string) $context['invoice_amounts'][0]['id'];`. This matches the confirmed KuickPay shape (`<4-digit prefix> + invoice_id`) and is **deterministic per invoice** — a concurrent reload computes the identical value, so the `(company_id, registration_number)` unique key blocks a duplicate at the schema layer. Do **NOT** use `uniqid()`/random/time-based components: randomness would let two concurrent inserts each pass the unique keys and create duplicate active vouchers (defeating AC2). The `'0000'` prefix is a documented placeholder; Story 2.2 replaces it with the configurable biller prefix. The DB unique constraint still backstops any collision.
-  - [ ] 4.3 **Consumer Number (deterministic):** concatenate `institution_id` + `registration_number` (yielding the confirmed `institution_id + <4-digit prefix> + invoice_id` shape). If `institution_id` is empty, fall back to `registration_number` alone so the value is never null/empty (the DB column is NOT NULL). This is likewise deterministic per invoice, so the `(company_id, consumer_number)` unique key is a second schema-level race guard.
-  - [ ] 4.4 Total length of both references must not exceed the `varchar(64)` column size. Truncate or error if needed. Document that Story 2.2 replaces this algorithm with configurable patterns.
+- [x] **Task 4 — Basic reference generation** (AC: #1)
+  - [x] 4.1 In `KuickPayVoucherReferenceService`, add a private `generateReferences(array $context): array` method that returns `['registration_number' => ..., 'consumer_number' => ...]`.
+  - [x] 4.2 **Registration Number (deterministic):** `$prefix = '0000'; $registration_number = $prefix . (string) $context['invoice_amounts'][0]['id'];`. This matches the confirmed KuickPay shape (`<4-digit prefix> + invoice_id`) and is **deterministic per invoice** — a concurrent reload computes the identical value, so the `(company_id, registration_number)` unique key blocks a duplicate at the schema layer. Do **NOT** use `uniqid()`/random/time-based components: randomness would let two concurrent inserts each pass the unique keys and create duplicate active vouchers (defeating AC2). The `'0000'` prefix is a documented placeholder; Story 2.2 replaces it with the configurable biller prefix. The DB unique constraint still backstops any collision.
+  - [x] 4.3 **Consumer Number (deterministic):** concatenate `institution_id` + `registration_number` (yielding the confirmed `institution_id + <4-digit prefix> + invoice_id` shape). If `institution_id` is empty, fall back to `registration_number` alone so the value is never null/empty (the DB column is NOT NULL). This is likewise deterministic per invoice, so the `(company_id, consumer_number)` unique key is a second schema-level race guard.
+  - [x] 4.4 Total length of both references must not exceed the `varchar(64)` column size. Truncate or error if needed. Document that Story 2.2 replaces this algorithm with configurable patterns.
 
 - [ ] **Task 5 — Wire gateway `buildProcess()` to plugin reference service** (AC: #1, #2)
   - [ ] 5.1 In `components/gateways/nonmerchant/kuickpay/kuickpay.php`, add a `protected $kuickpay_gateway_id;` property and override `setGatewayId($id)`:
@@ -517,11 +517,13 @@ GPT-5 Codex
 
 - 2026-06-10: Task 1 syntax checks passed for `kuickpay_reconcile_model.php` and `kuickpay_reconcile_plugin.php`; structural grep confirmed required voucher unique keys and idempotent table creation calls.
 - 2026-06-10: Task 2 syntax checks passed for both plugin model files; method-surface grep confirmed the required voucher and invoice-link APIs exist.
+- 2026-06-10: Tasks 3-4 red/green unit coverage added and passed: `KuickPayVoucherReferenceServiceTest` covers reuse without create, deterministic placeholder references, and create-null race recovery.
 
 ### Completion Notes List
 
 - Task 1 complete: added the plugin base model, idempotent voucher/invoice-link schema creation in `install()`, safe no-op upgrade, and non-destructive uninstall documentation preserving evidence tables.
 - Task 2 complete: added voucher and voucher-invoice models with required CRUD/query APIs, required-field/status/currency/amount validation, automatic timestamps, and `lastInsertId()` returns after successful inserts.
+- Tasks 3-4 complete: added the repository transaction boundary, reference service reuse/create/race-recovery gate, flat view-facing voucher contract, and deterministic Story 2.1 placeholder references.
 
 ### File List
 
@@ -529,6 +531,9 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherReferenceServiceTest.php
 
 ## Change Log
 
@@ -536,3 +541,4 @@ GPT-5 Codex
 - 2026-06-10: Validation triage applied (story remains ready-for-dev). Pinned the voucher data contract (service returns a flat array; view stops mis-accessing a `stdClass`); relocated model error language keys into the per-model files the base model actually auto-loads; made reference generation deterministic and aligned to the confirmed KuickPay shape so the company-scoped unique keys become the schema-level AC2 race guard; mandated atomic transactional create with rollback plus a race-recovery re-query; added invoice-link validation, `lastInsertId()` returns, an inline status allowlist, and string-only fail-closed amount normalization; gated voucher create/reuse behind the no-errors branch (the guard has no early-return); corrected the "prove no mutation" grep (dropped the self-matching `->add(`); added a unit-test task and a `setGatewayId()` ordering check; and added Dev Notes for the data contract and the AC2 idempotency strategy. Verified against source: `buildProcess()` control flow, base-model language auto-load, `Record->insert()`/`lastInsertId()`, the 3.1 confirmed reference formula, and the existing test harness.
 - 2026-06-10: Implemented Task 1 plugin base model and durable voucher schema.
 - 2026-06-10: Implemented Task 2 plugin voucher models.
+- 2026-06-10: Implemented Tasks 3-4 voucher repository, reference service, deterministic references, and focused unit tests.
