@@ -83,7 +83,7 @@ development_status:
   1-2-configure-kuickpay-gateway-settings: done
   1-3-encrypt-and-mask-kuickpay-credentials: done
   1-4-run-safe-kuickpay-connection-tests: done
-  1-5-enforce-pkr-only-gateway-eligibility: backlog
+  1-5-enforce-pkr-only-gateway-eligibility: ready-for-dev
   epic-1-retrospective: optional
 
   # --- Epic 2: Customer Voucher Payment Reference ---
@@ -101,7 +101,7 @@ development_status:
   # NOTE: 3-1(InsertVoucher) and 3-2(creation parser) slices precede 2-3.
   epic-3: in-progress
   3-1-wrap-kuickpay-soap-operations: done
-  3-2-normalize-kuickpay-evidence-with-fixtures: backlog
+  3-2-normalize-kuickpay-evidence-with-fixtures: ready-for-dev
   3-3-reconcile-pending-vouchers-by-single-inquiry: backlog
   3-4-validate-confirmed-payment-evidence: backlog
   3-5-post-safe-blesta-transactions: backlog
