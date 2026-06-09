@@ -94,7 +94,9 @@ class KuickPayRedactor
      */
     public function redactEnvelope(string $xml): string
     {
-        if (strlen($xml) > self::MAX_ENVELOPE_BYTES || stripos($xml, '<!DOCTYPE') !== false) {
+        // Empty input must short-circuit: on PHP 8 DOMDocument::loadXML('') throws a
+        // ValueError rather than returning false, which would escape this method uncaught.
+        if ($xml === '' || strlen($xml) > self::MAX_ENVELOPE_BYTES || stripos($xml, '<!DOCTYPE') !== false) {
             return self::ENVELOPE_UNPARSEABLE;
         }
 

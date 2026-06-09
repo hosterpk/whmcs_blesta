@@ -70,6 +70,7 @@ class KuickPayRedactorTest extends TestCase
             $redactor->redactEnvelope('<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo />')
         );
         $this->assertSame(KuickPayRedactor::ENVELOPE_UNPARSEABLE, $redactor->redactEnvelope('<foo>'));
+        $this->assertSame(KuickPayRedactor::ENVELOPE_UNPARSEABLE, $redactor->redactEnvelope(''));
         $this->assertSame(
             KuickPayRedactor::ENVELOPE_UNPARSEABLE,
             $redactor->redactEnvelope(str_repeat('a', KuickPayRedactor::MAX_ENVELOPE_BYTES + 1))
