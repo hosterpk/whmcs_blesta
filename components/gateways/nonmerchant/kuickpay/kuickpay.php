@@ -77,6 +77,165 @@ class Kuickpay extends NonmerchantGateway
      */
     public function editSettings(array $meta)
     {
+        foreach ([
+            'inquiry_same_as_voucher',
+            'instruction_online_banking',
+            'instruction_bank_deposit',
+            'instruction_agent_franchise',
+            'instruction_mobile_app',
+            'logging_enabled',
+            'reconciliation_enabled',
+        ] as $checkbox) {
+            if (!isset($meta[$checkbox])) {
+                $meta[$checkbox] = 'false';
+            }
+        }
+
+        if (!isset($meta['currency_policy']) || $meta['currency_policy'] === '') {
+            $meta['currency_policy'] = 'pkr_only';
+        }
+        if (!isset($meta['fee_policy']) || $meta['fee_policy'] === '') {
+            $meta['fee_policy'] = 'none';
+        }
+
+        $same = (($meta['inquiry_same_as_voucher'] ?? 'false') === 'true');
+        $optionalNumericRule = ['matches', '/^([0-9]+)?$/'];
+        $referencePatternRule = ['matches', '/^[A-Za-z0-9_{}+\-]+$/'];
+
+        $rules = [
+            'wsdl_url' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.wsdl_url.empty', true),
+                ],
+                'format' => [
+                    'rule' => function ($url) {
+                        return is_string($url)
+                            && filter_var($url, FILTER_VALIDATE_URL) !== false
+                            && strtolower((string) parse_url($url, PHP_URL_SCHEME)) === 'https';
+                    },
+                    'message' => Language::_('Kuickpay.!error.wsdl_url.format', true),
+                ],
+            ],
+            'voucher_username' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.voucher_username.empty', true),
+                ],
+            ],
+            'voucher_password' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.voucher_password.empty', true),
+                ],
+            ],
+            'institution_id' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.institution_id.empty', true),
+                ],
+            ],
+            'registration_number_pattern' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.registration_number_pattern.empty', true),
+                ],
+                'format' => [
+                    'rule' => $referencePatternRule,
+                    'message' => Language::_('Kuickpay.!error.registration_number_pattern.format', true),
+                ],
+            ],
+            'consumer_number_pattern' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.consumer_number_pattern.empty', true),
+                ],
+                'format' => [
+                    'rule' => $referencePatternRule,
+                    'message' => Language::_('Kuickpay.!error.consumer_number_pattern.format', true),
+                ],
+            ],
+            'soap_timeout' => [
+                'numeric' => [
+                    'if_set' => true,
+                    'rule' => $optionalNumericRule,
+                    'message' => Language::_('Kuickpay.!error.soap_timeout.numeric', true),
+                ],
+            ],
+            'due_date_offset_days' => [
+                'numeric' => [
+                    'if_set' => true,
+                    'rule' => $optionalNumericRule,
+                    'message' => Language::_('Kuickpay.!error.due_date_offset_days.numeric', true),
+                ],
+            ],
+            'expiry_date_offset_days' => [
+                'numeric' => [
+                    'if_set' => true,
+                    'rule' => $optionalNumericRule,
+                    'message' => Language::_('Kuickpay.!error.expiry_date_offset_days.numeric', true),
+                ],
+            ],
+            'currency_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    'rule' => ['in_array', ['pkr_only']],
+                    'message' => Language::_('Kuickpay.!error.currency_policy.valid', true),
+                ],
+            ],
+            'fee_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    'rule' => ['in_array', ['none']],
+                    'message' => Language::_('Kuickpay.!error.fee_policy.valid', true),
+                ],
+            ],
+        ];
+
+        if (!$same) {
+            $rules['inquiry_username'] = [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.inquiry_username.empty', true),
+                ],
+            ];
+            $rules['inquiry_password'] = [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => Language::_('Kuickpay.!error.inquiry_password.empty', true),
+                ],
+            ];
+        }
+
+        foreach ([
+            'inquiry_same_as_voucher',
+            'instruction_online_banking',
+            'instruction_bank_deposit',
+            'instruction_agent_franchise',
+            'instruction_mobile_app',
+            'logging_enabled',
+            'reconciliation_enabled',
+        ] as $checkbox) {
+            $rules[$checkbox] = [
+                'valid' => [
+                    'if_set' => true,
+                    'rule' => ['in_array', ['true', 'false']],
+                    'message' => Language::_('Kuickpay.!error.' . $checkbox . '.valid', true),
+                ],
+            ];
+        }
+
+        $this->Input->setRules($rules);
+        $this->Input->validates($meta);
+
         return $meta;
     }
 
