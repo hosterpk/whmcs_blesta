@@ -99,8 +99,8 @@ class Kuickpay extends NonmerchantGateway
         }
 
         $same = (($meta['inquiry_same_as_voucher'] ?? 'false') === 'true');
-        $optionalNumericRule = ['matches', '/^([0-9]+)?$/'];
-        $referencePatternRule = ['matches', '/^[A-Za-z0-9_{}+\-]+$/'];
+        $optionalNumericRule = ['matches', '/^([0-9]+)?$/D'];
+        $referencePatternRule = ['matches', '/^[A-Za-z0-9_{}+\-]+$/D'];
 
         $rules = [
             'wsdl_url' => [
