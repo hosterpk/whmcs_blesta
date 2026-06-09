@@ -1,0 +1,312 @@
+<?php
+
+use PHPUnit\Framework\TestCase;
+
+class KuickPayReconcileServiceTest extends TestCase
+{
+    private const FIXTURE_DIR = __DIR__ . '/fixtures/kuickpay';
+
+    public function testPaidExactInquiryTransitionsToConfirmedUnpostedWithoutPosting()
+    {
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher]);
+        $service = $this->service(['voucher_repository' => $repo, 'client' => $client]);
+
+        $result = $service->runCron(1);
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame(['RegistrationNumber' => 'REG-0000001'], $client->requests[0]);
+        $this->assertArrayNotHasKey('expected_consumer_number', $service->buildParserContext($voucher));
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertSame('1000.00', $repo->edits[0]['amount']);
+        $this->assertSame('2026-06-09 00:00:00', $repo->edits[0]['date_paid']);
+        $this->assertSame('KP-REF-PAID', $repo->edits[0]['kuickpay_reference']);
+        $this->assertNotSame('posted', $repo->edits[0]['status']);
+        $this->assertStringNotContainsString(
+            'BillPaymentInquiryResult',
+            $repo->edits[0]['diagnostic_summary']
+        );
+    }
+
+    /**
+     * @dataProvider fixtureMappingProvider
+     */
+    public function testFixtureBackedStateMappings(string $fixture, string $expectedStatus, ?string $expectedError)
+    {
+        $client = new KuickPayReconcileFakeClient([$this->outcome($this->fixtureResult($fixture))]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher()]);
+        $service = $this->service(['voucher_repository' => $repo, 'client' => $client]);
+
+        $service->runCron(1);
+
+        $this->assertSame($expectedStatus, $repo->edits[0]['status']);
+        $this->assertSame($expectedError, $repo->edits[0]['error_class']);
+    }
+
+    public function fixtureMappingProvider(): array
+    {
+        return [
+            ['valid/bill-payment-inquiry-pending.xml', 'pending', null],
+            ['ambiguous/bill-payment-inquiry-amount-mismatch.xml', 'manual_review', 'amount_mismatch'],
+            ['valid/bill-payment-inquiry-expired.xml', 'expired', null],
+            ['ambiguous/bill-payment-inquiry-unknown.xml', 'manual_review', 'unknown_status'],
+        ];
+    }
+
+    public function testTransportTimeoutMovesToRetryAndIncrementsRetryCount()
+    {
+        $client = new KuickPayReconcileFakeClient([[
+            'ok' => false,
+            'operation' => 'BillPaymentInquiry',
+            'raw_result' => null,
+            'error_class' => 'timeout',
+            'redacted_trace_id' => 'kp_timeout',
+        ]]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher(['retry_count' => 1])]);
+        $service = $this->service(['voucher_repository' => $repo, 'client' => $client]);
+
+        $service->runCron(1);
+
+        $this->assertSame('retry', $repo->edits[0]['status']);
+        $this->assertSame(2, $repo->edits[0]['retry_count']);
+        $this->assertSame('timeout', $repo->edits[0]['error_class']);
+    }
+
+    public function testRetryLimitEscalatesTransportFailureToManualReview()
+    {
+        $client = new KuickPayReconcileFakeClient([[
+            'ok' => false,
+            'operation' => 'BillPaymentInquiry',
+            'raw_result' => null,
+            'error_class' => 'transport_error',
+            'redacted_trace_id' => 'kp_timeout',
+        ]]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([
+            $this->voucher(['status' => 'retry', 'retry_count' => 4]),
+        ]);
+        $service = $this->service(['voucher_repository' => $repo, 'client' => $client]);
+
+        $service->runCron(1);
+
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertSame(5, $repo->edits[0]['retry_count']);
+    }
+
+    public function testHeldLockSkipsWithoutOpeningRun()
+    {
+        $lock = new KuickPayReconcileFakeLockRepository(false);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $service = $this->service(['lock_repository' => $lock, 'run_repository' => $run]);
+
+        $result = $service->runCron(1);
+
+        $this->assertSame('skipped', $result['status']);
+        $this->assertSame('lock_held', $result['reason']);
+        $this->assertSame(0, $run->opened);
+    }
+
+    public function testRunUsesResumeCursorAndClosesCompletedRunWithResetCursor()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-pending.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher(['id' => 6])]);
+        $run = new KuickPayReconcileFakeRunRepository(5);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'run_repository' => $run,
+            'client' => $client,
+        ]);
+
+        $service->runCron(1);
+
+        $this->assertSame(5, $repo->lastAfterId);
+        $this->assertSame(0, $run->closedCursor);
+    }
+
+    public function testSupplyingBothIdentityKeysFailsClosedRegressionGuard()
+    {
+        $evidence = (new KuickPayResponseParser())->parse(
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+            [
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+                'expected_registration_number' => 'REG-0000001',
+                'expected_consumer_number' => 'INSTITUTION_IDREG-0000001',
+            ]
+        );
+
+        $this->assertSame('manual_review', $evidence->status());
+        $this->assertSame('unmatched_reference', $evidence->errorClass());
+    }
+
+    private function service(array $overrides = []): KuickPayReconcileService
+    {
+        $client = $overrides['client'] ?? new KuickPayReconcileFakeClient([]);
+
+        return new KuickPayReconcileService([
+            'voucher_repository' => $overrides['voucher_repository'] ?? new KuickPayReconcileFakeVoucherRepository([]),
+            'run_repository' => $overrides['run_repository'] ?? new KuickPayReconcileFakeRunRepository(),
+            'item_repository' => $overrides['item_repository'] ?? new KuickPayReconcileFakeItemRepository(),
+            'lock_repository' => $overrides['lock_repository'] ?? new KuickPayReconcileFakeLockRepository(),
+            'audit_service' => $overrides['audit_service'] ?? new KuickPayReconcileFakeAuditService(),
+            'parser' => new KuickPayResponseParser(),
+            'gateway_config' => ['reconciliation_enabled' => 'true'],
+            'client_factory' => function () use ($client) {
+                return $client;
+            },
+        ]);
+    }
+
+    private function voucher(array $overrides = [])
+    {
+        return (object) array_merge([
+            'id' => 1,
+            'company_id' => 1,
+            'status' => 'pending',
+            'amount' => '1000.00',
+            'currency' => 'PKR',
+            'registration_number' => 'REG-0000001',
+            'consumer_number' => 'INSTITUTION_IDREG-0000001',
+            'retry_count' => 0,
+        ], $overrides);
+    }
+
+    private function outcome(string $rawResult): array
+    {
+        return [
+            'ok' => true,
+            'operation' => 'BillPaymentInquiry',
+            'raw_result' => $rawResult,
+            'error_class' => null,
+            'redacted_trace_id' => 'kp_trace',
+        ];
+    }
+
+    private function fixtureResult(string $fixture): string
+    {
+        $xml = file_get_contents(self::FIXTURE_DIR . '/' . $fixture);
+        preg_match('/<BillPaymentInquiryResult>(.*?)<\/BillPaymentInquiryResult>/s', $xml, $matches);
+
+        return trim(html_entity_decode($matches[1]));
+    }
+}
+
+class KuickPayReconcileFakeVoucherRepository
+{
+    public array $edits = [];
+    public int $lastAfterId = 0;
+    private array $vouchers;
+
+    public function __construct(array $vouchers)
+    {
+        $this->vouchers = $vouchers;
+    }
+
+    public function getReconcilable(int $company_id, int $limit, int $afterId = 0, string $minRecheckBefore = null): array
+    {
+        $this->lastAfterId = $afterId;
+
+        return $this->vouchers;
+    }
+
+    public function edit(int $voucher_id, array $vars): void
+    {
+        $this->edits[] = $vars;
+    }
+}
+
+class KuickPayReconcileFakeRunRepository
+{
+    public int $opened = 0;
+    public int $closedCursor = -1;
+    private int $resumeCursor;
+
+    public function __construct(int $resumeCursor = 0)
+    {
+        $this->resumeCursor = $resumeCursor;
+    }
+
+    public function getResumeCursor(int $company_id): int
+    {
+        return $this->resumeCursor;
+    }
+
+    public function open(int $company_id, string $trigger_type, int $cursor): int
+    {
+        $this->opened++;
+
+        return 10;
+    }
+
+    public function updateCursor(int $run_id, int $cursor): void
+    {
+    }
+
+    public function close(int $run_id, string $status, array $counts, int $cursor, string $summary): void
+    {
+        $this->closedCursor = $status === 'completed' ? 0 : $cursor;
+    }
+}
+
+class KuickPayReconcileFakeItemRepository
+{
+    public array $items = [];
+
+    public function record(array $vars): void
+    {
+        $this->items[] = $vars;
+    }
+}
+
+class KuickPayReconcileFakeLockRepository
+{
+    private bool $available;
+    public bool $released = false;
+
+    public function __construct(bool $available = true)
+    {
+        $this->available = $available;
+    }
+
+    public function acquire(int $company_id, string $lockName, int $ttlSeconds): ?string
+    {
+        return $this->available ? 'owner-token' : null;
+    }
+
+    public function release(int $company_id, string $lockName, string $ownerToken): void
+    {
+        $this->released = true;
+    }
+}
+
+class KuickPayReconcileFakeAuditService
+{
+    public array $events = [];
+
+    public function record(string $eventName, array $context): void
+    {
+        $this->events[] = [$eventName, $context];
+    }
+}
+
+class KuickPayReconcileFakeClient
+{
+    public array $requests = [];
+    private array $outcomes;
+
+    public function __construct(array $outcomes)
+    {
+        $this->outcomes = $outcomes;
+    }
+
+    public function billPaymentInquiry(array $params): array
+    {
+        $this->requests[] = $params;
+
+        return array_shift($this->outcomes);
+    }
+}
