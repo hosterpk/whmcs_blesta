@@ -49,11 +49,17 @@ class KuickPayConnectionProbeGateway extends Kuickpay
 {
     public $probeCalls = [];
     public $probeResult = ['errno' => 7, 'response_code' => 0];
+    public $resolvedAddresses = ['93.184.216.34'];
 
     protected function executeConnectionProbe($url, array $options)
     {
         $this->probeCalls[] = ['url' => $url, 'options' => $options];
         return $this->probeResult;
+    }
+
+    protected function resolveProbeAddresses($host)
+    {
+        return $this->resolvedAddresses;
     }
 }
 
@@ -128,6 +134,8 @@ class KuickPayConnectionProbeTest extends TestCase
         $this->assertFalse($call['options'][CURLOPT_FOLLOWLOCATION]);
         $this->assertTrue($call['options'][CURLOPT_RETURNTRANSFER]);
         $this->assertFalse($call['options'][CURLOPT_NOBODY]);
+        // The request is pinned to the validated public address (DNS-rebinding guard).
+        $this->assertSame(['example.test:443:93.184.216.34'], $call['options'][CURLOPT_RESOLVE]);
         $this->assertStringNotContainsString('voucher-user', serialize($call));
         $this->assertStringNotContainsString('voucher-secret', serialize($call));
         $this->assertStringNotContainsString('inquiry-user', serialize($call));
@@ -149,6 +157,76 @@ class KuickPayConnectionProbeTest extends TestCase
         $this->assertSame(
             'Kuickpay.!error.connection.timeout',
             $input->errors['connection']['timeout']
+        );
+    }
+
+    public function testLoopbackIpLiteralIsBlockedBeforeProbe()
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+
+        $gateway->editSettings($this->meta([
+            'wsdl_url' => 'https://127.0.0.1/wsdl',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertSame(
+            'Kuickpay.!error.connection.url_blocked',
+            $input->errors['connection']['url_blocked']
+        );
+    }
+
+    public function testCloudMetadataIpIsBlockedBeforeProbe()
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+
+        $gateway->editSettings($this->meta([
+            'wsdl_url' => 'https://169.254.169.254/latest/meta-data/',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertSame(
+            'Kuickpay.!error.connection.url_blocked',
+            $input->errors['connection']['url_blocked']
+        );
+    }
+
+    public function testHostnameResolvingToPrivateAddressIsBlockedBeforeProbe()
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+        $gateway->resolvedAddresses = ['10.0.0.5'];
+
+        $gateway->editSettings($this->meta([
+            'wsdl_url' => 'https://internal.example/wsdl',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertSame(
+            'Kuickpay.!error.connection.url_blocked',
+            $input->errors['connection']['url_blocked']
+        );
+    }
+
+    public function testUnresolvableHostIsBlockedBeforeProbe()
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+        $gateway->resolvedAddresses = [];
+
+        $gateway->editSettings($this->meta([
+            'wsdl_url' => 'https://nx.example/wsdl',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertSame(
+            'Kuickpay.!error.connection.url_blocked',
+            $input->errors['connection']['url_blocked']
         );
     }
 

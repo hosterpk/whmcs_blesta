@@ -333,6 +333,45 @@ class Kuickpay extends NonmerchantGateway
             return;
         }
 
+        // SSRF guard: resolve the host and reject private, loopback, link-local, or
+        // otherwise reserved addresses so the server-side fetch cannot be steered at
+        // internal services or the cloud metadata endpoint (169.254.169.254). A literal
+        // IP is checked directly; a hostname is resolved through the system resolver
+        // (which honors /etc/hosts, so "localhost" is caught) and every resolved address
+        // must be public. A host that resolves to nothing is treated as blocked rather
+        // than handed to an unvalidated cURL re-resolution. Residual, deferred to the
+        // Epic 5 confirmed-endpoint allowlist: IPv6-only hosts named via DNS are not
+        // resolved here (gethostbynamel is IPv4-only).
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $host = trim($host, '[]');
+        $addresses = filter_var($host, FILTER_VALIDATE_IP)
+            ? [$host]
+            : $this->resolveProbeAddresses($host);
+
+        $blocked = ($host === '' || $addresses === []);
+        foreach ($addresses as $address) {
+            if (!filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                $blocked = true;
+                break;
+            }
+        }
+        if ($blocked) {
+            $this->Input->setErrors([
+                'connection' => [
+                    'url_blocked' => Language::_('Kuickpay.!error.connection.url_blocked', true),
+                ],
+            ]);
+            return;
+        }
+
+        // Pin the validated address(es) so cURL connects only to what was checked,
+        // closing the DNS-rebinding window between this check and the fetch.
+        $port = parse_url($url, PHP_URL_PORT);
+        $resolve = [];
+        foreach ($addresses as $address) {
+            $resolve[] = $host . ':' . (is_int($port) ? $port : 443) . ':' . $address;
+        }
+
         $timeout = (int) ($meta['soap_timeout'] ?? 0);
         if ($timeout < 1) {
             $timeout = 30;
@@ -348,6 +387,7 @@ class Kuickpay extends NonmerchantGateway
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_NOBODY => false,
+            CURLOPT_RESOLVE => $resolve,
         ]);
 
         if ((int) ($result['errno'] ?? 0) === 0 && (int) ($result['response_code'] ?? 0) > 0) {
@@ -373,7 +413,9 @@ class Kuickpay extends NonmerchantGateway
     /**
      * Executes the cURL transport probe.
      *
-     * Broader SSRF host allowlisting is deferred until the production KuickPay endpoint set is confirmed.
+     * Callers must validate and pin the host first (see runConnectionTest()'s SSRF guard).
+     * A broader confirmed-endpoint host allowlist is deferred until the production KuickPay
+     * endpoint set is confirmed (Epic 5).
      *
      * @param string $url The HTTPS WSDL URL to fetch
      * @param array $options cURL options for the bounded reachability request
@@ -382,6 +424,9 @@ class Kuickpay extends NonmerchantGateway
     protected function executeConnectionProbe($url, array $options)
     {
         $ch = curl_init($url);
+        if ($ch === false) {
+            return ['errno' => CURLE_FAILED_INIT, 'response_code' => 0];
+        }
         curl_setopt_array($ch, $options);
         curl_exec($ch);
 
@@ -393,6 +438,21 @@ class Kuickpay extends NonmerchantGateway
         curl_close($ch);
 
         return $result;
+    }
+
+    /**
+     * Resolves a probe hostname to its IP addresses through the system resolver.
+     *
+     * Split out as a seam so connection tests can exercise the SSRF guard without DNS.
+     *
+     * @param string $host The WSDL hostname to resolve
+     * @return array The resolved IPv4 addresses, or an empty array when none resolve
+     */
+    protected function resolveProbeAddresses($host)
+    {
+        $addresses = gethostbynamel($host);
+
+        return is_array($addresses) ? $addresses : [];
     }
 
     /**
