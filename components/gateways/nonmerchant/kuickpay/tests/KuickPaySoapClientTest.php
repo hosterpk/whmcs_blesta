@@ -9,10 +9,21 @@ class KuickPaySoapClientFake
     public $lastResponse = '';
     public $throw;
     public $return;
+    public $queue = [];
 
     public function __soapCall($operation, $arguments)
     {
         $this->calls[] = [$operation, $arguments];
+
+        if (!empty($this->queue)) {
+            $next = array_shift($this->queue);
+            $this->lastResponse = $next['lastResponse'] ?? $this->lastResponse;
+            if (isset($next['throw'])) {
+                throw $next['throw'];
+            }
+
+            return $next['return'] ?? null;
+        }
 
         if ($this->throw) {
             throw $this->throw;
@@ -177,6 +188,91 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertSame('voucher-secret', $params['password']);
         $this->assertSame('KP01', $params['InstitutionID']);
         $this->assertSame('REG-1', $params['RegistrationNumber']);
+        $this->assertSame('timeout', $outcome['error_class']);
+    }
+
+    public function testInquiryUsesInquiryCredentialsAndRetriesTransportFailures()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->queue = [
+            ['throw' => new SoapFault('HTTP', 'connection timed out')],
+            [
+                'return' => (object) [
+                    'BillPaymentInquiryResult' => '00,REG-0000001,20260609,1000.00,KP-TXN-0001,KP-REF-PAID,PKR,INSTITUTION_ID',
+                ],
+                'lastResponse' => $this->fixture('bill-payment-inquiry/paid-exact.xml'),
+            ],
+        ];
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $client->billPaymentInquiry(['RegistrationNumber' => 'REG-1']);
+
+        $this->assertSame(2, $outcome['attempts']);
+        $this->assertCount(2, $fake->calls);
+        $params = $fake->calls[0][1][0];
+        $this->assertSame('inquiry-user', $params['userName']);
+        $this->assertSame('inquiry-secret', $params['password']);
+        $this->assertSame('KP01', $params['InstitutionID']);
+        $this->assertTrue($outcome['ok']);
+        $this->assertNull($outcome['error_class']);
+        $this->assertSame(
+            '00,REG-0000001,20260609,1000.00,KP-TXN-0001,KP-REF-PAID,PKR,INSTITUTION_ID',
+            $outcome['raw_result']
+        );
+    }
+
+    public function testInquiryFallsBackToVoucherCredentialsWhenConfigured()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->return = (object) ['BillPaymentInquiryResult' => '00,REG-1'];
+        $fake->lastResponse = $this->fixture('bill-payment-inquiry/paid-exact.xml');
+
+        $client = new KuickPaySoapClient($this->config(['inquiry_same_as_voucher' => 'true']), function () use ($fake) {
+            return $fake;
+        });
+
+        $client->billPaymentInquiry(['RegistrationNumber' => 'REG-1']);
+
+        $params = $fake->calls[0][1][0];
+        $this->assertSame('voucher-user', $params['userName']);
+        $this->assertSame('voucher-secret', $params['password']);
+    }
+
+    public function testBulkInquiryRetriesOnlyToBoundedLimitAndPassesRawXml()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $rawBulk = '<NewDataSet><Table><Consumer_Number>KP0100011</Consumer_Number></Table></NewDataSet>';
+        $fake->return = (object) ['BillPaymentBulkInquiryResult' => $rawBulk];
+        $fake->lastResponse = $this->fixture('bill-payment-bulk-inquiry/matched-paid.xml');
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $client->billPaymentBulkInquiry(['TransactionDate' => '20260609']);
+
+        $this->assertSame(1, $outcome['attempts']);
+        $this->assertSame($rawBulk, $outcome['raw_result']);
+        $this->assertArrayNotHasKey('Consumer_Number', $outcome);
+    }
+
+    public function testInquiryGivesUpAfterBoundedTransportRetries()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->throw = new SoapFault('HTTP', 'connection timed out');
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $client->billPaymentInquiry(['RegistrationNumber' => 'REG-1']);
+
+        $this->assertSame(3, $outcome['attempts']);
+        $this->assertCount(3, $fake->calls);
+        $this->assertFalse($outcome['ok']);
         $this->assertSame('timeout', $outcome['error_class']);
     }
 

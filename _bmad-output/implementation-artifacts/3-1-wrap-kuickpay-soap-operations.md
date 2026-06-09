@@ -83,10 +83,10 @@ Derived from Epic 3 Story 3.1 (epics.md:580-598), FR15, and the architecture API
   - [x] Add a method to `Kuickpay` (e.g. `protected function getSoapClient(): KuickPaySoapClient`) that `Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayRedactor.php')` and `... 'KuickPaySoapClient.php'` (the established gateway lib-load pattern — see alipay.php:176, paystack.php:343), builds the `$config` array from `$this->meta`, and returns a configured client. This is the single construction point so 2.3/3.3 reuse it; it does NOT call any operation.
   - [x] Do **not** modify `buildProcess()`, `validate()`, `success()`, `editSettings()`, `encryptableFields()`, `getSettings()`, `setMeta()`, `maskCredentials()`, or `$credential_mask_fields`. They stay exactly as-is (regression guard, AC10). Do not call `$this->log()` from settings/construction paths (gateway_id is null there — see 1-4 Non-Negotiable #2).
 
-- [ ] **Task 5 — Public `billPaymentInquiry()` + `billPaymentBulkInquiry()` with bounded retry (AC: 4, 6, 7, 8)** *(may follow the InsertVoucher slice)*
-  - [ ] `public function billPaymentInquiry(array $inquiryParams): array` and `public function billPaymentBulkInquiry(array $bulkParams): array`. Select inquiry credentials (fall back to voucher creds when `inquiry_same_as_voucher === 'true'`).
-  - [ ] Wrap `call()` in a bounded retry loop (small max, e.g. 2-3 total attempts) that retries only when `error_class` is `timeout` or `transport_error`. Stop on first transport success (any received body). Record `attempts`. No backoff requirement here beyond a bounded count; do not add unbounded loops (NFR7).
-  - [ ] Bulk: the client only transmits and returns the raw bulk XML payload in `raw_result`. Bounded/safe XML parsing and Consumer-Number matching are the parser's/reconcile service's job (3.2/3.7) — do not parse the dataset here. [Source: architecture.md:412; epics.md:135]
+- [x] **Task 5 — Public `billPaymentInquiry()` + `billPaymentBulkInquiry()` with bounded retry (AC: 4, 6, 7, 8)** *(may follow the InsertVoucher slice)*
+  - [x] `public function billPaymentInquiry(array $inquiryParams): array` and `public function billPaymentBulkInquiry(array $bulkParams): array`. Select inquiry credentials (fall back to voucher creds when `inquiry_same_as_voucher === 'true'`).
+  - [x] Wrap `call()` in a bounded retry loop (small max, e.g. 2-3 total attempts) that retries only when `error_class` is `timeout` or `transport_error`. Stop on first transport success (any received body). Record `attempts`. No backoff requirement here beyond a bounded count; do not add unbounded loops (NFR7).
+  - [x] Bulk: the client only transmits and returns the raw bulk XML payload in `raw_result`. Bounded/safe XML parsing and Consumer-Number matching are the parser's/reconcile service's job (3.2/3.7) — do not parse the dataset here. [Source: architecture.md:412; epics.md:135]
 
 - [ ] **Task 6 — Tests (AC: 9) and verification (AC: 10)**
   - [ ] Place gateway-lib unit tests under a component-local layout `components/gateways/nonmerchant/kuickpay/tests/` (modeled on the existing component-local pattern, e.g. coingate's `build/phpunit.xml`). Do NOT create a root `tests/` directory and do NOT claim root PHPUnit coverage unless the sibling `../tests` suite is present. [Source: project-context testing rules; NFR12]
@@ -198,6 +198,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Task 2: Added SOAP client PHPUnit coverage first; `phpunit` is not installed on PATH. `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct checks covered TLS/timeout options, raw result passthrough, redacted request diagnostics, no business decision fields, and timeout mapping.
 - Task 3: Added insert-voucher PHPUnit coverage before implementation; `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport check covered voucher credential injection, institution id injection, pass-through caller params, and exactly one attempt on timeout.
 - Task 4: `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed. Diff review confirmed only the `getSoapClient()` factory was added; fail-closed gateway placeholders and settings/credential methods were not changed.
+- Task 5: Added inquiry/bulk PHPUnit coverage before implementation; `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport checks covered inquiry credential selection, bounded retry to success, and three-attempt timeout give-up.
 
 ### Completion Notes List
 
@@ -205,6 +206,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Implemented `KuickPaySoapClient` transport wrapper with lazy injectable SOAP construction, timeout/TLS options, userinfo WSDL guard, redacted diagnostics, parser-only raw payload handoff, and transport-only error classes.
 - Added `insertVoucher()` as a one-attempt voucher operation that injects voucher credentials and leaves voucher field computation/parsing to later stories.
 - Added the gateway-owned `getSoapClient()` factory that lazy-loads the KuickPay redactor/client libs and passes decrypted gateway meta into the transport wrapper.
+- Added `billPaymentInquiry()` and `billPaymentBulkInquiry()` with inquiry credential selection, same-as-voucher fallback, bounded retry for transport-only failures, and raw payload passthrough with no bulk XML parsing.
 
 ### File List
 

@@ -69,6 +69,28 @@ class KuickPaySoapClient
     }
 
     /**
+     * Run a single bill payment inquiry with bounded transport retries.
+     *
+     * @param array $inquiryParams Caller-supplied inquiry field map
+     * @return array Structured transport outcome
+     */
+    public function billPaymentInquiry(array $inquiryParams): array
+    {
+        return $this->callWithRetry('BillPaymentInquiry', $this->withCredentials($inquiryParams, true));
+    }
+
+    /**
+     * Run a bulk bill payment inquiry with bounded transport retries.
+     *
+     * @param array $bulkParams Caller-supplied bulk inquiry field map
+     * @return array Structured transport outcome
+     */
+    public function billPaymentBulkInquiry(array $bulkParams): array
+    {
+        return $this->callWithRetry('BillPaymentBulkInquiry', $this->withCredentials($bulkParams, true));
+    }
+
+    /**
      * Perform one SOAP transport attempt and return transport facts only.
      *
      * Outcome shape:
@@ -195,6 +217,30 @@ class KuickPaySoapClient
             'password' => (string) $this->configValue($prefix . '_password', ''),
             'InstitutionID' => (string) $this->configValue('institution_id', ''),
         ]);
+    }
+
+    /**
+     * Retry inquiry operations on transport-only failures.
+     *
+     * @param string $operation SOAP operation name
+     * @param array $params SOAP params
+     * @return array Structured transport outcome
+     */
+    private function callWithRetry(string $operation, array $params): array
+    {
+        $max_attempts = 3;
+        $outcome = null;
+
+        for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
+            $outcome = $this->call($operation, $params);
+            $outcome['attempts'] = $attempt;
+
+            if ($outcome['ok'] || !in_array($outcome['error_class'], ['timeout', 'transport_error'], true)) {
+                return $outcome;
+            }
+        }
+
+        return $outcome;
     }
 
     /**
