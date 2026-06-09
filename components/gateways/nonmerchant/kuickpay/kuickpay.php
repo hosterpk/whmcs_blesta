@@ -53,8 +53,18 @@ class Kuickpay extends NonmerchantGateway
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Form', 'Html']);
 
+        $currencyPolicyOptions = [
+            'pkr_only' => Language::_('Kuickpay.currency_policy.pkr_only', true),
+        ];
+
+        $feePolicyOptions = [
+            'none' => Language::_('Kuickpay.fee_policy.none', true),
+        ];
+
         $this->view->set('meta', $meta);
         $this->view->set('companion_installed', $companion_installed);
+        $this->view->set('currency_policy', $currencyPolicyOptions);
+        $this->view->set('fee_policy', $feePolicyOptions);
 
         return $this->view->fetch();
     }

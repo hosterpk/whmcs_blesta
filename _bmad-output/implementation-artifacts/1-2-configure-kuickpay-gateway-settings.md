@@ -50,12 +50,12 @@ so that production-specific values are controlled without code changes.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Extend `getSettings()` to supply form data (AC1)** [Source: components/gateways/nonmerchant/coingate/coingate.php getSettings]
-  - [ ] 1.1 Keep the existing `getSettings()` body (companion check + `makeView('settings',...)` + `loadHelpers(['Form','Html'])` + `set('meta',$meta)` + `set('companion_installed',...)`). Only **add** the select-option arrays below; do not change the view-resolution idiom.
-  - [ ] 1.2 Build localized select-option arrays in `getSettings()` and pass them to the view (mirror coingate's `$receiveCurrency`/`$coingateEnvironment` pattern — option **values** are stable keys, option **labels** come from language files):
+- [x] **Task 1 — Extend `getSettings()` to supply form data (AC1)** [Source: components/gateways/nonmerchant/coingate/coingate.php getSettings]
+  - [x] 1.1 Keep the existing `getSettings()` body (companion check + `makeView('settings',...)` + `loadHelpers(['Form','Html'])` + `set('meta',$meta)` + `set('companion_installed',...)`). Only **add** the select-option arrays below; do not change the view-resolution idiom.
+  - [x] 1.2 Build localized select-option arrays in `getSettings()` and pass them to the view (mirror coingate's `$receiveCurrency`/`$coingateEnvironment` pattern — option **values** are stable keys, option **labels** come from language files):
     - `currency_policy` options: `['pkr_only' => Language::_('Kuickpay.currency_policy.pkr_only', true)]` (single option for MVP; PKR-first is visible but not selectable to anything else).
     - `fee_policy` options: `['none' => Language::_('Kuickpay.fee_policy.none', true)]` (minimal; detailed fee mechanics are deferred — see Dev Notes "Currency & fee policy").
-  - [ ] 1.3 Pass the option arrays via `$this->view->set('currency_policy', $currencyPolicyOptions)` and `$this->view->set('fee_policy', $feePolicyOptions)`.
+  - [x] 1.3 Pass the option arrays via `$this->view->set('currency_policy', $currencyPolicyOptions)` and `$this->view->set('fee_policy', $feePolicyOptions)`.
 
 - [ ] **Task 2 — Build the grouped settings template `views/default/settings.pdt` (AC1)** [Source: components/gateways/nonmerchant/coingate/views/default/settings.pdt; paypal_payments_standard/views/default/settings.pdt]
   - [ ] 2.1 **Preserve the companion-missing branch** exactly as in 1.1: when `!$companion_installed`, render the `alert alert-danger` with `$this->_('Kuickpay.!error.companion_missing')` and render **no fields** (Non-Negotiable #4).
@@ -375,12 +375,21 @@ If no running Blesta + MySQL stack is available, root PHPUnit / install-time run
 
 ### Debug Log References
 
+- 2026-06-09: Task 1 red check `grep -nE "currency_policy|fee_policy|currencyPolicyOptions|feePolicyOptions" components/gateways/nonmerchant/kuickpay/kuickpay.php` returned no matches before implementation.
+- 2026-06-09: Task 1 green check `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed; grep confirmed localized `currency_policy` and `fee_policy` option arrays are passed to the view.
+
 ### Completion Notes List
+
+- Task 1: Extended `getSettings()` with localized `currency_policy` and `fee_policy` option arrays while preserving the existing companion check, view-resolution idiom, helper loading, and existing view variables.
 
 ### File List
 
+- components/gateways/nonmerchant/kuickpay/kuickpay.php
+- _bmad-output/implementation-artifacts/1-2-configure-kuickpay-gateway-settings.md
+
 ## Change Log
 
+- 2026-06-09: Added localized KuickPay settings option arrays to `getSettings()` for currency and fee policy.
 - 2026-06-09: Story drafted (ready-for-dev) via bmad-create-story. Exhaustive context-engine analysis across epics, PRD (FR-2/3/5/7), addendum SOAP mapping, architecture, UX (UX-DR8/9/25/28), the Story 1.1 scaffold + learnings, deferred-work log, and the canonical in-repo coingate/paypal gateway settings idioms.
 - 2026-06-09: Validation triage (multi-agent) applied, all findings verified against the codebase. Corrected the `fieldPassword` call to the 2-arg attributes signature (`$attributes` is the 2nd param, not a value) and fixed the Task 6.2 grep proof accordingly; switched optional-numeric rules to the empty-tolerant `/^([0-9]+)?$/` idiom (a blank input submits `''`; `if_set` skips only absent keys); added an authoritative **Default meta values** table and made the checkbox render use each field's real default (fixes `inquiry_same_as_voucher` first-save forcing inquiry credentials); made the reference-pattern illustrative defaults space-free/regex-consistent and explicitly non-prefilled; added single-option select normalization; documented the interim credential re-save limitation (owned by 1.3); and added smaller guards (no `<form>` tag, `encryptableFields()` auto-encrypt/decrypt, `process.pdt` do-not-touch, `scaffold_note` removal ordering, group `pad` wrapper, accessibility check 6.5, downgraded the `matches` caution to confirmed).
 
