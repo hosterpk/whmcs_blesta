@@ -79,7 +79,7 @@ class KuickpayVoucherInvoices extends KuickpayReconcileModel
                 ],
                 'numeric' => [
                     'rule' => ['matches', '/^\d+$/'],
-                    'message' => $this->_('KuickpayVoucherInvoices.!error.voucher_id.empty')
+                    'message' => $this->_('KuickpayVoucherInvoices.!error.voucher_id.format')
                 ]
             ],
             'invoice_id' => [
@@ -90,7 +90,7 @@ class KuickpayVoucherInvoices extends KuickpayReconcileModel
                 ],
                 'numeric' => [
                     'rule' => ['matches', '/^\d+$/'],
-                    'message' => $this->_('KuickpayVoucherInvoices.!error.invoice_id.empty')
+                    'message' => $this->_('KuickpayVoucherInvoices.!error.invoice_id.format')
                 ]
             ],
             'amount' => [
