@@ -246,4 +246,10 @@
             ?>
         </div>
     </div>
+    <div class="pad">
+        <button type="submit" name="run_connection_test" value="true" class="btn btn-outline-secondary">
+            <?php $this->_('Kuickpay.test_connection'); ?>
+        </button>
+        <div class="form-text"><?php $this->_('Kuickpay.test_connection_note'); ?></div>
+    </div>
 <?php } ?>
