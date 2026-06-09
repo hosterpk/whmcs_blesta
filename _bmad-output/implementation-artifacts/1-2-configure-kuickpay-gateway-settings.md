@@ -1,6 +1,10 @@
+---
+baseline_commit: dbee701de838a7dc6c52cf1a506ff16e98cc9de7
+---
+
 # Story 1.2: Configure KuickPay Gateway Settings
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
