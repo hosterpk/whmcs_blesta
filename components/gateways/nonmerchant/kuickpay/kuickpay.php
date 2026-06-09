@@ -304,6 +304,31 @@ class Kuickpay extends NonmerchantGateway
     }
 
     /**
+     * Builds the KuickPay SOAP transport client from gateway meta.
+     *
+     * @return KuickPaySoapClient The configured SOAP transport wrapper
+     */
+    protected function getSoapClient()
+    {
+        Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayRedactor.php');
+        Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPaySoapClient.php');
+
+        $meta = is_array($this->meta) ? $this->meta : [];
+
+        return new KuickPaySoapClient([
+            'wsdl_url' => $meta['wsdl_url'] ?? '',
+            'soap_timeout' => $meta['soap_timeout'] ?? '',
+            'institution_id' => $meta['institution_id'] ?? '',
+            'voucher_username' => $meta['voucher_username'] ?? '',
+            'voucher_password' => $meta['voucher_password'] ?? '',
+            'inquiry_username' => $meta['inquiry_username'] ?? '',
+            'inquiry_password' => $meta['inquiry_password'] ?? '',
+            'inquiry_same_as_voucher' => $meta['inquiry_same_as_voucher'] ?? 'false',
+            'logging_enabled' => $meta['logging_enabled'] ?? 'false',
+        ]);
+    }
+
+    /**
      * Returns all HTML markup required to render an authorization and capture payment form
      *
      * @param array $contact_info An array of contact info including:

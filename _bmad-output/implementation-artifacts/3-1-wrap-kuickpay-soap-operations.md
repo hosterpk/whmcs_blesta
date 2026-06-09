@@ -79,9 +79,9 @@ Derived from Epic 3 Story 3.1 (epics.md:580-598), FR15, and the architecture API
   - [x] Add a code comment citing the rule: InsertVoucher is never auto-retried because idempotency is unproven and a retry can double-issue a payable voucher; reconciliation inquiry (3.3) is what confirms whether a create landed. [Source: epics.md:136; 0-1 contract]
   - [x] Caller supplies the voucher field map (`RegistrationNumber`, `Head1`/`Amount1`, `TotalAmount`, dates, `Name`/`Mobile`/`Email`/`Branch`, etc. — see redaction fixture). 3.1 does NOT compute reference numbers or dates (that is Epic 2 / 2.2); it only injects credentials + institution id and transmits. Keep the field map pass-through.
 
-- [ ] **Task 4 — Gateway factory method on `kuickpay.php` (AC: 1, 4, 10)**
-  - [ ] Add a method to `Kuickpay` (e.g. `protected function getSoapClient(): KuickPaySoapClient`) that `Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayRedactor.php')` and `... 'KuickPaySoapClient.php'` (the established gateway lib-load pattern — see alipay.php:176, paystack.php:343), builds the `$config` array from `$this->meta`, and returns a configured client. This is the single construction point so 2.3/3.3 reuse it; it does NOT call any operation.
-  - [ ] Do **not** modify `buildProcess()`, `validate()`, `success()`, `editSettings()`, `encryptableFields()`, `getSettings()`, `setMeta()`, `maskCredentials()`, or `$credential_mask_fields`. They stay exactly as-is (regression guard, AC10). Do not call `$this->log()` from settings/construction paths (gateway_id is null there — see 1-4 Non-Negotiable #2).
+- [x] **Task 4 — Gateway factory method on `kuickpay.php` (AC: 1, 4, 10)**
+  - [x] Add a method to `Kuickpay` (e.g. `protected function getSoapClient(): KuickPaySoapClient`) that `Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayRedactor.php')` and `... 'KuickPaySoapClient.php'` (the established gateway lib-load pattern — see alipay.php:176, paystack.php:343), builds the `$config` array from `$this->meta`, and returns a configured client. This is the single construction point so 2.3/3.3 reuse it; it does NOT call any operation.
+  - [x] Do **not** modify `buildProcess()`, `validate()`, `success()`, `editSettings()`, `encryptableFields()`, `getSettings()`, `setMeta()`, `maskCredentials()`, or `$credential_mask_fields`. They stay exactly as-is (regression guard, AC10). Do not call `$this->log()` from settings/construction paths (gateway_id is null there — see 1-4 Non-Negotiable #2).
 
 - [ ] **Task 5 — Public `billPaymentInquiry()` + `billPaymentBulkInquiry()` with bounded retry (AC: 4, 6, 7, 8)** *(may follow the InsertVoucher slice)*
   - [ ] `public function billPaymentInquiry(array $inquiryParams): array` and `public function billPaymentBulkInquiry(array $bulkParams): array`. Select inquiry credentials (fall back to voucher creds when `inquiry_same_as_voucher === 'true'`).
@@ -197,18 +197,21 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Task 1: Added redactor PHPUnit coverage first; `phpunit` is not installed on PATH, so direct PHP fallback checks were used. `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php` passed. Direct checks covered array redaction, default-namespace envelope redaction, and unparseable envelope placeholder behavior.
 - Task 2: Added SOAP client PHPUnit coverage first; `phpunit` is not installed on PATH. `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct checks covered TLS/timeout options, raw result passthrough, redacted request diagnostics, no business decision fields, and timeout mapping.
 - Task 3: Added insert-voucher PHPUnit coverage before implementation; `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport check covered voucher credential injection, institution id injection, pass-through caller params, and exactly one attempt on timeout.
+- Task 4: `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed. Diff review confirmed only the `getSoapClient()` factory was added; fail-closed gateway placeholders and settings/credential methods were not changed.
 
 ### Completion Notes List
 
 - Implemented `KuickPayRedactor` as the standalone protocol redaction layer for keyed arrays, SOAP envelopes, unsafe XML fallback, and non-PII trace ids.
 - Implemented `KuickPaySoapClient` transport wrapper with lazy injectable SOAP construction, timeout/TLS options, userinfo WSDL guard, redacted diagnostics, parser-only raw payload handoff, and transport-only error classes.
 - Added `insertVoucher()` as a one-attempt voucher operation that injects voucher credentials and leaves voucher field computation/parsing to later stories.
+- Added the gateway-owned `getSoapClient()` factory that lazy-loads the KuickPay redactor/client libs and passes decrypted gateway meta into the transport wrapper.
 
 ### File List
 
 - components/gateways/nonmerchant/kuickpay/build/phpunit.xml
 - components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php
 - components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php
+- components/gateways/nonmerchant/kuickpay/kuickpay.php
 - components/gateways/nonmerchant/kuickpay/tests/bootstrap.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayRedactorTest.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPaySoapClientTest.php
