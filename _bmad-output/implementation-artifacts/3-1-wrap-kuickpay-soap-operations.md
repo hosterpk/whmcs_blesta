@@ -95,8 +95,8 @@ Derived from Epic 3 Story 3.1 (epics.md:580-598), FR15, and the architecture API
   - [x] Optionally exercise the provisional Phase 0 fixtures as canned `__getLastResponse()` bodies to confirm the client passes the exact `*Result` payload through untouched. Treat fixtures as provisional (see Risks). Fixtures live at `docs/kuickpay/fixtures/{insert-voucher,bill-payment-inquiry,bill-payment-bulk-inquiry,redaction}/` (map: `insert-voucher/`→`InsertVoucherResult`, `bill-payment-inquiry/`→`BillPaymentInquiryResult`, `bill-payment-bulk-inquiry/`→`BillPaymentBulkInquiryResult`; `redaction/credentials.xml` drives the default-namespace envelope-redaction test).
   - [x] Run `php -l` on `KuickPaySoapClient.php`, `KuickPayRedactor.php`, and `kuickpay.php`. State exactly what ran; if `../tests`/DB are absent, say so and list the fallback (php -l + component-local unit tests). **At story-authoring time `php` is not installed in this checkout, so `php -l` cannot be executed here** — if that is still true at dev time, record it explicitly (do not claim a passing lint that never ran) and execute `php -l` + the component-local suite in an environment that provides PHP 8.2 + ext-soap.
 
-- [ ] **Task 7 — Optional safe-setup operations `echo()` / `getInstitutionsList()` (AC: 1, 6)** *(optional, lowest priority)*
-  - [ ] Thin wrappers over `call('Echo', ...)` / `call('GetInstitutionsList', ...)` returning the same transport-outcome shape, for future safe connection-testing. Name the wrapper method `echoTest()` (or `safeEcho()`), not `echo()` — even though PHP 7+ permits keywords as method names, a bare `echo` invites confusion and tooling edge cases; the SOAP operation string passed to `call()` is still `'Echo'`. Do NOT wire these into the Story 1.4 connection test (1.4 uses a cURL WSDL reachability probe and is out of scope here). [Source: epics.md:131; architecture.md:390-392; 1-4 transport-probe design]
+- [x] **Task 7 — Optional safe-setup operations `echo()` / `getInstitutionsList()` (AC: 1, 6)** *(optional, lowest priority)*
+  - [x] Thin wrappers over `call('Echo', ...)` / `call('GetInstitutionsList', ...)` returning the same transport-outcome shape, for future safe connection-testing. Name the wrapper method `echoTest()` (or `safeEcho()`), not `echo()` — even though PHP 7+ permits keywords as method names, a bare `echo` invites confusion and tooling edge cases; the SOAP operation string passed to `call()` is still `'Echo'`. Do NOT wire these into the Story 1.4 connection test (1.4 uses a cURL WSDL reachability probe and is out of scope here). [Source: epics.md:131; architecture.md:390-392; 1-4 transport-probe design]
 
 ## Dev Notes
 
@@ -200,6 +200,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Task 4: `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php` passed. Diff review confirmed only the `getSoapClient()` factory was added; fail-closed gateway placeholders and settings/credential methods were not changed.
 - Task 5: Added inquiry/bulk PHPUnit coverage before implementation; `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport checks covered inquiry credential selection, bounded retry to success, and three-attempt timeout give-up.
 - Task 6: `php -l` passed for `KuickPayRedactor.php`, `KuickPaySoapClient.php`, `kuickpay.php`, `tests/bootstrap.php`, `KuickPayRedactorTest.php`, and `KuickPaySoapClientTest.php`. `phpunit` is not installed on PATH and `../tests` is absent, so root/component PHPUnit was not executed. A direct PHP fake-transport fallback script passed coverage for redaction, TLS/timeout options, credential selection, same-as-voucher fallback, timeout, transport_error, SOAP fault with body, construction failure, userinfo WSDL guard, InsertVoucher no retry, bounded inquiry retry, raw payload passthrough, and no payment-decision fields.
+- Task 7: `php -l components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php` passed. Direct fake-transport check covered `echoTest()` -> `Echo` and `getInstitutionsList()` -> `GetInstitutionsList` returning the same transport outcome shape.
 
 ### Completion Notes List
 
@@ -209,6 +210,7 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - Added the gateway-owned `getSoapClient()` factory that lazy-loads the KuickPay redactor/client libs and passes decrypted gateway meta into the transport wrapper.
 - Added `billPaymentInquiry()` and `billPaymentBulkInquiry()` with inquiry credential selection, same-as-voucher fallback, bounded retry for transport-only failures, and raw payload passthrough with no bulk XML parsing.
 - Added component-local PHPUnit test files and executed available lint/fallback behavior checks. No live KuickPay endpoint was called.
+- Added optional safe setup wrappers `echoTest()` and `getInstitutionsList()` without wiring them into settings or the Story 1.4 connection test.
 
 ### File List
 

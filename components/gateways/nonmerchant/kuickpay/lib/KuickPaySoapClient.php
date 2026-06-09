@@ -91,6 +91,28 @@ class KuickPaySoapClient
     }
 
     /**
+     * Run a safe SOAP Echo operation for future setup checks.
+     *
+     * @param array $params Caller-supplied echo params
+     * @return array Structured transport outcome
+     */
+    public function echoTest(array $params = []): array
+    {
+        return $this->call('Echo', $params);
+    }
+
+    /**
+     * Run a safe SOAP GetInstitutionsList operation for future setup checks.
+     *
+     * @param array $params Caller-supplied params
+     * @return array Structured transport outcome
+     */
+    public function getInstitutionsList(array $params = []): array
+    {
+        return $this->call('GetInstitutionsList', $params);
+    }
+
+    /**
      * Perform one SOAP transport attempt and return transport facts only.
      *
      * Outcome shape:

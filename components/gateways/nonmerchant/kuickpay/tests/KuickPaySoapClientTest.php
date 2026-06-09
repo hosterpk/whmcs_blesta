@@ -276,6 +276,25 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertSame('timeout', $outcome['error_class']);
     }
 
+    public function testSafeSetupOperationsUseTransportOutcome()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->return = (object) ['EchoResult' => 'pong'];
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $echo = $client->echoTest(['message' => 'ping']);
+        $institutions = $client->getInstitutionsList([]);
+
+        $this->assertSame('Echo', $fake->calls[0][0]);
+        $this->assertSame('GetInstitutionsList', $fake->calls[1][0]);
+        $this->assertTrue($echo['ok']);
+        $this->assertSame('pong', $echo['raw_result']);
+        $this->assertSame('GetInstitutionsList', $institutions['operation']);
+    }
+
     private function callPrivate(KuickPaySoapClient $client, $operation, array $params)
     {
         $method = new ReflectionMethod($client, 'call');
