@@ -4,7 +4,7 @@ baseline_commit: f851a0e8
 
 # Story 2.1: Create Durable Customer Voucher Records
 
-Status: review
+Status: done
 
 ## Story
 
@@ -560,3 +560,32 @@ GPT-5 Codex
 - 2026-06-10: Implemented Tasks 6-7 customer voucher display and language strings.
 - 2026-06-10: Completed Task 8 verification and gateway helper tests.
 - 2026-06-10: Story marked ready for review after all tasks and verification passed.
+- 2026-06-10: Code review (bmad-code-review, YOLO) — 3 adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor). All AC1/AC2 and NN#1–NN#8 verified satisfied; 102 tests / 566 assertions pass; all touched files lint clean (PHP 8.2-compatible). 1 patch applied (4d00652e), 5 items deferred to later stories, 7 dismissed (spec-mandated behavior or false positives). Story marked done.
+
+## Review Findings
+
+_Code review 2026-06-10 (bmad-code-review, YOLO mode). Diff baseline `f851a0e8`, scoped to this story's File List. Layers: Blind Hunter (diff-only adversarial), Edge Case Hunter (diff + project), Acceptance Auditor (diff + spec). Outcome: **0 decision-needed · 1 patch (applied) · 5 deferred · 7 dismissed**._
+
+**Verification performed during review:** ran the KuickPay PHPUnit 8.5 suite (`102 tests, 566 assertions` — pass); `php -l` on all 12 touched PHP files (clean); confirmed `PDO::FETCH_OBJ` default (so `flatten()` object access is correct) and `reuseConnection=true` pooling (so the cross-model `begin()/commit()` in the repository is a single sound transaction); confirmed all AC/NN compliance. No running Blesta + MySQL stack, so DB-level unique-key enforcement and the live reload-reuse flow remain runtime-unverified (as the story already documents).
+
+### Patch (resolved)
+
+- [x] [Review][Patch] Voucher-link numeric validation reused the `.empty` message key (a non-numeric `voucher_id`/`invoice_id` reported "is required") [plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php:81,92] — fixed in commit `4d00652e` (added dedicated `.format` language keys; low impact, ids are always programmatic).
+
+### Deferred (out of 2.1 scope — see deferred-work.md)
+
+- [x] [Review][Defer] Deterministic reference collides with a non-pending voucher for the same invoice → permanent `not_ready` deadlock [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:85] — deferred, pre-empted by scope: in 2.1 vouchers only ever stay `pending`, so this state is unreachable; reference regeneration after failed/expired is Story 2.2/2.4/Epic 3 per Dev Notes "AC2 idempotency strategy".
+- [x] [Review][Defer] Duplicate invoice IDs in `invoice_amounts` trip the `(voucher_id, invoice_id)` unique key → whole create rolls back → `not_ready` [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:72] — deferred: cannot occur in the normal Blesta pay flow (distinct invoices) and fails closed; multi-invoice handling is Story 2.4.
+- [x] [Review][Defer] Reuse lookup keys only on the first invoice; a multi-invoice payment with a partially overlapping set can reuse/display a mismatched voucher [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:42] — deferred: matches spec Task 3.2 (reuse by first invoice); multi-invoice correctness is Story 2.4.
+- [x] [Review][Defer] No minimum/positive amount check — `0.00` passes validation and creates a zero-value pending voucher [plugins/kuickpay_reconcile/models/kuickpay_vouchers.php:225] — deferred: amount gating is Story 2.4; AC1 sets no minimum.
+- [x] [Review][Defer] `KuickpayVouchers::edit()` updates by `id` only (no `company_id` scope) and its `if (empty($fields))` guard is dead code (`date_updated` always present) [plugins/kuickpay_reconcile/models/kuickpay_vouchers.php:80] — deferred: no caller in 2.1; signature matches spec; tenant-scoped edit is future hardening.
+
+### Dismissed (no action — recorded for transparency)
+
+- Sub-cent amount truncation `0.009 → 0.00` (Blind rated HIGH, Edge LOW): the algorithm is verbatim from spec Task 5.5, string-only (NN#4-compliant), pinned as expected in tests; Blesta invoice totals are already 2-decimal so it never triggers in the live path.
+- Negative/signed/invalid amounts pass the normalizer unchanged then fail model validation → `not_ready`: this is the exact spec-prescribed fail-closed behavior (Task 5.5).
+- `offsetDate(0)` yields same-day due/expiry and clamps negatives to today: matches the spec formula (`today + offset`); no expiry enforcement exists in 2.1 (Epic 3); admin-configurable via 1.2 settings.
+- Amount exceeding `varchar(20)` → "Data too long" → `not_ready`: unrealistic (>17-digit integer) and fails closed.
+- `flatten()` object access assumes object rows: **false positive** — `PDO::FETCH_OBJ` is the confirmed default (`config/database.php`).
+- `getList()` calls "undefined" `getPerPage()`: **false positive** — it is a standard `AppModel` method (47 repo usages; defined in ionCube-encoded `app_model.php`) and is not exercised in 2.1.
+- View shows raw status slug for non-pending vouchers: spec-mandated graceful degradation (Task 6.2), HTML-escaped, and non-pending is unreachable in 2.1.
