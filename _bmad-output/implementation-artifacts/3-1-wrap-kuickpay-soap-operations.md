@@ -1,6 +1,10 @@
+---
+baseline_commit: 3668b622171191ca23bfb2c01cb59096d729594d
+---
+
 # Story 3.1: Wrap KuickPay SOAP Operations
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
