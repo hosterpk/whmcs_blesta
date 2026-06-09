@@ -4,7 +4,7 @@ baseline_commit: 45926c5e41114ad147968f6ed3ffe43226be40bb
 
 # Story 3.2: Normalize KuickPay Evidence with Fixtures
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -279,6 +279,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Final component suite passed: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (88 tests, 537 assertions).
 - 2026-06-10: Secret-safety scan found no known forbidden real values (`voucher-user`, `voucher-secret`, `03001234567`, `john@example.com`, `Customer Name`, `config/blesta.php`, `public_html/clientarea`) in plugin fixtures.
 - 2026-06-10: Redaction-confirmation scan found only expected placeholders (`REDACTED_USERNAME`, `REDACTED_PASSWORD`, `0300XXXXXXX`, `customer@example.invalid`, `REDACTED_CUSTOMER_NAME`, `INSTITUTION_ID`); `plugins/kuickpay_reconcile/tests/.htaccess` contains `Require all denied` plus Apache 2.2 fallback.
+- 2026-06-10: Final completion gate passed: no unchecked task boxes; component PHPUnit passed (88 tests, 537 assertions); touched PHP syntax checks passed; plugin fixture XML validation passed.
 
 ### Completion Notes List
 
@@ -289,6 +290,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - Relocated Phase 0 KuickPay fixtures into the canonical plugin test fixture tree and added web protection without changing the original docs fixture provenance.
 - Added Story 3.2 hardening fixtures, documented provisional provenance, and expanded parser tests to read canonical plugin fixtures for all mapping-table operations and fail-closed hardening cases.
 - Verified no gateway placeholder/settings/client/redactor regression surface was changed; final lint, PHPUnit, XML validation, fixture secret scan, and web-protection checks passed.
+- Story is complete and ready for review; all acceptance criteria are covered by parser implementation, relocated fixtures, fixture-backed tests, and verification notes.
 
 ### File List
 
@@ -322,6 +324,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-pending.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/insert-voucher-success.xml
 - docs/kuickpay/testing-fixtures.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
 - _bmad-output/implementation-artifacts/3-2-normalize-kuickpay-evidence-with-fixtures.md
 
 ### Change Log
@@ -333,6 +336,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Relocated Phase 0 fixtures to the plugin test tree and blocked web access.
 - 2026-06-10: Added hardening fixtures, provenance, and fixture-backed parser tests.
 - 2026-06-10: Completed verification and regression guard for parser evidence story.
+- 2026-06-10: Marked story ready for review after final completion gates.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
