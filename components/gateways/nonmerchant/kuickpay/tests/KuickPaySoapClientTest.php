@@ -193,6 +193,23 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertSame(KuickPayRedactor::ENVELOPE_UNPARSEABLE, $outcome['raw_envelope']);
     }
 
+    public function testNonSoapFaultThrowableWithResponseBodyIsTransportSuccess()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->throw = new RuntimeException('decode blew up after the body arrived');
+        $fake->lastResponse = $this->fixture('insert-voucher/success.xml');
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $this->callPrivate($client, 'InsertVoucher', []);
+
+        $this->assertTrue($outcome['ok']);
+        $this->assertNull($outcome['error_class']);
+        $this->assertSame('00 VOUCHERID00001', $outcome['raw_result']);
+    }
+
     public function testTimeoutWithoutResponseBodyMapsToTimeout()
     {
         $fake = new KuickPaySoapClientFake();
