@@ -581,30 +581,14 @@ class KuickPayResponseParser
 
     private function parseInquiryFields(string $rawResult): array
     {
-        $fields = array_map('trim', explode(',', $rawResult));
-        $count = count($fields);
-
-        if ($count > 8 || ($count === 8 && $this->looksLikeAmountContinuation($fields[4]))) {
-            $suffixCount = $count > 8 ? 4 : 3;
-            $amountEnd = $count - $suffixCount - 1;
-            $amountParts = array_slice($fields, 3, $amountEnd - 2);
-            $fields = [
-                $fields[0],
-                $fields[1] ?? '',
-                $fields[2] ?? '',
-                implode(',', $amountParts),
-                $fields[$amountEnd + 1] ?? '',
-                $fields[$amountEnd + 2] ?? '',
-                $fields[$amountEnd + 3] ?? '',
-            ];
-        }
-
-        return $fields;
-    }
-
-    private function looksLikeAmountContinuation(string $value): bool
-    {
-        return preg_match('/^\d+(?:\.\d+)?$/', trim($value)) === 1;
+        // The inquiry result is comma-delimited with fixed field positions (status,
+        // registration, date, amount, txn ref, reference, currency, institution). A comma is
+        // always a field boundary -- the amount never embeds a thousands separator -- so split
+        // directly. normalizeAmount() strips separators from the individual amount value if any
+        // are ever present. Reconstructing fields from comma counts is unsound: a purely numeric
+        // txn-ref field (field 4) is indistinguishable from a split amount and would corrupt the
+        // reference/currency mapping for an otherwise-valid paid row.
+        return array_map('trim', explode(',', $rawResult));
     }
 
     private function normalizeAmount(string $amount): ?string

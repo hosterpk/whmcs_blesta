@@ -209,8 +209,11 @@ class KuickPayResponseParserTest extends TestCase
 
     public function testBillPaymentInquiryNormalizesPaidFields()
     {
+        // Field 4 (txn ref) is purely numeric here: a regression guard against the old
+        // comma-count reconstruction, which mistook a numeric txn ref for a split amount and
+        // corrupted the reference/currency mapping. Amount, currency, and date still normalize.
         $evidence = $this->parser()->parse(
-            $this->outcome('BillPaymentInquiry', '00,REG-0000001,20260609,1,000.00,KP-TXN-0001,KP-REF-PAID,PKR'),
+            $this->outcome('BillPaymentInquiry', '00,REG-0000001,20260609,1000.0,1234567890,KP-REF-PAID,pkr,INSTITUTION_ID'),
             [
                 'expected_amount' => '1000',
                 'expected_currency' => 'pkr',
@@ -222,6 +225,7 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame('1000.00', $evidence->amount());
         $this->assertSame('PKR', $evidence->currency());
         $this->assertSame('2026-06-09', $evidence->paidAt());
+        $this->assertSame('KP-REF-PAID', $evidence->reference());
     }
 
     public function testBulkTransportFailureReturnsSingleRetryEvidence()
