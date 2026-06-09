@@ -4,7 +4,7 @@ baseline_commit: 0f70ff5a94d2bfdb94967c04ba5f4baabf2b4a89
 
 # Story 1.4: Run Safe KuickPay Connection Tests
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -272,6 +272,8 @@ No new libraries. This story uses only: PHP 8.2; Blesta's `NonmerchantGateway`/`
 _(to be filled by the dev agent)_
 
 ### Debug Log References
+
+- 2026-06-09: Started dev-story workflow. Python 3.12 resolver was unavailable at `/opt/homebrew/opt/python@3.12/bin/python3.12`; manually applied workflow defaults from `customize.toml`. Loaded project context and confirmed existing `baseline_commit` is preserved.
 
 ### Completion Notes List
 
