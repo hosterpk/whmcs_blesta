@@ -4,7 +4,7 @@ baseline_commit: a4ab3265ac72363a355d497ea34c987aaf1c5029
 
 # Story 1.3: Encrypt and Mask KuickPay Credentials
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -123,6 +123,14 @@ Two 1.2 follow-up fixes are already in place and **must be preserved**: whitespa
   - [x] 7.4 **Dedupe present:** `grep -nE "unset\(\\\$meta\['inquiry_(username|password)'\]\)" components/gateways/nonmerchant/kuickpay/kuickpay.php` — confirm the same-as-voucher unset.
   - [x] 7.5 **Scope containment:** `git status --porcelain` shows only the three gateway files + this story file + `sprint-status.yaml`; **no** `plugins/kuickpay_reconcile/` changes, **no** new `lib/` files. `find components/gateways/nonmerchant/kuickpay -type d -name lib` → expect no output.
   - [x] 7.6 If a running Blesta + MySQL stack is available: open Settings → Payment Gateways → KuickPay; save with same-as-voucher ON → confirm `gateway_meta` has **no** `inquiry_password` row and the voucher password row is **encrypted** (ciphertext, not plaintext); reopen → password fields blank, masked "stored" note shown; toggle same-as-voucher OFF, save blank inquiry creds → rejected. If no runtime/DB, **state that explicitly** and rely on lint + grep + unit tests. [Source: NFR12 line 109]
+
+### Review Findings
+
+_Code review 2026-06-09 (bmad-code-review). Baseline `a4ab3265`..HEAD, 3 implementation files. Three adversarial layers ran (Blind Hunter, Edge Case Hunter, Acceptance Auditor); none failed. Acceptance Auditor confirmed all 3 ACs and all 7 Non-Negotiables cleanly met. Triage: 1 decision-needed (resolved → deferred to 3.2), 0 patch, 3 deferred total, 12 dismissed as noise (blind-context false positives + by-design items)._
+
+- [x] [Review][Defer] Credential mask allowlist is exact-match & case-sensitive — RESOLVED: deferred to Story 3.2 — `$credential_mask_fields` (kuickpay.php:21-30) is matched by the base class via case-sensitive `array_search`, so common credential spellings (`username`, `Username`, `PASSWORD`, `pwd`, `pin`, `token`, `secret`) are NOT covered and would pass through unmasked if they ever reach gateway logging. The four stored `gateway_meta` keys ARE covered today. Reason: Exact SOAP credential field names are unconfirmed until Phase 0 (0.1); the four stored gateway_meta keys are already covered, and allowlist completion is owned by Story 3.2 per Open Question #4.
+- [x] [Review][Defer] `maskCredentials()` primitive mishandles non-array / non-string inputs [kuickpay.php:291-294; gateway.php `maskDataRecursive`] — deferred, downstream-consumer concern. Object graphs raise `TypeError` (`str_repeat` over `strlen($object)`); credential keys nested inside objects are never traversed (recursion guards on `is_array` only); non-string scalars (null/bool) emit PHP 8.2 deprecations and mask to an empty string. No live caller exists in 1.3 (contract-only), so it is not triggered now; Story 1.4 / Epic 3 callers must pass normalized string arrays (matching the in-repo `serialize($this->maskData($params, ...))` idiom) or harden the boundary before it logs real SOAP payloads.
+- [x] [Review][Defer] Value-based redaction of already-serialized credential strings is out of this array-key boundary [kuickpay.php:291-294] — deferred, owned by Epic 3. `maskCredentials()` redacts by array key; a credential concatenated into a URL/query/exception string before becoming an array is not caught. That layer is Epic 3 / Story 3.2's SOAP/XML `redactor` protocol class, intentionally separate from the gateway-owned credential boundary.
 
 ## Dev Notes
 
