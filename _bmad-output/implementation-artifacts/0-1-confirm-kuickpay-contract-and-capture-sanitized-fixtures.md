@@ -4,7 +4,7 @@ baseline_commit: bbb49f7c540b5853e3503434dcdafb3b0f896ec4
 
 # Story 0.1: Confirm KuickPay Contract and Capture Sanitized Fixtures
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -264,13 +264,16 @@ GPT-5 Codex
 - Created operation-keyed provisional sanitized fixtures for InsertVoucher, BillPaymentInquiry, BillPaymentBulkInquiry, and credential redaction.
 - Created `docs/kuickpay/testing-fixtures.md` with normalized evidence mapping, sanitization rules, Story 3.2 relocation mapping, and per-fixture provenance.
 - All generated fixture XML is well-formed.
-- All fixtures are marked provisional from `synthetic_from_observed_format`; the gate remains `PENDING_HUMAN_APPROVAL` and cannot be considered approved without live/sandbox evidence.
+- All fixtures are marked provisional from `synthetic_from_observed_format`; human approver accepted WHMCS-derived KuickPay contract and fixture shapes as sufficient Phase 0 evidence for Blesta parser development on 2026-06-09.
+- Existing live WHMCS KuickPay implementation under `/home/hosterpk/public_html/clientarea/` has been reviewed and summarized as sanitized contract evidence. This confirms the current HosterPK endpoint/WSDL usage, date formats, Consumer Number formula, Registration Number formula, credential separation, and parser shapes, but it does not by itself provide sanitized KuickPay response captures.
+- Phase 0 gate approval is recorded in `docs/kuickpay/phase-0-contract.md`; payment posting remains disabled until separate Epic 3 posting controls and service implementation are approved.
 - No runtime PHP changed, so `php -l` is N/A. Verification used XML well-formedness and secret/redaction scans.
 
 ### File List
 
 - `docs/kuickpay/phase-0-contract.md`
 - `docs/kuickpay/testing-fixtures.md`
+- `docs/kuickpay/whmcs-live-implementation-evidence.md`
 - `docs/kuickpay/fixtures/insert-voucher/success.xml`
 - `docs/kuickpay/fixtures/insert-voucher/duplicate.xml`
 - `docs/kuickpay/fixtures/insert-voucher/invalid-credentials.xml`
@@ -291,10 +294,11 @@ GPT-5 Codex
 ## Change Log
 
 - 2026-06-09: Implemented Phase 0 KuickPay contract and sanitized fixture gate artifacts.
+- 2026-06-09: Added sanitized evidence from existing live WHMCS KuickPay implementation; adjusted provisional fixtures to match the observed WHMCS parser shape.
 
 ## Open Questions / Clarifications (for the team — non-blocking for dev start)
 
-1. **Live/sandbox access:** Are real KuickPay sandbox or production credentials available to capture *verified* fixtures during this story? If not, fixtures will be `provisional` (built from the addendum's observed formats) and the gate stays UNAPPROVED until real captures replace them — which is the correct fail-closed posture, but the team should know the gate cannot be closed without live evidence.
+1. **Sanitized live response captures:** KuickPay does not provide sandbox for this merchant. Existing live WHMCS implementation evidence has been accepted by human approval for Phase 0, but sanitized live KuickPay response captures remain useful future hardening evidence.
 2. **Fixture home confirmation:** This story stages fixtures under `docs/kuickpay/fixtures/` (web-blocked, scaffold-independent) and defers relocation to `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/` to Story 3.2. Confirm this is acceptable vs. waiting for the Story 1.1 scaffold and writing fixtures directly into the plugin tree (with added `.htaccess` protection).
 3. **Production Blesta version:** Operations must decide 5.13 stable vs 6.0 beta. The repo is `6.0.0-b1`; research flags 6.0 beta as non-production. Whoever owns the production target should fill this before the gate is approved.
 
@@ -323,3 +327,5 @@ _Code review (bmad-code-review, YOLO) — 2026-06-09. Diff vs baseline `bbb49f7c
 ## Change Log
 
 - 2026-06-09: Code review (YOLO). Applied 2 fail-closed doc-hardening patches to `testing-fixtures.md`; added `insert_voucher_result_format` contradiction row to `phase-0-contract.md`. 1 decision-needed (authoritative `InsertVoucherResult` format) left open pending KuickPay confirmation; 3 items deferred. Status moved `review` -> `in-progress`. Gate remains `PENDING_HUMAN_APPROVAL`; payment posting stays DISABLED.
+- 2026-06-09: Existing live WHMCS KuickPay implementation reviewed under `/home/hosterpk/public_html/clientarea/`. Sanitized evidence added to `docs/kuickpay/whmcs-live-implementation-evidence.md`; contract fields updated in `phase-0-contract.md`; provisional fixture shapes updated in `testing-fixtures.md` and InsertVoucher/bulk fixture XML. This resolves the delimiter-vs-offset contradiction in favor of the existing WHMCS fixed-position parser shape, while keeping gate approval pending because no sanitized live response capture is committed.
+- 2026-06-09: Human approver Israr accepted WHMCS-derived KuickPay contract and fixture shapes as sufficient Phase 0 evidence for Blesta parser development. Gate approval recorded in `docs/kuickpay/phase-0-contract.md`; story moved to `done`. Known limitation remains: no sanitized live response bodies are committed. Payment posting stays disabled until separate Epic 3 posting controls are implemented and approved.

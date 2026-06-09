@@ -74,7 +74,7 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 development_status:
   # --- Epic 0: Phase 0 - KuickPay Contract Validation and Fixture Gate ---
   epic-0: in-progress
-  0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures: in-progress
+  0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures: done
   epic-0-retrospective: optional
 
   # --- Epic 1: Safe KuickPay Gateway Enablement (parallel with Phase 0) ---
