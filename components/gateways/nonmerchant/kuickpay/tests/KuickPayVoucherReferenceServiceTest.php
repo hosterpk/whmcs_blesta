@@ -39,8 +39,47 @@ class KuickPayVoucherReferenceServiceFakeRepository
     }
 }
 
+class TestableKuickPayVoucherReferenceService extends KuickPayVoucherReferenceService
+{
+    public function callExpandPattern(string $pattern, array $values): ?string
+    {
+        return $this->expandPattern($pattern, $values);
+    }
+}
+
 class KuickPayVoucherReferenceServiceTest extends TestCase
 {
+    public function testExpandPatternSubstitutesRecognizedTokensAndLiterals()
+    {
+        $service = new TestableKuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertSame(
+            '1111-55_KP',
+            $service->callExpandPattern(
+                '{random_prefix}-{invoice_id}_{institution_id}',
+                ['random_prefix' => '1111', 'invoice_id' => '55', 'institution_id' => 'KP']
+            )
+        );
+    }
+
+    public function testExpandPatternRejectsUnknownTokensAndResidualBraces()
+    {
+        $service = new TestableKuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertNull($service->callExpandPattern('{client_id}', ['client_id' => '3']));
+        $this->assertNull($service->callExpandPattern('KP{invoice_id', ['invoice_id' => '55']));
+        $this->assertNull($service->callExpandPattern('{registration_number}', ['invoice_id' => '55']));
+    }
+
+    public function testExpandPatternRejectsEmptyAndOverlongResults()
+    {
+        $service = new TestableKuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertNull($service->callExpandPattern('{institution_id}', ['institution_id' => '']));
+        $this->assertNull($service->callExpandPattern(str_repeat('A', 65), []));
+        $this->assertSame(str_repeat('A', 64), $service->callExpandPattern(str_repeat('A', 64), []));
+    }
+
     public function testReuseReturnsExistingPendingVoucherWithoutCreating()
     {
         $repository = new KuickPayVoucherReferenceServiceFakeRepository();

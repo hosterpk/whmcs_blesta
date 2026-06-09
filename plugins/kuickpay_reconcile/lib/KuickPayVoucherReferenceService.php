@@ -10,6 +10,9 @@
  */
 class KuickPayVoucherReferenceService
 {
+    private const DEFAULT_REGISTRATION_PATTERN = '{random_prefix}{invoice_id}';
+    private const DEFAULT_CONSUMER_PATTERN = '{institution_id}{registration_number}';
+
     /**
      * @var KuickPayVoucherRepository Voucher repository
      */
@@ -122,6 +125,38 @@ class KuickPayVoucherReferenceService
             'registration_number' => $registration_number,
             'consumer_number' => $consumer_number,
         ];
+    }
+
+    /**
+     * Expands a configured reference pattern.
+     *
+     * @param string $pattern The reference pattern
+     * @param array $values Token values keyed by token name
+     * @return string|null Expanded pattern, or null when malformed
+     */
+    protected function expandPattern(string $pattern, array $values): ?string
+    {
+        $tokens = ['random_prefix', 'invoice_id', 'institution_id', 'registration_number'];
+        $valid = true;
+        $expanded = preg_replace_callback('/\{([^{}]+)\}/', function (array $matches) use ($values, $tokens, &$valid) {
+            $token = $matches[1];
+            if (!in_array($token, $tokens, true) || !isset($values[$token]) || (string) $values[$token] === '') {
+                $valid = false;
+                return '';
+            }
+
+            return (string) $values[$token];
+        }, $pattern);
+
+        if (!$valid || $expanded === null || $expanded === '' || strpos($expanded, '{') !== false || strpos($expanded, '}') !== false) {
+            return null;
+        }
+
+        if (strlen($expanded) > 64) {
+            return null;
+        }
+
+        return $expanded;
     }
 
     /**
