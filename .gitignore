@@ -14,6 +14,7 @@ error_log
 !/cache/.htaccess
 !/cache/.gitkeep
 /logs/
+temp/
 *.log
 
 # OS/editor noise
