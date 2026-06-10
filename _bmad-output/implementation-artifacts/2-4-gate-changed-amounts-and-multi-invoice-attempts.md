@@ -291,3 +291,22 @@ GPT-5 Codex
 ### Change Log
 
 - 2026-06-10: Implemented Story 2.4 gateway policy gates, amount/mapping comparison, replacement retire audit, deterministic multi-invoice storage, customer notices, tests, and explicit active-context uniqueness deferral.
+- 2026-06-10: Code review (bmad-code-review, YOLO). 3 adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor). All 5 ACs + load-bearing invariants verified correct by the Acceptance Auditor. 1 patch applied, 5 deferred, 7 dismissed.
+
+### Review Findings
+
+_Reviewed diff range `11c63661..HEAD` (the Story 2.4 commits; the frontmatter `baseline_commit` predates the interleaved Story 3.4 work, so it was narrowed to 2.4's own files). 3 parallel layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. Acceptance Auditor independently verified all five ACs and every load-bearing invariant (single comparator, conditional-(b) link compare, shape-tolerance, fail-closed dedupe, code-enforced production gate, posting boundary, in-scope `$service` reuse, Task 9 re-deferral) as correctly implemented._
+
+**Patch (resolved):**
+
+- [x] [Review][Patch] Add gateway test for the service→notice mapping on the create/reuse branch (Task 10 mandated this case but it was untested). Extracted the create branch of `buildProcess()` into a `createVoucherForContext()` seam mirroring `displayVoucherForContext()`, then added two tests (amount_changed→notice, generic failure→no notice). `buildProcess()` behavior unchanged; gateway suite 180→180 green (commit `0a818337`). [components/gateways/nonmerchant/kuickpay/kuickpay.php:671; tests/KuickPayVoucherGatewayHelpersTest.php]
+
+**Deferred (recorded, not actionable now):**
+
+- [x] [Review][Defer] `retireVoucher()` robustness — edit+audit is non-atomic (by spec: durable edit first, then audit) and `edit()` performs no affected-row check, so a no-op cancel (wrong/zero company_id, already-cancelled row) still returns `true` and records `voucher.replaced`. [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:227] — deferred, latent (`replace` is code-gated out of production until 3.4/3.5/3.7)
+- [x] [Review][Defer] Replace-path non-amount failures (issuance/uniqueness/transport) surface the `amount_changed` notice instead of mapping via `getLastError()`. [components/gateways/nonmerchant/kuickpay/kuickpay.php:923] — deferred, latent (`replace` gated off; fails safe)
+- [x] [Review][Defer] `getOrCreateForInvoiceContext()` create-failure fall-through `return null` sets no `lastError`, so `recordReferenceGenerationFailure()` logs a generic (null) reason. [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:174] — deferred, pre-existing (predates 2.4)
+- [x] [Review][Defer] `normalizeAmount()` truncates beyond 2 decimals (no rounding) and returns invalid/negative input as raw trimmed string rather than failing closed. [both `normalizeAmount` copies: kuickpay.php / KuickPayVoucherReferenceService.php] — deferred, latent (self-consistent both sides; Blesta supplies 2-dp amounts)
+- [x] [Review][Defer] Gateway single-invoice reload regression guard is fake-driven (injected `requestMatchesVoucher` returns a stub), so the real empty-links amount-only path is exercised only at the service layer. [components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php:685] — deferred, low (behavior covered by `testRequestMatchesVoucherTreatsUnloadedLinksAsAmountOnly`)
+
+**Dismissed as noise / by-design / mitigated (7):** set-query "superset" false-positive (mitigated by the `(voucher_id, invoice_id)` unique key — exact-set match is sound); empty-links amount-only "fail-open" (by-design conditional-(b); block-mode vouchers are single-invoice so amount-total compare is complete); double retire-on-replace (`getPendingByInvoiceId` is pending-only, retired row is `cancelled` — spec documents no double-fire); duplicate-invoice-id blocked under `block` (by spec Task 2 — fail closed); invoice id `0` treated as real (unreachable — Blesta IDs are positive); array-vs-object `$latest` (repository returns `stdClass`); `process.pdt` language-key concatenation (only hard-coded literals flow in, no input source).
