@@ -300,3 +300,12 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - plugins/kuickpay_reconcile/tests/KuickPayEvidenceValidatorTest.php
 - plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
+
+### Review Findings
+
+Adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor), 2026-06-10. Baseline `91819026`. 3 layers ran; 2 patch, 2 defer, 15 dismissed.
+
+- [ ] [Review][Patch] `toMinorUnitsOrNull` rejects Blesta `decimal(12,4)` amounts → adopt-existing-transaction (AC7b) routes every real match to `manual_review` in production [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:418] — DB returns `transactions.amount`/`transaction_applied.amount` as 4-decimal strings (`"1000.0000"`); the regex `^\d+(?:\.\d{1,2})?$` only accepts 0–2 decimals → `null`. Tests passed only because the fakes used 2-decimal strings. Fix also hardens `adoptExistingTransaction`/`appliedMatches` so an unparseable (`null`) amount is a definitive mismatch (no `null===null` match). No floats introduced.
+- [ ] [Review][Patch] AC9 double-allocation not verified end-to-end through the real validator [plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php:229] — `testDoubleAllocationRevalidationFailureMovesToManualReview` injects a stub validator; AC15 enumerates symmetric (active sibling → `stale_voucher`) and asymmetric (reduced live `due` → `invoice_mismatch`) cases. Logic is covered in `KuickPayEvidenceValidatorTest`, but add posting-service integration tests driving the real `KuickPayEvidenceValidator`.
+- [x] [Review][Defer] Head-of-line blocking: a deterministically-failing voucher stays `confirmed_unposted` and re-occupies the front of every bounded batch [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:54] — deferred, secondary; per AC6 the `failed` outcome intentionally preserves `confirmed_unposted` for retry, and a retry/backoff cap is Epic-4 scope.
+- [x] [Review][Defer] `getByTransactionId` returns a single arbitrary row when duplicate references exist [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:136] — deferred, pre-existing core behavior; `transactions.transaction_id` has no unique index. Low likelihood since `kuickpay_reference` is per-voucher unique.
