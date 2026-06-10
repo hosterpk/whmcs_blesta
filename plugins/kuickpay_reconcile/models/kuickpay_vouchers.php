@@ -379,6 +379,29 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Fetches vouchers eligible for local expiry.
+     *
+     * @param int $company_id The company ID
+     * @param int $limit Maximum records to return
+     * @param int $after_id Resume cursor; only IDs greater than this are returned
+     * @return array Voucher rows
+     */
+    public function getExpirable(int $company_id, int $limit, int $after_id = 0): array
+    {
+        return $this->Record->select()
+            ->from('kuickpay_vouchers')
+            ->where('company_id', '=', $company_id)
+            ->where('currency', '=', 'PKR')
+            ->where('status', 'in', ['pending', 'retry'])
+            ->where('date_expires', '!=', null)
+            ->where('date_expires', '<', 'CURDATE()', false, false)
+            ->where('id', '>', max(0, $after_id))
+            ->order(['id' => 'ASC'])
+            ->limit(max(1, $limit))
+            ->fetchAll();
+    }
+
+    /**
      * Locks and fetches a company-scoped voucher row.
      *
      * @param int $voucher_id The voucher ID

@@ -226,6 +226,19 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches vouchers eligible for bounded local expiry.
+     *
+     * @param int $company_id The company ID
+     * @param int $limit Maximum records to return
+     * @param int $afterId Resume cursor; only IDs greater than this are returned
+     * @return array Voucher rows
+     */
+    public function getExpirable(int $company_id, int $limit, int $afterId = 0): array
+    {
+        return $this->KuickpayVouchers->getExpirable($company_id, $limit, $afterId);
+    }
+
+    /**
      * Locks and fetches a company-scoped voucher row.
      *
      * @param int $voucher_id The voucher ID

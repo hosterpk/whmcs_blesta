@@ -48,6 +48,17 @@ class KuickPayVoucherRepositoryTest extends TestCase
         $this->assertSame([7, 100, 12], $model->postableCall);
     }
 
+    public function testGetExpirableDelegatesToModel()
+    {
+        $model = new KuickPayVoucherRepositoryFakeVoucherModel();
+        $repository = $this->repository($model);
+
+        $result = $repository->getExpirable(7, 100, 12);
+
+        $this->assertSame([$model->activeVoucher], $result);
+        $this->assertSame([7, 100, 12], $model->expirableCall);
+    }
+
     public function testLockedReadsDelegateToModels()
     {
         $model = new KuickPayVoucherRepositoryFakeVoucherModel();
@@ -80,6 +91,7 @@ class KuickPayVoucherRepositoryFakeVoucherModel
     public ?array $invoiceCall = null;
     public ?array $invoiceSetCall = null;
     public ?array $postableCall = null;
+    public ?array $expirableCall = null;
     public ?array $forUpdateCall = null;
     public stdClass $activeVoucher;
 
@@ -112,6 +124,13 @@ class KuickPayVoucherRepositoryFakeVoucherModel
     public function getPostable(int $company_id, int $limit, int $afterId = 0): array
     {
         $this->postableCall = [$company_id, $limit, $afterId];
+
+        return [$this->activeVoucher];
+    }
+
+    public function getExpirable(int $company_id, int $limit, int $afterId = 0): array
+    {
+        $this->expirableCall = [$company_id, $limit, $afterId];
 
         return [$this->activeVoucher];
     }

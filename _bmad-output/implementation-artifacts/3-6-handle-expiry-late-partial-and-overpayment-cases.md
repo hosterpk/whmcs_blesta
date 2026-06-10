@@ -56,9 +56,9 @@ The following testable criteria expand the two BDD scenarios. Each maps to tasks
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Expirable voucher selector + repository passthrough (AC1)**
-  - [ ] Add `KuickpayVouchers::getExpirable(int $company_id, int $limit, int $after_id = 0): array` to `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`. Mirror `getPostable()` (lines 366-379): `->where('company_id','=',$company_id)`, **`->where('currency','=','PKR')`** (same guard as `getPostable`:371 / `getReconcilable`:324), `->where('status','in',['pending','retry'])`, `->where('date_expires','!=',null)` (Blesta `Record` renders `!= null` as `IS NOT NULL` — proven by the shipped `getPostable` selector at :374), `->where('date_expires','<','DATE(NOW())', false, false)` (or `CURDATE()` via a bound-safe raw fragment — match the existing raw-fragment style at kuickpay_vouchers.php:343-349; the 5-arg `(field, op, value, false, false)` form works on `where()` as well as `orWhere()`), `->where('id','>',max(0,$after_id))`, `->order(['id'=>'ASC'])`, `->limit(max(1,$limit))`, `->fetchAll()`. **Compare `date_expires` (a DATE) against the DB's current date**, not a PHP date string, so cron-host vs DB clock drift cannot mis-expire (use `CURDATE()`/`DATE(NOW())`). Keep it company-scoped.
-  - [ ] Add `KuickPayVoucherRepository::getExpirable(int $company_id, int $limit, int $afterId = 0): array` passthrough (mirror `getPostable`, KuickPayVoucherRepository.php:223-226).
+- [x] **Task 1 — Expirable voucher selector + repository passthrough (AC1)**
+  - [x] Add `KuickpayVouchers::getExpirable(int $company_id, int $limit, int $after_id = 0): array` to `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`. Mirror `getPostable()` (lines 366-379): `->where('company_id','=',$company_id)`, **`->where('currency','=','PKR')`** (same guard as `getPostable`:371 / `getReconcilable`:324), `->where('status','in',['pending','retry'])`, `->where('date_expires','!=',null)` (Blesta `Record` renders `!= null` as `IS NOT NULL` — proven by the shipped `getPostable` selector at :374), `->where('date_expires','<','DATE(NOW())', false, false)` (or `CURDATE()` via a bound-safe raw fragment — match the existing raw-fragment style at kuickpay_vouchers.php:343-349; the 5-arg `(field, op, value, false, false)` form works on `where()` as well as `orWhere()`), `->where('id','>',max(0,$after_id))`, `->order(['id'=>'ASC'])`, `->limit(max(1,$limit))`, `->fetchAll()`. **Compare `date_expires` (a DATE) against the DB's current date**, not a PHP date string, so cron-host vs DB clock drift cannot mis-expire (use `CURDATE()`/`DATE(NOW())`). Keep it company-scoped.
+  - [x] Add `KuickPayVoucherRepository::getExpirable(int $company_id, int $limit, int $afterId = 0): array` passthrough (mirror `getPostable`, KuickPayVoucherRepository.php:223-226).
 
 - [ ] **Task 2 — Expiry sweep method (AC2, AC3, AC6)** on `KuickPayReconcileService`.
   - [ ] Add a `const LOCK_NAME_EXPIRE = 'expire_vouchers';` (distinct from `reconcile_pending`).
@@ -262,5 +262,9 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 ### Debug Log References
 
 ### Completion Notes List
+- Task 1: Added the PKR-guarded, company-scoped `getExpirable()` selector using DB-side `CURDATE()` and the repository passthrough; verified with targeted repository tests and PHP syntax checks.
 
 ### File List
+- plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
+- plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
