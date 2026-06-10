@@ -429,6 +429,44 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame('13-Jun-26', $gateway->exposeFormatVoucherDate('2026-06-13'));
     }
 
+    /**
+     * @dataProvider unparseableDateProvider
+     */
+    public function testFormatVoucherDateFailsClosedOnUnparseableDate($input)
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame('', $gateway->exposeFormatVoucherDate($input));
+    }
+
+    public function unparseableDateProvider()
+    {
+        return [
+            'empty' => [''],
+            'not a date' => ['not-a-date'],
+        ];
+    }
+
+    public function testBuildVoucherRequestFailsClosedOnMissingDueDate()
+    {
+        $gateway = $this->gateway();
+        $request = $gateway->exposeBuildVoucherRequest(
+            [
+                'registration_number' => 'REG55',
+                'amount' => '1500.00',
+                'date_due' => '',
+                'date_expires' => '',
+            ],
+            ['first_name' => 'Ali', 'last_name' => 'Khan', 'company' => '', 'mobile' => '', 'email' => '', 'branch' => ''],
+            []
+        );
+
+        $this->assertSame('', $request['DueDate']);
+        $this->assertSame('', $request['ExpiryDate']);
+        $this->assertSame('', $request['VoucherMonth']);
+        $this->assertSame('', $request['VoucherYear']);
+    }
+
     public function testBuildVoucherContactDataLoadsEmailMobileAndBranch()
     {
         $gateway = $this->gateway();

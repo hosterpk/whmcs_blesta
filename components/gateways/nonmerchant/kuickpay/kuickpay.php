@@ -698,6 +698,7 @@ class Kuickpay extends NonmerchantGateway
     {
         $amount = $this->normalizeAmount((string) ($voucher['amount'] ?? ''));
         $dueDate = (string) ($voucher['date_due'] ?? '');
+        $dueTimestamp = $dueDate !== '' ? strtotime($dueDate) : false;
         $clientMobile = $this->normalizePkMobile((string) ($contactData['mobile'] ?? ''));
         $fallbackMobile = $this->normalizePkMobile((string) ($meta['fallback_mobile'] ?? ''));
         $company = trim((string) ($contactData['company'] ?? ''));
@@ -722,8 +723,8 @@ class Kuickpay extends NonmerchantGateway
             'AmountAfterDueDate' => $amount,
             'ExpiryDate' => $this->formatVoucherDate((string) ($voucher['date_expires'] ?? '')),
             'IssueDate' => $this->formatVoucherDate(date('Y-m-d')),
-            'VoucherMonth' => date('m', strtotime($dueDate)),
-            'VoucherYear' => date('Y', strtotime($dueDate)),
+            'VoucherMonth' => $dueTimestamp !== false ? date('m', $dueTimestamp) : '',
+            'VoucherYear' => $dueTimestamp !== false ? date('Y', $dueTimestamp) : '',
             'Name' => $name,
             'Mobile' => $clientMobile ?: ($fallbackMobile ?: ''),
             'Email' => $email,
@@ -978,7 +979,9 @@ class Kuickpay extends NonmerchantGateway
      */
     protected function formatVoucherDate(string $ymdDate): string
     {
-        return date('d-M-y', strtotime($ymdDate));
+        $timestamp = $ymdDate !== '' ? strtotime($ymdDate) : false;
+
+        return $timestamp !== false ? date('d-M-y', $timestamp) : '';
     }
 
     /**
