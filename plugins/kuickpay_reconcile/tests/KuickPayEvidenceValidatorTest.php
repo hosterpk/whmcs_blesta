@@ -21,6 +21,54 @@ class KuickPayEvidenceValidatorTest extends TestCase
         $this->assertSame('confirmed_unposted', $result->outcomeStatus());
     }
 
+    public function testMultipleInvoiceLinkAllocationsSummingToVoucherAmountPass()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(['amount' => '1000.00']),
+            [
+                $this->invoiceLink(['invoice_id' => 55, 'amount' => '600.00']),
+                $this->invoiceLink(['invoice_id' => 56, 'amount' => '400.00']),
+            ],
+            $this->evidence(['consumer_number' => null])
+        );
+
+        $this->assertTrue($result->isValid());
+        $this->assertSame([], $result->reasons());
+    }
+
+    public function testMultipleInvoiceLinkAllocationsNotSummingToVoucherAmountFailAmount()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(['amount' => '1000.00']),
+            [
+                $this->invoiceLink(['invoice_id' => 55, 'amount' => '600.00']),
+                $this->invoiceLink(['invoice_id' => 56, 'amount' => '300.00']),
+            ],
+            $this->evidence(['consumer_number' => null])
+        );
+
+        $this->assertFalse($result->isValid());
+        $this->assertContains('amount_mismatch', $result->reasons());
+    }
+
+    public function testTrailingZeroVoucherAmountMatchesTwoDecimalEvidenceInMinorUnits()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(['amount' => '1000.0']),
+            [$this->invoiceLink(['amount' => '1000.0'])],
+            $this->evidence(['consumer_number' => null, 'amount' => '1000.00'])
+        );
+
+        $this->assertTrue($result->isValid());
+        $this->assertSame([], $result->reasons());
+    }
+
     /**
      * @dataProvider failureProvider
      */
