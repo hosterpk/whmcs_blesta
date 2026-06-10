@@ -47,6 +47,21 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame(['posting.failed'], array_column($audit->events, 0));
     }
 
+    public function testEmptyPaidDateMovesToManualReviewWithoutTransaction()
+    {
+        $voucher = $this->voucher(['date_paid' => '']);
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $voucher);
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertSame(['missing_paid_date'], json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']);
+        $this->assertSame([], $transactions->adds);
+    }
+
     public function testMalformedPaidDateMovesToManualReviewWithoutTransaction()
     {
         $voucher = $this->voucher(['date_paid' => '0000-00-00 00:00:00']);
