@@ -646,6 +646,127 @@ class Kuickpay extends NonmerchantGateway
     }
 
     /**
+     * Builds the KuickPay InsertVoucher request field map.
+     *
+     * @param array $voucher Flat voucher data
+     * @param array $contactData Contact data with name/mobile/email/branch fields
+     * @param array $meta Gateway settings
+     * @return array InsertVoucher request fields
+     */
+    protected function buildVoucherRequest(array $voucher, array $contactData, array $meta): array
+    {
+        $amount = $this->normalizeAmount((string) ($voucher['amount'] ?? ''));
+        $dueDate = (string) ($voucher['date_due'] ?? '');
+        $clientMobile = $this->normalizePkMobile((string) ($contactData['mobile'] ?? ''));
+        $fallbackMobile = $this->normalizePkMobile((string) ($meta['fallback_mobile'] ?? ''));
+        $company = trim((string) ($contactData['company'] ?? ''));
+        $name = $company !== ''
+            ? $company
+            : trim(trim((string) ($contactData['first_name'] ?? '')) . ' ' . trim((string) ($contactData['last_name'] ?? '')));
+        $email = trim((string) ($contactData['email'] ?? ''));
+        if ($email === '') {
+            $email = trim((string) ($meta['fallback_email'] ?? ''));
+        }
+        $branch = trim((string) ($contactData['branch'] ?? ''));
+        if ($branch === '') {
+            $branch = trim((string) ($meta['default_branch'] ?? ''));
+        }
+
+        $request = [
+            'RegistrationNumber' => (string) ($voucher['registration_number'] ?? ''),
+            'Head1' => trim((string) ($meta['payment_head_label'] ?? '')) ?: 'Invoice Payment',
+            'Amount1' => $amount,
+            'TotalAmount' => $amount,
+            'DueDate' => $this->formatVoucherDate($dueDate),
+            'AmountAfterDueDate' => $amount,
+            'ExpiryDate' => $this->formatVoucherDate((string) ($voucher['date_expires'] ?? '')),
+            'IssueDate' => $this->formatVoucherDate(date('Y-m-d')),
+            'VoucherMonth' => date('m', strtotime($dueDate)),
+            'VoucherYear' => date('Y', strtotime($dueDate)),
+            'Name' => $name,
+            'Mobile' => $clientMobile ?: ($fallbackMobile ?: ''),
+            'Email' => $email,
+            'Branch' => $branch,
+        ];
+
+        for ($i = 2; $i <= 10; $i++) {
+            $request['Head' . $i] = '';
+            $request['Amount' . $i] = '0';
+        }
+
+        return $request;
+    }
+
+    /**
+     * Builds the customer contact fields needed for InsertVoucher.
+     *
+     * @param array $contactInfo Contact data passed by Blesta
+     * @return array Contact data for voucher mapping
+     */
+    protected function buildVoucherContactData(array $contactInfo): array
+    {
+        if (!isset($this->Contacts)) {
+            Loader::loadModels($this, ['Contacts']);
+        }
+
+        $contact_id = (int) ($contactInfo['id'] ?? 0);
+        $contact = $contact_id > 0 ? $this->Contacts->get($contact_id) : null;
+        $numbers = $contact_id > 0 ? $this->Contacts->getNumbers($contact_id, 'phone', 'mobile') : [];
+        $firstNumber = is_array($numbers) && !empty($numbers) ? reset($numbers) : null;
+        $state = $contactInfo['state'] ?? [];
+
+        return [
+            'first_name' => (string) ($contactInfo['first_name'] ?? ''),
+            'last_name' => (string) ($contactInfo['last_name'] ?? ''),
+            'company' => (string) ($contactInfo['company'] ?? ''),
+            'email' => (string) ($contact->email ?? ''),
+            'mobile' => (string) ($firstNumber->number ?? ''),
+            'branch' => is_array($state) ? (string) ($state['code'] ?? '') : '',
+        ];
+    }
+
+    /**
+     * Normalizes Pakistani mobile numbers to 03XXXXXXXXX for KuickPay.
+     *
+     * Accepted shapes: 03XXXXXXXXX, +923XXXXXXXXX, 00923XXXXXXXXX, and 923XXXXXXXXX.
+     *
+     * @param string $raw Raw mobile number
+     * @return string|null Normalized mobile number, or null when invalid
+     */
+    protected function normalizePkMobile(string $raw): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $raw);
+        if ($digits === null || $digits === '') {
+            return null;
+        }
+
+        if (preg_match('/^03\d{9}$/', $digits)) {
+            return $digits;
+        }
+
+        if (preg_match('/^923\d{9}$/', $digits)) {
+            return '0' . substr($digits, 2);
+        }
+
+        if (preg_match('/^00923\d{9}$/', $digits)) {
+            return '0' . substr($digits, 4);
+        }
+
+        return null;
+    }
+
+    /**
+     * Formats a voucher date for KuickPay.
+     *
+     * @param string $ymdDate Date in Y-m-d form
+     * @return string KuickPay voucher date
+     */
+    protected function formatVoucherDate(string $ymdDate): string
+    {
+        return date('d-M-y', strtotime($ymdDate));
+    }
+
+    /**
      * Records an admin-safe reference generation diagnostic.
      *
      * @param mixed $service Reference service exposing getLastError()

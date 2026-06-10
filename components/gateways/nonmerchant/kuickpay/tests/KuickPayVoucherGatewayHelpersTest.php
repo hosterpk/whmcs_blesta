@@ -65,6 +65,26 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         $this->recordReferenceGenerationFailure($service, $invoice_amounts, $meta);
     }
 
+    public function exposeBuildVoucherRequest(array $voucher, array $contactData, array $meta): array
+    {
+        return $this->buildVoucherRequest($voucher, $contactData, $meta);
+    }
+
+    public function exposeNormalizePkMobile(string $raw): ?string
+    {
+        return $this->normalizePkMobile($raw);
+    }
+
+    public function exposeFormatVoucherDate(string $ymdDate): string
+    {
+        return $this->formatVoucherDate($ymdDate);
+    }
+
+    public function exposeBuildVoucherContactData(array $contactInfo): array
+    {
+        return $this->buildVoucherContactData($contactInfo);
+    }
+
     protected function log($url, $data = null, $direction = 'input', $success = false)
     {
         $this->logs[] = compact('url', 'data', 'direction', 'success');
@@ -85,6 +105,19 @@ class KuickPayVoucherGatewayFailureService
     public function getLastError(): ?string
     {
         return $this->lastError;
+    }
+}
+
+class KuickPayVoucherGatewayFakeContacts
+{
+    public function get(int $contact_id)
+    {
+        return (object) ['email' => 'ali@example.test'];
+    }
+
+    public function getNumbers(int $contact_id, string $type, string $location)
+    {
+        return [(object) ['number' => '+923001234567']];
     }
 }
 
@@ -203,6 +236,140 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         );
 
         $this->assertSame([], $gateway->logs);
+    }
+
+    public function testBuildVoucherRequestMapsInvoiceContactAndConfiguredPolicies()
+    {
+        $gateway = $this->gateway();
+        $request = $gateway->exposeBuildVoucherRequest(
+            [
+                'registration_number' => 'REG55',
+                'amount' => '001,500.5',
+                'date_due' => '2026-06-13',
+                'date_expires' => '2026-06-17',
+            ],
+            [
+                'first_name' => 'Ali',
+                'last_name' => 'Khan',
+                'company' => '',
+                'mobile' => '+92 300-1234567',
+                'email' => 'ali@example.test',
+                'branch' => 'SD',
+            ],
+            [
+                'payment_head_label' => 'Hosting invoice',
+                'fallback_mobile' => '03123456789',
+                'fallback_email' => 'fallback@example.test',
+                'default_branch' => 'PB',
+                'institution_id' => 'SHOULD_NOT_LEAK',
+                'voucher_username' => 'SHOULD_NOT_LEAK',
+                'voucher_password' => 'SHOULD_NOT_LEAK',
+            ]
+        );
+
+        $this->assertSame('REG55', $request['RegistrationNumber']);
+        $this->assertSame('Hosting invoice', $request['Head1']);
+        $this->assertSame('1500.50', $request['Amount1']);
+        $this->assertSame('1500.50', $request['TotalAmount']);
+        $this->assertSame('13-Jun-26', $request['DueDate']);
+        $this->assertSame('17-Jun-26', $request['ExpiryDate']);
+        $this->assertSame(date('d-M-y'), $request['IssueDate']);
+        $this->assertSame('06', $request['VoucherMonth']);
+        $this->assertSame('2026', $request['VoucherYear']);
+        $this->assertSame('Ali Khan', $request['Name']);
+        $this->assertSame('03001234567', $request['Mobile']);
+        $this->assertSame('ali@example.test', $request['Email']);
+        $this->assertSame('SD', $request['Branch']);
+        $this->assertSame('', $request['Head2']);
+        $this->assertSame('0', $request['Amount2']);
+        $this->assertArrayNotHasKey('userName', $request);
+        $this->assertArrayNotHasKey('password', $request);
+        $this->assertArrayNotHasKey('InstitutionID', $request);
+    }
+
+    public function testBuildVoucherRequestAppliesMobileEmailAndBranchFallbacks()
+    {
+        $gateway = $this->gateway();
+        $request = $gateway->exposeBuildVoucherRequest(
+            [
+                'registration_number' => 'REG55',
+                'amount' => '1500.00',
+                'date_due' => '2026-06-13',
+                'date_expires' => '2026-06-17',
+            ],
+            [
+                'first_name' => 'Ali',
+                'last_name' => 'Khan',
+                'company' => 'Example Co',
+                'mobile' => '555',
+                'email' => '',
+                'branch' => '',
+            ],
+            [
+                'payment_head_label' => '',
+                'fallback_mobile' => '00923001234567',
+                'fallback_email' => 'fallback@example.test',
+                'default_branch' => 'PB',
+            ]
+        );
+
+        $this->assertSame('Invoice Payment', $request['Head1']);
+        $this->assertSame('Example Co', $request['Name']);
+        $this->assertSame('03001234567', $request['Mobile']);
+        $this->assertSame('fallback@example.test', $request['Email']);
+        $this->assertSame('PB', $request['Branch']);
+    }
+
+    /**
+     * @dataProvider pkMobileProvider
+     */
+    public function testNormalizePkMobileAcceptsDocumentedShapes($input, $expected)
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame($expected, $gateway->exposeNormalizePkMobile($input));
+    }
+
+    public function pkMobileProvider()
+    {
+        return [
+            ['03001234567', '03001234567'],
+            ['+923001234567', '03001234567'],
+            ['00923001234567', '03001234567'],
+            ['923001234567', '03001234567'],
+            ['+92 300-123-4567', '03001234567'],
+            ['02134567890', null],
+            ['+12025550123', null],
+            ['', null],
+        ];
+    }
+
+    public function testFormatVoucherDateCentralizesKuickpayDateFormat()
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame('13-Jun-26', $gateway->exposeFormatVoucherDate('2026-06-13'));
+    }
+
+    public function testBuildVoucherContactDataLoadsEmailMobileAndBranch()
+    {
+        $gateway = $this->gateway();
+        $gateway->Contacts = new KuickPayVoucherGatewayFakeContacts();
+
+        $contactData = $gateway->exposeBuildVoucherContactData([
+            'id' => 9,
+            'first_name' => 'Ali',
+            'last_name' => 'Khan',
+            'company' => 'Example Co',
+            'state' => ['code' => 'SD', 'name' => 'Sindh'],
+        ]);
+
+        $this->assertSame('Ali', $contactData['first_name']);
+        $this->assertSame('Khan', $contactData['last_name']);
+        $this->assertSame('Example Co', $contactData['company']);
+        $this->assertSame('ali@example.test', $contactData['email']);
+        $this->assertSame('+923001234567', $contactData['mobile']);
+        $this->assertSame('SD', $contactData['branch']);
     }
 
     public function testReferencePatternLanguageNotesDocumentLiveTokens()
