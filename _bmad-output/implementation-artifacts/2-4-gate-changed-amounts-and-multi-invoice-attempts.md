@@ -4,7 +4,7 @@ baseline_commit: a55dac93f5d8486a1a1c088fd5a33644cca5bf4f
 
 # Story 2.4: Gate Changed Amounts and Multi-Invoice Attempts
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
