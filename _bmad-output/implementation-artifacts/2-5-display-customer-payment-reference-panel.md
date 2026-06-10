@@ -4,7 +4,7 @@ baseline_commit: a7c238539805a58abe98d8e045285aaeca86bec1
 
 # Story 2.5: Display Customer Payment Reference Panel
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -272,3 +272,12 @@ GPT-5 Codex
 - 2026-06-10: Added customer status/display-mode view-model helpers, tests, and language keys.
 - 2026-06-10: Rebuilt the customer payment reference panel and copy interaction.
 - 2026-06-10: Completed validation and moved story to review.
+- 2026-06-10: Code review (bmad-code-review, YOLO) — 1 patch applied, 1 deferred, 22 dismissed; status → done.
+
+## Review Findings
+
+_Adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor), 2026-06-10. Diff baseline `a7c23853..HEAD`. Full gateway suite green (205 tests, 877 assertions); `php -l` clean. Outcome: 0 decision-needed, 1 patch (fixed), 1 deferred, 22 dismissed as noise/by-design._
+
+- [x] [Review][Patch] Customer voucher dates echoed as raw `YYYY-MM-DD HH:MM:SS` instead of human-readable [components/gateways/nonmerchant/kuickpay/views/default/process.pdt:63-71] — FIXED in `31d7e27e`. Payable panel now formats `date_due`/`date_expires` to `d-M-y` (mirrors `formatVoucherDate()`) via guarded inline `strtotime`/`date` in the `.pdt` header, per Dev Notes:95 ("never echo a raw `YYYY-MM-DD HH:MM:SS`"). Unparseable/empty values omit the row. AC1.
+
+- [x] [Review][Defer] Concurrent reconcile can render a just-issued non-pending voucher as `display_mode='payable'`, which then falls through all panel arms to the generic `retry_safe` copy [components/gateways/nonmerchant/kuickpay/kuickpay.php:1093] — deferred, pre-existing. `issueVoucherIfNeeded()` re-reads `getLatestByInvoiceId()` without re-asserting `status==='pending'`; if a reconcile flips the row between the issuance write and this re-read, `resolveDisplayMode(..., 'issue')` returns `payable` but the `.pdt` `payable` arm requires `status==='pending'` and `status_only` requires `display_mode==='status_only'`, so the panel shows `retry_safe`. The re-read predates this story (issuance path), the `issue→payable` mapping is the intended Decision-A contract (asserted by tests), and the consequence is benign (generic safe copy; self-corrects on next render once the row routes to `block`→`status_only`). No payment-state or success-styling leak. Revisit if observed in practice or alongside Story 3.5 posting.
