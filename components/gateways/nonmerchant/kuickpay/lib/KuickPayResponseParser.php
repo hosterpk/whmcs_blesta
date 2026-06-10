@@ -253,6 +253,22 @@ class KuickPayResponseParser
                 continue;
             }
 
+            // A confirmed bulk row needs a usable paid date. persistEvidence stores it as
+            // date_paid, and the posting cron (getPostable) only posts vouchers whose
+            // date_paid is non-null. A matched, amount-correct row carrying an empty or
+            // unparseable Transaction_Date would otherwise sit in confirmed_unposted forever
+            // -- never posting and never surfaced for review. Fail closed to manual review.
+            if ($this->normalizeDate($row['paid_at']) === null) {
+                $evidence[] = $this->bulkEvidence(
+                    self::STATUS_MANUAL_REVIEW,
+                    null,
+                    $row,
+                    $transportOutcome,
+                    ['missing_paid_date']
+                );
+                continue;
+            }
+
             $evidence[] = $this->bulkEvidence(
                 self::STATUS_CONFIRMED_UNPOSTED,
                 null,

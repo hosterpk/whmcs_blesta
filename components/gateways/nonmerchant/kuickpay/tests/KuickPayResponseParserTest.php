@@ -414,6 +414,31 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame(['amount_mismatch'], $evidence[1]->validationErrors());
     }
 
+    public function testBulkConfirmWithMissingPaidDateFailsClosed()
+    {
+        // Amount and currency match, but the Transaction_Date is present-but-empty, so it
+        // cannot be confirmed (it would never post). It must fail closed to manual review.
+        $row = '<Table>'
+            . '<Consumer_Number>INSTITUTION_ID1234INVOICE_ID</Consumer_Number>'
+            . '<Registration_Number>1234INVOICE_ID</Registration_Number>'
+            . '<Transaction_Date></Transaction_Date>'
+            . '<Paid_Amount>1000.00</Paid_Amount>'
+            . '<Transaction_Reference>KP-BULK-PAID-0001</Transaction_Reference>'
+            . '<Currency>PKR</Currency>'
+            . '</Table>';
+        $dataset = '<NewDataSet>' . $row . '</NewDataSet>';
+
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $dataset),
+            ['expected' => ['INSTITUTION_ID1234INVOICE_ID' => ['amount' => '1000.00', 'currency' => 'PKR']]]
+        );
+
+        $this->assertCount(1, $evidence);
+        $this->assertEvidence('manual_review', null, $evidence[0]);
+        $this->assertSame(['missing_paid_date'], $evidence[0]->validationErrors());
+        $this->assertNull($evidence[0]->paidAt());
+    }
+
     /**
      * @dataProvider insertVoucherFixtureProvider
      */
