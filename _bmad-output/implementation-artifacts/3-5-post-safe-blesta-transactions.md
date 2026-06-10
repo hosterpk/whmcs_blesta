@@ -58,10 +58,10 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
   - [ ] Decide the enforcement point: simplest is a guard at the start of posting (`date_paid` empty/`'0000-00-00...'`/unparseable → route to `manual_review`, audit `posting.failed`, no transaction). Optionally also tighten the 3-4 confirmed path, but do NOT change 3-4 test expectations without updating them.
   - [ ] Add a language key for the safe customer/admin label if any string surfaces; reason codes stay machine-readable (e.g. `missing_paid_date`).
 
-- [ ] **Task 2 — Extend the validator for the `confirmed_unposted` posting state (AC3, AC9, AC14)** — without breaking 3-4.
-  - [ ] In `KuickPayEvidenceValidator::validate()`, add an optional trailing parameter `array $allowedStatuses = ['pending', 'retry']` and thread it into `voucherIsFresh()` (replace the hard-coded `['pending','retry']` membership test with `$allowedStatuses`). Default value preserves all existing reconcile-time behavior.
-  - [ ] Posting calls `validate($freshVoucher, $invoiceLinks, $evidence, ['confirmed_unposted'])`. Confirm the other sub-checks already behave correctly at posting time: `referenceIsUnique` and `findActiveByInvoiceId` exclude the current voucher id (sibling/duplicate detection still correct); `amountMatches`/`currencyMatches`/`invoiceMatches` re-verify live invoice state.
-  - [ ] Update/extend `KuickPayEvidenceValidatorTest.php` to cover the new `confirmed_unposted` allowed-status path AND assert the default still rejects `confirmed_unposted` as `stale_voucher` (regression guard).
+- [x] **Task 2 — Extend the validator for the `confirmed_unposted` posting state (AC3, AC9, AC14)** — without breaking 3-4.
+  - [x] In `KuickPayEvidenceValidator::validate()`, add an optional trailing parameter `array $allowedStatuses = ['pending', 'retry']` and thread it into `voucherIsFresh()` (replace the hard-coded `['pending','retry']` membership test with `$allowedStatuses`). Default value preserves all existing reconcile-time behavior.
+  - [x] Posting calls `validate($freshVoucher, $invoiceLinks, $evidence, ['confirmed_unposted'])`. Confirm the other sub-checks already behave correctly at posting time: `referenceIsUnique` and `findActiveByInvoiceId` exclude the current voucher id (sibling/duplicate detection still correct); `amountMatches`/`currencyMatches`/`invoiceMatches` re-verify live invoice state.
+  - [x] Update/extend `KuickPayEvidenceValidatorTest.php` to cover the new `confirmed_unposted` allowed-status path AND assert the default still rejects `confirmed_unposted` as `stale_voucher` (regression guard).
 
 - [ ] **Task 3 — Build `KuickPayPostingService` (AC1–AC7, AC10, AC11, AC13)** at `plugins/kuickpay_reconcile/lib/KuickPayPostingService.php`.
 
@@ -267,7 +267,11 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 {{agent_model_name_version}}
 
 ### Debug Log References
+- 2026-06-10: Extended `KuickPayEvidenceValidator::validate()` with an allowed-status parameter. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayEvidenceValidatorTest.php` and `php -l` on changed validator files.
 
 ### Completion Notes List
+- Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
 
 ### File List
+- plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
+- plugins/kuickpay_reconcile/tests/KuickPayEvidenceValidatorTest.php

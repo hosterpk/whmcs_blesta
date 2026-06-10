@@ -22,8 +22,12 @@ class KuickPayEvidenceValidator
         $this->invoiceReader = $dependencies['invoice_reader'] ?? new KuickPayInvoiceReader();
     }
 
-    public function validate(stdClass $voucher, array $invoiceLinks, KuickPayEvidence $evidence): KuickPayValidationResult
-    {
+    public function validate(
+        stdClass $voucher,
+        array $invoiceLinks,
+        KuickPayEvidence $evidence,
+        array $allowedStatuses = ['pending', 'retry']
+    ): KuickPayValidationResult {
         $reasons = [];
         $voucher_id = (int) ($voucher->id ?? 0);
         $company_id = (int) ($voucher->company_id ?? 0);
@@ -66,7 +70,7 @@ class KuickPayEvidenceValidator
             $reasons[] = 'invoice_mismatch';
         }
 
-        if (!$this->voucherIsFresh($voucher, $invoiceLinks, $company_id, $voucher_id)) {
+        if (!$this->voucherIsFresh($voucher, $invoiceLinks, $company_id, $voucher_id, $allowedStatuses)) {
             $reasons[] = 'stale_voucher';
         }
 
@@ -137,9 +141,14 @@ class KuickPayEvidenceValidator
         return $due !== null && $due >= $linkAmount;
     }
 
-    private function voucherIsFresh(stdClass $voucher, array $invoiceLinks, int $company_id, int $voucher_id): bool
-    {
-        if (!in_array((string) ($voucher->status ?? ''), ['pending', 'retry'], true)
+    private function voucherIsFresh(
+        stdClass $voucher,
+        array $invoiceLinks,
+        int $company_id,
+        int $voucher_id,
+        array $allowedStatuses
+    ): bool {
+        if (!in_array((string) ($voucher->status ?? ''), $allowedStatuses, true)
             || !empty($voucher->blesta_transaction_id)
         ) {
             return false;

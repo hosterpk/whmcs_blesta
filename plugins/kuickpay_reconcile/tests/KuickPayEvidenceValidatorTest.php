@@ -21,6 +21,35 @@ class KuickPayEvidenceValidatorTest extends TestCase
         $this->assertSame('confirmed_unposted', $result->outcomeStatus());
     }
 
+    public function testConfirmedUnpostedVoucherPassesWhenAllowedForPosting()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(['status' => 'confirmed_unposted']),
+            [$this->invoiceLink()],
+            $this->evidence(['consumer_number' => null]),
+            ['confirmed_unposted']
+        );
+
+        $this->assertTrue($result->isValid());
+        $this->assertSame([], $result->reasons());
+    }
+
+    public function testConfirmedUnpostedVoucherIsRejectedByDefault()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(['status' => 'confirmed_unposted']),
+            [$this->invoiceLink()],
+            $this->evidence(['consumer_number' => null])
+        );
+
+        $this->assertFalse($result->isValid());
+        $this->assertContains('stale_voucher', $result->reasons());
+    }
+
     public function testMultipleInvoiceLinkAllocationsSummingToVoucherAmountPass()
     {
         $validator = $this->validator();
