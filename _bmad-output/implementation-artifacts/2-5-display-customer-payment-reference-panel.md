@@ -1,6 +1,10 @@
+---
+baseline_commit: a7c238539805a58abe98d8e045285aaeca86bec1
+---
+
 # Story 2.5: Display Customer Payment Reference Panel
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
