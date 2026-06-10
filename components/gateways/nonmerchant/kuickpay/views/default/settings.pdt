@@ -197,6 +197,26 @@
             $this->Form->fieldSelect('fee_policy', (isset($fee_policy) ? $fee_policy : []), ($meta['fee_policy'] ?? 'none'), ['id' => 'fee_policy', 'class' => 'form-select']);
             ?>
         </div>
+        <div class="mb-3">
+            <label for="amount_change_policy" class="form-label">
+                <?php $this->_('Kuickpay.amount_change_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.amount_change_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('amount_change_policy', (isset($amount_change_policy) ? $amount_change_policy : []), ($meta['amount_change_policy'] ?? 'block'), ['id' => 'amount_change_policy', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="multi_invoice_policy" class="form-label">
+                <?php $this->_('Kuickpay.multi_invoice_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.multi_invoice_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('multi_invoice_policy', (isset($multi_invoice_policy) ? $multi_invoice_policy : []), ($meta['multi_invoice_policy'] ?? 'block'), ['id' => 'multi_invoice_policy', 'class' => 'form-select']);
+            ?>
+        </div>
     </div>
 
     <div class="title_row">

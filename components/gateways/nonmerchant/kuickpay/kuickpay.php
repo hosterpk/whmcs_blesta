@@ -93,15 +93,39 @@ class Kuickpay extends NonmerchantGateway
         $feePolicyOptions = [
             'none' => Language::_('Kuickpay.fee_policy.none', true),
         ];
+        $paymentPolicyOptions = $this->paymentPolicyOptions();
 
         $this->view->set('meta', $meta);
         $this->view->set('companion_installed', $companion_installed);
         $this->view->set('currency_policy', $currencyPolicyOptions);
         $this->view->set('fee_policy', $feePolicyOptions);
+        $this->view->set('amount_change_policy', $paymentPolicyOptions['amount_change_policy']);
+        $this->view->set('multi_invoice_policy', $paymentPolicyOptions['multi_invoice_policy']);
         $this->view->set('voucher_password_stored', !empty($meta['voucher_password']));
         $this->view->set('inquiry_password_stored', !empty($meta['inquiry_password']));
 
         return $this->view->fetch();
+    }
+
+    /**
+     * Builds production-selectable voucher payment policy options.
+     *
+     * @return array Policy option lists keyed by setting name
+     */
+    protected function paymentPolicyOptions(): array
+    {
+        return [
+            'amount_change_policy' => [
+                'block' => Language::_('Kuickpay.amount_change_policy.block', true),
+                // TODO(3.7): expose 'replace' once posting+bulk-recon land.
+                // 'replace' => Language::_('Kuickpay.amount_change_policy.replace', true),
+            ],
+            'multi_invoice_policy' => [
+                'block' => Language::_('Kuickpay.multi_invoice_policy.block', true),
+                // TODO(3.7): expose 'allow' once posting+bulk-recon land.
+                // 'allow' => Language::_('Kuickpay.multi_invoice_policy.allow', true),
+            ],
+        ];
     }
 
     /**
@@ -131,6 +155,12 @@ class Kuickpay extends NonmerchantGateway
         }
         if (!isset($meta['fee_policy']) || $meta['fee_policy'] === '') {
             $meta['fee_policy'] = 'none';
+        }
+        if (!isset($meta['amount_change_policy']) || $meta['amount_change_policy'] === '') {
+            $meta['amount_change_policy'] = 'block';
+        }
+        if (!isset($meta['multi_invoice_policy']) || $meta['multi_invoice_policy'] === '') {
+            $meta['multi_invoice_policy'] = 'block';
         }
 
         // Trim required identifier fields so whitespace-only input is treated as empty.
@@ -243,6 +273,22 @@ class Kuickpay extends NonmerchantGateway
                     'if_set' => true,
                     'rule' => ['in_array', ['none']],
                     'message' => Language::_('Kuickpay.!error.fee_policy.valid', true),
+                ],
+            ],
+            'amount_change_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    // TODO(3.7): widen to ['block', 'replace'] once posting+bulk-recon land.
+                    'rule' => ['in_array', ['block']],
+                    'message' => Language::_('Kuickpay.!error.amount_change_policy.valid', true),
+                ],
+            ],
+            'multi_invoice_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    // TODO(3.7): widen to ['block', 'allow'] once posting+bulk-recon land.
+                    'rule' => ['in_array', ['block']],
+                    'message' => Language::_('Kuickpay.!error.multi_invoice_policy.valid', true),
                 ],
             ],
         ];

@@ -39,6 +39,11 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
     public $fakeIssuanceService;
     public $fakeVoucherRepository;
 
+    public function exposePaymentPolicyOptions(): array
+    {
+        return $this->paymentPolicyOptions();
+    }
+
     public function exposeNormalizeAmount(string $amount): string
     {
         return $this->normalizeAmount($amount);
@@ -638,6 +643,41 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame('Default branch', $lang['Kuickpay.default_branch']);
         $this->assertArrayHasKey('Kuickpay.fallback_email_note', $lang);
         $this->assertArrayHasKey('Kuickpay.default_branch_note', $lang);
+    }
+
+    public function testPaymentPolicySettingsAreProductionGatedToBlock()
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame(
+            [
+                'amount_change_policy' => ['block' => 'Kuickpay.amount_change_policy.block'],
+                'multi_invoice_policy' => ['block' => 'Kuickpay.multi_invoice_policy.block'],
+            ],
+            $gateway->exposePaymentPolicyOptions()
+        );
+    }
+
+    public function testPaymentPolicyLanguageKeysExistForFutureUngating()
+    {
+        $lang = [];
+        require __DIR__ . '/../language/en_us/kuickpay.php';
+
+        foreach ([
+            'Kuickpay.amount_change_policy',
+            'Kuickpay.amount_change_policy_note',
+            'Kuickpay.amount_change_policy.block',
+            'Kuickpay.amount_change_policy.replace',
+            'Kuickpay.!error.amount_change_policy.valid',
+            'Kuickpay.multi_invoice_policy',
+            'Kuickpay.multi_invoice_policy_note',
+            'Kuickpay.multi_invoice_policy.block',
+            'Kuickpay.multi_invoice_policy.allow',
+            'Kuickpay.!error.multi_invoice_policy.valid',
+        ] as $key) {
+            $this->assertArrayHasKey($key, $lang);
+            $this->assertNotSame('', $lang[$key]);
+        }
     }
 
     public function testProcessRetrySafeCopyHasLanguageKey()
