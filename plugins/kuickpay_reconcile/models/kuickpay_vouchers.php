@@ -168,6 +168,44 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Fetches the pending voucher whose linked invoice set exactly matches the IDs.
+     *
+     * @param array $invoice_ids Sorted distinct invoice IDs
+     * @param int $company_id The company ID
+     * @return mixed The voucher row, or false when absent
+     */
+    public function getPendingByInvoiceSet(array $invoice_ids, int $company_id)
+    {
+        $invoice_ids = array_values(array_unique(array_map('intval', $invoice_ids)));
+        sort($invoice_ids, SORT_NUMERIC);
+        if (empty($invoice_ids)) {
+            return false;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($invoice_ids), '?'));
+        $count = count($invoice_ids);
+        $sub_query = 'SELECT voucher_id FROM kuickpay_voucher_invoices'
+            . ' GROUP BY voucher_id'
+            . ' HAVING COUNT(*) = ?'
+            . ' AND SUM(CASE WHEN invoice_id IN (' . $placeholders . ') THEN 1 ELSE 0 END) = ?';
+        $values = array_merge([$count], $invoice_ids, [$count]);
+
+        return $this->Record->select(['kuickpay_vouchers.*'])
+            ->from('kuickpay_vouchers')
+            ->appendValues($values)
+            ->innerJoin(
+                [$sub_query => 'matched_invoice_set'],
+                'matched_invoice_set.voucher_id',
+                '=',
+                'kuickpay_vouchers.id',
+                false
+            )
+            ->where('kuickpay_vouchers.company_id', '=', $company_id)
+            ->where('kuickpay_vouchers.status', '=', 'pending')
+            ->fetch();
+    }
+
+    /**
      * Fetches the most recent voucher linked to an invoice, regardless of status.
      *
      * @param int $invoice_id The invoice ID

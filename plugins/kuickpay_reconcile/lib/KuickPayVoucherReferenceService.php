@@ -62,14 +62,26 @@ class KuickPayVoucherReferenceService
         $this->lastError = null;
 
         try {
-            $firstInvoice = $context['invoice_amounts'][0] ?? null;
+            $invoiceAmounts = $this->normalizeContextInvoiceAmounts((array) ($context['invoice_amounts'] ?? []));
+            if ($invoiceAmounts === null) {
+                return null;
+            }
+            $context['invoice_amounts'] = $invoiceAmounts;
+
+            $firstInvoice = $invoiceAmounts[0] ?? null;
             if (!is_array($firstInvoice) || !isset($firstInvoice['id'])) {
                 return null;
             }
 
             $invoice_id = (int) $firstInvoice['id'];
             $company_id = (int) ($context['company_id'] ?? 0);
-            $pending = $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
+            $invoiceIds = array_map(function (array $invoiceAmount): int {
+                return (int) $invoiceAmount['id'];
+            }, $invoiceAmounts);
+            $useInvoiceSet = ($context['multi_invoice_policy'] ?? 'block') === 'allow' && count($invoiceIds) > 1;
+            $pending = $useInvoiceSet
+                ? $this->repository->getPendingByInvoiceSet($invoiceIds, $company_id)
+                : $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
             if ($pending) {
                 $pendingFlat = $this->flatten($this->repository->getWithInvoices((int) $pending->id));
                 if ($pendingFlat === null) {
@@ -137,7 +149,7 @@ class KuickPayVoucherReferenceService
             ];
 
             $invoiceLinks = [];
-            foreach ((array) ($context['invoice_amounts'] ?? []) as $invoiceAmount) {
+            foreach ($invoiceAmounts as $invoiceAmount) {
                 $invoiceLinks[] = [
                     'invoice_id' => $invoiceAmount['id'] ?? null,
                     'amount' => $invoiceAmount['amount'] ?? null,
@@ -149,7 +161,9 @@ class KuickPayVoucherReferenceService
                 return $this->flatten($this->repository->getWithInvoices($voucher_id));
             }
 
-            $pending = $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
+            $pending = $useInvoiceSet
+                ? $this->repository->getPendingByInvoiceSet($invoiceIds, $company_id)
+                : $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
             if ($pending) {
                 return $this->flatten($this->repository->getWithInvoices((int) $pending->id));
             }
@@ -360,6 +374,39 @@ class KuickPayVoucherReferenceService
         ksort($canonical, SORT_NATURAL);
 
         return $canonical;
+    }
+
+    /**
+     * Canonicalizes context invoice allocations and fails closed on conflicting duplicates.
+     *
+     * @param array $invoiceAmounts Incoming invoice amount rows
+     * @return array|null Canonical rows sorted by invoice ID, or null on conflict
+     */
+    private function normalizeContextInvoiceAmounts(array $invoiceAmounts): ?array
+    {
+        $canonical = [];
+        foreach ($invoiceAmounts as $invoiceAmount) {
+            $row = (array) $invoiceAmount;
+            $invoice_id = (string) ($row['id'] ?? '');
+            if ($invoice_id === '') {
+                continue;
+            }
+
+            $amount = $this->normalizeAmount((string) ($row['amount'] ?? ''));
+            if (isset($canonical[$invoice_id]) && $canonical[$invoice_id]['amount'] !== $amount) {
+                $this->lastError = 'duplicate_invoice_id';
+                return null;
+            }
+
+            $canonical[$invoice_id] = [
+                'id' => (int) $invoice_id,
+                'amount' => $amount,
+            ];
+        }
+
+        ksort($canonical, SORT_NATURAL);
+
+        return array_values($canonical);
     }
 
     /**

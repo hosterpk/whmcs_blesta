@@ -19,6 +19,8 @@ class KuickPayVoucherReferenceServiceFakeRepository
     public $registrationLookupReturns = [];
     public $consumerLookupReturns = [];
     public array $edits = [];
+    public array $invoiceSetLookups = [];
+    public $pendingByInvoiceSet;
 
     public function getPendingByInvoiceId(int $invoice_id, int $company_id)
     {
@@ -27,6 +29,13 @@ class KuickPayVoucherReferenceServiceFakeRepository
         }
 
         return $this->pendingVoucher;
+    }
+
+    public function getPendingByInvoiceSet(array $invoiceIds, int $company_id)
+    {
+        $this->invoiceSetLookups[] = [$invoiceIds, $company_id];
+
+        return $this->pendingByInvoiceSet;
     }
 
     public function create(array $voucherData, array $invoiceLinks)
@@ -212,6 +221,105 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame('voucher.replaced', $audit->events[0]['event']);
         $this->assertSame('1500.00', $audit->events[0]['context']['payload']['old_amount']);
         $this->assertSame('1200.00', $audit->events[0]['context']['payload']['new_amount']);
+    }
+
+    public function testAllowMultiInvoiceStoresDeterministicInvoiceLinks()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, '123455', 'KP123455'),
+            'invoices' => [
+                $this->invoiceRow(55, '1000.00'),
+                $this->invoiceRow(56, '500.00'),
+            ],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1234];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'amount' => '1500.00',
+            'invoice_amounts' => [
+                ['id' => 56, 'amount' => '500.00'],
+                ['id' => 55, 'amount' => '1000.00'],
+            ],
+            'multi_invoice_policy' => 'allow',
+        ]));
+
+        $this->assertSame(101, $voucher['id']);
+        $this->assertSame([[[55, 56], 1]], $repository->invoiceSetLookups);
+        $this->assertSame([
+            ['invoice_id' => 55, 'amount' => '1000.00'],
+            ['invoice_id' => 56, 'amount' => '500.00'],
+        ], $repository->createdInvoiceLinks);
+    }
+
+    public function testAllowMultiInvoiceReusesBySortedInvoiceSet()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->pendingByInvoiceSet = $this->voucherRow(25);
+        $repository->records[25] = [
+            'voucher' => $repository->pendingByInvoiceSet,
+            'invoices' => [
+                $this->invoiceRow(55, '1000.00'),
+                $this->invoiceRow(56, '500.00'),
+            ],
+        ];
+
+        $service = new KuickPayVoucherReferenceService($repository);
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'amount' => '1500.00',
+            'invoice_amounts' => [
+                ['id' => 56, 'amount' => '500.00'],
+                ['id' => 55, 'amount' => '1000.00'],
+            ],
+            'multi_invoice_policy' => 'allow',
+        ]));
+
+        $this->assertSame(25, $voucher['id']);
+        $this->assertSame([[[55, 56], 1]], $repository->invoiceSetLookups);
+        $this->assertSame(0, $repository->createCalls);
+    }
+
+    public function testDuplicateInvoiceIdWithDifferentAmountsFailsClosed()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $service = new KuickPayVoucherReferenceService($repository);
+
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'amount' => '1500.00',
+            'invoice_amounts' => [
+                ['id' => 55, 'amount' => '1000.00'],
+                ['id' => 55, 'amount' => '500.00'],
+            ],
+            'multi_invoice_policy' => 'allow',
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('duplicate_invoice_id', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+    }
+
+    public function testDuplicateInvoiceIdWithSameAmountCollapsesDeterministically()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, '123455', 'KP123455'),
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository);
+        $service->randomQueue = [1234];
+        $service->getOrCreateForInvoiceContext($this->context([
+            'invoice_amounts' => [
+                ['id' => 55, 'amount' => '1500.00'],
+                ['id' => 55, 'amount' => '1500.00'],
+            ],
+            'multi_invoice_policy' => 'allow',
+        ]));
+
+        $this->assertSame([
+            ['invoice_id' => 55, 'amount' => '1500.00'],
+        ], $repository->createdInvoiceLinks);
     }
 
     public function testRequestMatchesVoucherComparesAmountsAsCanonicalStrings()

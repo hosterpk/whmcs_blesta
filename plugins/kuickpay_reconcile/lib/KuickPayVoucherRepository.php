@@ -72,6 +72,26 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches a pending voucher whose linked invoice set exactly matches the requested IDs.
+     *
+     * @param array $invoiceIds Invoice IDs
+     * @param int $company_id The company ID
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function getPendingByInvoiceSet(array $invoiceIds, int $company_id): ?stdClass
+    {
+        $invoiceIds = array_values(array_unique(array_map('intval', $invoiceIds)));
+        sort($invoiceIds, SORT_NUMERIC);
+        if (empty($invoiceIds)) {
+            return null;
+        }
+
+        $voucher = $this->KuickpayVouchers->getPendingByInvoiceSet($invoiceIds, $company_id);
+
+        return $voucher ?: null;
+    }
+
+    /**
      * Fetches the latest voucher by linked invoice.
      *
      * @param int $invoice_id The invoice ID
