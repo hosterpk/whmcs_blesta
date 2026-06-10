@@ -27,6 +27,7 @@ class KuickPaySecretLeakageTest extends TestCase
         $captured = [];
 
         $captured = array_merge($captured, $this->captureSingleReconcilePersistence());
+        $captured = array_merge($captured, $this->captureConfirmedReconcilePersistence());
         $captured = array_merge($captured, $this->captureBulkReconcilePersistence());
         $captured = array_merge($captured, $this->capturePostingPersistence());
         $captured = array_merge($captured, $this->captureIssuancePersistence());
@@ -57,6 +58,37 @@ class KuickPaySecretLeakageTest extends TestCase
             'single item rows' => $items->items,
             'single run summary' => $run->summaries,
             'single audit events' => $audit->events,
+        ];
+    }
+
+    private function captureConfirmedReconcilePersistence(): array
+    {
+        $voucher = $this->voucher();
+        $repo = new KuickPaySecretLeakageVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $run = new KuickPaySecretLeakageRunRepository();
+        $items = new KuickPaySecretLeakageItemRepository();
+        $audit = new KuickPaySecretLeakageAuditService();
+        $client = new KuickPaySecretLeakageClient([
+            $this->outcome($this->inquiryResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $service = $this->reconcileService($repo, $run, $items, $audit, $client);
+
+        $service->runCron(1);
+
+        // Prove the confirmed branch actually ran so this capture is not vacuous: the
+        // provider-echoed reference and raw status must reach the persisted columns
+        // (KuickPayReconcileService.php:378,410) — the exact sinks where a smuggled
+        // secret would land but a diagnostic_summary-only scan would miss it.
+        $this->assertNotEmpty($repo->edits);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertSame('KP-REF-PAID', $repo->edits[0]['kuickpay_reference']);
+        $this->assertNotEmpty($repo->edits[0]['raw_status']);
+
+        return [
+            'confirmed voucher edit' => $repo->edits,
+            'confirmed item rows' => $items->items,
+            'confirmed run summary' => $run->summaries,
+            'confirmed audit events' => $audit->events,
         ];
     }
 
