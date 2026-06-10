@@ -4,6 +4,7 @@ $status_display = is_array($status_display ?? null) ? $status_display : [];
 $status_label_key = $status_display['label_key'] ?? 'Kuickpay.process.status.unknown';
 $status_badge = $status_display['badge'] ?? 'badge-secondary';
 $status = (string) ($voucher['status'] ?? '');
+$instruction_groups = $instruction_groups ?? [];
 $has_payable_reference = !empty($voucher)
     && $display_mode === 'payable'
     && $status === 'pending'
@@ -88,6 +89,25 @@ $date_expires_display = $date_expires_ts !== false ? date('d-M-y', $date_expires
             <?php } ?>
         </dl>
     </div>
+    <?php if (!empty($instruction_groups)) { ?>
+        <div class="kuickpay-instructions mt-3">
+            <p class="font-weight-bold mb-2"><?php echo $this->_('Kuickpay.process.instructions_heading'); ?></p>
+            <?php foreach ($instruction_groups as $group) { ?>
+                <div class="mb-2">
+                    <div class="font-weight-bold">
+                        <?php echo $this->Html->safe($this->_($group['title_key'])); ?>
+                    </div>
+                    <p class="mb-0"><?php echo $this->Html->safe($this->_($group['body_key'])); ?></p>
+                </div>
+            <?php } ?>
+        </div>
+    <?php } ?>
+    <?php if (!empty($status_check_supported)) { ?>
+        <?php // Check Payment Status affordance - wired but dark for MVP (Decision D2). ?>
+        <?php // When enabled: add a language-keyed label (Kuickpay.process.check_payment_status), ?>
+        <?php // use a Blesta POST/form flow with disable-on-submit, must NOT blank the Consumer ?>
+        <?php // Number / last-known status, and must never mark paid except via KuickPayPostingService (Story 3.5). ?>
+    <?php } ?>
     <?php if ($has_consumer_number) { ?>
         <script>
         (function () {

@@ -686,6 +686,8 @@ class Kuickpay extends NonmerchantGateway
                 $this->view->set('display_mode', $display_mode);
                 $this->view->set('kuickpay_name', Language::_('Kuickpay.name', true));
                 $this->view->set('institution_id', (string) ($meta['institution_id'] ?? ''));
+                $this->view->set('instruction_groups', $this->enabledInstructionGroups($meta));
+                $this->view->set('status_check_supported', $this->customerStatusCheckSupported());
             } elseif ($service !== null) {
                 $this->recordReferenceGenerationFailure($service, $context['invoice_amounts'], $meta);
             }
@@ -887,6 +889,64 @@ class Kuickpay extends NonmerchantGateway
         }
 
         return $decision === 'block' ? 'status_only' : 'payable';
+    }
+
+    /**
+     * Builds the ordered customer instruction group descriptors enabled by gateway settings.
+     *
+     * @param array $meta Gateway settings
+     * @return array Ordered descriptors with channel, title_key, and body_key
+     */
+    protected function enabledInstructionGroups(array $meta): array
+    {
+        $channels = [
+            'online_banking' => [
+                'field' => 'instruction_online_banking',
+                'default' => 'true',
+            ],
+            'bank_deposit' => [
+                'field' => 'instruction_bank_deposit',
+                'default' => 'true',
+            ],
+            'agent_franchise' => [
+                'field' => 'instruction_agent_franchise',
+                'default' => 'false',
+            ],
+            'mobile_app' => [
+                'field' => 'instruction_mobile_app',
+                'default' => 'false',
+            ],
+        ];
+        $groups = [];
+
+        foreach ($channels as $channel => $config) {
+            if (($meta[$config['field']] ?? $config['default']) !== 'true') {
+                continue;
+            }
+
+            $groups[] = [
+                'channel' => $channel,
+                'title_key' => 'Kuickpay.process.instruction.' . $channel . '.title',
+                'body_key' => 'Kuickpay.process.instruction.' . $channel . '.body',
+            ];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * Single flip-point for customer-side payment status checks once a safe inquiry flow exists.
+     *
+     * The MVP customer page must not trigger payment inquiry or posting. Enable this only when a
+     * customer-callable flow uses the same parser, validation, and KuickPayPostingService boundary
+     * as scheduled reconciliation, preserves existing displayed values while checking, and cannot
+     * mark an invoice paid outside the posting service.
+     *
+     * @return bool True when the customer status-check affordance may render
+     */
+    protected function customerStatusCheckSupported(): bool
+    {
+        return false;
     }
 
     /**

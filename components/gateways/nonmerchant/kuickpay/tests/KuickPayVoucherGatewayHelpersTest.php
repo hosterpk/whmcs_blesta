@@ -109,6 +109,16 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->customerVoucherStatusDisplay($status);
     }
 
+    public function exposeEnabledInstructionGroups(array $meta): array
+    {
+        return $this->enabledInstructionGroups($meta);
+    }
+
+    public function exposeCustomerStatusCheckSupported(): bool
+    {
+        return $this->customerStatusCheckSupported();
+    }
+
     public function exposeIsBlockedMultiInvoice(array $invoiceAmounts, string $policy): bool
     {
         return $this->isBlockedMultiInvoice($invoiceAmounts, $policy);
@@ -734,6 +744,67 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
     }
 
     /**
+     * @dataProvider enabledInstructionGroupsProvider
+     */
+    public function testEnabledInstructionGroupsFollowConfiguredOrderAndDefaults(array $meta, array $expectedChannels)
+    {
+        $gateway = $this->gateway();
+
+        $groups = $gateway->exposeEnabledInstructionGroups($meta);
+
+        $this->assertSame($expectedChannels, array_column($groups, 'channel'));
+        foreach ($groups as $group) {
+            $channel = $group['channel'];
+            $this->assertSame('Kuickpay.process.instruction.' . $channel . '.title', $group['title_key']);
+            $this->assertSame('Kuickpay.process.instruction.' . $channel . '.body', $group['body_key']);
+        }
+    }
+
+    public function enabledInstructionGroupsProvider()
+    {
+        return [
+            'all enabled' => [
+                [
+                    'instruction_online_banking' => 'true',
+                    'instruction_bank_deposit' => 'true',
+                    'instruction_agent_franchise' => 'true',
+                    'instruction_mobile_app' => 'true',
+                ],
+                ['online_banking', 'bank_deposit', 'agent_franchise', 'mobile_app'],
+            ],
+            'all disabled' => [
+                [
+                    'instruction_online_banking' => 'false',
+                    'instruction_bank_deposit' => 'false',
+                    'instruction_agent_franchise' => 'false',
+                    'instruction_mobile_app' => 'false',
+                ],
+                [],
+            ],
+            'fresh install defaults' => [
+                [],
+                ['online_banking', 'bank_deposit'],
+            ],
+            'explicit mixed overrides' => [
+                [
+                    'instruction_online_banking' => 'false',
+                    'instruction_bank_deposit' => 'true',
+                    'instruction_agent_franchise' => 'true',
+                    'instruction_mobile_app' => 'false',
+                ],
+                ['bank_deposit', 'agent_franchise'],
+            ],
+        ];
+    }
+
+    public function testCustomerStatusCheckSupportedIsDisabledForMvp()
+    {
+        $gateway = $this->gateway();
+
+        $this->assertFalse($gateway->exposeCustomerStatusCheckSupported());
+    }
+
+    /**
      * @dataProvider multiInvoiceGateProvider
      */
     public function testMultiInvoiceGateBlocksAmbiguousAttempts(array $invoiceAmounts, string $policy, bool $expected)
@@ -1103,9 +1174,52 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
             'Kuickpay.process.status.manual_review',
             'Kuickpay.process.status.cancelled',
             'Kuickpay.process.status.unknown',
+            'Kuickpay.process.instructions_heading',
+            'Kuickpay.process.instruction.online_banking.title',
+            'Kuickpay.process.instruction.online_banking.body',
+            'Kuickpay.process.instruction.bank_deposit.title',
+            'Kuickpay.process.instruction.bank_deposit.body',
+            'Kuickpay.process.instruction.agent_franchise.title',
+            'Kuickpay.process.instruction.agent_franchise.body',
+            'Kuickpay.process.instruction.mobile_app.title',
+            'Kuickpay.process.instruction.mobile_app.body',
         ] as $key) {
             $this->assertArrayHasKey($key, $lang);
             $this->assertNotSame('', $lang[$key]);
+        }
+
+        $forbiddenTerms = [
+            'SOAP',
+            'WSDL',
+            'xmlns',
+            'Envelope',
+            'error_class',
+            'Exception',
+            'raw_status',
+            'registration_number',
+            'consumer_number',
+            'password',
+            'username',
+            'secret',
+            'credential',
+            'confirmed_unposted',
+            'manual_review',
+            'Registration Number',
+        ];
+        foreach ([
+            'Kuickpay.process.instructions_heading',
+            'Kuickpay.process.instruction.online_banking.title',
+            'Kuickpay.process.instruction.online_banking.body',
+            'Kuickpay.process.instruction.bank_deposit.title',
+            'Kuickpay.process.instruction.bank_deposit.body',
+            'Kuickpay.process.instruction.agent_franchise.title',
+            'Kuickpay.process.instruction.agent_franchise.body',
+            'Kuickpay.process.instruction.mobile_app.title',
+            'Kuickpay.process.instruction.mobile_app.body',
+        ] as $key) {
+            foreach ($forbiddenTerms as $term) {
+                $this->assertStringNotContainsStringIgnoringCase($term, $lang[$key]);
+            }
         }
     }
 
