@@ -21,7 +21,7 @@ target="$root/_bmad/bmm/config.user.yaml"
 show_current() {
   if [[ -f "$target" ]]; then
     local cur
-    cur="$(grep -m1 -oE '_bmad-output/[a-z]+/' "$target" 2>/dev/null | grep -oE '[a-z]+/' | tr -d '/')"
+    cur="$(grep -m1 -oE '_bmad-output/[a-z0-9_]+' "$target" 2>/dev/null | head -1 | sed 's#_bmad-output/##')"
     echo "active profile in '$(basename "$root")': ${cur:-unknown}"
   else
     echo "no config.user.yaml in '$(basename "$root")' — falls back to _bmad/bmm/config.yaml"
