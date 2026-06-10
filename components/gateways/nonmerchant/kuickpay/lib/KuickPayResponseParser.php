@@ -476,7 +476,7 @@ class KuickPayResponseParser
 
         if ($expectedAmount !== null && $amount !== $expectedAmount) {
             $errorClass = self::ERROR_AMOUNT;
-            $errors[] = self::ERROR_AMOUNT;
+            $errors[] = $this->amountMismatchReason($amount, $expectedAmount);
         }
 
         if ($expectedCurrency !== '' && $currency !== $expectedCurrency) {
@@ -616,6 +616,29 @@ class KuickPayResponseParser
         $fraction = substr(str_pad($fraction, 2, '0'), 0, 2);
 
         return $integer . '.' . $fraction;
+    }
+
+    private function amountMismatchReason(?string $amount, ?string $expectedAmount): string
+    {
+        $paidMinor = $amount === null ? null : $this->toMinorUnitsOrNull($amount);
+        $expectedMinor = $expectedAmount === null ? null : $this->toMinorUnitsOrNull($expectedAmount);
+
+        if ($paidMinor === null || $expectedMinor === null || $paidMinor === $expectedMinor) {
+            return self::ERROR_AMOUNT;
+        }
+
+        return $paidMinor < $expectedMinor ? 'underpayment' : 'overpayment';
+    }
+
+    private function toMinorUnitsOrNull(string $amount): ?int
+    {
+        if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $amount)) {
+            return null;
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+
+        return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
     }
 
     private function normalizeDate(string $date): ?string

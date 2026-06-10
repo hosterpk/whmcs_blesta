@@ -66,6 +66,8 @@ class KuickPayEvidenceValidator
             $reasons[] = 'unmatched_reference';
         }
 
+        $reasons = array_merge($reasons, $this->lateReason($voucher, $evidence));
+
         if ($invoiceMismatch) {
             $reasons[] = 'invoice_mismatch';
         }
@@ -176,6 +178,18 @@ class KuickPayEvidenceValidator
         }
 
         return !$this->voucherRepository->findActiveByKuickpayReference($reference, $company_id, $voucher_id);
+    }
+
+    private function lateReason(stdClass $voucher, KuickPayEvidence $evidence): array
+    {
+        if (empty($voucher->date_expires) || $evidence->paidAt() === null) {
+            return [];
+        }
+
+        $date_expires = substr((string) $voucher->date_expires, 0, 10);
+        $paid_at = substr((string) $evidence->paidAt(), 0, 10);
+
+        return $paid_at > $date_expires ? ['late_payment'] : [];
     }
 
     private function invoiceDueMinorUnits(stdClass $invoice): ?int

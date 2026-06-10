@@ -98,6 +98,50 @@ class KuickPayEvidenceValidatorTest extends TestCase
         $this->assertSame([], $result->reasons());
     }
 
+    public function testPaidAfterVoucherExpiryFailsWithLatePaymentReason()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(['date_expires' => '2026-06-08']),
+            [$this->invoiceLink()],
+            $this->evidence(['paid_at' => '2026-06-09'])
+        );
+
+        $this->assertFalse($result->isValid());
+        $this->assertSame(['late_payment'], array_values(array_intersect(['late_payment'], $result->reasons())));
+    }
+
+    /**
+     * @dataProvider notLatePaymentProvider
+     */
+    public function testLatePaymentReasonIsNoopWhenExpiryOrPaidDateAbsentOrNotAfter(
+        array $voucherOverrides,
+        array $evidenceOverrides
+    ) {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher($voucherOverrides),
+            [$this->invoiceLink()],
+            $this->evidence($evidenceOverrides)
+        );
+
+        $this->assertTrue($result->isValid());
+        $this->assertNotContains('late_payment', $result->reasons());
+    }
+
+    public function notLatePaymentProvider(): array
+    {
+        return [
+            'null expiry' => [['date_expires' => null], ['paid_at' => '2026-06-09']],
+            'empty expiry' => [['date_expires' => ''], ['paid_at' => '2026-06-09']],
+            'null paid date' => [['date_expires' => '2026-06-08'], ['paid_at' => null]],
+            'paid on expiry date' => [['date_expires' => '2026-06-09'], ['paid_at' => '2026-06-09']],
+            'paid before expiry date' => [['date_expires' => '2026-06-10'], ['paid_at' => '2026-06-09']],
+        ];
+    }
+
     /**
      * @dataProvider failureProvider
      */
