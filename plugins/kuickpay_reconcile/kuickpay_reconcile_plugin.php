@@ -113,6 +113,10 @@ class KuickpayReconcilePlugin extends Plugin
             if (version_compare($current_version, '1.2.0', '<')) {
                 $this->addCronTasks();
             }
+
+            if (version_compare($current_version, '1.3.0', '<')) {
+                $this->addCronTasks();
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -145,7 +149,7 @@ class KuickpayReconcilePlugin extends Plugin
      */
     public function cron($key)
     {
-        if (!in_array($key, ['reconcile_pending', 'post_confirmed'], true)) {
+        if (!in_array($key, ['reconcile_pending', 'post_confirmed', 'expire_vouchers'], true)) {
             return;
         }
 
@@ -154,6 +158,14 @@ class KuickpayReconcilePlugin extends Plugin
 
             $service = new KuickPayReconcileService();
             $service->runCron((int) Configure::get('Blesta.company_id'));
+            return;
+        }
+
+        if ($key === 'expire_vouchers') {
+            Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayReconcileService.php');
+
+            $service = new KuickPayReconcileService();
+            $service->expirePending((int) Configure::get('Blesta.company_id'));
             return;
         }
 
@@ -364,6 +376,16 @@ class KuickpayReconcilePlugin extends Plugin
                 'description'=>Language::_('KuickpayReconcilePlugin.cron.post_confirmed_desc', true),
                 'type'=>'interval',
                 'type_value'=>5,
+                'enabled'=>1
+            ],
+            [
+                'key'=>'expire_vouchers',
+                'dir'=>'kuickpay_reconcile',
+                'task_type'=>'plugin',
+                'name'=>Language::_('KuickpayReconcilePlugin.cron.expire_vouchers_name', true),
+                'description'=>Language::_('KuickpayReconcilePlugin.cron.expire_vouchers_desc', true),
+                'type'=>'interval',
+                'type_value'=>60,
                 'enabled'=>1
             ],
         ];

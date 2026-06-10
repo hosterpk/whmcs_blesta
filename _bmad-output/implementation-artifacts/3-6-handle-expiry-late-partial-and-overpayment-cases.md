@@ -69,11 +69,11 @@ The following testable criteria expand the two BDD scenarios. Each maps to tasks
     4. Return `['status'=>'completed'|'skipped'|'aborted','counts'=>['processed'=>N,'expired'=>N,'errors'=>N]]`.
   - [x] Do **not** create/apply any Blesta transaction, touch invoices, or call `KuickPayPostingService` here (AC6). Do **not** open a SOAP client and do **not** call `gatewayConfigForCompany()` — expiry needs no gateway config, and that method returns `null` when `reconciliation_enabled` is off (KuickPayReconcileService.php:332-334), which would make the sweep silently skip. `expirePending()` is invoked **directly** from `cron($key)` (no `runCron()`/run-summary wrapper — expiry writes no `kuickpay_reconciliation_runs` row), and it fetches a single `BATCH_SIZE` batch with **no outer pagination loop** (`$after_id` is selector-shape parity only; `expired` rows leave the `getExpirable` set so a re-fetch naturally advances).
 
-- [ ] **Task 3 — Register the `expire_vouchers` cron trigger (AC4)** in `kuickpay_reconcile_plugin.php`.
-  - [ ] Add an `expire_vouchers` entry to `getCronTasks()` (kuickpay_reconcile_plugin.php:346-370): `key`/`dir`/`task_type=plugin`/`name`/`description` (language keys), `type=interval`, `type_value=60` (hourly; idempotent), `enabled=1`.
-  - [ ] Handle `expire_vouchers` in `cron($key)` (lines 146-164): add it to the allowed-keys list, then `Loader::load(... 'KuickPayReconcileService.php')` and `(new KuickPayReconcileService())->expirePending((int) Configure::get('Blesta.company_id'))`. **Do not gate this on `reconciliation_enabled`** — expiry is a local sweep.
-  - [ ] Bump `config.json` version `1.2.0 → 1.3.0`. Add a cumulative upgrade gate to `upgrade()` (lines 100-120), preserving the existing `1.1.0`/`1.2.0` gates: `if (version_compare($current_version, '1.3.0', '<')) { $this->addCronTasks(); }`. `addCronTasks()`/`addCronTask()` are already idempotent (`getByKey`/`getTaskRunByKey` guards, lines 297-320), so re-running registers only the new `expire_vouchers` task. Smoke-note: verify a real `1.2.0 → 1.3.0` upgrade registers `expire_vouchers` and it dispatches.
-  - [ ] The `expire_vouchers` lock coexists with `reconcile_pending` and `post_confirmed` in the single `kuickpay_reconcile_locks` table keyed by `(company_id, lock_name)`; the distinct name means the three crons never contend.
+- [x] **Task 3 — Register the `expire_vouchers` cron trigger (AC4)** in `kuickpay_reconcile_plugin.php`.
+  - [x] Add an `expire_vouchers` entry to `getCronTasks()` (kuickpay_reconcile_plugin.php:346-370): `key`/`dir`/`task_type=plugin`/`name`/`description` (language keys), `type=interval`, `type_value=60` (hourly; idempotent), `enabled=1`.
+  - [x] Handle `expire_vouchers` in `cron($key)` (lines 146-164): add it to the allowed-keys list, then `Loader::load(... 'KuickPayReconcileService.php')` and `(new KuickPayReconcileService())->expirePending((int) Configure::get('Blesta.company_id'))`. **Do not gate this on `reconciliation_enabled`** — expiry is a local sweep.
+  - [x] Bump `config.json` version `1.2.0 → 1.3.0`. Add a cumulative upgrade gate to `upgrade()` (lines 100-120), preserving the existing `1.1.0`/`1.2.0` gates: `if (version_compare($current_version, '1.3.0', '<')) { $this->addCronTasks(); }`. `addCronTasks()`/`addCronTask()` are already idempotent (`getByKey`/`getTaskRunByKey` guards, lines 297-320), so re-running registers only the new `expire_vouchers` task. Smoke-note: verify a real `1.2.0 → 1.3.0` upgrade registers `expire_vouchers` and it dispatches.
+  - [x] The `expire_vouchers` lock coexists with `reconcile_pending` and `post_confirmed` in the single `kuickpay_reconcile_locks` table keyed by `(company_id, lock_name)`; the distinct name means the three crons never contend.
 
 - [ ] **Task 4 — Verify + cover customer regeneration on `expired` (AC5)**
   - [ ] Confirm `reloadVoucherDecision()` (kuickpay.php:852-874) already returns `'allow'` for an `expired` latest voucher (line 869-870) — **no code change expected**. If a gap is found, fix minimally without altering the `cancelled`/`pending` branches.
@@ -264,8 +264,12 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 ### Completion Notes List
 - Task 1: Added the PKR-guarded, company-scoped `getExpirable()` selector using DB-side `CURDATE()` and the repository passthrough; verified with targeted repository tests and PHP syntax checks.
 - Task 2: Added the locked, bounded `expirePending()` sweep with per-voucher error isolation, `voucher.expired` audit writes, idempotent rerun behavior, and no SOAP/posting/invoice mutation path.
+- Task 3: Registered the hourly `expire_vouchers` plugin cron, dispatched it directly to `expirePending()`, added the 1.3.0 idempotent upgrade gate, and bumped plugin metadata.
 
 ### File List
+- plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/config.json
+- plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
 - plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php
