@@ -4,7 +4,7 @@ baseline_commit: 91819026ea0658080eb433c9de38d347978895ff
 
 # Story 3.5: Post Safe Blesta Transactions
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -120,9 +120,9 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
   - [x] Add new strings to `plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php`: the `post_confirmed` cron name/description, the `Transactions->add()` `message` text (e.g. `KuickpayReconcile.posting.transaction_message`), and any admin manual-review reason labels. Keep machine reason codes out of user copy.
   - [x] **Create** `plugins/kuickpay_reconcile/lib/README.md` (it does not exist yet) stating that `KuickPayPostingService` is the only class permitted to create/apply Blesta payments — this file is mandated by the architecture and this story is the natural owner since it introduces the service. [Source: architecture.md:906]
 
-- [ ] **Task 7 — Tests (AC15)** at `plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php` (+ the validator test updates from Task 2).
-  - [ ] Reuse the fake-injection style from `KuickPayReconcileServiceTest`/`KuickPayEvidenceValidatorTest`: fake voucher repository (in-memory rows + invoice links), fake/stub `Transactions` (records `add`/`apply` calls, returns a fake id, can be forced to error, and lets the test seed `getByTransactionId`/`getApplied` return values), fake invoice reader, fake audit service (captures event names + payloads).
-  - [ ] Cases:
+- [x] **Task 7 — Tests (AC15)** at `plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php` (+ the validator test updates from Task 2).
+  - [x] Reuse the fake-injection style from `KuickPayReconcileServiceTest`/`KuickPayEvidenceValidatorTest`: fake voucher repository (in-memory rows + invoice links), fake/stub `Transactions` (records `add`/`apply` calls, returns a fake id, can be forced to error, and lets the test seed `getByTransactionId`/`getApplied` return values), fake invoice reader, fake audit service (captures event names + payloads).
+  - [x] Cases:
     - happy-path post (transaction created, applied, voucher→`posted`, `blesta_transaction_id` set, `date_posted` set, `posting.started` **and** `posting.succeeded` audited);
     - idempotent skip when already `posted` / `blesta_transaction_id` set → no `add`;
     - **existing-transaction verify-applied (AC7b):** (i) found + approved + matching + already applied to the mapped invoices → link, set `posted`, **no** duplicate `add`; (ii) found + approved but **unapplied** → applies within the same transaction, then `posted`; (iii) found but **non-approved / wrong amount / wrong currency / wrong invoice / partially applied** → `manual_review`, **never** `posted`;
@@ -131,8 +131,8 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
     - `apply()` error → rollback, voucher stays `confirmed_unposted`;
     - missing/invalid `date_paid` → `manual_review`, no `add`;
     - double-allocation **asymmetric** (sibling already `posted`, invoice `due` reduced) → `manual_review`; double-allocation **symmetric** (two `confirmed_unposted` on one invoice) → **both** `manual_review`.
-  - [ ] Assert no audit payload or transaction `message` contains secrets/raw SOAP/PII; assert the posting service's own amount handling uses string/minor-unit comparisons; assert failure reasons land in `diagnostic_summary`.
-  - [ ] Run: `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (NOT `-c build/phpunit.xml`). `php -l` every changed PHP file. Report exactly what ran; if `../tests`/DB unavailable, say so.
+  - [x] Assert no audit payload or transaction `message` contains secrets/raw SOAP/PII; assert the posting service's own amount handling uses string/minor-unit comparisons; assert failure reasons land in `diagnostic_summary`.
+  - [x] Run: `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (NOT `-c build/phpunit.xml`). `php -l` every changed PHP file. Report exactly what ran; if `../tests`/DB unavailable, say so.
 
 ## Dev Notes
 
@@ -273,6 +273,7 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - 2026-06-10: Registered `post_confirmed` cron, bumped plugin config to 1.2.0, added posting language strings, and made upgrade version gates cumulative. Verified with `php -l` on plugin/language files and the posting service PHPUnit slice.
 - 2026-06-10: Added `plugins/kuickpay_reconcile/lib/README.md` documenting `KuickPayPostingService` as the only KuickPay payment posting boundary.
 - 2026-06-10: Expanded posting tests for malformed paid dates, unsafe existing transactions, partial applications, and double-allocation re-validation failures. Verified with the posting service PHPUnit slice and `php -l` on the test file.
+- 2026-06-10: Final verification passed: `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (56 tests, 205 assertions), and `php -l` passed for every changed PHP file. Boundary grep confirmed KuickPay-owned `Transactions->add()` / `Transactions->apply()` calls are limited to `KuickPayPostingService`.
 
 ### Completion Notes List
 - Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
@@ -283,6 +284,7 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - Task 6 language strings complete: cron labels and the redacted transaction message are in the plugin language file.
 - Task 6 docs complete: library README documents the single posting boundary and forbids payment creation/application outside `KuickPayPostingService`.
 - Task 7 coverage expanded: posting tests now cover happy path, idempotency, duplicate/adopted transactions, invalid paid dates, re-validation failure, rollback failure paths, and unsafe existing transaction handling.
+- Task 7 complete: full plugin-local PHPUnit suite and syntax checks passed; story is ready for review.
 
 ### File List
 - plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
