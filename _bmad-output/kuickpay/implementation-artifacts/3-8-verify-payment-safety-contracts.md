@@ -57,10 +57,10 @@ From epics.md Story 3.8 (lines 707–722), restated as testable criteria. **ACs 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Build the FR28 coverage matrix (AC1).** Produce a matrix mapping each of the 8 FR28 areas + the 4 AC1 outcomes to the concrete existing test(s). Use §"FR28 Coverage Matrix (start here)" below as the verified starting point; confirm each cited test still exists and passes, and mark each cell **COVERED** / **GAP**. Commit the matrix to `docs/kuickpay/payment-safety-verification.md` (new file). Do not duplicate it into runtime code.
-  - [ ] Run both suites first to get the live baseline counts; record them.
-  - [ ] For every cell marked GAP, decide whether an existing test partially covers it (strengthen) or nothing does (add).
-  - [ ] Cross-check the matrix against architecture.md's **minimum fixture gate** (`architecture.md:228-239`): ensure each case is mapped — including **single-inquiry late-after-expiry** (`ambiguous/bill-payment-inquiry-late-after-expiry.xml`), **single-inquiry overpayment** (`ambiguous/bill-payment-inquiry-overpayment.xml`, parser test:502), and **invoice mismatch** — the last is **COVERED at the validator layer** (`KuickPayEvidenceValidatorTest::testValidationFailuresReturnMachineReasonCodes` via `failureProvider`, 5 `invoice_mismatch` cases: empty links, missing/void/paid invoice, wrong-client), **not** a parser fixture (invoice validation lives in the validator, not the parser) — map it there; do **not** hunt for a parser fixture. Add a row or mark COVERED/GAP explicitly for any case the current matrix only covers in the bulk context.
+- [x] **Task 1 — Build the FR28 coverage matrix (AC1).** Produce a matrix mapping each of the 8 FR28 areas + the 4 AC1 outcomes to the concrete existing test(s). Use §"FR28 Coverage Matrix (start here)" below as the verified starting point; confirm each cited test still exists and passes, and mark each cell **COVERED** / **GAP**. Commit the matrix to `docs/kuickpay/payment-safety-verification.md` (new file). Do not duplicate it into runtime code.
+  - [x] Run both suites first to get the live baseline counts; record them.
+  - [x] For every cell marked GAP, decide whether an existing test partially covers it (strengthen) or nothing does (add).
+  - [x] Cross-check the matrix against architecture.md's **minimum fixture gate** (`architecture.md:228-239`): ensure each case is mapped — including **single-inquiry late-after-expiry** (`ambiguous/bill-payment-inquiry-late-after-expiry.xml`), **single-inquiry overpayment** (`ambiguous/bill-payment-inquiry-overpayment.xml`, parser test:502), and **invoice mismatch** — the last is **COVERED at the validator layer** (`KuickPayEvidenceValidatorTest::testValidationFailuresReturnMachineReasonCodes` via `failureProvider`, 5 `invoice_mismatch` cases: empty links, missing/void/paid invoice, wrong-client), **not** a parser fixture (invoice validation lives in the validator, not the parser) — map it there; do **not** hunt for a parser fixture. Add a row or mark COVERED/GAP explicitly for any case the current matrix only covers in the bulk context.
 
 - [ ] **Task 2 — Close the secret-leakage gap (AC1.d, NFR8).** The current leak coverage is `KuickPayRedactorTest` (envelope/credential unit masking) + a forbidden-term scan over **language strings** in `KuickPayVoucherGatewayHelpersTest.php:1241`. Neither scans **fixtures** or **persisted evidence**. Add a dedicated leak-scan test (plugin suite, e.g. `tests/KuickPaySecretLeakageTest.php`):
   - [ ] **Fixture scan:** glob every file under `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/**`, assert none contains a forbidden *value* — real-looking credentials, `password`/`userName` values, an unredacted SOAP `Envelope`/`Header` credential, a real Institution ID, or PII (CNIC, real mobile, real email). Key the scan on the sanitization rules in `docs/kuickpay/testing-fixtures.md` §"Sanitization Rules" (placeholders only; `synthetic_from_observed_format`). Use a forbidden-substring list, not just a `REDACTED_` allow-check (deferred-work 0.1 flagged that mixed placeholder styles defeat a `REDACTED_`-keyed scan). **Do not flag the presence of a sanitized `<Envelope>` itself** — every `.xml` fixture legitimately carries one (testing-fixtures.md:9); flag only forbidden *values* inside it, and only `.md` transport descriptors and `.xml` results, not a stray real secret string.
@@ -253,10 +253,21 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 
 ### Debug Log References
 
+- 2026-06-11: Baseline gateway suite passed: `OK (215 tests, 1120 assertions)`.
+- 2026-06-11: Baseline plugin suite passed: `OK (81 tests, 315 assertions)`.
+
 ### Completion Notes List
+
+- Task 1: Added `docs/kuickpay/payment-safety-verification.md` with FR28 contract coverage, AC1 outcome coverage, minimum fixture gate mapping, live baseline counts, and honest unavailable-runtime notes.
 
 ### File List
 
+- docs/kuickpay/payment-safety-verification.md
+- _bmad-output/kuickpay/implementation-artifacts/3-8-verify-payment-safety-contracts.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
+
 ### Change Log
+
+- 2026-06-11: Added payment-safety coverage matrix and recorded baseline component-suite counts.
 
 ### Review Findings
