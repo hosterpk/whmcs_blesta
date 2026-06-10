@@ -168,6 +168,139 @@ class KuickPayReconcileService
         return ['status' => $status, 'run_id' => $run_id, 'counts' => $counts, 'cursor' => $cursor];
     }
 
+    public function runBulk(int $company_id, string $run_date, string $trigger_type = 'bulk'): array
+    {
+        $request = $this->buildBulkRequest($run_date);
+        $gateway_config = $this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id);
+        if ($gateway_config === null) {
+            return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable'];
+        }
+        $this->gatewayConfig = $gateway_config;
+
+        $owner_token = $this->lockRepository->acquire($company_id, self::LOCK_NAME, self::LOCK_TTL_SECONDS);
+        if ($owner_token === null) {
+            return ['status' => 'skipped', 'reason' => 'lock_held'];
+        }
+
+        $run_id = 0;
+        $counts = $this->initialCounts();
+        $counts['total_unmatched'] = 0;
+        $status = 'completed';
+        $start = time();
+
+        try {
+            $run_id = $this->runRepository->openBulk($company_id, $run_date);
+            $this->auditService->record('reconciliation.run.started', [
+                'company_id' => $company_id,
+                'run_id' => $run_id,
+                'payload' => ['trigger_type' => $trigger_type, 'run_date' => $run_date],
+            ]);
+
+            $client = $this->client($gateway_config);
+            $transport = $client->billPaymentBulkInquiry($request);
+            $initialEvidence = $this->parser->parseBulk($transport, []);
+
+            if ($this->isBulkRunFailure($initialEvidence)) {
+                $status = 'failed';
+                $counts['total_failed']++;
+                $counts['total_errors']++;
+                return ['status' => $status, 'run_id' => $run_id, 'counts' => $counts, 'run_date' => $run_date];
+            }
+
+            $expectations = $this->bulkExpectations($company_id, $initialEvidence);
+            $evidenceRows = $this->parser->parseBulk($transport, ['expected' => $expectations['expected']]);
+            $counts['total_eligible'] = count($evidenceRows);
+            $seenConsumers = [];
+
+            foreach ($evidenceRows as $evidence) {
+                if (time() - $start >= self::MAX_RUNTIME_SECONDS) {
+                    $status = 'aborted';
+                    break;
+                }
+
+                $consumerNumber = (string) ($evidence->consumerNumber() ?? '');
+                $voucher = $expectations['vouchers'][$consumerNumber] ?? null;
+
+                if (!$voucher) {
+                    $counts = $this->countOutcome($counts, 'manual_review', false);
+                    $counts['total_unmatched']++;
+                    $this->recordUnmatchedBulkAudit($company_id, $run_id, $evidence);
+                    continue;
+                }
+
+                if (isset($seenConsumers[$consumerNumber])) {
+                    $evidence = $this->duplicateBulkEvidence($evidence);
+                    $new_status = $this->persistDuplicateBulkEvidence($company_id, $voucher, $evidence);
+                    $this->itemRepository->record([
+                        'run_id' => $run_id,
+                        'voucher_id' => (int) $voucher->id,
+                        'prior_status' => (string) $voucher->status,
+                        'new_status' => $new_status,
+                        'error_class' => $evidence->errorClass(),
+                        'evidence_hash' => $evidence->evidenceHash(),
+                        'redacted_trace_id' => $evidence->redactedTraceId(),
+                        'date_created' => date('Y-m-d H:i:s'),
+                    ]);
+                    $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $new_status);
+                    $counts = $this->countOutcome($counts, $new_status, false);
+                    continue;
+                }
+                $seenConsumers[$consumerNumber] = true;
+
+                $prior_status = (string) $voucher->status;
+                $error = false;
+
+                try {
+                    $new_status = $this->persistEvidence($company_id, $voucher, $evidence);
+
+                    $this->itemRepository->record([
+                        'run_id' => $run_id,
+                        'voucher_id' => (int) $voucher->id,
+                        'prior_status' => $prior_status,
+                        'new_status' => $new_status,
+                        'error_class' => $evidence->errorClass(),
+                        'evidence_hash' => $evidence->evidenceHash(),
+                        'redacted_trace_id' => $evidence->redactedTraceId(),
+                        'date_created' => date('Y-m-d H:i:s'),
+                    ]);
+
+                    $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $new_status);
+                } catch (Throwable $e) {
+                    $error = true;
+                    $new_status = $prior_status;
+                }
+
+                $counts = $this->countOutcome($counts, $new_status, $error);
+            }
+        } catch (Throwable $e) {
+            $status = 'failed';
+            $counts['total_errors']++;
+        } finally {
+            try {
+                if ($run_id > 0) {
+                    $summary = json_encode([
+                        'run_kind' => 'bulk',
+                        'run_date' => $run_date,
+                        'status' => $status,
+                        'counts' => $counts,
+                    ]);
+                    $this->runRepository->close($run_id, $status, $counts, 0, $summary);
+                    $this->auditService->record('reconciliation.run.completed', [
+                        'company_id' => $company_id,
+                        'run_id' => $run_id,
+                        'payload' => ['trigger_type' => 'bulk', 'run_date' => $run_date, 'status' => $status, 'counts' => $counts],
+                    ]);
+                }
+            } catch (Throwable $closeError) {
+                // Closing the run / writing audit is best-effort; the lock MUST still be released below.
+            }
+
+            $this->lockRepository->release($company_id, self::LOCK_NAME, $owner_token);
+        }
+
+        return ['status' => $status, 'run_id' => $run_id, 'counts' => $counts, 'run_date' => $run_date];
+    }
+
     public function processVoucher(int $company_id, int $run_id, $voucher, $client): array
     {
         $prior_status = (string) $voucher->status;
@@ -216,6 +349,16 @@ class KuickPayReconcileService
     public function buildInquiryRequest($voucher): array
     {
         return ['RegistrationNumber' => (string) $voucher->registration_number];
+    }
+
+    public function buildBulkRequest(string $run_date): array
+    {
+        $date = DateTime::createFromFormat('!Y-m-d', $run_date);
+        if (!$date || $date->format('Y-m-d') !== $run_date) {
+            throw new InvalidArgumentException('Bulk reconciliation run_date must be YYYY-MM-DD');
+        }
+
+        return ['TransactionDate' => $date->format('Ymd')];
     }
 
     public function buildParserContext($voucher): array
@@ -397,6 +540,96 @@ class KuickPayReconcileService
         } elseif (in_array($new_status, ['manual_review', 'failed'], true)) {
             $this->auditService->record('evidence.rejected', $context);
         }
+    }
+
+    private function isBulkRunFailure(array $evidenceRows): bool
+    {
+        if (count($evidenceRows) !== 1) {
+            return false;
+        }
+
+        $evidence = $evidenceRows[0];
+
+        return $evidence instanceof KuickPayEvidence
+            && $evidence->consumerNumber() === null
+            && in_array($evidence->errorClass(), ['timeout', 'transport_error', 'malformed_response'], true);
+    }
+
+    private function bulkExpectations(int $company_id, array $evidenceRows): array
+    {
+        $expected = [];
+        $vouchers = [];
+
+        foreach ($evidenceRows as $evidence) {
+            if (!$evidence instanceof KuickPayEvidence || $evidence->consumerNumber() === null) {
+                continue;
+            }
+
+            $consumerNumber = $evidence->consumerNumber();
+            if ($consumerNumber === '' || array_key_exists($consumerNumber, $vouchers)) {
+                continue;
+            }
+
+            $voucher = $this->voucherRepository->getByConsumerNumber($consumerNumber, $company_id);
+            if (!$voucher) {
+                continue;
+            }
+
+            $vouchers[$consumerNumber] = $voucher;
+            $expected[$consumerNumber] = [
+                'amount' => (string) $voucher->amount,
+                'currency' => (string) $voucher->currency,
+            ];
+        }
+
+        return ['expected' => $expected, 'vouchers' => $vouchers];
+    }
+
+    private function duplicateBulkEvidence(KuickPayEvidence $evidence): KuickPayEvidence
+    {
+        return new KuickPayEvidence(
+            'manual_review',
+            'duplicate_reference',
+            $evidence->reference(),
+            $evidence->consumerNumber(),
+            $evidence->registrationNumber(),
+            $evidence->amount(),
+            $evidence->currency(),
+            $evidence->paidAt(),
+            $evidence->rawStatus(),
+            $evidence->redactedTraceId(),
+            substr(hash('sha256', $evidence->evidenceHash() . '|duplicate'), 0, 24),
+            ['duplicate_reference'],
+            $evidence->operation()
+        );
+    }
+
+    private function persistDuplicateBulkEvidence(int $company_id, $voucher, KuickPayEvidence $evidence): string
+    {
+        $this->voucherRepository->edit((int) $voucher->id, $company_id, [
+            'status' => 'manual_review',
+            'date_last_checked' => date('Y-m-d H:i:s'),
+            'raw_status' => $evidence->rawStatus(),
+            'error_class' => $evidence->errorClass(),
+            'evidence_hash' => $evidence->evidenceHash(),
+            'diagnostic_summary' => $this->diagnosticSummary($evidence),
+        ]);
+
+        return 'manual_review';
+    }
+
+    private function recordUnmatchedBulkAudit(int $company_id, int $run_id, KuickPayEvidence $evidence): void
+    {
+        $this->auditService->record('evidence.unmatched', [
+            'company_id' => $company_id,
+            'run_id' => $run_id,
+            'redacted_trace_id' => $evidence->redactedTraceId(),
+            'evidence_hash' => $evidence->evidenceHash(),
+            'payload' => [
+                'consumer_number' => $evidence->consumerNumber(),
+                'error_class' => $evidence->errorClass(),
+            ],
+        ]);
     }
 
     private function gatewayConfigForCompany(int $company_id): ?array

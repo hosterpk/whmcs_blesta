@@ -343,6 +343,193 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(0, $run->closedCursor);
     }
 
+    public function testRunBulkHappyPathMatchesByConsumerNumberAndQueuesConfirmed()
+    {
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+        ]);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-matched-paid.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'run_repository' => $run,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame(['TransactionDate' => '20260609'], $client->bulkRequests[0]);
+        $this->assertSame('2026-06-09', $run->openedBulkDate);
+        $this->assertSame(0, $run->resumeCalls);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertSame('KP-BULK-PAID-0001', $repo->edits[0]['kuickpay_reference']);
+        $this->assertSame('confirmed_unposted', $items->items[0]['new_status']);
+        $this->assertSame(1, $run->closedCounts['total_checked']);
+        $this->assertSame(1, $run->closedCounts['total_confirmed']);
+        $this->assertSame(0, $run->closedCounts['total_unmatched']);
+        $this->assertContains('reconciliation.run.started', array_column($audit->events, 0));
+        $this->assertContains('reconciliation.run.completed', array_column($audit->events, 0));
+    }
+
+    public function testRunBulkUnmatchedRowAuditsWithoutItemOrVoucherMutation()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('ambiguous/bill-payment-bulk-unmatched.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher()]);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'run_repository' => $run,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame([], $repo->edits);
+        $this->assertSame([], $items->items);
+        $this->assertSame(1, $run->closedCounts['total_unmatched']);
+        $this->assertSame(1, $run->closedCounts['total_manual_review']);
+        $this->assertContains('evidence.unmatched', array_column($audit->events, 0));
+    }
+
+    public function testRunBulkMalformedBulkResponseFailsRunWithoutVoucherMutation()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('malformed/bill-payment-bulk-malformed-xml.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher()]);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'run_repository' => $run,
+            'client' => $client,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('failed', $result['status']);
+        $this->assertSame([], $repo->edits);
+        $this->assertSame(1, $run->closedCounts['total_errors']);
+        $this->assertSame(1, $run->closedCounts['total_failed']);
+    }
+
+    public function testRunBulkHeldLockSkipsWithoutOpeningRun()
+    {
+        $lock = new KuickPayReconcileFakeLockRepository(false);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $service = $this->service(['lock_repository' => $lock, 'run_repository' => $run]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('skipped', $result['status']);
+        $this->assertSame('lock_held', $result['reason']);
+        $this->assertSame(0, $run->opened);
+        $this->assertSame('reconcile_pending', $lock->acquiredLockName);
+    }
+
+    public function testRunBulkLatePaymentOnPendingExpiredVoucherMovesToManualReview()
+    {
+        $row = '<NewDataSet><Table>'
+            . '<Consumer_Number>INSTITUTION_ID1234INVOICE_ID</Consumer_Number>'
+            . '<Registration_Number>1234INVOICE_ID</Registration_Number>'
+            . '<Transaction_Date>20260615</Transaction_Date>'
+            . '<Paid_Amount>1000.00</Paid_Amount>'
+            . '<Transaction_Reference>KP-BULK-LATE-0001</Transaction_Reference>'
+            . '<Currency>PKR</Currency>'
+            . '</Table></NewDataSet>';
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+            'date_expires' => '2026-06-08',
+        ]);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($row, 'BillPaymentBulkInquiry'),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $service->runBulk(1, '2026-06-15');
+
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertArrayNotHasKey('kuickpay_reference', $repo->edits[0]);
+        $diagnostic = json_decode($repo->edits[0]['diagnostic_summary'], true);
+        $this->assertSame(['late_payment'], $diagnostic['validation_errors']);
+    }
+
+    public function testRunBulkDuplicateConsumerRowsDoNotDoubleConfirm()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-mixed-multi-row.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([
+            $this->voucher([
+                'registration_number' => '1234INVOICE_ID',
+                'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+            ]),
+        ], [$this->invoiceLink()]);
+        $items = new KuickPayReconcileFakeItemRepository();
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'client' => $client,
+        ]);
+
+        $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame(['confirmed_unposted', 'manual_review'], array_column($items->items, 'new_status'));
+        $this->assertSame('duplicate_reference', $items->items[1]['error_class']);
+    }
+
+    public function testBuildBulkRequestValidatesAndFormatsTransactionDate()
+    {
+        $service = $this->service();
+
+        $this->assertSame(['TransactionDate' => '20260609'], $service->buildBulkRequest('2026-06-09'));
+
+        $this->expectException(InvalidArgumentException::class);
+        $service->buildBulkRequest('2026-99-09');
+    }
+
     public function testSupplyingBothIdentityKeysFailsClosedRegressionGuard()
     {
         $evidence = (new KuickPayResponseParser())->parse(
@@ -393,11 +580,11 @@ class KuickPayReconcileServiceTest extends TestCase
         ], $overrides);
     }
 
-    private function outcome(string $rawResult): array
+    private function outcome(string $rawResult, string $operation = 'BillPaymentInquiry'): array
     {
         return [
             'ok' => true,
-            'operation' => 'BillPaymentInquiry',
+            'operation' => $operation,
             'raw_result' => $rawResult,
             'error_class' => null,
             'redacted_trace_id' => 'kp_trace',
@@ -410,6 +597,14 @@ class KuickPayReconcileServiceTest extends TestCase
         preg_match('/<BillPaymentInquiryResult>(.*?)<\/BillPaymentInquiryResult>/s', $xml, $matches);
 
         return trim(html_entity_decode($matches[1]));
+    }
+
+    private function bulkFixtureResult(string $fixture): string
+    {
+        $xml = file_get_contents(self::FIXTURE_DIR . '/' . $fixture);
+        preg_match('/<BillPaymentBulkInquiryResult><!\[CDATA\[(.*?)\]\]><\/BillPaymentBulkInquiryResult>/s', $xml, $matches);
+
+        return trim($matches[1]);
     }
 
     private function invoiceLink(array $overrides = [])
@@ -544,6 +739,17 @@ class KuickPayReconcileFakeVoucherRepository
         return null;
     }
 
+    public function getByConsumerNumber(string $consumer_number, int $company_id): ?stdClass
+    {
+        foreach ($this->vouchers as $voucher) {
+            if ((string) $voucher->consumer_number === $consumer_number && (int) $voucher->company_id === $company_id) {
+                return $voucher;
+            }
+        }
+
+        return null;
+    }
+
     public function findActiveByKuickpayReference(string $reference, int $company_id, int $excludeVoucherId = 0): ?stdClass
     {
         return $this->duplicateReference;
@@ -598,6 +804,9 @@ class KuickPayReconcileFakeRunRepository
 {
     public int $opened = 0;
     public int $closedCursor = -1;
+    public int $resumeCalls = 0;
+    public ?string $openedBulkDate = null;
+    public array $closedCounts = [];
     private int $resumeCursor;
 
     public function __construct(int $resumeCursor = 0)
@@ -607,12 +816,22 @@ class KuickPayReconcileFakeRunRepository
 
     public function getResumeCursor(int $company_id): int
     {
+        $this->resumeCalls++;
+
         return $this->resumeCursor;
     }
 
     public function open(int $company_id, string $trigger_type, int $cursor): int
     {
         $this->opened++;
+
+        return 10;
+    }
+
+    public function openBulk(int $company_id, string $run_date): int
+    {
+        $this->opened++;
+        $this->openedBulkDate = $run_date;
 
         return 10;
     }
@@ -624,6 +843,7 @@ class KuickPayReconcileFakeRunRepository
     public function close(int $run_id, string $status, array $counts, int $cursor, string $summary): void
     {
         $this->closedCursor = $status === 'completed' ? 0 : $cursor;
+        $this->closedCounts = $counts;
     }
 }
 
@@ -674,6 +894,7 @@ class KuickPayReconcileFakeAuditService
 class KuickPayReconcileFakeClient
 {
     public array $requests = [];
+    public array $bulkRequests = [];
     private array $outcomes;
 
     public function __construct(array $outcomes)
@@ -684,6 +905,13 @@ class KuickPayReconcileFakeClient
     public function billPaymentInquiry(array $params): array
     {
         $this->requests[] = $params;
+
+        return array_shift($this->outcomes);
+    }
+
+    public function billPaymentBulkInquiry(array $params): array
+    {
+        $this->bulkRequests[] = $params;
 
         return array_shift($this->outcomes);
     }
