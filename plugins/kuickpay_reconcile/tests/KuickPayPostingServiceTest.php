@@ -260,6 +260,70 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame([], $transactions->adds);
     }
 
+    public function testSymmetricDoubleAllocationFailsThroughRealValidator()
+    {
+        // AC9 symmetric: a sibling voucher is still active on the same invoice, so
+        // the real validator's findActiveByInvoiceId trips voucherIsFresh ->
+        // stale_voucher -> manual_review (no transaction). End-to-end, real validator.
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => new KuickPayPostingValidatorRepo((object) ['id' => 44]),
+            'invoice_reader' => new KuickPayPostingValidatorInvoiceReader((object) [
+                'id' => 55, 'client_id' => 10, 'status' => 'active', 'currency' => 'PKR',
+                'total' => 1000.0, 'paid' => 0.0, 'due' => 1000.0,
+            ]),
+        ]);
+        $service = new KuickPayPostingService([
+            'voucher_repository' => $repo,
+            'evidence_validator' => $validator,
+            'audit_service' => new KuickPayPostingFakeAuditService(),
+            'lock_repository' => new KuickPayPostingFakeLockRepository(),
+            'transactions' => $transactions,
+        ]);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertContains(
+            'stale_voucher',
+            json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']
+        );
+        $this->assertSame([], $transactions->adds);
+    }
+
+    public function testAsymmetricDoubleAllocationFailsLiveInvoiceCheckThroughRealValidator()
+    {
+        // AC9 asymmetric: a sibling already posted reduced the live invoice due
+        // below the allocation, so the real validator's invoiceMatches fails ->
+        // invoice_mismatch -> manual_review (no transaction). End-to-end, real validator.
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => new KuickPayPostingValidatorRepo(null),
+            'invoice_reader' => new KuickPayPostingValidatorInvoiceReader((object) [
+                'id' => 55, 'client_id' => 10, 'status' => 'active', 'currency' => 'PKR',
+                'total' => 1000.0, 'paid' => 600.0, 'due' => 400.0,
+            ]),
+        ]);
+        $service = new KuickPayPostingService([
+            'voucher_repository' => $repo,
+            'evidence_validator' => $validator,
+            'audit_service' => new KuickPayPostingFakeAuditService(),
+            'lock_repository' => new KuickPayPostingFakeLockRepository(),
+            'transactions' => $transactions,
+        ]);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertContains(
+            'invoice_mismatch',
+            json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']
+        );
+        $this->assertSame([], $transactions->adds);
+    }
+
     public function testPostConfirmedUsesLockAndCountsOutcomes()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
@@ -529,5 +593,40 @@ class KuickPayPostingFakeLockRepository
     public function release(int $company_id, string $lockName, string $ownerToken): void
     {
         $this->released = true;
+    }
+}
+
+class KuickPayPostingValidatorRepo
+{
+    private ?stdClass $sibling;
+
+    public function __construct(?stdClass $sibling = null)
+    {
+        $this->sibling = $sibling;
+    }
+
+    public function findActiveByInvoiceId(int $invoice_id, int $company_id, int $excludeVoucherId = 0): ?stdClass
+    {
+        return $this->sibling;
+    }
+
+    public function findActiveByKuickpayReference(string $reference, int $company_id, int $excludeVoucherId = 0): ?stdClass
+    {
+        return null;
+    }
+}
+
+class KuickPayPostingValidatorInvoiceReader
+{
+    private $invoice;
+
+    public function __construct($invoice)
+    {
+        $this->invoice = $invoice;
+    }
+
+    public function get(int $invoice_id): ?stdClass
+    {
+        return $this->invoice;
     }
 }
