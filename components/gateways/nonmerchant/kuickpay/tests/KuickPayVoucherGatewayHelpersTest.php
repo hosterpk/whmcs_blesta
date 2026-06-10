@@ -99,6 +99,16 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->reloadVoucherDecision($voucher);
     }
 
+    public function exposeResolveDisplayMode(?array $voucher, string $decision): ?string
+    {
+        return $this->resolveDisplayMode($voucher, $decision);
+    }
+
+    public function exposeCustomerVoucherStatusDisplay(string $status): array
+    {
+        return $this->customerVoucherStatusDisplay($status);
+    }
+
     public function exposeIsBlockedMultiInvoice(array $invoiceAmounts, string $policy): bool
     {
         return $this->isBlockedMultiInvoice($invoiceAmounts, $policy);
@@ -638,6 +648,92 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
     }
 
     /**
+     * @dataProvider displayModeProvider
+     */
+    public function testResolveDisplayModeFollowsResolvedVoucherAndDecision($voucher, string $decision, $expected)
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame($expected, $gateway->exposeResolveDisplayMode($voucher, $decision));
+    }
+
+    public function displayModeProvider()
+    {
+        $voucher = ['status' => 'pending', 'kuickpay_reference' => 'KP-ISSUED-123'];
+
+        return [
+            'display with no resolved voucher is no panel' => [null, 'display', null],
+            'block with resolved voucher is status only' => [$voucher, 'block', 'status_only'],
+            'display with resolved voucher is payable' => [$voucher, 'display', 'payable'],
+            'allow with resolved voucher is payable' => [$voucher, 'allow', 'payable'],
+            'issue with resolved voucher is payable' => [$voucher, 'issue', 'payable'],
+        ];
+    }
+
+    /**
+     * @dataProvider customerStatusDisplayProvider
+     */
+    public function testCustomerVoucherStatusDisplayMapsCustomerStatusCopyAndBadges(
+        string $status,
+        string $expectedLabelKey,
+        string $expectedBadge
+    ) {
+        $gateway = $this->gateway();
+
+        $display = $gateway->exposeCustomerVoucherStatusDisplay($status);
+
+        $this->assertSame($expectedLabelKey, $display['label_key']);
+        $this->assertSame($expectedBadge, $display['badge']);
+    }
+
+    public function customerStatusDisplayProvider()
+    {
+        return [
+            'pending' => ['pending', 'Kuickpay.process.status.pending', 'badge-info'],
+            'retry' => ['retry', 'Kuickpay.process.status.retry', 'badge-info'],
+            'confirmed unposted' => [
+                'confirmed_unposted',
+                'Kuickpay.process.status.confirmed_unposted',
+                'badge-info',
+            ],
+            'posted' => ['posted', 'Kuickpay.process.status.posted', 'badge-success'],
+            'failed' => ['failed', 'Kuickpay.process.status.failed', 'badge-info'],
+            'expired' => ['expired', 'Kuickpay.process.status.expired', 'badge-secondary'],
+            'manual review' => ['manual_review', 'Kuickpay.process.status.manual_review', 'badge-warning'],
+            'cancelled' => ['cancelled', 'Kuickpay.process.status.cancelled', 'badge-secondary'],
+            'unmapped' => ['unexpected', 'Kuickpay.process.status.unknown', 'badge-secondary'],
+            'empty' => ['', 'Kuickpay.process.status.unknown', 'badge-secondary'],
+        ];
+    }
+
+    /**
+     * @dataProvider nonPostedCustomerStatusProvider
+     */
+    public function testCustomerVoucherStatusDisplayKeepsNonPostedStatesNonSuccess(string $status)
+    {
+        $gateway = $this->gateway();
+
+        $display = $gateway->exposeCustomerVoucherStatusDisplay($status);
+
+        $this->assertNotSame('badge-success', $display['badge']);
+    }
+
+    public function nonPostedCustomerStatusProvider()
+    {
+        return [
+            ['pending'],
+            ['retry'],
+            ['confirmed_unposted'],
+            ['failed'],
+            ['expired'],
+            ['manual_review'],
+            ['cancelled'],
+            ['unexpected'],
+            [''],
+        ];
+    }
+
+    /**
      * @dataProvider multiInvoiceGateProvider
      */
     public function testMultiInvoiceGateBlocksAmbiguousAttempts(array $invoiceAmounts, string $policy, bool $expected)
@@ -986,6 +1082,31 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.amount_changed']);
         $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.multi_invoice_unsupported']);
         $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.multi_invoice_unsupported']);
+    }
+
+    public function testCustomerReferencePanelLanguageKeysExist()
+    {
+        $lang = [];
+        require __DIR__ . '/../language/en_us/kuickpay.php';
+
+        foreach ([
+            'Kuickpay.process.identity_label',
+            'Kuickpay.process.copy_button',
+            'Kuickpay.process.copy_feedback',
+            'Kuickpay.process.status_expectation',
+            'Kuickpay.process.status.pending',
+            'Kuickpay.process.status.retry',
+            'Kuickpay.process.status.confirmed_unposted',
+            'Kuickpay.process.status.posted',
+            'Kuickpay.process.status.failed',
+            'Kuickpay.process.status.expired',
+            'Kuickpay.process.status.manual_review',
+            'Kuickpay.process.status.cancelled',
+            'Kuickpay.process.status.unknown',
+        ] as $key) {
+            $this->assertArrayHasKey($key, $lang);
+            $this->assertNotSame('', $lang[$key]);
+        }
     }
 
     private function gateway()

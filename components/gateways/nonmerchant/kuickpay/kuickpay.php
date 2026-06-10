@@ -631,6 +631,7 @@ class Kuickpay extends NonmerchantGateway
         if (!$this->Input->errors()) {
             $meta = is_array($this->meta) ? $this->meta : [];
             $service = null;
+            $display_mode = null;
             $context = $this->buildVoucherReferenceContext(
                 $contact_info,
                 $amount,
@@ -665,19 +666,26 @@ class Kuickpay extends NonmerchantGateway
                     if (!empty($display['process_notice'])) {
                         $this->view->set('process_notice', $display['process_notice']);
                     }
+                    $display_mode = $this->resolveDisplayMode($voucher, $decision);
                 } elseif ($decision === 'block') {
-                    $voucher = null;
+                    $voucher = $this->voucherRowToView($latest);
+                    $display_mode = $this->resolveDisplayMode($voucher, $decision);
                 } else {
                     $create = $this->createVoucherForContext($context, $contact_info, $meta, $service);
                     $voucher = $create['voucher'];
                     if (!empty($create['process_notice'])) {
                         $this->view->set('process_notice', $create['process_notice']);
                     }
+                    $display_mode = $this->resolveDisplayMode($voucher, $decision);
                 }
             }
 
             if ($voucher !== null) {
                 $this->view->set('voucher', $voucher);
+                $this->view->set('status_display', $this->customerVoucherStatusDisplay((string) ($voucher['status'] ?? '')));
+                $this->view->set('display_mode', $display_mode);
+                $this->view->set('kuickpay_name', Language::_('Kuickpay.name', true));
+                $this->view->set('institution_id', (string) ($meta['institution_id'] ?? ''));
             } elseif ($service !== null) {
                 $this->recordReferenceGenerationFailure($service, $context['invoice_amounts'], $meta);
             }
@@ -863,6 +871,47 @@ class Kuickpay extends NonmerchantGateway
         }
 
         return 'block';
+    }
+
+    /**
+     * Resolves the process view display mode from the resolved voucher.
+     *
+     * @param array|null $voucher Voucher data after branch-specific safety gates
+     * @param string $decision Reload decision that produced the voucher
+     * @return string|null One of payable, status_only, or null when no voucher renders
+     */
+    protected function resolveDisplayMode(?array $voucher, string $decision): ?string
+    {
+        if ($voucher === null) {
+            return null;
+        }
+
+        return $decision === 'block' ? 'status_only' : 'payable';
+    }
+
+    /**
+     * Maps voucher status to conservative customer-facing copy and badge styling.
+     *
+     * @param string $status Voucher status
+     * @return array Status display contract with label_key and badge keys
+     */
+    protected function customerVoucherStatusDisplay(string $status): array
+    {
+        $map = [
+            'pending' => ['label_key' => 'Kuickpay.process.status.pending', 'badge' => 'badge-info'],
+            'retry' => ['label_key' => 'Kuickpay.process.status.retry', 'badge' => 'badge-info'],
+            'confirmed_unposted' => [
+                'label_key' => 'Kuickpay.process.status.confirmed_unposted',
+                'badge' => 'badge-info',
+            ],
+            'posted' => ['label_key' => 'Kuickpay.process.status.posted', 'badge' => 'badge-success'],
+            'failed' => ['label_key' => 'Kuickpay.process.status.failed', 'badge' => 'badge-info'],
+            'expired' => ['label_key' => 'Kuickpay.process.status.expired', 'badge' => 'badge-secondary'],
+            'manual_review' => ['label_key' => 'Kuickpay.process.status.manual_review', 'badge' => 'badge-warning'],
+            'cancelled' => ['label_key' => 'Kuickpay.process.status.cancelled', 'badge' => 'badge-secondary'],
+        ];
+
+        return $map[$status] ?? ['label_key' => 'Kuickpay.process.status.unknown', 'badge' => 'badge-secondary'];
     }
 
     /**
