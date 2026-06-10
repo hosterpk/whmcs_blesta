@@ -999,6 +999,41 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame(1, $service->createCalls);
     }
 
+    public function testExpiredLatestVoucherAllowsFreshVoucherCreation()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService();
+        $service->createdVoucher = $this->voucher([
+            'id' => 26,
+            'status' => 'pending',
+            'registration_number' => 'REG-NEW',
+            'consumer_number' => 'INSTREG-NEW',
+            'kuickpay_reference' => 'KP-NEW',
+        ]);
+        $latest = (object) $this->voucher([
+            'id' => 25,
+            'status' => 'expired',
+            'registration_number' => 'REG-OLD',
+            'consumer_number' => 'INSTREG-OLD',
+        ]);
+
+        $decision = $gateway->exposeReloadVoucherDecision($latest);
+        $result = $gateway->exposeCreateVoucherForContext(
+            $this->voucherContext(),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'block', 'multi_invoice_policy' => 'block'],
+            $service
+        );
+
+        $this->assertSame('allow', $decision);
+        $this->assertSame(1, $service->createCalls);
+        $this->assertSame(26, $result['voucher']['id']);
+        $this->assertSame('REG-NEW', $result['voucher']['registration_number']);
+        $this->assertSame('INSTREG-NEW', $result['voucher']['consumer_number']);
+        $this->assertSame('KP-NEW', $result['voucher']['kuickpay_reference']);
+        $this->assertNull($result['process_notice']);
+    }
+
     public function testIssueVoucherIfNeededCallsSoapParsesAndPersistsEvidence()
     {
         $gateway = $this->gateway();
