@@ -187,6 +187,7 @@ class KuickPayVoucherGatewayFakeVoucherRepository
 {
     public array $edits = [];
     public $latest;
+    public bool $throwOnLatest = false;
 
     public function edit(int $voucher_id, int $company_id, array $vars): void
     {
@@ -195,6 +196,10 @@ class KuickPayVoucherGatewayFakeVoucherRepository
 
     public function getLatestByInvoiceId(int $invoice_id, int $company_id)
     {
+        if ($this->throwOnLatest) {
+            throw new RuntimeException('latest read failed');
+        }
+
         return $this->latest;
     }
 }
@@ -556,6 +561,25 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame('pending', $gateway->fakeIssuanceService->records[0]['evidence']->status());
         $this->assertSame('KP-ISSUED-123', $gateway->fakeIssuanceService->records[0]['evidence']->reference());
         $this->assertSame('KP-ISSUED-123', $result['kuickpay_reference']);
+    }
+
+    public function testIssueVoucherIfNeededPreservesRecordedOutcomeWhenPostPersistStepThrows()
+    {
+        $gateway = $this->gateway();
+        $gateway->Contacts = new KuickPayVoucherGatewayFakeContacts();
+        $gateway->fakeSoapClient = new KuickPayVoucherGatewayFakeSoapClient();
+        $gateway->fakeIssuanceService = new KuickPayVoucherGatewayFakeIssuanceService();
+        $gateway->fakeVoucherRepository = new KuickPayVoucherGatewayFakeVoucherRepository();
+        $gateway->fakeVoucherRepository->throwOnLatest = true;
+
+        $result = $gateway->exposeIssueVoucherIfNeeded($this->voucher(), $this->contactInfo(), []);
+
+        // A post-persist failure must not overwrite the recorded success:
+        // the evidence is recorded exactly once and never re-fabricated.
+        $this->assertNull($result);
+        $this->assertCount(1, $gateway->fakeIssuanceService->records);
+        $this->assertSame('pending', $gateway->fakeIssuanceService->records[0]['evidence']->status());
+        $this->assertSame('KP-ISSUED-123', $gateway->fakeIssuanceService->records[0]['evidence']->reference());
     }
 
     public function testIssueVoucherIfNeededLogsSanitizedFailureDiagnostic()

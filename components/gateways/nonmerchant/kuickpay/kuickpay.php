@@ -818,6 +818,8 @@ class Kuickpay extends NonmerchantGateway
 
         $repository->edit($voucher_id, $company_id, ['date_last_checked' => date('Y-m-d H:i:s')]);
 
+        $persisted = false;
+
         try {
             if (!class_exists('KuickPayEvidence')) {
                 Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayEvidence.php');
@@ -835,6 +837,7 @@ class Kuickpay extends NonmerchantGateway
             );
 
             $this->getIssuanceService()->recordIssueOutcome($voucher_id, $company_id, $evidence);
+            $persisted = true;
             $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta);
 
             if ($evidence->status() !== 'pending' || !$evidence->reference()) {
@@ -848,6 +851,13 @@ class Kuickpay extends NonmerchantGateway
                 'raw_status' => $evidence->rawStatus(),
             ]);
         } catch (Throwable $e) {
+            if ($persisted) {
+                // Real evidence was already recorded; a post-persist failure
+                // (diagnostic log, latest-voucher re-read) must not overwrite
+                // the authoritative voucher row with fabricated evidence (Task 6).
+                return null;
+            }
+
             try {
                 if (!class_exists('KuickPayEvidence')) {
                     Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayEvidence.php');
