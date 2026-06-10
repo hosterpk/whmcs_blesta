@@ -4,7 +4,7 @@ baseline_commit: a55dac93f5d8486a1a1c088fd5a33644cca5bf4f
 
 # Story 3.4: Validate Confirmed Payment Evidence
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -260,3 +260,21 @@ GPT-5 Codex
 ### Change Log
 
 - 2026-06-10 — Implemented confirmed payment evidence validation gate and moved story to review.
+- 2026-06-10 — Code review (3 adversarial layers): all 10 ACs met; 1 patch applied (validator amount-math coverage), 3 items deferred, ~14 dismissed as noise/false-positive. Status → done.
+
+### Review Findings
+
+_Code review 2026-06-10 — Blind Hunter + Edge Case Hunter + Acceptance Auditor (all layers completed). Verified independently: `php -l` clean on all 9 changed files; plugin suite green (34 tests / 109 assertions after the patch below). Acceptance Auditor verdict: AC1–AC10 all **Met**._
+
+**Patch (applied this review):**
+
+- [x] [Review][Patch] Validator amount-math coverage gap — multi-invoice-link summation (AC3 `sum(links)` equality) and the trailing-zero precision trap were untested at the validator level (`bill-payment-inquiry-paid-trailing-zero.xml` was only exercised by the gateway parser test). Added 3 unit tests (multi-link sum pass, multi-link sum mismatch → `amount_mismatch`, trailing-zero minor-unit equality). [plugins/kuickpay_reconcile/tests/KuickPayEvidenceValidatorTest.php] — fixed in commit `test(kuickpay_reconcile): cover multi-invoice sum and trailing-zero math`.
+
+**Deferred (real, but not actionable in 3.4 scope):**
+
+- [x] [Review][Defer] Confirmed evidence with a null/malformed paid date passes the gate → voucher persists `confirmed_unposted` with `date_paid = NULL`. Parser reaches `STATUS_CONFIRMED_UNPOSTED` without validating `fields[2]` (the date), and the validator never checks `paidAt()`. Paid date is not in the AC3–AC7 check-list, and the root allowance is in the 3.2 parser. **Must be resolved before 3.5 posting** (a Blesta transaction needs a paid date). [components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php:504; plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:220] — deferred to Story 3.5.
+- [x] [Review][Defer] Same invoice can be allocated by two distinct **pending** vouchers — `findActiveByInvoiceId` only matches `confirmed_unposted`/`posted` siblings, and `invoiceMatches` compares the full invoice `due` (not reduced by in-flight unposted links). No money moves in 3.4; the real guard is 3.5 row-locked posting + final re-validation. [plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php voucherIsFresh/invoiceMatches] — deferred to Story 3.5.
+- [x] [Review][Defer] Consumer-number format consistency on the **bulk** path (3.7) — voucher `consumer_number` stores an `INSTITUTION_ID`-prefixed value; when bulk evidence carries a non-null `consumer_number`, the strict equality in `referenceMatches()` could route a legitimately-paid voucher to `manual_review`. Correct/skipped for 3.4 (inquiry consumer is always null). [plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php referenceMatches] — verify when Story 3.7 consumes bulk evidence.
+- [x] [Review][Defer] AC10 PHP 8.2 verification gate outstanding — only PHP 8.3.31 and 7.4.33 are present on this host (no 8.2 binary). Code is 8.2-syntax-compatible (no 8.3+ syntax; verified). Re-run the plugin suite under PHP 8.2 before merge per the story's own AC10 gate. — pre-merge action.
+
+**Dismissed (false positives / handled / out-of-scope by design):** `!= null` SQL "never matches" — refuted, Record converts to `IS NOT NULL` (vendors/minphp/record/src/Record.php:1117); duplicate `invoice_id` double-counts `linkSum` — prevented by `uniq(voucher_id, invoice_id)` (kuickpay_reconcile_plugin.php:82); `mergeValidationErrors` silent JSON loss — input is always well-formed JSON from a single internal producer; pending-vs-pending reference race — `kuickpay_reference` is empty on pending vouchers + sequential batch + reconcile DB lock; currency-check redundancy — consistent, maintainability only; fail-closed path lacks defensive `unset` — payment keys only set in the pass branch (structural no-op); negative `due` → generic reason — fails closed; zero-amount / integer-overflow amounts — not reachable from DB-bounded invoice totals; `invoiceDueMinorUnits` total−paid fallback — dead branch for real Blesta reads; test sentinel `[]` collision — cosmetic, fail-closed behavior covered via `null`.
