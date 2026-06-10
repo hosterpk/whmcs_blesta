@@ -14,6 +14,10 @@ $show_expectation = $display_mode === 'payable'
         $display_mode === 'status_only'
         && !in_array($status, ['posted', 'expired', 'cancelled'], true)
     );
+$date_due_ts = !empty($voucher['date_due']) ? strtotime((string) $voucher['date_due']) : false;
+$date_due_display = $date_due_ts !== false ? date('d-M-y', $date_due_ts) : '';
+$date_expires_ts = !empty($voucher['date_expires']) ? strtotime((string) $voucher['date_expires']) : false;
+$date_expires_display = $date_expires_ts !== false ? date('d-M-y', $date_expires_ts) : '';
 ?>
 <?php if (!empty($process_notice)) { ?>
     <?php echo $this->_('Kuickpay.process.' . $process_notice); ?>
@@ -60,14 +64,14 @@ $show_expectation = $display_mode === 'payable'
                 </dd>
             <?php } ?>
 
-            <?php if (!empty($voucher['date_due'])) { ?>
+            <?php if ($date_due_display !== '') { ?>
                 <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.due_date_label'); ?></dt>
-                <dd class="col-12 col-md-8"><?php echo $this->Html->safe($voucher['date_due']); ?></dd>
+                <dd class="col-12 col-md-8"><?php echo $this->Html->safe($date_due_display); ?></dd>
             <?php } ?>
 
-            <?php if (!empty($voucher['date_expires'])) { ?>
+            <?php if ($date_expires_display !== '') { ?>
                 <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.expiry_date_label'); ?></dt>
-                <dd class="col-12 col-md-8"><?php echo $this->Html->safe($voucher['date_expires']); ?></dd>
+                <dd class="col-12 col-md-8"><?php echo $this->Html->safe($date_expires_display); ?></dd>
             <?php } ?>
 
             <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.status_label'); ?></dt>
