@@ -54,9 +54,9 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Resolve the paid-date prerequisite (AC8)** — fail closed when confirmed evidence lacks a usable paid date.
+- [x] **Task 1 — Resolve the paid-date prerequisite (AC8)** — fail closed when confirmed evidence lacks a usable paid date.
   - [x] Decide the enforcement point: simplest is a guard at the start of posting (`date_paid` empty/`'0000-00-00...'`/unparseable → route to `manual_review`, audit `posting.failed`, no transaction). Optionally also tighten the 3-4 confirmed path, but do NOT change 3-4 test expectations without updating them.
-  - [ ] Add a language key for the safe customer/admin label if any string surfaces; reason codes stay machine-readable (e.g. `missing_paid_date`).
+  - [x] Add a language key for the safe customer/admin label if any string surfaces; reason codes stay machine-readable (e.g. `missing_paid_date`).
 
 - [x] **Task 2 — Extend the validator for the `confirmed_unposted` posting state (AC3, AC9, AC14)** — without breaking 3-4.
   - [x] In `KuickPayEvidenceValidator::validate()`, add an optional trailing parameter `array $allowedStatuses = ['pending', 'retry']` and thread it into `voucherIsFresh()` (replace the hard-coded `['pending','retry']` membership test with `$allowedStatuses`). Default value preserves all existing reconcile-time behavior.
@@ -100,10 +100,10 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
   - [x] Add a locked invoice-link read for the posting transaction (e.g. `KuickPayVoucherRepository::getInvoiceLinksForUpdate(int $voucher_id)` → model method issuing `SELECT ... FROM kuickpay_voucher_invoices WHERE voucher_id = ? FOR UPDATE`). The existing `getByVoucherId()` is an unlocked read and is fine for batch selection, but the re-validation/apply inside the posting transaction must use the locked rows (AC3, architecture.md:353).
   - [x] Confirm `KuickPayVoucherRepository::edit()` is sufficient for the locked write flow (it is a plain `where()->update()` — safe inside `begin()/commit()`); do not introduce a non-canonical interim status — the 8 enum states are fixed.
 
-- [ ] **Task 5 — Register the `post_confirmed` cron trigger (AC12)** in `kuickpay_reconcile_plugin.php`.
-  - [ ] Add a `post_confirmed` entry to `getCronTasks()` (interval; choose a sensible cadence ≥ the 5-min reconcile, e.g. 5–15 min) with its own `key`/`name`/`description` language entries.
-  - [ ] Handle `post_confirmed` in `cron($key)`: load + run `KuickPayPostingService::postConfirmed((int) Configure::get('Blesta.company_id'))`.
-  - [ ] Bump `config.json` version to `1.2.0` and **restructure `upgrade()`** into sequential, idempotent version-gated blocks. The current method early-returns when `version_compare($current_version, '1.1.0', '>=')` — that guard would make the `1.2.0` work **unreachable** for any install already at `1.1.0` (the live upgrade case), silently never registering `post_confirmed` and failing AC12. Remove the top-level early return and replace with cumulative gates, e.g.:
+- [x] **Task 5 — Register the `post_confirmed` cron trigger (AC12)** in `kuickpay_reconcile_plugin.php`.
+  - [x] Add a `post_confirmed` entry to `getCronTasks()` (interval; choose a sensible cadence ≥ the 5-min reconcile, e.g. 5–15 min) with its own `key`/`name`/`description` language entries.
+  - [x] Handle `post_confirmed` in `cron($key)`: load + run `KuickPayPostingService::postConfirmed((int) Configure::get('Blesta.company_id'))`.
+  - [x] Bump `config.json` version to `1.2.0` and **restructure `upgrade()`** into sequential, idempotent version-gated blocks. The current method early-returns when `version_compare($current_version, '1.1.0', '>=')` — that guard would make the `1.2.0` work **unreachable** for any install already at `1.1.0` (the live upgrade case), silently never registering `post_confirmed` and failing AC12. Remove the top-level early return and replace with cumulative gates, e.g.:
     ```php
     if (!isset($this->Record)) { Loader::loadComponents($this, ['Input', 'Record']); }
     if (version_compare($current_version, '1.1.0', '<')) {
@@ -114,10 +114,10 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
     }
     ```
     `addCronTasks()` is already idempotent (`getByKey`/`getTaskRunByKey` guards), so re-running it is safe. Add a verification note: smoke-test a real `1.1.0 → 1.2.0` upgrade and confirm `post_confirmed` is registered and dispatchable.
-  - [ ] Use a distinct DB lock name (`post_confirmed`) via the existing `KuickPayReconcileLockRepository` — both locks coexist in the single `kuickpay_reconcile_locks` table keyed by `(company_id, lock_name)`, so the distinct names mean posting and reconciliation never contend. Honor TTL / stale-lock handling like the reconcile service.
+  - [x] Use a distinct DB lock name (`post_confirmed`) via the existing `KuickPayReconcileLockRepository` — both locks coexist in the single `kuickpay_reconcile_locks` table keyed by `(company_id, lock_name)`, so the distinct names mean posting and reconciliation never contend. Honor TTL / stale-lock handling like the reconcile service.
 
 - [ ] **Task 6 — Language & docs (AC13)**.
-  - [ ] Add new strings to `plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php`: the `post_confirmed` cron name/description, the `Transactions->add()` `message` text (e.g. `KuickpayReconcile.posting.transaction_message`), and any admin manual-review reason labels. Keep machine reason codes out of user copy.
+  - [x] Add new strings to `plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php`: the `post_confirmed` cron name/description, the `Transactions->add()` `message` text (e.g. `KuickpayReconcile.posting.transaction_message`), and any admin manual-review reason labels. Keep machine reason codes out of user copy.
   - [ ] **Create** `plugins/kuickpay_reconcile/lib/README.md` (it does not exist yet) stating that `KuickPayPostingService` is the only class permitted to create/apply Blesta payments — this file is mandated by the architecture and this story is the natural owner since it introduces the service. [Source: architecture.md:906]
 
 - [ ] **Task 7 — Tests (AC15)** at `plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php` (+ the validator test updates from Task 2).
@@ -270,17 +270,23 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - 2026-06-10: Extended `KuickPayEvidenceValidator::validate()` with an allowed-status parameter. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayEvidenceValidatorTest.php` and `php -l` on changed validator files.
 - 2026-06-10: Added postable voucher selection plus locked voucher/invoice-link reads. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherRepositoryTest.php` and `php -l` on touched repository/model files.
 - 2026-06-10: Added `KuickPayPostingService` with paid-date guard, locked re-read, validation, duplicate transaction adoption, Blesta transaction add/apply, rollback handling, and posting audits. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayPostingServiceTest.php` and `php -l` on new posting files.
+- 2026-06-10: Registered `post_confirmed` cron, bumped plugin config to 1.2.0, added posting language strings, and made upgrade version gates cumulative. Verified with `php -l` on plugin/language files and the posting service PHPUnit slice.
 
 ### Completion Notes List
 - Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
 - Task 4 complete: repository/model support now exposes bounded postable fetches and `FOR UPDATE` reads for the posting transaction.
 - Task 1 paid-date guard complete in `KuickPayPostingService::postVoucher()`; missing or malformed paid dates route to `manual_review` with `missing_paid_date` and no transaction.
 - Task 3 complete: posting is centralized in `KuickPayPostingService` with DB lock batching, row-locked posting, idempotency, rollback-safe failures, and redacted audit events.
+- Task 5 complete: `post_confirmed` is registered idempotently, dispatches `KuickPayPostingService`, and uses a distinct DB lock.
+- Task 6 language strings complete: cron labels and the redacted transaction message are in the plugin language file.
 
 ### File List
 - plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
 - plugins/kuickpay_reconcile/lib/KuickPayPostingService.php
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
+- plugins/kuickpay_reconcile/config.json
+- plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php
 - plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/bootstrap.php

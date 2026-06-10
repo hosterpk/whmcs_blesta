@@ -99,18 +99,20 @@ class KuickpayReconcilePlugin extends Plugin
      */
     public function upgrade($current_version, $plugin_id)
     {
-        if (version_compare($current_version, '1.1.0', '>=')) {
-            return;
-        }
-
         if (!isset($this->Record)) {
             Loader::loadComponents($this, ['Input', 'Record']);
         }
 
         try {
-            $this->addVoucherEvidenceColumns();
-            $this->createReconcileTables();
-            $this->addCronTasks();
+            if (version_compare($current_version, '1.1.0', '<')) {
+                $this->addVoucherEvidenceColumns();
+                $this->createReconcileTables();
+                $this->addCronTasks();
+            }
+
+            if (version_compare($current_version, '1.2.0', '<')) {
+                $this->addCronTasks();
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -143,14 +145,22 @@ class KuickpayReconcilePlugin extends Plugin
      */
     public function cron($key)
     {
-        if ($key !== 'reconcile_pending') {
+        if (!in_array($key, ['reconcile_pending', 'post_confirmed'], true)) {
             return;
         }
 
-        Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayReconcileService.php');
+        if ($key === 'reconcile_pending') {
+            Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayReconcileService.php');
 
-        $service = new KuickPayReconcileService();
-        $service->runCron((int) Configure::get('Blesta.company_id'));
+            $service = new KuickPayReconcileService();
+            $service->runCron((int) Configure::get('Blesta.company_id'));
+            return;
+        }
+
+        Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayPostingService.php');
+
+        $service = new KuickPayPostingService();
+        $service->postConfirmed((int) Configure::get('Blesta.company_id'));
     }
 
     /**
@@ -342,6 +352,16 @@ class KuickpayReconcilePlugin extends Plugin
                 'task_type'=>'plugin',
                 'name'=>Language::_('KuickpayReconcilePlugin.cron.reconcile_pending_name', true),
                 'description'=>Language::_('KuickpayReconcilePlugin.cron.reconcile_pending_desc', true),
+                'type'=>'interval',
+                'type_value'=>5,
+                'enabled'=>1
+            ],
+            [
+                'key'=>'post_confirmed',
+                'dir'=>'kuickpay_reconcile',
+                'task_type'=>'plugin',
+                'name'=>Language::_('KuickpayReconcilePlugin.cron.post_confirmed_name', true),
+                'description'=>Language::_('KuickpayReconcilePlugin.cron.post_confirmed_desc', true),
                 'type'=>'interval',
                 'type_value'=>5,
                 'enabled'=>1
