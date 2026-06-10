@@ -70,10 +70,15 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(['invoice_mismatch'], $diagnostic['validation_errors']);
     }
 
-    public function testUnderpaymentEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields()
-    {
+    /**
+     * @dataProvider parserLevelExceptionProvider
+     */
+    public function testParserLevelExceptionEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields(
+        string $fixture,
+        string $expectedReason
+    ) {
         $client = new KuickPayReconcileFakeClient([
-            $this->outcome($this->fixtureResult('ambiguous/bill-payment-inquiry-amount-mismatch.xml')),
+            $this->outcome($this->fixtureResult($fixture)),
         ]);
         $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher()]);
         $audit = new KuickPayReconcileFakeAuditService();
@@ -95,14 +100,22 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertContains('evidence.rejected', array_column($audit->events, 0));
 
         $diagnostic = json_decode($repo->edits[0]['diagnostic_summary'], true);
-        $this->assertSame(['underpayment'], $diagnostic['validation_errors']);
+        $this->assertSame([$expectedReason], $diagnostic['validation_errors']);
+    }
+
+    public function parserLevelExceptionProvider(): array
+    {
+        return [
+            'underpayment' => ['ambiguous/bill-payment-inquiry-amount-mismatch.xml', 'underpayment'],
+            'overpayment' => ['ambiguous/bill-payment-inquiry-overpayment.xml', 'overpayment'],
+        ];
     }
 
     public function testLatePaymentEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields()
     {
         $voucher = $this->voucher(['date_expires' => '2026-06-08']);
         $client = new KuickPayReconcileFakeClient([
-            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+            $this->outcome($this->fixtureResult('ambiguous/bill-payment-inquiry-late-after-expiry.xml')),
         ]);
         $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
         $audit = new KuickPayReconcileFakeAuditService();
