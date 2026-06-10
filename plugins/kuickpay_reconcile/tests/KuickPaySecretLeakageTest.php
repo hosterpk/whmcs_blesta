@@ -53,6 +53,10 @@ class KuickPaySecretLeakageTest extends TestCase
 
         $service->runCron(1);
 
+        // Guard against a vacuous scan: a path that persisted nothing would
+        // stringify to "[]" and pass every forbidden-pattern check trivially.
+        $this->assertNotEmpty($repo->edits);
+
         return [
             'single voucher edit' => $repo->edits,
             'single item rows' => $items->items,
@@ -111,6 +115,8 @@ class KuickPaySecretLeakageTest extends TestCase
 
         $service->runBulk(1, '2026-06-09');
 
+        $this->assertNotEmpty($repo->edits);
+
         return [
             'bulk voucher edits' => $repo->edits,
             'bulk item rows' => $items->items,
@@ -142,6 +148,8 @@ class KuickPaySecretLeakageTest extends TestCase
 
         $service->postVoucher(1, $voucher);
 
+        $this->assertNotEmpty($repo->edits);
+
         return [
             'posting voucher edits' => $repo->edits,
             'posting audit events' => $audit->events,
@@ -169,6 +177,8 @@ class KuickPaySecretLeakageTest extends TestCase
         );
 
         $service->recordIssueOutcome(25, 1, $evidence);
+
+        $this->assertNotEmpty($repo->edits);
 
         return [
             'issuance voucher edits' => $repo->edits,
