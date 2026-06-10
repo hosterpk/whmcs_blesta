@@ -668,15 +668,10 @@ class Kuickpay extends NonmerchantGateway
                 } elseif ($decision === 'block') {
                     $voucher = null;
                 } else {
-                    $voucher = $service->getOrCreateForInvoiceContext($context);
-
-                    if ($voucher !== null) {
-                        $voucher = $this->issueVoucherIfNeeded($voucher, $contact_info, $meta);
-                    } elseif (
-                        method_exists($service, 'getLastError')
-                        && $service->getLastError() === 'amount_changed'
-                    ) {
-                        $this->view->set('process_notice', 'amount_changed');
+                    $create = $this->createVoucherForContext($context, $contact_info, $meta, $service);
+                    $voucher = $create['voucher'];
+                    if (!empty($create['process_notice'])) {
+                        $this->view->set('process_notice', $create['process_notice']);
                     }
                 }
             }
@@ -927,6 +922,43 @@ class Kuickpay extends NonmerchantGateway
             'voucher' => $voucher,
             'process_notice' => $voucher === null ? 'amount_changed' : null,
         ];
+    }
+
+    /**
+     * Resolves the create-or-reuse branch for a fresh voucher request.
+     *
+     * Mirrors {@see self::displayVoucherForContext()} so the service-layer
+     * amount-change signal is mapped to the customer notice in a seam the
+     * test harness can drive (buildProcess() itself is not drivable there).
+     *
+     * @param array $context Voucher reference context
+     * @param array $contactInfo Contact data passed by Blesta
+     * @param array $meta Gateway settings
+     * @param mixed $service Voucher reference service
+     * @return array Create result with voucher and process_notice keys
+     */
+    protected function createVoucherForContext(
+        array $context,
+        array $contactInfo,
+        array $meta,
+        $service
+    ): array {
+        $voucher = $service->getOrCreateForInvoiceContext($context);
+
+        if ($voucher !== null) {
+            $voucher = $this->issueVoucherIfNeeded($voucher, $contactInfo, $meta);
+
+            return ['voucher' => $voucher, 'process_notice' => null];
+        }
+
+        if (
+            method_exists($service, 'getLastError')
+            && $service->getLastError() === 'amount_changed'
+        ) {
+            return ['voucher' => null, 'process_notice' => 'amount_changed'];
+        }
+
+        return ['voucher' => null, 'process_notice' => null];
     }
 
     /**

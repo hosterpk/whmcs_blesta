@@ -120,6 +120,15 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->displayVoucherForContext($latest, $context, $contactInfo, $meta, $service, $repository);
     }
 
+    public function exposeCreateVoucherForContext(
+        array $context,
+        array $contactInfo,
+        array $meta,
+        $service
+    ): array {
+        return $this->createVoucherForContext($context, $contactInfo, $meta, $service);
+    }
+
     protected function log($url, $data = null, $direction = 'input', $success = false)
     {
         $this->logs[] = compact('url', 'data', 'direction', 'success');
@@ -787,6 +796,40 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         );
 
         $this->assertSame($repository->withInvoices['invoices'], $service->matchCalls[0]['voucherFlat']['invoices']);
+    }
+
+    public function testCreateVoucherForContextMapsServiceAmountChangedToNotice()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService('amount_changed');
+
+        $result = $gateway->exposeCreateVoucherForContext(
+            $this->voucherContext(['amount' => '1200.00']),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'block', 'multi_invoice_policy' => 'block'],
+            $service
+        );
+
+        $this->assertNull($result['voucher']);
+        $this->assertSame('amount_changed', $result['process_notice']);
+        $this->assertSame(1, $service->createCalls);
+    }
+
+    public function testCreateVoucherForContextLeavesNoticeUnsetForGenericFailure()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService('uniqueness_exhausted');
+
+        $result = $gateway->exposeCreateVoucherForContext(
+            $this->voucherContext(),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'block', 'multi_invoice_policy' => 'block'],
+            $service
+        );
+
+        $this->assertNull($result['voucher']);
+        $this->assertNull($result['process_notice']);
+        $this->assertSame(1, $service->createCalls);
     }
 
     public function testIssueVoucherIfNeededCallsSoapParsesAndPersistsEvidence()
