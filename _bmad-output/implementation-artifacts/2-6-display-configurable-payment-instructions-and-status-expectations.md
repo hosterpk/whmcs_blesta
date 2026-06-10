@@ -1,6 +1,10 @@
+---
+baseline_commit: d8b391a17146eae9ed923d55c73f25ce03d8cd2e
+---
+
 # Story 2.6: Display Configurable Payment Instructions and Status Expectations
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
