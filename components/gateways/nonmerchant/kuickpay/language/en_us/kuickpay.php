@@ -6,6 +6,7 @@ $lang['Kuickpay.!error.companion_missing'] = 'KuickPay requires its companion pl
 // Customer-facing — neutral process-view placeholder (no voucher, no amount, no paid/success language)
 $lang['Kuickpay.process.not_ready'] = 'A KuickPay payment reference is not available for this invoice yet. Please choose another payment method or contact support for assistance.';
 $lang['Kuickpay.process.retry_safe'] = 'Your KuickPay payment reference is not ready yet. Please try again later or contact support if this continues.';
+$lang['Kuickpay.process.multi_invoice_unsupported'] = 'KuickPay payment references can be created for one invoice at a time. Please pay each invoice separately or choose another payment method.';
 // Customer process view — Story 2.1 voucher display
 $lang['Kuickpay.process.consumer_number_label'] = 'Consumer Number';
 $lang['Kuickpay.process.amount_label'] = 'Amount';

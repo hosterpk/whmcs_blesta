@@ -98,6 +98,11 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->reloadVoucherDecision($voucher);
     }
 
+    public function exposeIsBlockedMultiInvoice(array $invoiceAmounts, string $policy): bool
+    {
+        return $this->isBlockedMultiInvoice($invoiceAmounts, $policy);
+    }
+
     public function exposeIssueVoucherIfNeeded(array $voucher, array $contactInfo, array $meta): ?array
     {
         return $this->issueVoucherIfNeeded($voucher, $contactInfo, $meta);
@@ -524,6 +529,44 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         ];
     }
 
+    /**
+     * @dataProvider multiInvoiceGateProvider
+     */
+    public function testMultiInvoiceGateBlocksAmbiguousAttempts(array $invoiceAmounts, string $policy, bool $expected)
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame($expected, $gateway->exposeIsBlockedMultiInvoice($invoiceAmounts, $policy));
+    }
+
+    public function multiInvoiceGateProvider()
+    {
+        return [
+            'empty block policy falls through' => [[], 'block', false],
+            'single invoice block policy falls through' => [[['id' => 55, 'amount' => '1500.00']], 'block', false],
+            'two distinct invoices block policy blocks' => [
+                [['id' => 55, 'amount' => '1000.00'], ['id' => 56, 'amount' => '500.00']],
+                'block',
+                true,
+            ],
+            'duplicate invoice id block policy blocks' => [
+                [['id' => 55, 'amount' => '1000.00'], ['id' => 55, 'amount' => '500.00']],
+                'block',
+                true,
+            ],
+            'two distinct invoices allow policy falls through' => [
+                [['id' => 55, 'amount' => '1000.00'], ['id' => 56, 'amount' => '500.00']],
+                'allow',
+                false,
+            ],
+            'duplicate invoice id allow policy falls through to service dedupe' => [
+                [['id' => 55, 'amount' => '1000.00'], ['id' => 55, 'amount' => '500.00']],
+                'allow',
+                false,
+            ],
+        ];
+    }
+
     public function testIssueVoucherIfNeededDoesNotReissueAlreadyIssuedPendingVoucher()
     {
         $gateway = $this->gateway();
@@ -686,8 +729,11 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         require __DIR__ . '/../language/en_us/kuickpay.php';
 
         $this->assertArrayHasKey('Kuickpay.process.retry_safe', $lang);
+        $this->assertArrayHasKey('Kuickpay.process.multi_invoice_unsupported', $lang);
         $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.retry_safe']);
         $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.retry_safe']);
+        $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.multi_invoice_unsupported']);
+        $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.multi_invoice_unsupported']);
     }
 
     private function gateway()

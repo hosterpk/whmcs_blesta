@@ -630,35 +630,44 @@ class Kuickpay extends NonmerchantGateway
 
         if (!$this->Input->errors()) {
             $meta = is_array($this->meta) ? $this->meta : [];
-            $service = $this->getVoucherReferenceService();
+            $service = null;
             $context = $this->buildVoucherReferenceContext(
                 $contact_info,
                 $amount,
                 (array) $invoice_amounts,
                 $meta
             );
-            $repository = $this->getVoucherRepository();
-            $invoice_id = (int) ($context['invoice_amounts'][0]['id'] ?? 0);
-            $latest = $invoice_id > 0
-                ? $repository->getLatestByInvoiceId($invoice_id, (int) $context['company_id'])
-                : null;
-            $decision = $this->reloadVoucherDecision($latest);
-
-            if ($decision === 'display') {
-                $voucher = $this->voucherRowToView($latest);
-            } elseif ($decision === 'block') {
+            if ($this->isBlockedMultiInvoice(
+                $context['invoice_amounts'],
+                (string) ($meta['multi_invoice_policy'] ?? 'block')
+            )) {
                 $voucher = null;
+                $this->view->set('process_notice', 'multi_invoice_unsupported');
             } else {
-                $voucher = $service->getOrCreateForInvoiceContext($context);
+                $service = $this->getVoucherReferenceService();
+                $repository = $this->getVoucherRepository();
+                $invoice_id = (int) ($context['invoice_amounts'][0]['id'] ?? 0);
+                $latest = $invoice_id > 0
+                    ? $repository->getLatestByInvoiceId($invoice_id, (int) $context['company_id'])
+                    : null;
+                $decision = $this->reloadVoucherDecision($latest);
 
-                if ($voucher !== null) {
-                    $voucher = $this->issueVoucherIfNeeded($voucher, $contact_info, $meta);
+                if ($decision === 'display') {
+                    $voucher = $this->voucherRowToView($latest);
+                } elseif ($decision === 'block') {
+                    $voucher = null;
+                } else {
+                    $voucher = $service->getOrCreateForInvoiceContext($context);
+
+                    if ($voucher !== null) {
+                        $voucher = $this->issueVoucherIfNeeded($voucher, $contact_info, $meta);
+                    }
                 }
             }
 
             if ($voucher !== null) {
                 $this->view->set('voucher', $voucher);
-            } else {
+            } elseif ($service !== null) {
                 $this->recordReferenceGenerationFailure($service, $context['invoice_amounts'], $meta);
             }
         }
@@ -841,6 +850,39 @@ class Kuickpay extends NonmerchantGateway
         }
 
         return 'block';
+    }
+
+    /**
+     * Determines whether a multi-invoice request must be blocked by policy.
+     *
+     * @param array $invoiceAmounts Normalized invoice amount allocations
+     * @param string $policy Multi-invoice policy
+     * @return bool True when the attempt is multi-invoice and policy blocks it
+     */
+    protected function isBlockedMultiInvoice(array $invoiceAmounts, string $policy): bool
+    {
+        if ($policy === 'allow' || empty($invoiceAmounts)) {
+            return false;
+        }
+
+        $seen = [];
+        foreach ($invoiceAmounts as $invoiceAmount) {
+            $invoice_id = (string) ($invoiceAmount['id'] ?? '');
+            if ($invoice_id === '') {
+                continue;
+            }
+
+            if (isset($seen[$invoice_id])) {
+                return true;
+            }
+
+            $seen[$invoice_id] = true;
+            if (count($seen) > 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

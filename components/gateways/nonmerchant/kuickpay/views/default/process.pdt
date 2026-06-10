@@ -19,5 +19,7 @@ if (!empty($voucher) && $voucher['status'] === 'pending' && !empty($voucher['kui
 </div>
 <?php
 } else {
-    echo $this->_('Kuickpay.process.retry_safe');
+    $notice_key = 'Kuickpay.process.' . ($process_notice ?? 'retry_safe');
+    $notice = $this->_($notice_key);
+    echo $notice === $notice_key ? $this->_('Kuickpay.process.retry_safe') : $notice;
 }
