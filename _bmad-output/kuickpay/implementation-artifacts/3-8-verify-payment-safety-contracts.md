@@ -81,13 +81,13 @@ From epics.md Story 3.8 (lines 707–722), restated as testable criteria. **ACs 
   - [x] Mismatched amount: confirm `amount-mismatch` (single) and bulk `overpayment`/`late-partial` fixtures assert `manual_review` + `amount_mismatch` and **never** `confirmed_unposted`. The parser owns this (Invariant #6); do not move the check.
   - [x] Amount comparison uses normalized decimal strings / minor units, never floats (NFR13) — confirm `bill-payment-inquiry-paid-trailing-zero.xml` proves `1000.0 == 1000.00`.
 
-- [ ] **Task 5 — Run the full verification and write the honest report (AC2).** Execute the verification procedure (§Testing) and record results in the Dev Agent Record as the verification report:
-  - [ ] Run both component suites with the external PHPUnit 8.5 runner; record exact `tests/assertions` and pass/fail.
-  - [ ] `php -l` on every changed PHP file (test files + any test-only seam); record results.
-  - [ ] State explicitly that root `../tests` and live DB-backed install/upgrade/SOAP smoke were **not** available/run; do not imply they passed (NFR12). If run on the web host where the runner exists, say so; if run elsewhere, say what was used.
-  - [ ] Confirm the matrix shows every FR28 area COVERED after gap-close; list any residual gap explicitly (and route to `deferred-work.md` if accepted).
+- [x] **Task 5 — Run the full verification and write the honest report (AC2).** Execute the verification procedure (§Testing) and record results in the Dev Agent Record as the verification report:
+  - [x] Run both component suites with the external PHPUnit 8.5 runner; record exact `tests/assertions` and pass/fail.
+  - [x] `php -l` on every changed PHP file (test files + any test-only seam); record results.
+  - [x] State explicitly that root `../tests` and live DB-backed install/upgrade/SOAP smoke were **not** available/run; do not imply they passed (NFR12). If run on the web host where the runner exists, say so; if run elsewhere, say what was used.
+  - [x] Confirm the matrix shows every FR28 area COVERED after gap-close; list any residual gap explicitly (and route to `deferred-work.md` if accepted).
 
-- [ ] **Task 6 — (Optional / SHOULD) audit-trail completeness spot-check.** `KuickPayAuditService` has **no dedicated test**; audit emission is asserted only indirectly. If time allows, add a focused test that the posting path emits `posting.started` → `posting.succeeded`/`posting.failed` and the reconcile path emits the evidence/run events, with redacted payloads only. Also cover the **3.3 deferred gap** — a per-voucher `catch (Throwable)` reconcile path writes a `reconcile_exception` item row; confirm it emits a redacted error/evidence audit event too. A real `KuickPayAuditService` test needs `require_once __DIR__ . '/../lib/KuickPayAuditService.php'` added to `tests/bootstrap.php` (it is not currently loaded). **Not AC-required** (FR28's list does not include audit completeness) — record as deferred if not done.
+- [x] **Task 6 — (Optional / SHOULD) audit-trail completeness spot-check.** `KuickPayAuditService` has **no dedicated test**; audit emission is asserted only indirectly. If time allows, add a focused test that the posting path emits `posting.started` → `posting.succeeded`/`posting.failed` and the reconcile path emits the evidence/run events, with redacted payloads only. Also cover the **3.3 deferred gap** — a per-voucher `catch (Throwable)` reconcile path writes a `reconcile_exception` item row; confirm it emits a redacted error/evidence audit event too. A real `KuickPayAuditService` test needs `require_once __DIR__ . '/../lib/KuickPayAuditService.php'` added to `tests/bootstrap.php` (it is not currently loaded). **Not AC-required** (FR28's list does not include audit completeness) — record as deferred if not done.
 
 ## FR28 Coverage Matrix (start here — verified against the tree at `a633a49a`)
 
@@ -263,6 +263,10 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 - 2026-06-11: Full plugin suite passed after Task 3: `OK (84 tests, 579 assertions)`.
 - 2026-06-11: Posting service duplicate/idempotency test passed: `OK (22 tests, 103 assertions)`.
 - 2026-06-11: Full plugin suite passed after Task 4: `OK (85 tests, 584 assertions)`.
+- 2026-06-11: Final `php -l` passed for changed PHP files: `KuickPayFailClosedContractTest.php`, `KuickPaySecretLeakageTest.php`, `KuickPayPostingServiceTest.php`.
+- 2026-06-11: Final gateway suite passed: `OK (230 tests, 1227 assertions)`.
+- 2026-06-11: Final plugin suite passed: `OK (85 tests, 584 assertions)`.
+- 2026-06-11: Environment disclosure: PHP CLI `8.3.31`, PHPUnit `8.5.52`, root `../tests` missing.
 
 ### Completion Notes List
 
@@ -270,6 +274,8 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 - Task 2: Added `KuickPaySecretLeakageTest` to scan every KuickPay fixture and captured reconcile/posting/issuance persisted evidence, item rows, run summaries, and audit payloads for forbidden credentials, PII, raw SOAP envelopes, and credential keys.
 - Task 3: Added a gateway fail-closed fixture wall, strengthened posting paid-date coverage for the empty-string case, and recorded the single-inquiry null-date parser asymmetry as LOW deferred work without changing production parser logic.
 - Task 4: Added a two-successive-call posting no-op assertion to prove an already-posted voucher never creates or applies a second transaction; confirmed amount mismatch and trailing-zero coverage remained parser/validator-owned.
+- Task 5: Final verification report: gateway suite `OK (230 tests, 1227 assertions)`; plugin suite `OK (85 tests, 584 assertions)`; `php -l` passed for all changed PHP test files. These are component-suite results only. Root Blesta `../tests`, DB-backed install/upgrade smoke, and live SOAP checks were not available/run and are not claimed.
+- Task 6: Deferred the optional dedicated `KuickPayAuditService` audit-completeness test because FR28 does not require it; audit payload redaction remains covered indirectly by service tests and the Task 2 persisted-evidence leak scan.
 
 ### File List
 
@@ -287,5 +293,6 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 - 2026-06-11: Added automated fixture and persisted-evidence secret leakage scan.
 - 2026-06-11: Added consolidated fail-closed contract wall and paid-date posting guard coverage.
 - 2026-06-11: Strengthened duplicate-posting no-op coverage across successive posting calls.
+- 2026-06-11: Completed final component-suite verification and honest AC2 report; deferred optional audit-completeness spot-check.
 
 ### Review Findings
