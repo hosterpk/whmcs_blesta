@@ -35,6 +35,9 @@ if (!class_exists('Kuickpay')) {
 class KuickPayVoucherGatewayHelpers extends Kuickpay
 {
     public $logs = [];
+    public $fakeSoapClient;
+    public $fakeIssuanceService;
+    public $fakeVoucherRepository;
 
     public function exposeNormalizeAmount(string $amount): string
     {
@@ -85,11 +88,36 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->buildVoucherContactData($contactInfo);
     }
 
+    public function exposeReloadVoucherDecision($voucher): string
+    {
+        return $this->reloadVoucherDecision($voucher);
+    }
+
+    public function exposeIssueVoucherIfNeeded(array $voucher, array $contactInfo, array $meta): ?array
+    {
+        return $this->issueVoucherIfNeeded($voucher, $contactInfo, $meta);
+    }
+
     protected function log($url, $data = null, $direction = 'input', $success = false)
     {
         $this->logs[] = compact('url', 'data', 'direction', 'success');
 
         return 'testlog1';
+    }
+
+    protected function getSoapClient()
+    {
+        return $this->fakeSoapClient;
+    }
+
+    protected function getIssuanceService()
+    {
+        return $this->fakeIssuanceService;
+    }
+
+    protected function getVoucherRepository()
+    {
+        return $this->fakeVoucherRepository;
     }
 }
 
@@ -118,6 +146,56 @@ class KuickPayVoucherGatewayFakeContacts
     public function getNumbers(int $contact_id, string $type, string $location)
     {
         return [(object) ['number' => '+923001234567']];
+    }
+}
+
+class KuickPayVoucherGatewayFakeSoapClient
+{
+    public array $requests = [];
+    private array $outcomes;
+
+    public function __construct(array $outcomes = [])
+    {
+        $this->outcomes = $outcomes;
+    }
+
+    public function insertVoucher(array $request): array
+    {
+        $this->requests[] = $request;
+
+        return array_shift($this->outcomes) ?: [
+            'ok' => true,
+            'operation' => 'InsertVoucher',
+            'raw_result' => '00 KP-ISSUED-123',
+            'error_class' => null,
+            'redacted_trace_id' => 'trace123',
+        ];
+    }
+}
+
+class KuickPayVoucherGatewayFakeIssuanceService
+{
+    public array $records = [];
+
+    public function recordIssueOutcome(int $voucherId, int $companyId, KuickPayEvidence $evidence): void
+    {
+        $this->records[] = compact('voucherId', 'companyId', 'evidence');
+    }
+}
+
+class KuickPayVoucherGatewayFakeVoucherRepository
+{
+    public array $edits = [];
+    public $latest;
+
+    public function edit(int $voucher_id, int $company_id, array $vars): void
+    {
+        $this->edits[] = compact('voucher_id', 'company_id', 'vars');
+    }
+
+    public function getLatestByInvoiceId(int $invoice_id, int $company_id)
+    {
+        return $this->latest;
     }
 }
 
@@ -372,6 +450,110 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame('SD', $contactData['branch']);
     }
 
+    /**
+     * @dataProvider reloadDecisionProvider
+     */
+    public function testReloadVoucherDecisionFollowsSequentialSafetyMatrix($voucher, string $expected)
+    {
+        $gateway = $this->gateway();
+
+        $this->assertSame($expected, $gateway->exposeReloadVoucherDecision($voucher));
+    }
+
+    public function reloadDecisionProvider()
+    {
+        return [
+            'none' => [null, 'allow'],
+            'pending without reference' => [(object) ['status' => 'pending', 'kuickpay_reference' => null], 'issue'],
+            'pending with reference' => [(object) ['status' => 'pending', 'kuickpay_reference' => 'KP-1'], 'display'],
+            'retry blocks' => [(object) ['status' => 'retry', 'error_class' => 'timeout'], 'block'],
+            'manual review blocks' => [(object) ['status' => 'manual_review', 'error_class' => 'duplicate_reference'], 'block'],
+            'failed credential allows' => [(object) ['status' => 'failed', 'error_class' => 'credential_error'], 'allow'],
+            'expired allows' => [(object) ['status' => 'expired', 'error_class' => null], 'allow'],
+            'cancelled allows' => [(object) ['status' => 'cancelled', 'error_class' => null], 'allow'],
+            'posted blocks' => [(object) ['status' => 'posted', 'error_class' => null], 'block'],
+            'unknown blocks' => [(object) ['status' => 'unexpected', 'error_class' => null], 'block'],
+        ];
+    }
+
+    public function testIssueVoucherIfNeededDoesNotReissueAlreadyIssuedPendingVoucher()
+    {
+        $gateway = $this->gateway();
+        $gateway->Contacts = new KuickPayVoucherGatewayFakeContacts();
+        $gateway->fakeSoapClient = new KuickPayVoucherGatewayFakeSoapClient();
+        $gateway->fakeIssuanceService = new KuickPayVoucherGatewayFakeIssuanceService();
+        $gateway->fakeVoucherRepository = new KuickPayVoucherGatewayFakeVoucherRepository();
+
+        $voucher = $this->voucher(['kuickpay_reference' => 'KP-ISSUED-123']);
+        $result = $gateway->exposeIssueVoucherIfNeeded($voucher, $this->contactInfo(), []);
+
+        $this->assertSame($voucher, $result);
+        $this->assertSame([], $gateway->fakeSoapClient->requests);
+        $this->assertSame([], $gateway->fakeIssuanceService->records);
+    }
+
+    public function testIssueVoucherIfNeededCallsSoapParsesAndPersistsEvidence()
+    {
+        $gateway = $this->gateway();
+        $gateway->Contacts = new KuickPayVoucherGatewayFakeContacts();
+        $gateway->fakeSoapClient = new KuickPayVoucherGatewayFakeSoapClient();
+        $gateway->fakeIssuanceService = new KuickPayVoucherGatewayFakeIssuanceService();
+        $gateway->fakeVoucherRepository = new KuickPayVoucherGatewayFakeVoucherRepository();
+        $gateway->fakeVoucherRepository->latest = (object) $this->voucher([
+            'kuickpay_reference' => 'KP-ISSUED-123',
+            'raw_status' => '00',
+        ]);
+
+        $result = $gateway->exposeIssueVoucherIfNeeded(
+            $this->voucher(),
+            $this->contactInfo(),
+            ['fallback_mobile' => '03123456789', 'fallback_email' => 'fallback@example.test']
+        );
+
+        $this->assertCount(1, $gateway->fakeVoucherRepository->edits);
+        $this->assertArrayHasKey('date_last_checked', $gateway->fakeVoucherRepository->edits[0]['vars']);
+        $this->assertCount(1, $gateway->fakeSoapClient->requests);
+        $this->assertSame('REG55', $gateway->fakeSoapClient->requests[0]['RegistrationNumber']);
+        $this->assertCount(1, $gateway->fakeIssuanceService->records);
+        $this->assertSame('pending', $gateway->fakeIssuanceService->records[0]['evidence']->status());
+        $this->assertSame('KP-ISSUED-123', $gateway->fakeIssuanceService->records[0]['evidence']->reference());
+        $this->assertSame('KP-ISSUED-123', $result['kuickpay_reference']);
+    }
+
+    public function testIssueVoucherIfNeededLogsSanitizedFailureDiagnostic()
+    {
+        $gateway = $this->gateway();
+        $gateway->Contacts = new KuickPayVoucherGatewayFakeContacts();
+        $gateway->fakeSoapClient = new KuickPayVoucherGatewayFakeSoapClient([[
+            'ok' => false,
+            'operation' => 'InsertVoucher',
+            'raw_result' => null,
+            'error_class' => 'timeout',
+            'redacted_trace_id' => 'trace-timeout',
+        ]]);
+        $gateway->fakeIssuanceService = new KuickPayVoucherGatewayFakeIssuanceService();
+        $gateway->fakeVoucherRepository = new KuickPayVoucherGatewayFakeVoucherRepository();
+        $gateway->fakeVoucherRepository->latest = (object) $this->voucher([
+            'status' => 'retry',
+            'error_class' => 'timeout',
+        ]);
+
+        $result = $gateway->exposeIssueVoucherIfNeeded(
+            $this->voucher(),
+            $this->contactInfo(),
+            ['logging_enabled' => 'true']
+        );
+
+        $this->assertNull($result);
+        $payload = json_decode($gateway->logs[0]['data'], true);
+        $this->assertSame('voucher_issue_outcome', $payload['event']);
+        $this->assertSame('timeout', $payload['error_class']);
+        $this->assertSame(55, $payload['invoice']);
+        $this->assertArrayNotHasKey('raw_result', $payload);
+        $this->assertArrayNotHasKey('email', $payload);
+        $this->assertArrayNotHasKey('mobile', $payload);
+    }
+
     public function testReferencePatternLanguageNotesDocumentLiveTokens()
     {
         $lang = [];
@@ -396,10 +578,51 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertArrayHasKey('Kuickpay.default_branch_note', $lang);
     }
 
+    public function testProcessRetrySafeCopyHasLanguageKey()
+    {
+        $lang = [];
+        require __DIR__ . '/../language/en_us/kuickpay.php';
+
+        $this->assertArrayHasKey('Kuickpay.process.retry_safe', $lang);
+        $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.retry_safe']);
+        $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.retry_safe']);
+    }
+
     private function gateway()
     {
         $reflection = new ReflectionClass(KuickPayVoucherGatewayHelpers::class);
 
         return $reflection->newInstanceWithoutConstructor();
+    }
+
+    private function voucher(array $overrides = []): array
+    {
+        return array_merge([
+            'id' => 25,
+            'company_id' => 1,
+            'client_id' => 3,
+            'gateway_id' => 2,
+            'currency' => 'PKR',
+            'amount' => '1500.00',
+            'status' => 'pending',
+            'registration_number' => 'REG55',
+            'consumer_number' => 'KPREG55',
+            'kuickpay_reference' => null,
+            'raw_status' => null,
+            'date_due' => '2026-06-13',
+            'date_expires' => '2026-06-17',
+            'invoices' => [['invoice_id' => 55, 'amount' => '1500.00']],
+        ], $overrides);
+    }
+
+    private function contactInfo(): array
+    {
+        return [
+            'id' => 9,
+            'first_name' => 'Ali',
+            'last_name' => 'Khan',
+            'company' => '',
+            'state' => ['code' => 'SD'],
+        ];
     }
 }

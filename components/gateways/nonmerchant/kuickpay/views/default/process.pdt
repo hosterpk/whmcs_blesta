@@ -1,5 +1,5 @@
 <?php
-if (!empty($voucher)) {
+if (!empty($voucher) && $voucher['status'] === 'pending' && !empty($voucher['kuickpay_reference'])) {
     $status_key = 'Kuickpay.process.status.' . $voucher['status'];
     $status_label = $this->_($status_key);
     if ($status_label === $status_key) {
@@ -19,5 +19,5 @@ if (!empty($voucher)) {
 </div>
 <?php
 } else {
-    echo $this->_('Kuickpay.process.not_ready');
+    echo $this->_('Kuickpay.process.retry_safe');
 }

@@ -591,7 +591,24 @@ class Kuickpay extends NonmerchantGateway
                 (array) $invoice_amounts,
                 $meta
             );
-            $voucher = $service->getOrCreateForInvoiceContext($context);
+            $repository = $this->getVoucherRepository();
+            $invoice_id = (int) ($context['invoice_amounts'][0]['id'] ?? 0);
+            $latest = $invoice_id > 0
+                ? $repository->getLatestByInvoiceId($invoice_id, (int) $context['company_id'])
+                : null;
+            $decision = $this->reloadVoucherDecision($latest);
+
+            if ($decision === 'display') {
+                $voucher = $this->voucherRowToView($latest);
+            } elseif ($decision === 'block') {
+                $voucher = null;
+            } else {
+                $voucher = $service->getOrCreateForInvoiceContext($context);
+
+                if ($voucher !== null) {
+                    $voucher = $this->issueVoucherIfNeeded($voucher, $contact_info, $meta);
+                }
+            }
 
             if ($voucher !== null) {
                 $this->view->set('voucher', $voucher);
@@ -613,6 +630,30 @@ class Kuickpay extends NonmerchantGateway
         Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherReferenceService.php');
 
         return new KuickPayVoucherReferenceService();
+    }
+
+    /**
+     * Gets the companion plugin voucher repository.
+     *
+     * @return KuickPayVoucherRepository The voucher repository
+     */
+    protected function getVoucherRepository()
+    {
+        Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherRepository.php');
+
+        return new KuickPayVoucherRepository();
+    }
+
+    /**
+     * Gets the companion plugin issuance service.
+     *
+     * @return KuickPayIssuanceService The issuance service
+     */
+    protected function getIssuanceService()
+    {
+        Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayIssuanceService.php');
+
+        return new KuickPayIssuanceService();
     }
 
     /**
@@ -723,6 +764,155 @@ class Kuickpay extends NonmerchantGateway
             'mobile' => (string) ($firstNumber->number ?? ''),
             'branch' => is_array($state) ? (string) ($state['code'] ?? '') : '',
         ];
+    }
+
+    /**
+     * Decides whether a sequential reload can issue a voucher.
+     *
+     * @param mixed $voucher Latest voucher row, or null
+     * @return string One of allow, issue, display, block
+     */
+    protected function reloadVoucherDecision($voucher): string
+    {
+        if (!$voucher) {
+            return 'allow';
+        }
+
+        $status = (string) ($voucher->status ?? '');
+        $reference = (string) ($voucher->kuickpay_reference ?? '');
+
+        if ($status === 'pending') {
+            return $reference === '' ? 'issue' : 'display';
+        }
+
+        if ($status === 'failed' && (string) ($voucher->error_class ?? '') === 'credential_error') {
+            return 'allow';
+        }
+
+        if (in_array($status, ['expired', 'cancelled'], true)) {
+            return 'allow';
+        }
+
+        return 'block';
+    }
+
+    /**
+     * Issues a pending voucher once and persists normalized evidence.
+     *
+     * @param array $voucher Flat voucher data
+     * @param array $contactInfo Contact data passed by Blesta
+     * @param array $meta Gateway settings
+     * @return array|null Displayable voucher when payable, or null for safe retry copy
+     */
+    protected function issueVoucherIfNeeded(array $voucher, array $contactInfo, array $meta): ?array
+    {
+        if (($voucher['status'] ?? '') !== 'pending' || !empty($voucher['kuickpay_reference'])) {
+            return $voucher;
+        }
+
+        $repository = $this->getVoucherRepository();
+        $company_id = (int) ($voucher['company_id'] ?? Configure::get('Blesta.company_id'));
+        $voucher_id = (int) ($voucher['id'] ?? 0);
+        $invoice_id = (int) ($voucher['invoices'][0]['invoice_id'] ?? 0);
+
+        $repository->edit($voucher_id, $company_id, ['date_last_checked' => date('Y-m-d H:i:s')]);
+
+        try {
+            if (!class_exists('KuickPayEvidence')) {
+                Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayEvidence.php');
+            }
+            if (!class_exists('KuickPayResponseParser')) {
+                Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayResponseParser.php');
+            }
+
+            $outcome = $this->getSoapClient()->insertVoucher(
+                $this->buildVoucherRequest($voucher, $this->buildVoucherContactData($contactInfo), $meta)
+            );
+            $evidence = (new KuickPayResponseParser())->parse(
+                $outcome,
+                ['expected_registration_number' => $voucher['registration_number'] ?? '']
+            );
+
+            $this->getIssuanceService()->recordIssueOutcome($voucher_id, $company_id, $evidence);
+            $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta);
+
+            if ($evidence->status() !== 'pending' || !$evidence->reference()) {
+                return null;
+            }
+
+            $latest = $repository->getLatestByInvoiceId($invoice_id, $company_id);
+
+            return $latest ? $this->voucherRowToView($latest) : array_merge($voucher, [
+                'kuickpay_reference' => $evidence->reference(),
+                'raw_status' => $evidence->rawStatus(),
+            ]);
+        } catch (Throwable $e) {
+            $this->log(
+                'kuickpay:voucher_issue',
+                json_encode([
+                    'event' => 'voucher_issue_exception',
+                    'reason' => 'issue_exception',
+                    'invoice' => $invoice_id,
+                ]),
+                'output',
+                false
+            );
+
+            return null;
+        }
+    }
+
+    /**
+     * Converts a voucher row into the process view contract.
+     *
+     * @param mixed $voucher Voucher row
+     * @return array Flat voucher data
+     */
+    protected function voucherRowToView($voucher): array
+    {
+        return [
+            'id' => (int) ($voucher->id ?? 0),
+            'company_id' => (int) ($voucher->company_id ?? 0),
+            'client_id' => (int) ($voucher->client_id ?? 0),
+            'gateway_id' => (int) ($voucher->gateway_id ?? 0),
+            'currency' => (string) ($voucher->currency ?? ''),
+            'amount' => (string) ($voucher->amount ?? ''),
+            'status' => (string) ($voucher->status ?? ''),
+            'registration_number' => (string) ($voucher->registration_number ?? ''),
+            'consumer_number' => (string) ($voucher->consumer_number ?? ''),
+            'kuickpay_reference' => $voucher->kuickpay_reference ?? null,
+            'raw_status' => $voucher->raw_status ?? null,
+            'date_due' => $voucher->date_due ?? null,
+            'date_expires' => $voucher->date_expires ?? null,
+            'invoices' => [],
+        ];
+    }
+
+    /**
+     * Records sanitized issuance diagnostics through the gateway log seam.
+     *
+     * @param KuickPayEvidence $evidence Normalized evidence
+     * @param int $invoice_id Invoice ID
+     * @param array $meta Gateway settings
+     */
+    protected function recordIssuanceDiagnostic(KuickPayEvidence $evidence, int $invoice_id, array $meta): void
+    {
+        if (($meta['logging_enabled'] ?? 'true') !== 'true') {
+            return;
+        }
+
+        $this->log(
+            'kuickpay:voucher_issue',
+            json_encode([
+                'event' => 'voucher_issue_outcome',
+                'status' => $evidence->status(),
+                'error_class' => $evidence->errorClass(),
+                'redacted_trace_id' => $evidence->redactedTraceId(),
+                'invoice' => $invoice_id,
+            ]),
+            'output',
+            $evidence->status() === 'pending'
+        );
     }
 
     /**
