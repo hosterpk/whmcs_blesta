@@ -23,6 +23,18 @@ class KuickPayReconciliationRunRepository
         ]);
     }
 
+    public function openBulk(int $company_id, string $run_date): int
+    {
+        return (int) $this->KuickpayReconciliationRuns->add([
+            'company_id' => $company_id,
+            'trigger_type' => 'bulk',
+            'status' => 'running',
+            'run_date' => $run_date,
+            'cursor' => 0,
+            'date_started' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
     public function close(int $run_id, string $status, array $counts, int $cursor, string $summary): void
     {
         $this->KuickpayReconciliationRuns->edit($run_id, array_merge($counts, [
