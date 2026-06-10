@@ -13,6 +13,7 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
         'status',
         'date_started',
         'date_completed',
+        'run_date',
         'cursor',
         'total_eligible',
         'total_checked',
@@ -22,6 +23,7 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
         'total_expired',
         'total_failed',
         'total_errors',
+        'total_unmatched',
         'summary',
     ];
 

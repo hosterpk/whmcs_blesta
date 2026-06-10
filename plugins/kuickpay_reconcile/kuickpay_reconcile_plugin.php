@@ -117,6 +117,10 @@ class KuickpayReconcilePlugin extends Plugin
             if (version_compare($current_version, '1.3.0', '<')) {
                 $this->addCronTasks();
             }
+
+            if (version_compare($current_version, '1.4.0', '<')) {
+                $this->addBulkReconciliationColumns();
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -194,6 +198,33 @@ class KuickpayReconcilePlugin extends Plugin
     }
 
     /**
+     * Adds bulk reconciliation summary fields to the run table.
+     */
+    private function addBulkReconciliationColumns()
+    {
+        if (!$this->enumContains('kuickpay_reconciliation_runs', 'trigger_type', 'bulk')) {
+            $this->Record->query(
+                "ALTER TABLE `kuickpay_reconciliation_runs` "
+                . "MODIFY `trigger_type` ENUM('cron','manual','bulk') NOT NULL"
+            );
+        }
+
+        if (!$this->columnExists('kuickpay_reconciliation_runs', 'run_date')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_reconciliation_runs` '
+                . 'ADD `run_date` DATE NULL DEFAULT NULL AFTER `date_completed`'
+            );
+        }
+
+        if (!$this->columnExists('kuickpay_reconciliation_runs', 'total_unmatched')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_reconciliation_runs` '
+                . 'ADD `total_unmatched` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `total_errors`'
+            );
+        }
+    }
+
+    /**
      * Creates reconciliation run, item, lock, and audit tables.
      */
     private function createReconcileTables()
@@ -201,10 +232,11 @@ class KuickpayReconcilePlugin extends Plugin
         $this->Record
             ->setField('id', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'auto_increment'=>true])
             ->setField('company_id', ['type'=>'int', 'size'=>10, 'unsigned'=>true])
-            ->setField('trigger_type', ['type'=>'enum', 'size'=>"'cron','manual'"])
+            ->setField('trigger_type', ['type'=>'enum', 'size'=>"'cron','manual','bulk'"])
             ->setField('status', ['type'=>'enum', 'size'=>"'running','completed','aborted','failed'"])
             ->setField('date_started', ['type'=>'datetime'])
             ->setField('date_completed', ['type'=>'datetime', 'is_null'=>true, 'default'=>null])
+            ->setField('run_date', ['type'=>'date', 'is_null'=>true, 'default'=>null])
             ->setField('cursor', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'is_null'=>true, 'default'=>null])
             ->setField('total_eligible', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
             ->setField('total_checked', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
@@ -214,6 +246,7 @@ class KuickpayReconcilePlugin extends Plugin
             ->setField('total_expired', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
             ->setField('total_failed', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
             ->setField('total_errors', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
+            ->setField('total_unmatched', ['type'=>'int', 'size'=>10, 'unsigned'=>true, 'default'=>0])
             ->setField('summary', ['type'=>'text', 'is_null'=>true, 'default'=>null])
             ->setKey(['id'], 'primary')
             ->setKey(['company_id'], 'index', 'idx_kuickpay_runs_company')
@@ -276,6 +309,22 @@ class KuickpayReconcilePlugin extends Plugin
         $statement = $this->Record->query('SHOW COLUMNS FROM `' . $table . '` LIKE ?', $column);
 
         return (bool) $statement->fetch();
+    }
+
+    /**
+     * Checks whether an enum column already includes a value.
+     *
+     * @param string $table The table name
+     * @param string $column The column name
+     * @param string $value The enum value
+     * @return bool True when the enum contains the value
+     */
+    private function enumContains($table, $column, $value)
+    {
+        $statement = $this->Record->query('SHOW COLUMNS FROM `' . $table . '` LIKE ?', $column);
+        $column = $statement->fetch();
+
+        return $column && strpos((string) $column->Type, "'" . $value . "'") !== false;
     }
 
     /**
