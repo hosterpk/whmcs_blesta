@@ -268,6 +268,8 @@ class KuickPayVoucherReferenceService
             'status' => $voucher->status,
             'registration_number' => $voucher->registration_number,
             'consumer_number' => $voucher->consumer_number,
+            'kuickpay_reference' => $voucher->kuickpay_reference ?? null,
+            'raw_status' => $voucher->raw_status ?? null,
             'date_due' => $voucher->date_due,
             'date_expires' => $voucher->date_expires,
             'invoices' => $invoices,

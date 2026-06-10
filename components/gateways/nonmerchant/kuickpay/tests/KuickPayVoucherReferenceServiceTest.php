@@ -142,6 +142,24 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame([['invoice_id' => 55, 'amount' => '1500.00']], $voucher['invoices']);
     }
 
+    public function testFlatVoucherExposesIssuanceStateForIdempotency()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->pendingVoucher = $this->voucherRow(25);
+        $repository->pendingVoucher->kuickpay_reference = 'KP-ISSUED-123';
+        $repository->pendingVoucher->raw_status = '00';
+        $repository->records[25] = [
+            'voucher' => $repository->pendingVoucher,
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+
+        $service = new KuickPayVoucherReferenceService($repository);
+        $voucher = $service->getOrCreateForInvoiceContext($this->context());
+
+        $this->assertSame('KP-ISSUED-123', $voucher['kuickpay_reference']);
+        $this->assertSame('00', $voucher['raw_status']);
+    }
+
     public function testCreateUsesDefaultRandomPatternReferencesForInvoiceContext()
     {
         $repository = new KuickPayVoucherReferenceServiceFakeRepository();
