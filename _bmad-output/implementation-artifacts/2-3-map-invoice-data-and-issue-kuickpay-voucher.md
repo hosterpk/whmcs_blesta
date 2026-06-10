@@ -4,7 +4,7 @@ baseline_commit: 5d048aaab309cce3ed777375485c4360edbc5f28
 
 # Story 2.3: Map Invoice Data and Issue KuickPay Voucher
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -324,3 +324,19 @@ _TBD by dev agent_
 ### Change Log
 
 - 2026-06-10: Implemented Story 2.3 invoice-to-InsertVoucher mapping, issuance orchestration, evidence persistence, safe display, diagnostics, and regression tests.
+
+### Review Findings
+
+Adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) on baseline `5d048aaab3`..HEAD. **2 patch findings (both fixed), 2 deferred, 9 dismissed as noise/false-positive/per-spec.** Acceptance Auditor confirmed all five ACs and every load-bearing constraint satisfied. Gateway suite green at `152 tests, 721 assertions` after fixes; plugin suite `12 tests, 43 assertions`.
+
+**Patches (fixed):**
+
+- [x] [Review][Patch] Voucher date helpers failed open to the Unix epoch (`01-Jan-70` / month `01` / year `1970`) on empty/unparseable `date_due`/`date_expires` [components/gateways/nonmerchant/kuickpay/kuickpay.php — `buildVoucherRequest()` VoucherMonth/Year + `formatVoucherDate()`] — fixed to fail closed (empty string) so a missing date can never produce a plausible-but-wrong already-expired voucher. Confirmed High by Blind + Edge. (commit `9723d008`)
+- [x] [Review][Patch] Broad `catch (Throwable)` in `issueVoucherIfNeeded()` re-persisted fabricated `transport_error`→`retry` evidence over an already-recorded successful issuance when a post-persist step (diagnostic log / latest-voucher re-read) threw, erasing the issued reference [components/gateways/nonmerchant/kuickpay/kuickpay.php — `issueVoucherIfNeeded()`] — fixed with a `$persisted` guard so the authoritative row is never overwritten after a real outcome is recorded (Task 6). (commit `8df90313`)
+
+**Deferred:**
+
+- [x] [Review][Defer] Concurrent double-submit can pass both reload reads before either writes and clobber an issued reference (slower `94`/duplicate response forces the row to `manual_review`, null reference) [plugins/kuickpay_reconcile/lib/KuickPayIssuanceService.php] — deferred, **explicitly out of 2.3 scope** per Dev Notes CONCURRENCY RESIDUAL; closed by the Story 2.4 active-context uniqueness item. Sequential-reload safety (this story's contract) is intact.
+- [x] [Review][Defer] Reload `display` branch shows the stored voucher amount without comparing the current invoice balance, so an amount change after issuance is shown stale [components/gateways/nonmerchant/kuickpay/kuickpay.php — `buildProcess()` display branch] — deferred; amount-change handling is reconciliation/Story 2.4 territory and a mismatch fails closed at reconcile time.
+
+**Dismissed (noise / false positive / per-spec):** Blind Hunter's `retry`-remap "double-issue" (false positive — `retry` is resolved by read-only inquiry and the reload matrix BLOCKs it), `invoice_id=0` (false positive — `flatten()` populates `invoices[].invoice_id`; the `invoices=[]` view shape never re-enters issuance), the `'issue'` decision "dead branch" (no functional impact — get-or-create reuses the pending voucher); mobile→empty when no valid fallback, 10-digit local mobile rejection, empty `Name` when all name parts blank, empty-amount pass-through, and `getLatestByInvoiceId` "latest by id" (all match the spec); and the Auditor's two informational notes (no defect).

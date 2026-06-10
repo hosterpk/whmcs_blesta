@@ -91,7 +91,7 @@ development_status:
   epic-2: in-progress
   2-1-create-durable-customer-voucher-records: done
   2-2-generate-registration-number-and-consumer-number: done
-  2-3-map-invoice-data-and-issue-kuickpay-voucher: review
+  2-3-map-invoice-data-and-issue-kuickpay-voucher: done
   2-4-gate-changed-amounts-and-multi-invoice-attempts: backlog
   2-5-display-customer-payment-reference-panel: backlog
   2-6-display-configurable-payment-instructions-and-status-expectations: backlog
