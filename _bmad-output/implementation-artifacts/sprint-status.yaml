@@ -94,7 +94,7 @@ development_status:
   2-3-map-invoice-data-and-issue-kuickpay-voucher: done
   2-4-gate-changed-amounts-and-multi-invoice-attempts: done
   2-5-display-customer-payment-reference-panel: done
-  2-6-display-configurable-payment-instructions-and-status-expectations: in-progress
+  2-6-display-configurable-payment-instructions-and-status-expectations: review
   epic-2-retrospective: optional
 
   # --- Epic 3: Trusted Reconciliation and Safe Posting ---

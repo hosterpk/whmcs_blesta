@@ -4,7 +4,7 @@ baseline_commit: d8b391a17146eae9ed923d55c73f25ce03d8cd2e
 
 # Story 2.6: Display Configurable Payment Instructions and Status Expectations
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -98,7 +98,7 @@ So that I know how to pay and when Blesta will update the invoice.
   - [x] **Use a distinct key namespace** (`Kuickpay.process.instruction.<channel>.*`) for this customer copy — do **not** reuse the admin **setting** label keys `Kuickpay.instruction_<channel>` / `_note` (`:81-88`), which are settings-screen labels, not customer copy.
   - [x] **Preserve all existing keys** — do not remove/rename 2.5's `Kuickpay.process.status_expectation` (`:20`), `identity_label`/`copy_button`/`copy_feedback` (`:17-19`), the `status.*` keys (`:21-29`), 2.4's `amount_changed`/`multi_invoice_unsupported` (`:9-10`), or the labels at `:12-16`. Add only the new keys.
   - [x] If the gateway maintains parallel locales, add the new keys there too; if only `en_us` exists for this gateway, `en_us` is sufficient (NFR6; project-context language rule).
-- [ ] **Task 6 — Verification**
+- [x] **Task 6 — Verification**
   - [x] `php -l` on every changed PHP file (`kuickpay.php`, language file) and the `.pdt`.
   - [x] **Required** unit tests in `tests/KuickPayVoucherGatewayHelpersTest.php` (subclass-`expose*` + fake-seam pattern):
     - `enabledInstructionGroups()`: all-enabled meta → 4 groups in the fixed order; all-disabled (all four explicitly `'false'`) → `[]`; **unset/empty meta (fresh install)** → exactly `online_banking` + `bank_deposit` (the settings.pdt defaults); a mixed case specified as a **full explicit meta with all four keys present** — e.g. `{online_banking:'false', bank_deposit:'true', agent_franchise:'true', mobile_app:'false'}` → `[bank_deposit, agent_franchise]` (exercises an override in both directions). Assert each descriptor carries the correct `channel`, `title_key`, and `body_key`. **Do not** write the mixed case as a *sparse* meta like `{agent_franchise:'true'}` and expect `[agent_franchise]`: under the default-`true` `online_banking`/`bank_deposit`, a sparse meta correctly resolves to `[online_banking, bank_deposit, agent_franchise]` (the unset≠false rule), so a one-element expectation would make the test fail and tempt a dev to weaken the assertion or break the helper.
@@ -106,9 +106,9 @@ So that I know how to pay and when Blesta will update the invoice.
     - **New language keys (AC2 enforcement).** Extend the existing `testCustomerReferencePanelLanguageKeysExist()` (`:1087-1110`, which `require`s the language file and asserts each key exists + is non-empty), or add a sibling test, to cover the nine new keys: `Kuickpay.process.instructions_heading` and `Kuickpay.process.instruction.<channel>.title`/`.body` for the four channels. Assert each exists and is non-empty, **and** assert each is free of forbidden internals. Mirror the existing forbidden-term precedent in `testProcessRetrySafeCopyHasLanguageKey()` (`:1079-1084`), but use the **case-insensitive** assertion `assertStringNotContainsStringIgnoringCase(...)` (available in PHPUnit 8.5) — the in-file precedent is case-sensitive, so a literal copy would not actually satisfy "case-insensitive". Run the reject assertions on the **`.title` keys too**, not only the bodies.
       - **Concrete reject-token set** (grounded in this gateway's real internals — `error_class` `kuickpay.php:865`, `RegistrationNumber`/`registration_number` `:794`, `raw_status` `:1097`): `SOAP`, `WSDL`, `xmlns`, `Envelope`; `error_class`, `Exception`; the snake_case raw keys `raw_status`, `registration_number`, `consumer_number`; credential terms `password`, `username`, `secret`, `credential`; the internal status enums `confirmed_unposted`, `manual_review`; and the spaced literal `Registration Number`.
       - **Allow-list carve-out (must NOT be rejected — they occur in legitimate copy):** `KuickPay`, `Bill Payment`, the **spaced** label `Consumer Number`, and the plain words `pay`/`payment`/`paid`/`amount`/`due`/`bank`/`branch`/`received`/`reference`. The trap the user flagged: "provider status strings" means the **raw upstream `raw_status` codes**, not the localized status *labels* — rejecting `paid`/`payment`/`received` would false-positive on "submit the payment" / "pay the amount due", and rejecting the spaced "Consumer Number" would break every body string (reject only the snake_case `consumer_number`). This catches missing keys, raw-key leakage, and unsafe copy that `php -l` + helper tests would not.
-  - [ ] Run the **full gateway suite** with the external PHPUnit 8.5 runner and confirm no regression: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`. Do **not** use `-c build/phpunit.xml` (bootstrap-path bug — project-context). Compare the green count against the actual pre-change baseline (re-run before changing to capture it; 2.5's notes referenced ~180+ tests).
-  - [ ] The `.pdt` (markup, instruction loop, responsive single-column, status-check conditional) is **not** drivable in the component harness — verify by code inspection + manual render in a Blesta client pay flow if a runtime is available; otherwise state the gap explicitly. Do **not** present `php -l` + helper unit tests as full UI verification. **Inspection checklist (must confirm by reading the rendered/static markup):** (a) all-disabled config → **no** instructions heading and **no** container render (the `if (!empty($instruction_groups))` guard holds — AC1); (b) the new block is a **sibling** between the `.kuickpay-voucher-info` `</div>` (`:90`) and the `$has_consumer_number` guard (`:91`) — **not** inside the `<dl>` and **not** inside the `$has_consumer_number` guard; (c) the `status_check_supported` conditional renders nothing in MVP.
-  - [ ] No live KuickPay calls. No DB-backed render verification is possible in this checkout — state it.
+  - [x] Run the **full gateway suite** with the external PHPUnit 8.5 runner and confirm no regression: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`. Do **not** use `-c build/phpunit.xml` (bootstrap-path bug — project-context). Compare the green count against the actual pre-change baseline (re-run before changing to capture it; 2.5's notes referenced ~180+ tests).
+  - [x] The `.pdt` (markup, instruction loop, responsive single-column, status-check conditional) is **not** drivable in the component harness — verify by code inspection + manual render in a Blesta client pay flow if a runtime is available; otherwise state the gap explicitly. Do **not** present `php -l` + helper unit tests as full UI verification. **Inspection checklist (must confirm by reading the rendered/static markup):** (a) all-disabled config → **no** instructions heading and **no** container render (the `if (!empty($instruction_groups))` guard holds — AC1); (b) the new block is a **sibling** between the `.kuickpay-voucher-info` `</div>` (`:90`) and the `$has_consumer_number` guard (`:91`) — **not** inside the `<dl>` and **not** inside the `$has_consumer_number` guard; (c) the `status_check_supported` conditional renders nothing in MVP.
+  - [x] No live KuickPay calls. No DB-backed render verification is possible in this checkout — state it.
 
 ## Dev Notes
 
@@ -236,6 +236,8 @@ Codex GPT-5
 - 2026-06-10: Red targeted helper suite after adding tests failed on missing `enabledInstructionGroups()`, missing `customerStatusCheckSupported()`, and missing `Kuickpay.process.instructions_heading` language key.
 - 2026-06-10: Targeted helper suite after implementation: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherGatewayHelpersTest.php` → OK (91 tests, 419 assertions).
 - 2026-06-10: Syntax checks passed: `php -l components/gateways/nonmerchant/kuickpay/kuickpay.php`; `php -l components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php`; `php -l components/gateways/nonmerchant/kuickpay/views/default/process.pdt`.
+- 2026-06-10: Full gateway suite after changes: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` → OK (210 tests, 1060 assertions).
+- 2026-06-10: Static `.pdt` inspection confirmed the instruction block is guarded by `if (!empty($instruction_groups))`, is a sibling after `.kuickpay-voucher-info` and before the `$has_consumer_number` guard, and the `status_check_supported` conditional has no active customer control while MVP gate returns false. No live Blesta/MySQL client render was available; no live KuickPay calls were made.
 
 ### Completion Notes List
 
@@ -244,6 +246,7 @@ Codex GPT-5
 - Wired `instruction_groups` and `status_check_supported` into `buildProcess()` as read-only view vars without changing voucher routing, reload, display-mode, or posting behavior.
 - Rendered instruction groups only in the payable arm, as a sibling after `.kuickpay-voucher-info` and before the copy-script guard, with a full empty-list guard so all-disabled settings render no heading/container.
 - Added customer-facing instruction language keys under `Kuickpay.process.instruction.<channel>.*` and extended language tests to reject internal/provider tokens case-insensitively.
+- Full gateway regression passed with the external PHPUnit 8.5 runner; browser/client pay-flow rendering remains a documented environment gap for this checkout.
 
 ### File List
 
@@ -258,3 +261,4 @@ Codex GPT-5
 
 - 2026-06-10: Started story 2.6 and captured baseline commit `d8b391a17146eae9ed923d55c73f25ce03d8cd2e`.
 - 2026-06-10: Implemented configurable KuickPay instruction-group display, MVP-dark customer status-check seam, customer language keys, and helper/language tests.
+- 2026-06-10: Completed full regression verification and marked story ready for review.
