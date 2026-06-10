@@ -37,11 +37,38 @@ class KuickPayVoucherRepositoryTest extends TestCase
         $this->assertSame([[55, 56], 7], $model->invoiceSetCall);
     }
 
-    private function repository($model): KuickPayVoucherRepository
+    public function testGetPostableDelegatesToModel()
+    {
+        $model = new KuickPayVoucherRepositoryFakeVoucherModel();
+        $repository = $this->repository($model);
+
+        $result = $repository->getPostable(7, 100, 12);
+
+        $this->assertSame([$model->activeVoucher], $result);
+        $this->assertSame([7, 100, 12], $model->postableCall);
+    }
+
+    public function testLockedReadsDelegateToModels()
+    {
+        $model = new KuickPayVoucherRepositoryFakeVoucherModel();
+        $invoiceModel = new KuickPayVoucherRepositoryFakeVoucherInvoiceModel();
+        $repository = $this->repository($model, $invoiceModel);
+
+        $voucher = $repository->getForUpdate(44, 7);
+        $links = $repository->getInvoiceLinksForUpdate(44);
+
+        $this->assertSame($model->activeVoucher, $voucher);
+        $this->assertSame([$invoiceModel->invoiceLink], $links);
+        $this->assertSame([44, 7], $model->forUpdateCall);
+        $this->assertSame([44], $invoiceModel->forUpdateCall);
+    }
+
+    private function repository($model, $invoiceModel = null): KuickPayVoucherRepository
     {
         $reflection = new ReflectionClass(KuickPayVoucherRepository::class);
         $repository = $reflection->newInstanceWithoutConstructor();
         $repository->KuickpayVouchers = $model;
+        $repository->KuickpayVoucherInvoices = $invoiceModel ?? new KuickPayVoucherRepositoryFakeVoucherInvoiceModel();
 
         return $repository;
     }
@@ -52,6 +79,8 @@ class KuickPayVoucherRepositoryFakeVoucherModel
     public ?array $referenceCall = null;
     public ?array $invoiceCall = null;
     public ?array $invoiceSetCall = null;
+    public ?array $postableCall = null;
+    public ?array $forUpdateCall = null;
     public stdClass $activeVoucher;
 
     public function __construct()
@@ -78,5 +107,37 @@ class KuickPayVoucherRepositoryFakeVoucherModel
         $this->invoiceSetCall = [$invoiceIds, $company_id];
 
         return $this->activeVoucher;
+    }
+
+    public function getPostable(int $company_id, int $limit, int $afterId = 0): array
+    {
+        $this->postableCall = [$company_id, $limit, $afterId];
+
+        return [$this->activeVoucher];
+    }
+
+    public function getForUpdate(int $voucher_id, int $company_id)
+    {
+        $this->forUpdateCall = [$voucher_id, $company_id];
+
+        return $this->activeVoucher;
+    }
+}
+
+class KuickPayVoucherRepositoryFakeVoucherInvoiceModel
+{
+    public ?array $forUpdateCall = null;
+    public stdClass $invoiceLink;
+
+    public function __construct()
+    {
+        $this->invoiceLink = (object) ['voucher_id' => 44, 'invoice_id' => 55, 'amount' => '1000.00'];
+    }
+
+    public function getByVoucherIdForUpdate(int $voucher_id): array
+    {
+        $this->forUpdateCall = [$voucher_id];
+
+        return [$this->invoiceLink];
     }
 }

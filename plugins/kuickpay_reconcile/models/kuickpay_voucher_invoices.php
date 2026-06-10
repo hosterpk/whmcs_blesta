@@ -50,6 +50,19 @@ class KuickpayVoucherInvoices extends KuickpayReconcileModel
     }
 
     /**
+     * Locks and fetches invoice links by voucher ID.
+     *
+     * @param int $voucher_id The voucher ID
+     * @return array Invoice link rows
+     */
+    public function getByVoucherIdForUpdate(int $voucher_id)
+    {
+        return $this->Record
+            ->query('SELECT * FROM kuickpay_voucher_invoices WHERE voucher_id = ? FOR UPDATE', $voucher_id)
+            ->fetchAll();
+    }
+
+    /**
      * Fetches invoice links by invoice ID.
      *
      * @param int $invoice_id The invoice ID

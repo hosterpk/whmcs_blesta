@@ -95,10 +95,10 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
     10. `posting.succeeded` audit. `commit()`. Return `posted`.
   - [ ] Wrap the whole unit in `try/catch (Throwable)`: on throw, `rollBack()` first, then a best-effort `posting.failed` audit on a fresh write **after** the rollback (`try { … } catch (Throwable) { /* swallow */ }`, mirroring `KuickPayReconcileService`'s `finally`/best-effort audit) so it survives the rollback and one voucher's failure cannot abort the rest of the batch.
 
-- [ ] **Task 4 — Repository/model support (AC2, AC9)**.
-  - [ ] Add `KuickpayVouchers::getPostable(int $company_id, int $limit, int $afterId = 0)` selecting `status='confirmed_unposted' AND currency='PKR' AND blesta_transaction_id IS NULL AND date_paid IS NOT NULL` ordered by id, plus a `KuickPayVoucherRepository::getPostable(...)` passthrough (mirror `getReconcilable`). The `date_paid IS NOT NULL` filter MUST live in the query (it is the primary gate); Task 1's paid-date guard is defense-in-depth for a row that slips through (e.g. a reconcile/posting race) — keep **both** layers.
-  - [ ] Add a locked invoice-link read for the posting transaction (e.g. `KuickPayVoucherRepository::getInvoiceLinksForUpdate(int $voucher_id)` → model method issuing `SELECT ... FROM kuickpay_voucher_invoices WHERE voucher_id = ? FOR UPDATE`). The existing `getByVoucherId()` is an unlocked read and is fine for batch selection, but the re-validation/apply inside the posting transaction must use the locked rows (AC3, architecture.md:353).
-  - [ ] Confirm `KuickPayVoucherRepository::edit()` is sufficient for the locked write flow (it is a plain `where()->update()` — safe inside `begin()/commit()`); do not introduce a non-canonical interim status — the 8 enum states are fixed.
+- [x] **Task 4 — Repository/model support (AC2, AC9)**.
+  - [x] Add `KuickpayVouchers::getPostable(int $company_id, int $limit, int $afterId = 0)` selecting `status='confirmed_unposted' AND currency='PKR' AND blesta_transaction_id IS NULL AND date_paid IS NOT NULL` ordered by id, plus a `KuickPayVoucherRepository::getPostable(...)` passthrough (mirror `getReconcilable`). The `date_paid IS NOT NULL` filter MUST live in the query (it is the primary gate); Task 1's paid-date guard is defense-in-depth for a row that slips through (e.g. a reconcile/posting race) — keep **both** layers.
+  - [x] Add a locked invoice-link read for the posting transaction (e.g. `KuickPayVoucherRepository::getInvoiceLinksForUpdate(int $voucher_id)` → model method issuing `SELECT ... FROM kuickpay_voucher_invoices WHERE voucher_id = ? FOR UPDATE`). The existing `getByVoucherId()` is an unlocked read and is fine for batch selection, but the re-validation/apply inside the posting transaction must use the locked rows (AC3, architecture.md:353).
+  - [x] Confirm `KuickPayVoucherRepository::edit()` is sufficient for the locked write flow (it is a plain `where()->update()` — safe inside `begin()/commit()`); do not introduce a non-canonical interim status — the 8 enum states are fixed.
 
 - [ ] **Task 5 — Register the `post_confirmed` cron trigger (AC12)** in `kuickpay_reconcile_plugin.php`.
   - [ ] Add a `post_confirmed` entry to `getCronTasks()` (interval; choose a sensible cadence ≥ the 5-min reconcile, e.g. 5–15 min) with its own `key`/`name`/`description` language entries.
@@ -268,10 +268,16 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 
 ### Debug Log References
 - 2026-06-10: Extended `KuickPayEvidenceValidator::validate()` with an allowed-status parameter. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayEvidenceValidatorTest.php` and `php -l` on changed validator files.
+- 2026-06-10: Added postable voucher selection plus locked voucher/invoice-link reads. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherRepositoryTest.php` and `php -l` on touched repository/model files.
 
 ### Completion Notes List
 - Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
+- Task 4 complete: repository/model support now exposes bounded postable fetches and `FOR UPDATE` reads for the posting transaction.
 
 ### File List
 - plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
+- plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php
+- plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/KuickPayEvidenceValidatorTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php

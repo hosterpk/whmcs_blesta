@@ -213,6 +213,54 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches vouchers eligible for bounded posting.
+     *
+     * @param int $company_id The company ID
+     * @param int $limit Maximum records to return
+     * @param int $afterId Resume cursor; only IDs greater than this are returned
+     * @return array Voucher rows
+     */
+    public function getPostable(int $company_id, int $limit, int $afterId = 0): array
+    {
+        return $this->KuickpayVouchers->getPostable($company_id, $limit, $afterId);
+    }
+
+    /**
+     * Locks and fetches a company-scoped voucher row.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function getForUpdate(int $voucher_id, int $company_id): ?stdClass
+    {
+        $voucher = $this->KuickpayVouchers->getForUpdate($voucher_id, $company_id);
+
+        return $voucher ?: null;
+    }
+
+    /**
+     * Locks and fetches invoice links for a voucher.
+     *
+     * @param int $voucher_id The voucher ID
+     * @return array Invoice link rows
+     */
+    public function getInvoiceLinksForUpdate(int $voucher_id): array
+    {
+        return $this->KuickpayVoucherInvoices->getByVoucherIdForUpdate($voucher_id);
+    }
+
+    /**
+     * Returns the shared Blesta Record instance used by the voucher model.
+     *
+     * @return mixed
+     */
+    public function record()
+    {
+        return $this->KuickpayVouchers->Record;
+    }
+
+    /**
      * Updates a voucher through the company-scoped model mutator.
      *
      * @param int $voucher_id The voucher ID

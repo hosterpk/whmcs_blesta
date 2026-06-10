@@ -356,6 +356,47 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Fetches vouchers eligible for safe posting.
+     *
+     * @param int $company_id The company ID
+     * @param int $limit Maximum records to return
+     * @param int $after_id Resume cursor; only IDs greater than this are returned
+     * @return array Voucher rows
+     */
+    public function getPostable(int $company_id, int $limit, int $after_id = 0): array
+    {
+        return $this->Record->select()
+            ->from('kuickpay_vouchers')
+            ->where('company_id', '=', $company_id)
+            ->where('currency', '=', 'PKR')
+            ->where('status', '=', 'confirmed_unposted')
+            ->where('blesta_transaction_id', '=', null)
+            ->where('date_paid', '!=', null)
+            ->where('id', '>', max(0, $after_id))
+            ->order(['id' => 'ASC'])
+            ->limit(max(1, $limit))
+            ->fetchAll();
+    }
+
+    /**
+     * Locks and fetches a company-scoped voucher row.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID
+     * @return mixed The voucher row, or false when absent
+     */
+    public function getForUpdate(int $voucher_id, int $company_id)
+    {
+        return $this->Record
+            ->query(
+                'SELECT * FROM kuickpay_vouchers WHERE id = ? AND company_id = ? FOR UPDATE',
+                $voucher_id,
+                $company_id
+            )
+            ->fetch();
+    }
+
+    /**
      * Returns voucher validation rules.
      *
      * @return array Validation rules
