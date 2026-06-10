@@ -108,13 +108,13 @@ This story closes residuals explicitly assigned to it by earlier stories. All pr
   - [x] **Coordination with Story 2.5 (template + decision-helper ownership — do not re-flatten).** Story 2.5 rebuilds this same `process.pdt` into a **4-arm** Unified view-flag tree: `process_notice → display_mode==='payable' → display_mode==='status_only' → retry_safe` (**2.5 owns the final template**). If 2.5 has **already landed**, do **not** collapse it back to the 3-arm shape above or re-key the payable branch off `display_mode` — add only your `process_notice` value-set + its two language keys into the existing tree (collapsing it drops 2.5's `status_only` arm and breaks 2.5 AC3's live `retry/confirmed_unposted/failed/manual_review` rendering). If **2.4 lands first**, build the 3-arm shape above; 2.5 absorbs your `process_notice` arm when it rebuilds. Your `process_notice` keeps top precedence in both shapes. Also: 2.5 extracts a `protected` `display_mode` decision helper from this **same `buildProcess()` display region** as this story's decision helper — a dev landing both must reconcile them into **one** decision surface yielding `(voucher, display_mode, process_notice)`, not two overlapping methods. [Source: 2-5 Unified view-flag contract + Coordination]
   - [x] **`replace` happy path sets no notice:** when `amount_change_policy === 'replace'` succeeds (stale retired, fresh voucher created + issued), `process_notice` stays `null` and the **payable branch** renders the new Consumer Number normally — do **not** set `amount_changed` on a successful replace. `amount_changed` is only for the `block` mismatch and the service `block` null path (Task 6).
 
-- [ ] **Task 9 — (OPEN DECISION A) Schema-level active-context uniqueness — concurrency residual**
-  - [ ] **Scope-gate this task on architect sign-off (OPEN DECISION A).** The 5 ACs above are fully satisfiable at the application layer (Tasks 1-8) and do **not** require this. This task is the durable closure of the 2.3 **concurrent double-submit** residual (deferred-work.md:72; architecture.md:351 "active payment context"). If not taken now, **re-defer it explicitly** in `deferred-work.md` with the known limitation — do not silently drop it.
-  - [ ] **Recommended low-risk design** (keeps Epic-3 transition code untouched by deriving release from `status`):
+- [x] **Task 9 — (OPEN DECISION A) Schema-level active-context uniqueness — concurrency residual**
+  - [x] **Scope-gate this task on architect sign-off (OPEN DECISION A).** The 5 ACs above are fully satisfiable at the application layer (Tasks 1-8) and do **not** require this. This task is the durable closure of the 2.3 **concurrent double-submit** residual (deferred-work.md:72; architecture.md:351 "active payment context"). If not taken now, **re-defer it explicitly** in `deferred-work.md` with the known limitation — do not silently drop it.
+  - [x] **Recommended low-risk design** (keeps Epic-3 transition code untouched by deriving release from `status`):
     - Add `context_key` varchar to `kuickpay_vouchers`, written at create from the canonical company-scoped sorted invoice-ID set.
     - Add `active_context_key` that equals `context_key` only while `status = 'pending'` and is `NULL` otherwise — implemented either as a MySQL **generated column** (`status='pending'` → `context_key` else NULL; MySQL 5.7+/8 supported by Blesta) **or** maintained in the model `add()`/`edit()` from `status`. Add `setKey(['active_context_key'], 'unique', 'uniq_kuickpay_vouchers_active_context')`. NULLs are exempt from MySQL unique constraints, so terminal/retired rows never collide; deriving from `status` means issuance-failure, replace→`cancelled`, and expiry transitions **auto-release** the key with no Epic-3 changes.
     - This guarantees one active (`pending`) voucher per invoice-set per company: a concurrent second create fails the unique insert; the service's existing `Throwable` catch + race-recovery re-read (`KuickPayVoucherReferenceService.php:115-118`) then returns the winner. Keying on `pending` only (not every active state) closes the concrete residual while avoiding entanglement with provider-liveness of `retry`/`manual_review` (which the reload matrix already BLOCKs).
-  - [ ] Migration/lifecycle: add the column + key in `install()` (`kuickpay_reconcile_plugin.php:38-73`), add an `upgrade()` branch for `< 1.2.0` (current guard returns at `>= 1.1.0`, `:102`) with idempotent `columnExists`-style guards (`:252`) + backfill (`active_context_key = context_key` for existing `pending` rows), and **bump `config.json` version to `1.2.0`**. Add `context_key`/`active_context_key` to `KuickpayVouchers::FIELDS` (`kuickpay_vouchers.php:24-48`). Verify both fresh-install and upgrade paths (state the DB-verification gap if no live MySQL — see Testing).
+  - [x] Migration/lifecycle: add the column + key in `install()` (`kuickpay_reconcile_plugin.php:38-73`), add an `upgrade()` branch for `< 1.2.0` (current guard returns at `>= 1.1.0`, `:102`) with idempotent `columnExists`-style guards (`:252`) + backfill (`active_context_key = context_key` for existing `pending` rows), and **bump `config.json` version to `1.2.0`**. Add `context_key`/`active_context_key` to `KuickpayVouchers::FIELDS` (`kuickpay_vouchers.php:24-48`). Verify both fresh-install and upgrade paths (state the DB-verification gap if no live MySQL — see Testing).
 
 - [ ] **Task 10 — Tests (AC1-AC5)**
   - [ ] **Gateway** (extend `KuickPayVoucherGatewayHelpersTest.php` via the `KuickPayVoucherGatewayHelpers extends Kuickpay` harness with `expose*` seams + fakes — the established pattern, `tests/KuickPayVoucherGatewayHelpersTest.php:35-205`):
@@ -257,6 +257,7 @@ _TBD by dev agent_
 - 2026-06-10: Task 7 red check: `phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherReferenceServiceTest.php` failed because allowed multi-invoice contexts still keyed by first invoice and passed duplicate links through.
 - 2026-06-10: Task 7 green check: `php -l ../../../../plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php`; `php -l ../../../../plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php`; `php -l ../../../../plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`; `phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherReferenceServiceTest.php`; `phpunit --bootstrap ../../../../plugins/kuickpay_reconcile/tests/bootstrap.php ../../../../plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php` passed.
 - 2026-06-10: Task 8 green check: `php -l views/default/process.pdt`; `phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherGatewayHelpersTest.php` passed.
+- 2026-06-10: Task 9 handled by explicit deferral in `deferred-work.md`; no schema/version change made without architect sign-off.
 
 ### Completion Notes List
 
@@ -268,6 +269,7 @@ _TBD by dev agent_
 - Added the service reuse-path amount-change gate, including block/replace policies and gateway notice mapping.
 - Added deterministic multi-invoice storage for the gated `allow` policy, including sorted set reuse and duplicate-ID fail-closed behavior.
 - Added specific customer notice rendering for amount-changed and unsupported multi-invoice states while preserving the payable branch.
+- Re-deferred schema-level active-context uniqueness with the known concurrent double-submit limitation documented.
 
 ### File List
 
@@ -281,3 +283,4 @@ _TBD by dev agent_
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
+- _bmad-output/implementation-artifacts/deferred-work.md

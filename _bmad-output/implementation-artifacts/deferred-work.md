@@ -2,6 +2,10 @@
 
 Items deferred during reviews. Each entry notes its origin and a one-line reason.
 
+## Deferred from: development of 2-4-gate-changed-amounts-and-multi-invoice-attempts (2026-06-10)
+
+- **Schema-level active-context uniqueness remains a concurrency residual** [plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php; plugins/kuickpay_reconcile/models/kuickpay_vouchers.php] — Story 2.4 implements amount/mapping gates and deterministic multi-invoice storage at the application layer, but Task 9 was explicitly scope-gated on architect sign-off and the five ACs do not require the schema change. Without `context_key` / `active_context_key` plus a unique key, two concurrent requests for the same invoice set can still both miss the application-level lookup and insert separate pending vouchers. Reason: no architect sign-off was provided for the schema/upgrade version bump in this implementation run; implement the recommended `context_key` + status-derived `active_context_key` unique key in a dedicated schema story or approved follow-up.
+
 ## Deferred from: code review of 1-5-enforce-pkr-only-gateway-eligibility (2026-06-10)
 
 - **No integration coverage of the production `getCurrencies()`→`config.json` wiring** [components/gateways/nonmerchant/kuickpay/tests/KuickPayCurrencyEligibilityTest.php] — the self-contained harness (spec Task 5.2/5.4) stubs `NonmerchantGateway` as an empty class, so the test must override `getCurrencies()` and cannot exercise the framework's `Gateway::loadConfig()`→`$this->config->currencies` path that production actually reads. `testConfigDeclaresOnlyPkr()` covers config.json's *content*, but the content→`getCurrencies()` wiring (inherited Blesta base code) is unverified by this suite. Reason: exercising it requires the absent `../tests` Blesta framework, which is out of this story's scope and spec-prohibited; the override is now documented as load-bearing (commit `96305301`). Revisit when the sibling Blesta PHPUnit suite is available.
