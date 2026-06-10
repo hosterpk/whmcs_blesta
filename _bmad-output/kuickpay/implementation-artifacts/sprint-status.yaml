@@ -107,7 +107,7 @@ development_status:
   3-5-post-safe-blesta-transactions: done
   3-6-handle-expiry-late-partial-and-overpayment-cases: done
   3-7-run-bulk-reconciliation-safety-net: done
-  3-8-verify-payment-safety-contracts: backlog
+  3-8-verify-payment-safety-contracts: in-progress
   epic-3-retrospective: optional
 
   # --- Epic 4: Admin Support and Manual Review Operations ---
