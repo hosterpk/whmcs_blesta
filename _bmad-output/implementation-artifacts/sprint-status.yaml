@@ -105,7 +105,7 @@ development_status:
   3-3-reconcile-pending-vouchers-by-single-inquiry: done
   3-4-validate-confirmed-payment-evidence: done
   3-5-post-safe-blesta-transactions: done
-  3-6-handle-expiry-late-partial-and-overpayment-cases: backlog
+  3-6-handle-expiry-late-partial-and-overpayment-cases: in-progress
   3-7-run-bulk-reconciliation-safety-net: backlog
   3-8-verify-payment-safety-contracts: backlog
   epic-3-retrospective: optional
