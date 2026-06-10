@@ -76,10 +76,10 @@ From epics.md Story 3.8 (lines 707–722), restated as testable criteria. **ACs 
   - [x] **Paid-date — assert the guarantee that HOLDS, not the one that fails.** `parseBulk` fails closed on a missing/unparseable paid date (parser:261-270, added by `e04ac212`); the **single-inquiry** path does **not** — `parseInquiry` reaches `confirmed_unposted` (parser:548-555) with no paid-date check, so a matched, amount/currency/reference-correct row with an empty/unparseable `Transaction_Date` yields `confirmed_unposted` + `date_paid = null`, and **no downstream layer (validator/reconcile) catches it** before persistence (confirmed by a full single-inquiry trace). **Do NOT assert "single-inquiry confirmed ⟹ paid date present"** — that assertion *fails* against current code and would stall this story or tempt the forbidden parser edit. Instead assert the guarantee that actually holds and is currently **uncovered**: such a row **never reaches `posted`**. Drive `KuickPayPostingService::postVoucher` with a `confirmed_unposted` voucher whose `date_paid` is null/empty/`0000-00-00` and assert `validPaidDate` (`KuickPayPostingService.php:80-82,307-316`) moves it to `manual_review` with `missing_paid_date` and creates **no** transaction (fake-driven). Note in the report that the second layer — `getPostable`'s `date_paid IS NOT NULL` filter — is DB-side and not exercisable without a live DB.
   - [x] **Record the parser asymmetry as a LOW deferred item — it is NOT a payment-safety escalation.** The single-inquiry `confirmed_unposted`-with-null-date is a latent *stuck-state* gap (the voucher never posts **and** is never surfaced as `manual_review`), not an unsafe posting — the posting layer fails closed, so no invoice is ever marked paid, so it does **not** trip §Context's "can mark an invoice paid unsafely" escalation trigger. Add it to `deferred-work.md` as LOW/latent, with the fix being to mirror the `parseBulk` `missing_paid_date` guard (parser:261-270) into `parseInquiry`'s confirmed branch — a one-block production change to be done **outside** Story 3.8. Do not make that production edit here.
 
-- [ ] **Task 4 — Confirm duplicate-posting & amount-mismatch idempotency (AC1.b/c).** Verify (don't reinvent) that these named outcomes are asserted; strengthen only if the assertion is weak:
-  - [ ] Duplicate posting: `KuickPayPostingServiceTest` already has `testAlreadyPostedVoucherIsNoOpAfterLock` (proves the no-op on a **single** call over an already-`posted` voucher). The bulk rerun-idempotency test `testRunBulkAlreadyConfirmedVoucherIsNotDemotedOnRerun` lives in **`KuickPayReconcileServiceTest.php:530`** (added with commit `b0b1d91c`) — **not** in the posting test. Confirm a re-run creates **no** second `Transactions->add()/apply()` and no second item row (`uniq_kuickpay_items_run_voucher`). The existing posting test asserts the no-op on first encounter only — if no test drives **two successive `postVoucher()` calls** and asserts the transaction-writer fake's call count stays zero across both, add that explicit re-run assertion.
-  - [ ] Mismatched amount: confirm `amount-mismatch` (single) and bulk `overpayment`/`late-partial` fixtures assert `manual_review` + `amount_mismatch` and **never** `confirmed_unposted`. The parser owns this (Invariant #6); do not move the check.
-  - [ ] Amount comparison uses normalized decimal strings / minor units, never floats (NFR13) — confirm `bill-payment-inquiry-paid-trailing-zero.xml` proves `1000.0 == 1000.00`.
+- [x] **Task 4 — Confirm duplicate-posting & amount-mismatch idempotency (AC1.b/c).** Verify (don't reinvent) that these named outcomes are asserted; strengthen only if the assertion is weak:
+  - [x] Duplicate posting: `KuickPayPostingServiceTest` already has `testAlreadyPostedVoucherIsNoOpAfterLock` (proves the no-op on a **single** call over an already-`posted` voucher). The bulk rerun-idempotency test `testRunBulkAlreadyConfirmedVoucherIsNotDemotedOnRerun` lives in **`KuickPayReconcileServiceTest.php:530`** (added with commit `b0b1d91c`) — **not** in the posting test. Confirm a re-run creates **no** second `Transactions->add()/apply()` and no second item row (`uniq_kuickpay_items_run_voucher`). The existing posting test asserts the no-op on first encounter only — if no test drives **two successive `postVoucher()` calls** and asserts the transaction-writer fake's call count stays zero across both, add that explicit re-run assertion.
+  - [x] Mismatched amount: confirm `amount-mismatch` (single) and bulk `overpayment`/`late-partial` fixtures assert `manual_review` + `amount_mismatch` and **never** `confirmed_unposted`. The parser owns this (Invariant #6); do not move the check.
+  - [x] Amount comparison uses normalized decimal strings / minor units, never floats (NFR13) — confirm `bill-payment-inquiry-paid-trailing-zero.xml` proves `1000.0 == 1000.00`.
 
 - [ ] **Task 5 — Run the full verification and write the honest report (AC2).** Execute the verification procedure (§Testing) and record results in the Dev Agent Record as the verification report:
   - [ ] Run both component suites with the external PHPUnit 8.5 runner; record exact `tests/assertions` and pass/fail.
@@ -261,12 +261,15 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 - 2026-06-11: Posting service test passed after empty-date guard: `OK (21 tests, 98 assertions)`.
 - 2026-06-11: Full gateway suite passed after Task 3: `OK (230 tests, 1227 assertions)`.
 - 2026-06-11: Full plugin suite passed after Task 3: `OK (84 tests, 579 assertions)`.
+- 2026-06-11: Posting service duplicate/idempotency test passed: `OK (22 tests, 103 assertions)`.
+- 2026-06-11: Full plugin suite passed after Task 4: `OK (85 tests, 584 assertions)`.
 
 ### Completion Notes List
 
 - Task 1: Added `docs/kuickpay/payment-safety-verification.md` with FR28 contract coverage, AC1 outcome coverage, minimum fixture gate mapping, live baseline counts, and honest unavailable-runtime notes.
 - Task 2: Added `KuickPaySecretLeakageTest` to scan every KuickPay fixture and captured reconcile/posting/issuance persisted evidence, item rows, run summaries, and audit payloads for forbidden credentials, PII, raw SOAP envelopes, and credential keys.
 - Task 3: Added a gateway fail-closed fixture wall, strengthened posting paid-date coverage for the empty-string case, and recorded the single-inquiry null-date parser asymmetry as LOW deferred work without changing production parser logic.
+- Task 4: Added a two-successive-call posting no-op assertion to prove an already-posted voucher never creates or applies a second transaction; confirmed amount mismatch and trailing-zero coverage remained parser/validator-owned.
 
 ### File List
 
@@ -283,5 +286,6 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 - 2026-06-11: Added payment-safety coverage matrix and recorded baseline component-suite counts.
 - 2026-06-11: Added automated fixture and persisted-evidence secret leakage scan.
 - 2026-06-11: Added consolidated fail-closed contract wall and paid-date posting guard coverage.
+- 2026-06-11: Strengthened duplicate-posting no-op coverage across successive posting calls.
 
 ### Review Findings

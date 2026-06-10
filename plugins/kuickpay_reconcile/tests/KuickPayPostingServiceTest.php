@@ -93,6 +93,23 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame([], $transactions->adds);
     }
 
+    public function testAlreadyPostedVoucherRemainsNoOpAcrossSuccessiveCalls()
+    {
+        $locked = $this->voucher(['status' => 'posted', 'blesta_transaction_id' => 800]);
+        $repo = new KuickPayPostingFakeVoucherRepository([$locked], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $service = $this->service($repo, $transactions);
+
+        $first = $service->postVoucher(1, $this->voucher());
+        $second = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('already_posted', $first['outcome']);
+        $this->assertSame('already_posted', $second['outcome']);
+        $this->assertSame([], $repo->edits);
+        $this->assertSame([], $transactions->adds);
+        $this->assertSame([], $transactions->applies);
+    }
+
     public function testValidationFailureMovesToManualReviewWithoutTransaction()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
