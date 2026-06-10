@@ -101,6 +101,9 @@ class Kuickpay extends NonmerchantGateway
         $this->view->set('fee_policy', $feePolicyOptions);
         $this->view->set('amount_change_policy', $paymentPolicyOptions['amount_change_policy']);
         $this->view->set('multi_invoice_policy', $paymentPolicyOptions['multi_invoice_policy']);
+        $this->view->set('underpayment_policy', $paymentPolicyOptions['underpayment_policy']);
+        $this->view->set('overpayment_policy', $paymentPolicyOptions['overpayment_policy']);
+        $this->view->set('late_payment_policy', $paymentPolicyOptions['late_payment_policy']);
         $this->view->set('voucher_password_stored', !empty($meta['voucher_password']));
         $this->view->set('inquiry_password_stored', !empty($meta['inquiry_password']));
 
@@ -124,6 +127,18 @@ class Kuickpay extends NonmerchantGateway
                 'block' => Language::_('Kuickpay.multi_invoice_policy.block', true),
                 // TODO(3.7): expose 'allow' once posting+bulk-recon land.
                 // 'allow' => Language::_('Kuickpay.multi_invoice_policy.allow', true),
+            ],
+            'underpayment_policy' => [
+                'manual_review' => Language::_('Kuickpay.underpayment_policy.manual_review', true),
+                // TODO(production-gate): widen once underpayment acceptance policy is approved.
+            ],
+            'overpayment_policy' => [
+                'manual_review' => Language::_('Kuickpay.overpayment_policy.manual_review', true),
+                // TODO(production-gate): widen once overpayment handling policy is approved.
+            ],
+            'late_payment_policy' => [
+                'manual_review' => Language::_('Kuickpay.late_payment_policy.manual_review', true),
+                // TODO(production-gate): widen once late payment acceptance policy is approved.
             ],
         ];
     }
@@ -161,6 +176,11 @@ class Kuickpay extends NonmerchantGateway
         }
         if (!isset($meta['multi_invoice_policy']) || $meta['multi_invoice_policy'] === '') {
             $meta['multi_invoice_policy'] = 'block';
+        }
+        foreach (['underpayment_policy', 'overpayment_policy', 'late_payment_policy'] as $policy) {
+            if (!isset($meta[$policy]) || $meta[$policy] === '') {
+                $meta[$policy] = 'manual_review';
+            }
         }
 
         // Trim required identifier fields so whitespace-only input is treated as empty.
@@ -289,6 +309,30 @@ class Kuickpay extends NonmerchantGateway
                     // TODO(3.7): widen to ['block', 'allow'] once posting+bulk-recon land.
                     'rule' => ['in_array', ['block']],
                     'message' => Language::_('Kuickpay.!error.multi_invoice_policy.valid', true),
+                ],
+            ],
+            'underpayment_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    // TODO(production-gate): widen once underpayment acceptance policy is approved.
+                    'rule' => ['in_array', ['manual_review']],
+                    'message' => Language::_('Kuickpay.!error.underpayment_policy.valid', true),
+                ],
+            ],
+            'overpayment_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    // TODO(production-gate): widen once overpayment handling policy is approved.
+                    'rule' => ['in_array', ['manual_review']],
+                    'message' => Language::_('Kuickpay.!error.overpayment_policy.valid', true),
+                ],
+            ],
+            'late_payment_policy' => [
+                'valid' => [
+                    'if_set' => true,
+                    // TODO(production-gate): widen once late payment acceptance policy is approved.
+                    'rule' => ['in_array', ['manual_review']],
+                    'message' => Language::_('Kuickpay.!error.late_payment_policy.valid', true),
                 ],
             ],
         ];

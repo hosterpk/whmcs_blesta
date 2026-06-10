@@ -96,6 +96,7 @@ class KuickPayReconcileService
         if ($gateway_config === null) {
             return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable'];
         }
+        $this->gatewayConfig = $gateway_config;
 
         $owner_token = $this->lockRepository->acquire($company_id, self::LOCK_NAME, self::LOCK_TTL_SECONDS);
         if ($owner_token === null) {
@@ -273,6 +274,13 @@ class KuickPayReconcileService
             }
         }
 
+        $reasons = $this->validationErrorsFromSummary($vars['diagnostic_summary']);
+        $resolved_status = $this->resolveExceptionStatus($new_status, $reasons, $this->gatewayConfig);
+        if ($resolved_status !== $new_status) {
+            $new_status = $resolved_status;
+            $vars['status'] = $resolved_status;
+        }
+
         // Story 3.4 validates confirmed evidence only. Posting and invoice mutation belong to Story 3.5.
         $this->voucherRepository->edit((int) $voucher->id, $company_id, $vars);
 
@@ -317,6 +325,33 @@ class KuickPayReconcileService
         )));
 
         return json_encode($diag);
+    }
+
+    private function validationErrorsFromSummary(string $diagnosticSummary): array
+    {
+        $diag = json_decode($diagnosticSummary, true) ?: [];
+
+        return is_array($diag['validation_errors'] ?? null) ? $diag['validation_errors'] : [];
+    }
+
+    private function resolveExceptionStatus(string $currentStatus, array $reasons, ?array $gatewayConfig): string
+    {
+        foreach (['underpayment', 'overpayment', 'late_payment'] as $reason) {
+            if (!in_array($reason, $reasons, true)) {
+                continue;
+            }
+
+            $policy = $gatewayConfig[$reason . '_policy'] ?? 'manual_review';
+
+            // TODO(production-gate): widen supported policies only after production approval.
+            if ($policy === 'manual_review') {
+                return 'manual_review';
+            }
+
+            return 'manual_review';
+        }
+
+        return $currentStatus;
     }
 
     private function paidDate(KuickPayEvidence $evidence): ?string
@@ -386,6 +421,9 @@ class KuickPayReconcileService
             'inquiry_password' => $meta['inquiry_password'] ?? '',
             'inquiry_same_as_voucher' => $meta['inquiry_same_as_voucher'] ?? 'false',
             'logging_enabled' => $meta['logging_enabled'] ?? 'false',
+            'underpayment_policy' => $meta['underpayment_policy'] ?? 'manual_review',
+            'overpayment_policy' => $meta['overpayment_policy'] ?? 'manual_review',
+            'late_payment_policy' => $meta['late_payment_policy'] ?? 'manual_review',
         ];
     }
 

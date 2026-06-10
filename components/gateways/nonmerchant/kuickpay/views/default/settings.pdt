@@ -217,6 +217,36 @@
             $this->Form->fieldSelect('multi_invoice_policy', (isset($multi_invoice_policy) ? $multi_invoice_policy : []), ($meta['multi_invoice_policy'] ?? 'block'), ['id' => 'multi_invoice_policy', 'class' => 'form-select']);
             ?>
         </div>
+        <div class="mb-3">
+            <label for="underpayment_policy" class="form-label">
+                <?php $this->_('Kuickpay.underpayment_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.underpayment_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('underpayment_policy', (isset($underpayment_policy) ? $underpayment_policy : []), ($meta['underpayment_policy'] ?? 'manual_review'), ['id' => 'underpayment_policy', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="overpayment_policy" class="form-label">
+                <?php $this->_('Kuickpay.overpayment_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.overpayment_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('overpayment_policy', (isset($overpayment_policy) ? $overpayment_policy : []), ($meta['overpayment_policy'] ?? 'manual_review'), ['id' => 'overpayment_policy', 'class' => 'form-select']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="late_payment_policy" class="form-label">
+                <?php $this->_('Kuickpay.late_payment_policy'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.late_payment_policy_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldSelect('late_payment_policy', (isset($late_payment_policy) ? $late_payment_policy : []), ($meta['late_payment_policy'] ?? 'manual_review'), ['id' => 'late_payment_policy', 'class' => 'form-select']);
+            ?>
+        </div>
     </div>
 
     <div class="title_row">

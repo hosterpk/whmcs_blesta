@@ -70,6 +70,65 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(['invoice_mismatch'], $diagnostic['validation_errors']);
     }
 
+    public function testUnderpaymentEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('ambiguous/bill-payment-inquiry-amount-mismatch.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$this->voucher()]);
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayReconcileFakeEvidenceValidator(true);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $service->runCron(1);
+
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertArrayNotHasKey('amount', $repo->edits[0]);
+        $this->assertArrayNotHasKey('date_paid', $repo->edits[0]);
+        $this->assertArrayNotHasKey('kuickpay_reference', $repo->edits[0]);
+        $this->assertFalse($validator->called);
+        $this->assertContains('evidence.rejected', array_column($audit->events, 0));
+
+        $diagnostic = json_decode($repo->edits[0]['diagnostic_summary'], true);
+        $this->assertSame(['underpayment'], $diagnostic['validation_errors']);
+    }
+
+    public function testLatePaymentEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields()
+    {
+        $voucher = $this->voucher(['date_expires' => '2026-06-08']);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $service->runCron(1);
+
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertArrayNotHasKey('amount', $repo->edits[0]);
+        $this->assertArrayNotHasKey('date_paid', $repo->edits[0]);
+        $this->assertArrayNotHasKey('kuickpay_reference', $repo->edits[0]);
+        $this->assertContains('evidence.rejected', array_column($audit->events, 0));
+
+        $diagnostic = json_decode($repo->edits[0]['diagnostic_summary'], true);
+        $this->assertSame(['late_payment'], $diagnostic['validation_errors']);
+    }
+
     public function testMissingFreshVoucherFailsClosedWithoutCallingValidator()
     {
         $voucher = $this->voucher();

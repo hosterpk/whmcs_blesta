@@ -1147,6 +1147,9 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
             [
                 'amount_change_policy' => ['block' => 'Kuickpay.amount_change_policy.block'],
                 'multi_invoice_policy' => ['block' => 'Kuickpay.multi_invoice_policy.block'],
+                'underpayment_policy' => ['manual_review' => 'Kuickpay.underpayment_policy.manual_review'],
+                'overpayment_policy' => ['manual_review' => 'Kuickpay.overpayment_policy.manual_review'],
+                'late_payment_policy' => ['manual_review' => 'Kuickpay.late_payment_policy.manual_review'],
             ],
             $gateway->exposePaymentPolicyOptions()
         );
@@ -1168,6 +1171,18 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
             'Kuickpay.multi_invoice_policy.block',
             'Kuickpay.multi_invoice_policy.allow',
             'Kuickpay.!error.multi_invoice_policy.valid',
+            'Kuickpay.underpayment_policy',
+            'Kuickpay.underpayment_policy_note',
+            'Kuickpay.underpayment_policy.manual_review',
+            'Kuickpay.!error.underpayment_policy.valid',
+            'Kuickpay.overpayment_policy',
+            'Kuickpay.overpayment_policy_note',
+            'Kuickpay.overpayment_policy.manual_review',
+            'Kuickpay.!error.overpayment_policy.valid',
+            'Kuickpay.late_payment_policy',
+            'Kuickpay.late_payment_policy_note',
+            'Kuickpay.late_payment_policy.manual_review',
+            'Kuickpay.!error.late_payment_policy.valid',
         ] as $key) {
             $this->assertArrayHasKey($key, $lang);
             $this->assertNotSame('', $lang[$key]);
