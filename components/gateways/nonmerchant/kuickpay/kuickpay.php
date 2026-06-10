@@ -653,7 +653,18 @@ class Kuickpay extends NonmerchantGateway
                 $decision = $this->reloadVoucherDecision($latest);
 
                 if ($decision === 'display') {
-                    $voucher = $this->voucherRowToView($latest);
+                    $display = $this->displayVoucherForContext(
+                        $latest,
+                        $context,
+                        $contact_info,
+                        $meta,
+                        $service,
+                        $repository
+                    );
+                    $voucher = $display['voucher'];
+                    if (!empty($display['process_notice'])) {
+                        $this->view->set('process_notice', $display['process_notice']);
+                    }
                 } elseif ($decision === 'block') {
                     $voucher = null;
                 } else {
@@ -850,6 +861,65 @@ class Kuickpay extends NonmerchantGateway
         }
 
         return 'block';
+    }
+
+    /**
+     * Applies the amount-change gate to an already-issued display candidate.
+     *
+     * @param mixed $latest Latest voucher row
+     * @param array $context Voucher reference context
+     * @param array $contactInfo Contact data passed by Blesta
+     * @param array $meta Gateway settings
+     * @param mixed $service Voucher reference service
+     * @param mixed $repository Voucher repository
+     * @return array Display result with voucher and process_notice keys
+     */
+    protected function displayVoucherForContext(
+        $latest,
+        array $context,
+        array $contactInfo,
+        array $meta,
+        $service,
+        $repository
+    ): array {
+        $voucherFlat = $this->voucherRowToView($latest);
+        if (($meta['multi_invoice_policy'] ?? 'block') === 'allow') {
+            $withInvoices = $repository->getWithInvoices((int) ($latest->id ?? 0));
+            if (!empty($withInvoices['invoices'])) {
+                $voucherFlat['invoices'] = $withInvoices['invoices'];
+            }
+        }
+
+        if ($service->requestMatchesVoucher($voucherFlat, $context['amount'], $context['invoice_amounts'])) {
+            return ['voucher' => $this->voucherRowToView($latest), 'process_notice' => null];
+        }
+
+        if (($meta['amount_change_policy'] ?? 'block') !== 'replace') {
+            return ['voucher' => null, 'process_notice' => 'amount_changed'];
+        }
+
+        $retired = $service->retireVoucher(
+            (int) ($latest->id ?? 0),
+            (int) ($context['company_id'] ?? 0),
+            'amount_changed',
+            [
+                'old_amount' => (string) ($latest->amount ?? ''),
+                'new_amount' => (string) ($context['amount'] ?? ''),
+            ]
+        );
+        if (!$retired) {
+            return ['voucher' => null, 'process_notice' => 'amount_changed'];
+        }
+
+        $voucher = $service->getOrCreateForInvoiceContext($context);
+        if ($voucher !== null) {
+            $voucher = $this->issueVoucherIfNeeded($voucher, $contactInfo, $meta);
+        }
+
+        return [
+            'voucher' => $voucher,
+            'process_notice' => $voucher === null ? 'amount_changed' : null,
+        ];
     }
 
     /**

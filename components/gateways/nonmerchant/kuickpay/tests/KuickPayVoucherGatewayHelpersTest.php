@@ -38,6 +38,7 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
     public $fakeSoapClient;
     public $fakeIssuanceService;
     public $fakeVoucherRepository;
+    public $fakeVoucherReferenceService;
 
     public function exposePaymentPolicyOptions(): array
     {
@@ -108,6 +109,17 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->issueVoucherIfNeeded($voucher, $contactInfo, $meta);
     }
 
+    public function exposeDisplayVoucherForContext(
+        $latest,
+        array $context,
+        array $contactInfo,
+        array $meta,
+        $service,
+        $repository
+    ): array {
+        return $this->displayVoucherForContext($latest, $context, $contactInfo, $meta, $service, $repository);
+    }
+
     protected function log($url, $data = null, $direction = 'input', $success = false)
     {
         $this->logs[] = compact('url', 'data', 'direction', 'success');
@@ -128,6 +140,11 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
     protected function getVoucherRepository()
     {
         return $this->fakeVoucherRepository;
+    }
+
+    protected function getVoucherReferenceService()
+    {
+        return $this->fakeVoucherReferenceService;
     }
 }
 
@@ -197,6 +214,7 @@ class KuickPayVoucherGatewayFakeVoucherRepository
 {
     public array $edits = [];
     public $latest;
+    public $withInvoices;
     public bool $throwOnLatest = false;
 
     public function edit(int $voucher_id, int $company_id, array $vars): void
@@ -211,6 +229,53 @@ class KuickPayVoucherGatewayFakeVoucherRepository
         }
 
         return $this->latest;
+    }
+
+    public function getWithInvoices(int $voucher_id)
+    {
+        return $this->withInvoices;
+    }
+}
+
+class KuickPayVoucherGatewayFakeReferenceService
+{
+    public bool $matches = true;
+    public bool $retireResult = true;
+    public ?array $createdVoucher = null;
+    public array $matchCalls = [];
+    public array $retireCalls = [];
+    public int $createCalls = 0;
+    private $lastError;
+
+    public function __construct($lastError = null)
+    {
+        $this->lastError = $lastError;
+    }
+
+    public function requestMatchesVoucher(array $voucherFlat, string $contextAmount, array $contextInvoiceAmounts): bool
+    {
+        $this->matchCalls[] = compact('voucherFlat', 'contextAmount', 'contextInvoiceAmounts');
+
+        return $this->matches;
+    }
+
+    public function retireVoucher(int $voucherId, int $companyId, string $reason, array $auditPayload = []): bool
+    {
+        $this->retireCalls[] = compact('voucherId', 'companyId', 'reason', 'auditPayload');
+
+        return $this->retireResult;
+    }
+
+    public function getOrCreateForInvoiceContext(array $context): ?array
+    {
+        $this->createCalls++;
+
+        return $this->createdVoucher;
+    }
+
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
     }
 }
 
@@ -583,6 +648,113 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame([], $gateway->fakeIssuanceService->records);
     }
 
+    public function testDisplayVoucherForContextShowsMatchingIssuedVoucher()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService();
+        $repository = new KuickPayVoucherGatewayFakeVoucherRepository();
+        $latest = (object) $this->voucher(['kuickpay_reference' => 'KP-ISSUED-123']);
+
+        $result = $gateway->exposeDisplayVoucherForContext(
+            $latest,
+            $this->voucherContext(),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'block', 'multi_invoice_policy' => 'block'],
+            $service,
+            $repository
+        );
+
+        $this->assertSame('KP-ISSUED-123', $result['voucher']['kuickpay_reference']);
+        $this->assertNull($result['process_notice']);
+        $this->assertCount(1, $service->matchCalls);
+        $this->assertSame([], $service->retireCalls);
+        $this->assertSame(0, $service->createCalls);
+    }
+
+    public function testDisplayVoucherForContextBlocksChangedAmount()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService();
+        $service->matches = false;
+        $repository = new KuickPayVoucherGatewayFakeVoucherRepository();
+
+        $result = $gateway->exposeDisplayVoucherForContext(
+            (object) $this->voucher(['kuickpay_reference' => 'KP-ISSUED-123']),
+            $this->voucherContext(['amount' => '1200.00']),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'block', 'multi_invoice_policy' => 'block'],
+            $service,
+            $repository
+        );
+
+        $this->assertNull($result['voucher']);
+        $this->assertSame('amount_changed', $result['process_notice']);
+        $this->assertSame([], $service->retireCalls);
+        $this->assertSame(0, $service->createCalls);
+    }
+
+    public function testDisplayVoucherForContextRetiresAndReplacesChangedAmount()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService();
+        $service->matches = false;
+        $service->createdVoucher = $this->voucher([
+            'id' => 26,
+            'amount' => '1200.00',
+            'kuickpay_reference' => 'KP-NEW-123',
+        ]);
+        $repository = new KuickPayVoucherGatewayFakeVoucherRepository();
+
+        $result = $gateway->exposeDisplayVoucherForContext(
+            (object) $this->voucher(['kuickpay_reference' => 'KP-OLD-123']),
+            $this->voucherContext(['amount' => '1200.00']),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'replace', 'multi_invoice_policy' => 'block'],
+            $service,
+            $repository
+        );
+
+        $this->assertSame('KP-NEW-123', $result['voucher']['kuickpay_reference']);
+        $this->assertNull($result['process_notice']);
+        $this->assertSame(1, $service->createCalls);
+        $this->assertSame(25, $service->retireCalls[0]['voucherId']);
+        $this->assertSame(1, $service->retireCalls[0]['companyId']);
+        $this->assertSame('amount_changed', $service->retireCalls[0]['reason']);
+        $this->assertSame('1500.00', $service->retireCalls[0]['auditPayload']['old_amount']);
+        $this->assertSame('1200.00', $service->retireCalls[0]['auditPayload']['new_amount']);
+    }
+
+    public function testDisplayVoucherForContextLoadsLinksWhenMultiInvoiceAllowed()
+    {
+        $gateway = $this->gateway();
+        $service = new KuickPayVoucherGatewayFakeReferenceService();
+        $repository = new KuickPayVoucherGatewayFakeVoucherRepository();
+        $latest = (object) $this->voucher(['kuickpay_reference' => 'KP-ISSUED-123']);
+        $repository->withInvoices = [
+            'voucher' => $latest,
+            'invoices' => [
+                (object) ['invoice_id' => 55, 'amount' => '1000.00'],
+                (object) ['invoice_id' => 56, 'amount' => '500.00'],
+            ],
+        ];
+
+        $gateway->exposeDisplayVoucherForContext(
+            $latest,
+            $this->voucherContext([
+                'invoice_amounts' => [
+                    ['id' => 55, 'amount' => '1000.00'],
+                    ['id' => 56, 'amount' => '500.00'],
+                ],
+            ]),
+            $this->contactInfo(),
+            ['amount_change_policy' => 'block', 'multi_invoice_policy' => 'allow'],
+            $service,
+            $repository
+        );
+
+        $this->assertSame($repository->withInvoices['invoices'], $service->matchCalls[0]['voucherFlat']['invoices']);
+    }
+
     public function testIssueVoucherIfNeededCallsSoapParsesAndPersistsEvidence()
     {
         $gateway = $this->gateway();
@@ -729,9 +901,12 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         require __DIR__ . '/../language/en_us/kuickpay.php';
 
         $this->assertArrayHasKey('Kuickpay.process.retry_safe', $lang);
+        $this->assertArrayHasKey('Kuickpay.process.amount_changed', $lang);
         $this->assertArrayHasKey('Kuickpay.process.multi_invoice_unsupported', $lang);
         $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.retry_safe']);
         $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.retry_safe']);
+        $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.amount_changed']);
+        $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.amount_changed']);
         $this->assertStringNotContainsString('SOAP', $lang['Kuickpay.process.multi_invoice_unsupported']);
         $this->assertStringNotContainsString('error_class', $lang['Kuickpay.process.multi_invoice_unsupported']);
     }
@@ -772,5 +947,14 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
             'company' => '',
             'state' => ['code' => 'SD'],
         ];
+    }
+
+    private function voucherContext(array $overrides = []): array
+    {
+        return array_merge([
+            'company_id' => 1,
+            'amount' => '1500.00',
+            'invoice_amounts' => [['id' => 55, 'amount' => '1500.00']],
+        ], $overrides);
     }
 }
