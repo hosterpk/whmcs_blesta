@@ -193,6 +193,54 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Fetches an active voucher with a confirmed KuickPay reference.
+     *
+     * @param string $reference The KuickPay transaction reference
+     * @param int $company_id The company ID
+     * @param int $exclude_voucher_id Voucher ID to exclude
+     * @return mixed The voucher row, or false when absent
+     */
+    public function findActiveByKuickpayReference(string $reference, int $company_id, int $exclude_voucher_id = 0)
+    {
+        return $this->Record->select()
+            ->from('kuickpay_vouchers')
+            ->where('kuickpay_reference', '=', $reference)
+            ->where('company_id', '=', $company_id)
+            ->where('status', 'in', ['confirmed_unposted', 'posted'])
+            ->where('id', '!=', $exclude_voucher_id)
+            ->where('kuickpay_reference', '!=', null)
+            ->where('kuickpay_reference', '!=', '')
+            ->fetch();
+    }
+
+    /**
+     * Fetches an active voucher linked to an invoice.
+     *
+     * @param int $invoice_id The invoice ID
+     * @param int $company_id The company ID
+     * @param int $exclude_voucher_id Voucher ID to exclude
+     * @return mixed The voucher row, or false when absent
+     */
+    public function findActiveByInvoiceId(int $invoice_id, int $company_id, int $exclude_voucher_id = 0)
+    {
+        return $this->Record->select(['kuickpay_vouchers.*'])
+            ->from('kuickpay_vouchers')
+            ->innerJoin(
+                'kuickpay_voucher_invoices',
+                'kuickpay_voucher_invoices.voucher_id',
+                '=',
+                'kuickpay_vouchers.id',
+                false
+            )
+            ->where('kuickpay_voucher_invoices.invoice_id', '=', $invoice_id)
+            ->where('kuickpay_vouchers.company_id', '=', $company_id)
+            ->where('kuickpay_vouchers.status', 'in', ['confirmed_unposted', 'posted'])
+            ->where('kuickpay_vouchers.id', '!=', $exclude_voucher_id)
+            ->limit(1)
+            ->fetch();
+    }
+
+    /**
      * Fetches vouchers matching optional filters.
      *
      * @param array $filters Supported filters: status, client_id, company_id

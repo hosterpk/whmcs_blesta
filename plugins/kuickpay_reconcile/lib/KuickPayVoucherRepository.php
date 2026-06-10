@@ -133,6 +133,43 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches another active voucher holding the same KuickPay reference.
+     *
+     * @param string $reference The confirmed KuickPay transaction reference
+     * @param int $company_id The company ID
+     * @param int $excludeVoucherId Voucher ID to exclude from duplicate checks
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function findActiveByKuickpayReference(
+        string $reference,
+        int $company_id,
+        int $excludeVoucherId = 0
+    ): ?stdClass {
+        $voucher = $this->KuickpayVouchers->findActiveByKuickpayReference(
+            $reference,
+            $company_id,
+            $excludeVoucherId
+        );
+
+        return $voucher ?: null;
+    }
+
+    /**
+     * Fetches another active voucher linked to an invoice.
+     *
+     * @param int $invoice_id The invoice ID
+     * @param int $company_id The company ID
+     * @param int $excludeVoucherId Voucher ID to exclude from sibling checks
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function findActiveByInvoiceId(int $invoice_id, int $company_id, int $excludeVoucherId = 0): ?stdClass
+    {
+        $voucher = $this->KuickpayVouchers->findActiveByInvoiceId($invoice_id, $company_id, $excludeVoucherId);
+
+        return $voucher ?: null;
+    }
+
+    /**
      * Fetches vouchers eligible for bounded single-inquiry reconciliation.
      *
      * @param int $company_id The company ID
