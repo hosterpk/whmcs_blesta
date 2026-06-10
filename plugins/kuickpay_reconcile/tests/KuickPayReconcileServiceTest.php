@@ -12,8 +12,13 @@ class KuickPayReconcileServiceTest extends TestCase
         $client = new KuickPayReconcileFakeClient([
             $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
         ]);
-        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher]);
-        $service = $this->service(['voucher_repository' => $repo, 'client' => $client]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $validator = new KuickPayReconcileFakeEvidenceValidator(true);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
 
         $result = $service->runCron(1);
 
@@ -21,6 +26,8 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(['RegistrationNumber' => 'REG-0000001'], $client->requests[0]);
         $this->assertArrayNotHasKey('expected_consumer_number', $service->buildParserContext($voucher));
         $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertSame($voucher, $validator->voucher);
+        $this->assertCount(1, $validator->invoiceLinks);
         $this->assertSame('1000.00', $repo->edits[0]['amount']);
         $this->assertSame('2026-06-09 00:00:00', $repo->edits[0]['date_paid']);
         $this->assertSame('KP-REF-PAID', $repo->edits[0]['kuickpay_reference']);
@@ -29,6 +36,37 @@ class KuickPayReconcileServiceTest extends TestCase
             'BillPaymentInquiryResult',
             $repo->edits[0]['diagnostic_summary']
         );
+    }
+
+    public function testConfirmedEvidenceRejectedByValidatorMovesToManualReviewWithoutPaymentFields()
+    {
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => new KuickPayReconcileFakeEvidenceValidator(false, ['invoice_mismatch']),
+        ]);
+
+        $service->runCron(1);
+
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertArrayNotHasKey('amount', $repo->edits[0]);
+        $this->assertArrayNotHasKey('date_paid', $repo->edits[0]);
+        $this->assertArrayNotHasKey('kuickpay_reference', $repo->edits[0]);
+        $this->assertSame('manual_review', $items->items[0]['new_status']);
+        $this->assertContains('evidence.rejected', array_column($audit->events, 0));
+
+        $diagnostic = json_decode($repo->edits[0]['diagnostic_summary'], true);
+        $this->assertSame('confirmed_unposted', $diagnostic['status']);
+        $this->assertSame(['invoice_mismatch'], $diagnostic['validation_errors']);
     }
 
     /**
@@ -154,6 +192,7 @@ class KuickPayReconcileServiceTest extends TestCase
             'lock_repository' => $overrides['lock_repository'] ?? new KuickPayReconcileFakeLockRepository(),
             'audit_service' => $overrides['audit_service'] ?? new KuickPayReconcileFakeAuditService(),
             'parser' => new KuickPayResponseParser(),
+            'evidence_validator' => $overrides['evidence_validator'] ?? new KuickPayReconcileFakeEvidenceValidator(true),
             'gateway_config' => ['reconciliation_enabled' => 'true'],
             'client_factory' => function () use ($client) {
                 return $client;
@@ -193,6 +232,15 @@ class KuickPayReconcileServiceTest extends TestCase
 
         return trim(html_entity_decode($matches[1]));
     }
+
+    private function invoiceLink(array $overrides = [])
+    {
+        return (object) array_merge([
+            'voucher_id' => 1,
+            'invoice_id' => 55,
+            'amount' => '1000.00',
+        ], $overrides);
+    }
 }
 
 class KuickPayReconcileFakeVoucherRepository
@@ -200,10 +248,12 @@ class KuickPayReconcileFakeVoucherRepository
     public array $edits = [];
     public int $lastAfterId = 0;
     private array $vouchers;
+    private array $invoiceLinks;
 
-    public function __construct(array $vouchers)
+    public function __construct(array $vouchers, array $invoiceLinks = [])
     {
         $this->vouchers = $vouchers;
+        $this->invoiceLinks = $invoiceLinks;
     }
 
     public function getReconcilable(int $company_id, int $limit, int $afterId = 0, string $minRecheckBefore = null): array
@@ -217,6 +267,39 @@ class KuickPayReconcileFakeVoucherRepository
     {
         $vars['company_id_scope'] = $company_id;
         $this->edits[] = $vars;
+    }
+
+    public function getWithInvoices(int $voucher_id): ?array
+    {
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id) {
+                return ['voucher' => $voucher, 'invoices' => $this->invoiceLinks];
+            }
+        }
+
+        return null;
+    }
+}
+
+class KuickPayReconcileFakeEvidenceValidator
+{
+    public ?stdClass $voucher = null;
+    public array $invoiceLinks = [];
+    private bool $valid;
+    private array $reasons;
+
+    public function __construct(bool $valid, array $reasons = [])
+    {
+        $this->valid = $valid;
+        $this->reasons = $reasons;
+    }
+
+    public function validate(stdClass $voucher, array $invoiceLinks, KuickPayEvidence $evidence): KuickPayValidationResult
+    {
+        $this->voucher = $voucher;
+        $this->invoiceLinks = $invoiceLinks;
+
+        return new KuickPayValidationResult($this->valid, $this->reasons);
     }
 }
 

@@ -21,6 +21,7 @@ class KuickPayReconcileService
     private $lockRepository;
     private $auditService;
     private $parser;
+    private $evidenceValidator;
     private $clientFactory;
     private $gatewayConfig;
 
@@ -36,6 +37,7 @@ class KuickPayReconcileService
         $this->lockRepository = $dependencies['lock_repository'] ?? new KuickPayReconcileLockRepository();
         $this->auditService = $dependencies['audit_service'] ?? new KuickPayAuditService();
         $this->parser = $dependencies['parser'] ?? new KuickPayResponseParser();
+        $this->evidenceValidator = $dependencies['evidence_validator'] ?? new KuickPayEvidenceValidator();
         $this->clientFactory = $dependencies['client_factory'] ?? null;
         $this->gatewayConfig = $dependencies['gateway_config'] ?? null;
     }
@@ -195,12 +197,40 @@ class KuickPayReconcileService
         }
 
         if ($evidence->isConfirmedUnposted()) {
-            $vars['amount'] = $evidence->amount();
-            $vars['date_paid'] = $this->paidDate($evidence);
-            $vars['kuickpay_reference'] = $evidence->reference();
+            $freshData = $this->voucherRepository->getWithInvoices((int) $voucher->id);
+            $freshVoucher = $freshData['voucher'] ?? null;
+            $invoiceLinks = $freshData['invoices'] ?? [];
+
+            if (!$freshData
+                || !$freshVoucher
+                || (int) ($freshVoucher->company_id ?? 0) !== $company_id
+                || !in_array((string) ($freshVoucher->status ?? ''), ['pending', 'retry'], true)
+            ) {
+                $new_status = 'manual_review';
+                $vars['status'] = 'manual_review';
+                $vars['diagnostic_summary'] = $this->mergeValidationErrors(
+                    $vars['diagnostic_summary'],
+                    ['stale_voucher']
+                );
+            } else {
+                $result = $this->evidenceValidator->validate($freshVoucher, $invoiceLinks, $evidence);
+
+                if ($result->isValid()) {
+                    $vars['amount'] = $evidence->amount();
+                    $vars['date_paid'] = $this->paidDate($evidence);
+                    $vars['kuickpay_reference'] = $evidence->reference();
+                } else {
+                    $new_status = 'manual_review';
+                    $vars['status'] = 'manual_review';
+                    $vars['diagnostic_summary'] = $this->mergeValidationErrors(
+                        $vars['diagnostic_summary'],
+                        $result->reasons()
+                    );
+                }
+            }
         }
 
-        // Story 3.3 stops at confirmed_unposted evidence. Posting and invoice mutation belong to Stories 3.4/3.5.
+        // Story 3.4 validates confirmed evidence only. Posting and invoice mutation belong to Story 3.5.
         $this->voucherRepository->edit((int) $voucher->id, $company_id, $vars);
 
         return $new_status;
@@ -233,6 +263,17 @@ class KuickPayReconcileService
             'redacted_trace_id' => $evidence->redactedTraceId(),
             'validation_errors' => $evidence->validationErrors(),
         ]);
+    }
+
+    private function mergeValidationErrors(string $diagnosticSummary, array $reasons): string
+    {
+        $diag = json_decode($diagnosticSummary, true) ?: [];
+        $diag['validation_errors'] = array_values(array_unique(array_merge(
+            $diag['validation_errors'] ?? [],
+            $reasons
+        )));
+
+        return json_encode($diag);
     }
 
     private function paidDate(KuickPayEvidence $evidence): ?string
@@ -367,6 +408,9 @@ class KuickPayReconcileService
         Loader::load($plugin_dir . DS . 'KuickPayReconcileLockRepository.php');
         Loader::load($plugin_dir . DS . 'KuickPayAuditRepository.php');
         Loader::load($plugin_dir . DS . 'KuickPayAuditService.php');
+        Loader::load($plugin_dir . DS . 'KuickPayValidationResult.php');
+        Loader::load($plugin_dir . DS . 'KuickPayInvoiceReader.php');
+        Loader::load($plugin_dir . DS . 'KuickPayEvidenceValidator.php');
         Loader::load($gateway_dir . DS . 'KuickPayRedactor.php');
         Loader::load($gateway_dir . DS . 'KuickPayEvidence.php');
         Loader::load($gateway_dir . DS . 'KuickPayResponseParser.php');
