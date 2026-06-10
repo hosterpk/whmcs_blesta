@@ -672,6 +672,11 @@ class Kuickpay extends NonmerchantGateway
 
                     if ($voucher !== null) {
                         $voucher = $this->issueVoucherIfNeeded($voucher, $contact_info, $meta);
+                    } elseif (
+                        method_exists($service, 'getLastError')
+                        && $service->getLastError() === 'amount_changed'
+                    ) {
+                        $this->view->set('process_notice', 'amount_changed');
                     }
                 }
             }
@@ -747,6 +752,8 @@ class Kuickpay extends NonmerchantGateway
             'institution_id' => $meta['institution_id'] ?? '',
             'registration_number_pattern' => $meta['registration_number_pattern'] ?? '',
             'consumer_number_pattern' => $meta['consumer_number_pattern'] ?? '',
+            'amount_change_policy' => $meta['amount_change_policy'] ?? 'block',
+            'multi_invoice_policy' => $meta['multi_invoice_policy'] ?? 'block',
             'due_date_offset_days' => (int) ($meta['due_date_offset_days'] ?? 0),
             'expiry_date_offset_days' => (int) ($meta['expiry_date_offset_days'] ?? 0),
         ];

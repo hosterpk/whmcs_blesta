@@ -352,6 +352,40 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame('1500.00', $context['amount']);
     }
 
+    public function testVoucherReferenceContextIncludesPaymentPolicies()
+    {
+        $gateway = $this->gateway();
+        $gateway->setCurrency('PKR');
+        $context = $gateway->exposeBuildVoucherReferenceContext(
+            ['client_id' => 3],
+            '1,500',
+            [['id' => 55, 'amount' => '1,500']],
+            [
+                'amount_change_policy' => 'replace',
+                'multi_invoice_policy' => 'allow',
+            ]
+        );
+
+        $this->assertSame('replace', $context['amount_change_policy']);
+        $this->assertSame('allow', $context['multi_invoice_policy']);
+    }
+
+    public function testVoucherReferenceContextDefaultsPaymentPoliciesToBlock()
+    {
+        $gateway = $this->gateway();
+        $gateway->setCurrency('PKR');
+        $context = $gateway->exposeBuildVoucherReferenceContext(
+            ['client_id' => 3],
+            '1,500',
+            [['id' => 55, 'amount' => '1,500']],
+            []
+        );
+
+        $this->assertSame('block', $context['amount_change_policy']);
+        $this->assertSame('block', $context['multi_invoice_policy']);
+    }
+
+
     public function testReferenceGenerationFailureLogsSanitizedPayload()
     {
         $gateway = $this->gateway();

@@ -71,7 +71,32 @@ class KuickPayVoucherReferenceService
             $company_id = (int) ($context['company_id'] ?? 0);
             $pending = $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
             if ($pending) {
-                return $this->flatten($this->repository->getWithInvoices((int) $pending->id));
+                $pendingFlat = $this->flatten($this->repository->getWithInvoices((int) $pending->id));
+                if ($pendingFlat === null) {
+                    return null;
+                }
+
+                if ($this->requestMatchesVoucher(
+                    $pendingFlat,
+                    (string) ($context['amount'] ?? ''),
+                    (array) ($context['invoice_amounts'] ?? [])
+                )) {
+                    return $pendingFlat;
+                }
+
+                if (($context['amount_change_policy'] ?? 'block') !== 'replace') {
+                    $this->lastError = 'amount_changed';
+                    return null;
+                }
+
+                $retired = $this->retireVoucher((int) $pendingFlat['id'], $company_id, 'amount_changed', [
+                    'old_amount' => (string) ($pendingFlat['amount'] ?? ''),
+                    'new_amount' => (string) ($context['amount'] ?? ''),
+                ]);
+                if (!$retired) {
+                    $this->lastError = 'amount_changed';
+                    return null;
+                }
             }
 
             $references = null;

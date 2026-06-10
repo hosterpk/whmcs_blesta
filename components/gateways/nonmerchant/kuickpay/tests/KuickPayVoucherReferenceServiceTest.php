@@ -158,6 +158,62 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame([['invoice_id' => 55, 'amount' => '1500.00']], $voucher['invoices']);
     }
 
+    public function testReuseBlocksPendingVoucherWhenAmountChanged()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->pendingVoucher = $this->voucherRow(25);
+        $repository->records[25] = [
+            'voucher' => $repository->pendingVoucher,
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+
+        $service = new KuickPayVoucherReferenceService($repository);
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'amount' => '1200.00',
+            'invoice_amounts' => [['id' => 55, 'amount' => '1200.00']],
+            'amount_change_policy' => 'block',
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame('amount_changed', $service->getLastError());
+        $this->assertSame(0, $repository->createCalls);
+        $this->assertSame([], $repository->edits);
+    }
+
+    public function testReuseReplacesPendingVoucherWhenAmountChanged()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $audit = new KuickPayVoucherReferenceServiceFakeAuditService();
+        $repository->pendingVoucher = $this->voucherRow(25);
+        $repository->records[25] = [
+            'voucher' => $repository->pendingVoucher,
+            'invoices' => [$this->invoiceRow(55, '1500.00')],
+        ];
+        $repository->records[101] = [
+            'voucher' => $this->voucherRow(101, '123455', 'KP123455'),
+            'invoices' => [$this->invoiceRow(55, '1200.00')],
+        ];
+
+        $service = new TestableKuickPayVoucherReferenceService($repository, $audit);
+        $service->randomQueue = [1234];
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'amount' => '1200.00',
+            'invoice_amounts' => [['id' => 55, 'amount' => '1200.00']],
+            'amount_change_policy' => 'replace',
+        ]));
+
+        $this->assertSame(101, $voucher['id']);
+        $this->assertSame(1, $repository->createCalls);
+        $this->assertSame([[
+            'voucher_id' => 25,
+            'company_id' => 1,
+            'vars' => ['status' => 'cancelled'],
+        ]], $repository->edits);
+        $this->assertSame('voucher.replaced', $audit->events[0]['event']);
+        $this->assertSame('1500.00', $audit->events[0]['context']['payload']['old_amount']);
+        $this->assertSame('1200.00', $audit->events[0]['context']['payload']['new_amount']);
+    }
+
     public function testRequestMatchesVoucherComparesAmountsAsCanonicalStrings()
     {
         $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
