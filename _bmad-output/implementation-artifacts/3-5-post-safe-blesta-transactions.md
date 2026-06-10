@@ -1,6 +1,10 @@
+---
+baseline_commit: 91819026ea0658080eb433c9de38d347978895ff
+---
+
 # Story 3.5: Post Safe Blesta Transactions
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
