@@ -184,6 +184,7 @@ class KuickPayResponseParser
         libxml_use_internal_errors($previous);
 
         $evidence = [];
+        $expectedMap = $this->bulkExpectedMap($context);
         // Drop empty expected consumer numbers: a blank value must never match a blank
         // Consumer_Number row (in_array('', [''], true) === true) and confirm a payment. An
         // absent/empty expected set leaves every row unmatched, per the fail-closed contract.
@@ -197,7 +198,10 @@ class KuickPayResponseParser
             : [];
 
         foreach ($rows as $row) {
-            $matched = in_array($row['consumer_number'], $expectedConsumers, true);
+            $matched = $row['consumer_number'] !== '' && (
+                array_key_exists($row['consumer_number'], $expectedMap)
+                || in_array($row['consumer_number'], $expectedConsumers, true)
+            );
             if (!$matched) {
                 $evidence[] = $this->bulkEvidence(
                     self::STATUS_MANUAL_REVIEW,
@@ -211,12 +215,17 @@ class KuickPayResponseParser
 
             $errors = [];
             $errorClass = null;
-            $expectedAmount = isset($context['expected_amount'])
-                ? $this->normalizeAmount((string) $context['expected_amount'])
-                : null;
-            $expectedCurrency = isset($context['expected_currency'])
-                ? strtoupper(trim((string) $context['expected_currency']))
-                : 'PKR';
+            $expected = $expectedMap[$row['consumer_number']] ?? [];
+            $expectedAmount = array_key_exists('amount', $expected)
+                ? $this->normalizeAmount((string) $expected['amount'])
+                : (isset($context['expected_amount'])
+                    ? $this->normalizeAmount((string) $context['expected_amount'])
+                    : null);
+            $expectedCurrency = array_key_exists('currency', $expected)
+                ? strtoupper(trim((string) $expected['currency']))
+                : (isset($context['expected_currency'])
+                    ? strtoupper(trim((string) $context['expected_currency']))
+                    : 'PKR');
             $amount = $this->normalizeAmount($row['amount']);
             $currency = $row['currency'] === '' ? null : strtoupper($row['currency']);
 
@@ -254,6 +263,25 @@ class KuickPayResponseParser
         }
 
         return $evidence;
+    }
+
+    private function bulkExpectedMap(array $context): array
+    {
+        if (!isset($context['expected']) || !is_array($context['expected'])) {
+            return [];
+        }
+
+        $expected = [];
+        foreach ($context['expected'] as $consumerNumber => $row) {
+            $consumerNumber = (string) $consumerNumber;
+            if ($consumerNumber === '' || !is_array($row)) {
+                continue;
+            }
+
+            $expected[$consumerNumber] = $row;
+        }
+
+        return $expected;
     }
 
     private function transportFailure(array $transportOutcome, string $operation): KuickPayEvidence

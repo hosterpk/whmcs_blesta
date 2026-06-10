@@ -391,6 +391,29 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame(['amount_mismatch'], $evidence[0]->validationErrors());
     }
 
+    public function testBulkExpectationMapUsesPerConsumerAmount()
+    {
+        $dataset = '<NewDataSet>'
+            . $this->bulkRow('INSTITUTION_ID1234INVOICE_ID', 'KP-BULK-PAID-0001', '1000.00')
+            . $this->bulkRow('INSTITUTION_ID5678INVOICE_ID', 'KP-BULK-PAID-0002', '500.00')
+            . '</NewDataSet>';
+
+        $evidence = $this->parser()->parseBulk(
+            $this->outcome('BillPaymentBulkInquiry', $dataset),
+            [
+                'expected' => [
+                    'INSTITUTION_ID1234INVOICE_ID' => ['amount' => '1000.00', 'currency' => 'PKR'],
+                    'INSTITUTION_ID5678INVOICE_ID' => ['amount' => '750.00', 'currency' => 'PKR'],
+                ],
+            ]
+        );
+
+        $this->assertCount(2, $evidence);
+        $this->assertEvidence('confirmed_unposted', null, $evidence[0]);
+        $this->assertEvidence('manual_review', 'amount_mismatch', $evidence[1]);
+        $this->assertSame(['amount_mismatch'], $evidence[1]->validationErrors());
+    }
+
     /**
      * @dataProvider insertVoucherFixtureProvider
      */
