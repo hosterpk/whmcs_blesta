@@ -4,7 +4,7 @@ baseline_commit: d8b391a17146eae9ed923d55c73f25ce03d8cd2e
 
 # Story 3.6: Handle Expiry, Late, Partial, and Overpayment Cases
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -257,11 +257,12 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+GPT-5 Codex
 
 ### Debug Log References
 
 ### Completion Notes List
+- Final: Story implementation is complete and ready for review. Full KuickPay plugin and gateway component suites pass; every changed PHP/PDT file was syntax checked.
 - Task 1: Added the PKR-guarded, company-scoped `getExpirable()` selector using DB-side `CURDATE()` and the repository passthrough; verified with targeted repository tests and PHP syntax checks.
 - Task 2: Added the locked, bounded `expirePending()` sweep with per-voucher error isolation, `voucher.expired` audit writes, idempotent rerun behavior, and no SOAP/posting/invoice mutation path.
 - Task 3: Registered the hourly `expire_vouchers` plugin cron, dispatched it directly to `expirePending()`, added the 1.3.0 idempotent upgrade gate, and bumped plugin metadata.
@@ -271,7 +272,12 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - Task 7: Added plugin cron language and gateway policy labels/options/errors; verified language PHP syntax and policy language-key coverage.
 - Task 8: Added the remaining late-after-expiry fixture and overpayment reconcile-policy assertion; full KuickPay plugin and gateway suites passed with external PHPUnit 8.5.
 
+### Change Log
+- 2026-06-10: Implemented local voucher expiry, exception classification, manual-review policy settings, cron registration, and fixture-backed regression coverage for Story 3.6.
+
 ### File List
+- _bmad-output/implementation-artifacts/3-6-handle-expiry-late-partial-and-overpayment-cases.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
 - plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
 - plugins/kuickpay_reconcile/config.json
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php
