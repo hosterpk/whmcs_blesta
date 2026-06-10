@@ -180,6 +180,40 @@ class KuickpayReconcilePlugin extends Plugin
     }
 
     /**
+     * Returns staff navigation actions for this plugin.
+     *
+     * @return array Plugin actions
+     */
+    public function getActions()
+    {
+        return [
+            [
+                'action' => 'nav_secondary_staff',
+                'uri' => 'plugin/kuickpay_reconcile/admin_main/index/',
+                'name' => 'KuickpayReconcilePlugin.nav_secondary_staff.bulk_reconcile',
+                'options' => ['parent' => 'billing/']
+            ]
+        ];
+    }
+
+    /**
+     * Returns ACL permissions for this plugin.
+     *
+     * @return array Plugin permissions
+     */
+    public function getPermissions()
+    {
+        return [
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.bulk_reconcile', true),
+                'alias' => 'kuickpay_reconcile.admin_main',
+                'action' => '*'
+            ]
+        ];
+    }
+
+    /**
      * Adds reconciliation-only columns to the existing voucher table.
      */
     private function addVoucherEvidenceColumns()

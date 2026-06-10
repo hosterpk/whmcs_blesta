@@ -1,0 +1,38 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo (isset($message) ? $message : null);
+
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminMain.index.boxtitle_bulk_reconcile', true));
+
+$this->Form->create($this->base_uri . 'plugin/kuickpay_reconcile/admin_main/run/', [
+    'id' => 'kuickpay_bulk_reconcile',
+    'class' => 'disable-on-submit'
+]);
+?>
+    <div class="mb-3">
+        <?php
+        $this->Form->label($this->_('AdminMain.index.field_run_date', true), 'run_date', ['class' => 'form-label']);
+        $this->Form->fieldText('run_date', ($vars->run_date ?? date('Y-m-d')), [
+            'id' => 'run_date',
+            'class' => 'form-control',
+            'placeholder' => 'YYYY-MM-DD'
+        ]);
+        ?>
+    </div>
+</div>
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php
+    $this->Form->fieldSubmit(
+        'run',
+        $this->_('AdminMain.index.field_submit', true),
+        ['class' => 'btn btn-primary']
+    );
+    ?>
+</div>
+<?php
+$this->Form->end();
+$this->Widget->end();
+?>
