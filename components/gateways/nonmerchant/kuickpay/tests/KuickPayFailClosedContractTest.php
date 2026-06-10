@@ -53,6 +53,13 @@ class KuickPayFailClosedContractTest extends TestCase
 
         foreach (glob(self::FIXTURE_DIR . '/{ambiguous,malformed}/*.xml', GLOB_BRACE) as $path) {
             $fixture = str_replace(self::FIXTURE_DIR . '/', '', $path);
+            // Lateness is a validator concern, not a parser one: with matching
+            // amount/currency/reference and no voucher-expiry context the parser
+            // correctly returns confirmed_unposted for this row. Its fail-closed
+            // guarantee is asserted at the validator/reconcile layer instead
+            // (KuickPayEvidenceValidatorTest::testPaidAfterVoucherExpiryFailsWithLatePaymentReason,
+            // KuickPayReconcileServiceTest::testLatePaymentEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields),
+            // so feeding it through the parser-only wall here would be a false failure.
             if ($fixture === 'ambiguous/bill-payment-inquiry-late-after-expiry.xml') {
                 continue;
             }
