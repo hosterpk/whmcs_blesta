@@ -218,6 +218,17 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertStringNotContainsString('later workflow', $lang['Kuickpay.consumer_number_pattern_note']);
     }
 
+    public function testVoucherCreationFallbackSettingsHaveLanguageKeys()
+    {
+        $lang = [];
+        require __DIR__ . '/../language/en_us/kuickpay.php';
+
+        $this->assertSame('Fallback email', $lang['Kuickpay.fallback_email']);
+        $this->assertSame('Default branch', $lang['Kuickpay.default_branch']);
+        $this->assertArrayHasKey('Kuickpay.fallback_email_note', $lang);
+        $this->assertArrayHasKey('Kuickpay.default_branch_note', $lang);
+    }
+
     private function gateway()
     {
         $reflection = new ReflectionClass(KuickPayVoucherGatewayHelpers::class);

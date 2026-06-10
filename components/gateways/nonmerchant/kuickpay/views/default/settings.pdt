@@ -158,6 +158,26 @@
             ?>
         </div>
         <div class="mb-3">
+            <label for="fallback_email" class="form-label">
+                <?php $this->_('Kuickpay.fallback_email'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.fallback_email_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('fallback_email', (isset($meta['fallback_email']) ? $meta['fallback_email'] : null), ['id' => 'fallback_email', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
+            <label for="default_branch" class="form-label">
+                <?php $this->_('Kuickpay.default_branch'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.default_branch_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldText('default_branch', (isset($meta['default_branch']) ? $meta['default_branch'] : null), ['id' => 'default_branch', 'class' => 'form-control']);
+            ?>
+        </div>
+        <div class="mb-3">
             <label for="currency_policy" class="form-label">
                 <?php $this->_('Kuickpay.currency_policy'); ?>
                 <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
