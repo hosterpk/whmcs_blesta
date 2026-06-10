@@ -14,6 +14,7 @@ class KuickPayReconcileService
     public const RETRY_LIMIT = 5;
     public const PENDING_RECHECK_MINUTES = 30;
     private const LOCK_NAME = 'reconcile_pending';
+    private const LOCK_NAME_EXPIRE = 'expire_vouchers';
 
     private $voucherRepository;
     private $runRepository;
@@ -45,6 +46,48 @@ class KuickPayReconcileService
     public function runCron(int $company_id): array
     {
         return $this->run($company_id, 'cron');
+    }
+
+    public function expirePending(int $company_id): array
+    {
+        $counts = ['processed' => 0, 'expired' => 0, 'errors' => 0];
+        $owner_token = $this->lockRepository->acquire($company_id, self::LOCK_NAME_EXPIRE, self::LOCK_TTL_SECONDS);
+        if ($owner_token === null) {
+            return ['status' => 'skipped', 'reason' => 'lock_held', 'counts' => $counts];
+        }
+
+        $status = 'completed';
+        $start = time();
+
+        try {
+            $vouchers = $this->voucherRepository->getExpirable($company_id, self::BATCH_SIZE);
+
+            foreach ($vouchers as $voucher) {
+                if (time() - $start >= self::MAX_RUNTIME_SECONDS) {
+                    $status = 'aborted';
+                    break;
+                }
+
+                $counts['processed']++;
+
+                try {
+                    $prior_status = (string) $voucher->status;
+                    $this->voucherRepository->edit((int) $voucher->id, $company_id, ['status' => 'expired']);
+                    $this->auditService->record('voucher.expired', [
+                        'company_id' => $company_id,
+                        'voucher_id' => (int) $voucher->id,
+                        'payload' => ['prior_status' => $prior_status],
+                    ]);
+                    $counts['expired']++;
+                } catch (Throwable $e) {
+                    $counts['errors']++;
+                }
+            }
+        } finally {
+            $this->lockRepository->release($company_id, self::LOCK_NAME_EXPIRE, $owner_token);
+        }
+
+        return ['status' => $status, 'counts' => $counts];
     }
 
     public function run(int $company_id, string $trigger_type = 'cron'): array

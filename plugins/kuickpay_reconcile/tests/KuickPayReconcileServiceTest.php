@@ -171,6 +171,59 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(0, $run->opened);
     }
 
+    public function testExpirePendingSkipsWhenExpiryLockHeld()
+    {
+        $lock = new KuickPayReconcileFakeLockRepository(false);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $service = $this->service(['lock_repository' => $lock, 'run_repository' => $run]);
+
+        $result = $service->expirePending(1);
+
+        $this->assertSame('skipped', $result['status']);
+        $this->assertSame('lock_held', $result['reason']);
+        $this->assertSame(['processed' => 0, 'expired' => 0, 'errors' => 0], $result['counts']);
+        $this->assertSame(0, $run->opened);
+        $this->assertSame('expire_vouchers', $lock->acquiredLockName);
+    }
+
+    public function testExpirePendingTransitionsOnlyExpirableVouchersAndAudits()
+    {
+        $repo = new KuickPayReconcileFakeVoucherRepository([
+            $this->voucher(['id' => 1, 'status' => 'pending', 'date_expires' => '2026-06-08']),
+            $this->voucher(['id' => 2, 'status' => 'retry', 'date_expires' => '2026-06-08']),
+            $this->voucher(['id' => 3, 'status' => 'pending', 'date_expires' => '2026-06-11']),
+            $this->voucher(['id' => 4, 'status' => 'pending', 'date_expires' => null]),
+            $this->voucher(['id' => 5, 'status' => 'pending', 'currency' => 'USD', 'date_expires' => '2026-06-08']),
+            $this->voucher(['id' => 6, 'status' => 'confirmed_unposted', 'date_expires' => '2026-06-08']),
+        ]);
+        $lock = new KuickPayReconcileFakeLockRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $client = new KuickPayReconcileFakeClient([]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'lock_repository' => $lock,
+            'audit_service' => $audit,
+            'client' => $client,
+        ]);
+
+        $result = $service->expirePending(1);
+        $rerun = $service->expirePending(1);
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame(['processed' => 2, 'expired' => 2, 'errors' => 0], $result['counts']);
+        $this->assertSame(['processed' => 0, 'expired' => 0, 'errors' => 0], $rerun['counts']);
+        $this->assertSame([1, 2], array_column($repo->edits, 'voucher_id'));
+        $this->assertSame('expired', $repo->edits[0]['status']);
+        $this->assertSame('expired', $repo->edits[1]['status']);
+        $this->assertSame(['voucher.expired', 'voucher.expired'], array_column($audit->events, 0));
+        $this->assertSame(['prior_status' => 'pending'], $audit->events[0][1]['payload']);
+        $this->assertSame(['prior_status' => 'retry'], $audit->events[1][1]['payload']);
+        $this->assertSame(1, $audit->events[0][1]['company_id']);
+        $this->assertSame(1, $audit->events[0][1]['voucher_id']);
+        $this->assertTrue($lock->released);
+        $this->assertSame([], $client->requests);
+    }
+
     public function testRunUsesResumeCursorAndClosesCompletedRunWithResetCursor()
     {
         $client = new KuickPayReconcileFakeClient([
@@ -305,10 +358,49 @@ class KuickPayReconcileFakeVoucherRepository
         return $this->vouchers;
     }
 
+    public function getExpirable(int $company_id, int $limit, int $afterId = 0): array
+    {
+        $this->lastAfterId = $afterId;
+        $today = '2026-06-10';
+        $expirable = [];
+
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id <= $afterId
+                || (int) $voucher->company_id !== $company_id
+                || (string) $voucher->currency !== 'PKR'
+                || !in_array((string) $voucher->status, ['pending', 'retry'], true)
+                || empty($voucher->date_expires)
+                || (string) $voucher->date_expires >= $today
+            ) {
+                continue;
+            }
+
+            $expirable[] = $voucher;
+            if (count($expirable) >= $limit) {
+                break;
+            }
+        }
+
+        return $expirable;
+    }
+
     public function edit(int $voucher_id, int $company_id, array $vars): void
     {
         $vars['company_id_scope'] = $company_id;
+        $vars['voucher_id'] = $voucher_id;
         $this->edits[] = $vars;
+
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                foreach ($vars as $key => $value) {
+                    if (in_array($key, ['company_id_scope', 'voucher_id'], true)) {
+                        continue;
+                    }
+
+                    $voucher->{$key} = $value;
+                }
+            }
+        }
     }
 
     public function getWithInvoices(int $voucher_id): ?array
@@ -423,6 +515,7 @@ class KuickPayReconcileFakeLockRepository
 {
     private bool $available;
     public bool $released = false;
+    public ?string $acquiredLockName = null;
 
     public function __construct(bool $available = true)
     {
@@ -431,6 +524,8 @@ class KuickPayReconcileFakeLockRepository
 
     public function acquire(int $company_id, string $lockName, int $ttlSeconds): ?string
     {
+        $this->acquiredLockName = $lockName;
+
         return $this->available ? 'owner-token' : null;
     }
 

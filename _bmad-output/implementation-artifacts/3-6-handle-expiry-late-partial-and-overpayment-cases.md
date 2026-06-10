@@ -60,14 +60,14 @@ The following testable criteria expand the two BDD scenarios. Each maps to tasks
   - [x] Add `KuickpayVouchers::getExpirable(int $company_id, int $limit, int $after_id = 0): array` to `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`. Mirror `getPostable()` (lines 366-379): `->where('company_id','=',$company_id)`, **`->where('currency','=','PKR')`** (same guard as `getPostable`:371 / `getReconcilable`:324), `->where('status','in',['pending','retry'])`, `->where('date_expires','!=',null)` (Blesta `Record` renders `!= null` as `IS NOT NULL` — proven by the shipped `getPostable` selector at :374), `->where('date_expires','<','DATE(NOW())', false, false)` (or `CURDATE()` via a bound-safe raw fragment — match the existing raw-fragment style at kuickpay_vouchers.php:343-349; the 5-arg `(field, op, value, false, false)` form works on `where()` as well as `orWhere()`), `->where('id','>',max(0,$after_id))`, `->order(['id'=>'ASC'])`, `->limit(max(1,$limit))`, `->fetchAll()`. **Compare `date_expires` (a DATE) against the DB's current date**, not a PHP date string, so cron-host vs DB clock drift cannot mis-expire (use `CURDATE()`/`DATE(NOW())`). Keep it company-scoped.
   - [x] Add `KuickPayVoucherRepository::getExpirable(int $company_id, int $limit, int $afterId = 0): array` passthrough (mirror `getPostable`, KuickPayVoucherRepository.php:223-226).
 
-- [ ] **Task 2 — Expiry sweep method (AC2, AC3, AC6)** on `KuickPayReconcileService`.
-  - [ ] Add a `const LOCK_NAME_EXPIRE = 'expire_vouchers';` (distinct from `reconcile_pending`).
-  - [ ] Add `public function expirePending(int $company_id): array`:
+- [x] **Task 2 — Expiry sweep method (AC2, AC3, AC6)** on `KuickPayReconcileService`.
+  - [x] Add a `const LOCK_NAME_EXPIRE = 'expire_vouchers';` (distinct from `reconcile_pending`).
+  - [x] Add `public function expirePending(int $company_id): array`:
     1. Acquire the `expire_vouchers` DB lock via `lockRepository->acquire($company_id, self::LOCK_NAME_EXPIRE, self::LOCK_TTL_SECONDS)`; on null return `['status'=>'skipped','reason'=>'lock_held','counts'=>...]`.
     2. In a `try { ... } finally { release lock }`, fetch up to `BATCH_SIZE` via `voucherRepository->getExpirable($company_id, self::BATCH_SIZE)`, iterate with the `MAX_RUNTIME_SECONDS` guard (set `status='aborted'` and break on timeout), and for each voucher: `voucherRepository->edit((int) $voucher->id, $company_id, ['status' => 'expired'])` then `auditService->record('voucher.expired', ['company_id'=>$company_id,'voucher_id'=>(int)$voucher->id,'payload'=>['prior_status'=>(string)$voucher->status]])`.
     3. Wrap each voucher's edit+audit in a per-voucher `try/catch (Throwable)` so one failure increments `errors` and does not abort the batch (mirror `processVoucher` isolation, KuickPayReconcileService.php:146-162).
     4. Return `['status'=>'completed'|'skipped'|'aborted','counts'=>['processed'=>N,'expired'=>N,'errors'=>N]]`.
-  - [ ] Do **not** create/apply any Blesta transaction, touch invoices, or call `KuickPayPostingService` here (AC6). Do **not** open a SOAP client and do **not** call `gatewayConfigForCompany()` — expiry needs no gateway config, and that method returns `null` when `reconciliation_enabled` is off (KuickPayReconcileService.php:332-334), which would make the sweep silently skip. `expirePending()` is invoked **directly** from `cron($key)` (no `runCron()`/run-summary wrapper — expiry writes no `kuickpay_reconciliation_runs` row), and it fetches a single `BATCH_SIZE` batch with **no outer pagination loop** (`$after_id` is selector-shape parity only; `expired` rows leave the `getExpirable` set so a re-fetch naturally advances).
+  - [x] Do **not** create/apply any Blesta transaction, touch invoices, or call `KuickPayPostingService` here (AC6). Do **not** open a SOAP client and do **not** call `gatewayConfigForCompany()` — expiry needs no gateway config, and that method returns `null` when `reconciliation_enabled` is off (KuickPayReconcileService.php:332-334), which would make the sweep silently skip. `expirePending()` is invoked **directly** from `cron($key)` (no `runCron()`/run-summary wrapper — expiry writes no `kuickpay_reconciliation_runs` row), and it fetches a single `BATCH_SIZE` batch with **no outer pagination loop** (`$after_id` is selector-shape parity only; `expired` rows leave the `getExpirable` set so a re-fetch naturally advances).
 
 - [ ] **Task 3 — Register the `expire_vouchers` cron trigger (AC4)** in `kuickpay_reconcile_plugin.php`.
   - [ ] Add an `expire_vouchers` entry to `getCronTasks()` (kuickpay_reconcile_plugin.php:346-370): `key`/`dir`/`task_type=plugin`/`name`/`description` (language keys), `type=interval`, `type_value=60` (hourly; idempotent), `enabled=1`.
@@ -263,8 +263,11 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 
 ### Completion Notes List
 - Task 1: Added the PKR-guarded, company-scoped `getExpirable()` selector using DB-side `CURDATE()` and the repository passthrough; verified with targeted repository tests and PHP syntax checks.
+- Task 2: Added the locked, bounded `expirePending()` sweep with per-voucher error isolation, `voucher.expired` audit writes, idempotent rerun behavior, and no SOAP/posting/invoice mutation path.
 
 ### File List
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
+- plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php
