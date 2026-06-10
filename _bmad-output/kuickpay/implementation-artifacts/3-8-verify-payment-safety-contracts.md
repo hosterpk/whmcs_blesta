@@ -4,7 +4,7 @@ baseline_commit: a633a49a9d90d1a233e3bc82ddb14c07019d0132
 
 # Story 3.8: Verify Payment-Safety Contracts
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -296,3 +296,20 @@ A second pass ran four **narrow, non-overlapping** lanes against the round-1-rev
 - 2026-06-11: Completed final component-suite verification and honest AC2 report; deferred optional audit-completeness spot-check.
 
 ### Review Findings
+
+**Code review 2026-06-11 — `bmad-code-review` (3 adversarial layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor; YOLO mode).**
+
+**Outcome: PASS.** Zero production-logic files changed (Invariant #1 upheld — diff touches only `tests/`, `docs/`, `_bmad-output/`). Both suites independently reproduced green and grown on the beta host (PHP 8.3.31 / PHPUnit 8.5.52): gateway `OK (230 tests, 1227 assertions)`, plugin `OK (85 tests, 628 assertions)` after fixes (was 584; +44 from the hardened leak scan). No BLOCKER or HIGH survived adjudication. The one "BLOCKER" raised was a false alarm (see dismissed).
+
+**Triage:** 0 decision-needed · 3 patch (applied) · 2 defer · 8 dismissed.
+
+**Patches applied (test-only, committed):**
+- [x] [Review][Patch] Leak scan never drove the confirmed reconcile branch, so the provider-echoed `kuickpay_reference`/`raw_status` columns (the exact sinks Task 2 named) were never persisted+scanned [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php] — added `captureConfirmedReconcilePersistence` over `valid/bill-payment-inquiry-paid-exact.xml`, asserting the confirmed branch ran before scanning (commit `52e7415c`).
+- [x] [Review][Patch] Persisted-evidence scan could pass vacuously: an empty sink stringifies to `"[]"` and trivially clears every pattern [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php] — assert each capture wrote a voucher edit before scanning (commit `356cfab6`).
+- [x] [Review][Patch] Fail-closed wall's bare `continue` over late-after-expiry read like a hidden red test [components/gateways/nonmerchant/kuickpay/tests/KuickPayFailClosedContractTest.php:56] — documented the deliberate parser-vs-validator layering and pointed at the validator/reconcile tests that own the guarantee (commit `ec66a103`).
+
+**Deferred (real, LOW — routed to `deferred-work.md`):**
+- [x] [Review][Defer] Leak-scan PII/credential patterns are narrow / placeholder-keyed (mobile, cnic, email allow-list, `REDACTED_*` lookahead) [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php:183-202] — deferred, pre-existing-style hardening; fail-safe today (fixtures clean), broadening risks false positives.
+- [x] [Review][Defer] Posting-service confirmed→post→rerun call-count not directly covered [plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php] — deferred; Task 4's already-posted two-call requirement is met and the `blesta_transaction_id` idempotency guard is covered by `testAlreadyPostedVoucherIsNoOpAfterLock`.
+
+**Dismissed (8):** (1) Edge Case Hunter's late-after-expiry **BLOCKER** — correct layering: parser legitimately returns `confirmed_unposted` (no expiry context), and the late guarantee is asserted at `KuickPayEvidenceValidatorTest::testPaidAfterVoucherExpiryFailsWithLatePaymentReason` + `KuickPayReconcileServiceTest::testLatePaymentEvidenceAppliesPolicyAndStaysManualReviewWithoutPaymentFields`, both mapped in the matrix (now also documented by the P3 comment). (2) Bulk wall hard-coded `expected` key never matching — refuted: all three bulk fixtures use `INSTITUTION_ID1234INVOICE_ID`, so rows are matched and amount-evaluated. (3) Wall `errorClass` enum check skipped when null — the status fail-closed assertion always runs, so no safety hole. (4) Posting fake `record()` property+method coexistence — legal PHP, works. (5) `GLOB_BRACE` data provider — PHPUnit 8.5 errors on an empty provider, so it surfaces rather than silently passing. (6) Matrix Pending/unpaid fixture citation imprecision — behavior is covered. (7) PHP 8.3.31 vs 8.2 target — honestly disclosed; no 8.2 binary on host; AC2 met. (8) Leak helper `?? ''` regex fallback — now guarded by the P2 non-empty assertions.

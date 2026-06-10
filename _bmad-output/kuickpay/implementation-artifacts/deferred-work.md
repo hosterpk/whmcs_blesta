@@ -2,6 +2,11 @@
 
 Items deferred during reviews. Each entry notes its origin and a one-line reason.
 
+## Deferred from: code review of 3-8-verify-payment-safety-contracts (2026-06-11)
+
+- **Leak-scan PII/credential patterns are narrow and placeholder-keyed** [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php:183-202] — the mobile pattern matches only bare `03XXXXXXXXX`, cnic only the dashed form, email allows only `@example.invalid`, and the `<userName>`/`<password>`/`<InstitutionID>` checks are negative-lookahead allow-checks keyed to the exact `REDACTED_*`/`INSTITUTION_ID` placeholders. Reason: fail-safe and green today (all fixtures are clean placeholders), so broadening to alternate PII formats / mixed placeholder styles is a low-priority hardening; doing it now risks false positives on clean fixtures. Revisit when fixtures diversify or a real-secret regression is suspected.
+- **Posting-service confirmed→post→rerun call-count not directly asserted** [plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php] — the new two-call test covers an already-`posted` voucher (count stays zero, per Task 4's literal wording); the complementary path — post a `confirmed_unposted` voucher once (exactly one transaction) then re-run and assert no second transaction — is not a dedicated posting-service test. Reason: the `blesta_transaction_id` idempotency guard is already exercised by `testAlreadyPostedVoucherIsNoOpAfterLock` and bulk rerun-idempotency by `KuickPayReconcileServiceTest`; add the post-then-rerun call-count assertion as future hardening.
+
 ## Deferred from: development of 3-8-verify-payment-safety-contracts (2026-06-11)
 
 - **Single-inquiry confirmed evidence can carry a null paid date, creating a latent stuck state** [components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php] — `parseBulk` fails closed when a matched paid row has a missing/unparseable `Transaction_Date`, but the single-inquiry confirmed branch can still produce `confirmed_unposted` with `paidAt() === null`. Posting fails closed (`KuickPayPostingService::validPaidDate`) and creates no Blesta transaction, so this is not a payment-safety escalation. Reason: Story 3.8 is a verification story with no production parser edits; mirror the bulk `missing_paid_date` guard into the single-inquiry confirmed branch in a dedicated follow-up.
