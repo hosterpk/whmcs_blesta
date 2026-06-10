@@ -261,7 +261,7 @@ If a running Blesta + MySQL dev instance is **not** available, root PHPUnit / in
 - [Source: composer.json:206-216] — installer-paths for gateway/plugin types.
 - [Source: sprint-status.yaml#BUILD ORDER] — Epic 1 unblocked, parallel with Phase 0; posting disabled until 0-1 approved.
 - [Source: implementation-readiness-report-2026-06-09.md lines 280–283, 316–347] — Epic 1 ready now; Story 1.1 "textbook" scaffold compliance.
-- [Source: _bmad-output/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md] — sibling story; `docs/kuickpay/` web-blocked fixture home; web-exposure learning (Non-Negotiable #6).
+- [Source: _bmad-output/kuickpay/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md] — sibling story; `docs/kuickpay/` web-blocked fixture home; web-exposure learning (Non-Negotiable #6).
 - [Source: project-context.md] — Blesta loader/Input/Record conventions, PHP 8.2, language-file rule, no-core-edit, secret-safety, PHPCS style.
 
 ## Dev Agent Record

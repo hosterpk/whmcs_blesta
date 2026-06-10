@@ -1,10 +1,10 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6]
 inputDocuments:
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/prd.md
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/addendum.md
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/review-rubric.md
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/reconcile-source-intake.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/prd.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/addendum.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/review-rubric.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/reconcile-source-intake.md
   - _bmad-output/project-context.md
   - docs/architecture.md
   - docs/development-guide.md
@@ -815,10 +815,10 @@ Main risks:
 
 ### Local Sources
 
-- `_bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/prd.md`
-- `_bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/addendum.md`
-- `_bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/review-rubric.md`
-- `_bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/reconcile-source-intake.md`
+- `_bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/prd.md`
+- `_bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/addendum.md`
+- `_bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/review-rubric.md`
+- `_bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/reconcile-source-intake.md`
 - `_bmad-output/project-context.md`
 - `docs/architecture.md`
 - `docs/development-guide.md`

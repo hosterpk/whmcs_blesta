@@ -236,18 +236,18 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-3.2 (lines 600-617)] — story, ACs, sequencing note
-- [Source: _bmad-output/planning-artifacts/epics.md (lines 132-135, FR16/FR17 lines 55-57, FR28 line 79)] — parser/normalization additional requirements
-- [Source: _bmad-output/planning-artifacts/architecture.md#Parser-and-Evidence-Contract (lines 549-579)] — 12 normalized fields + 8 allowed error classes
-- [Source: _bmad-output/planning-artifacts/architecture.md#API-and-Communication-Patterns (lines 381-414)] — SOAP→redactor→parser flow, bounded XML, retry policy
-- [Source: _bmad-output/planning-artifacts/architecture.md#Posting-Contract / #UI-Display-State-Matrix (lines 581-608)] — confirmed_unposted ≠ paid; state semantics
-- [Source: _bmad-output/planning-artifacts/architecture.md#Complete-Project-Directory-Structure (lines 683-687, 739-752, 826-831)] — gateway lib parser/evidence + plugin fixture tree
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-3.2 (lines 600-617)] — story, ACs, sequencing note
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md (lines 132-135, FR16/FR17 lines 55-57, FR28 line 79)] — parser/normalization additional requirements
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Parser-and-Evidence-Contract (lines 549-579)] — 12 normalized fields + 8 allowed error classes
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#API-and-Communication-Patterns (lines 381-414)] — SOAP→redactor→parser flow, bounded XML, retry policy
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Posting-Contract / #UI-Display-State-Matrix (lines 581-608)] — confirmed_unposted ≠ paid; state semantics
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Complete-Project-Directory-Structure (lines 683-687, 739-752, 826-831)] — gateway lib parser/evidence + plugin fixture tree
 - [Source: docs/kuickpay/testing-fixtures.md] — expected-evidence mapping, paid preconditions, status-code default, category mapping, provenance
 - [Source: docs/kuickpay/whmcs-live-implementation-evidence.md] — confirmed result shapes/offsets/date formats
 - [Source: docs/kuickpay/fixtures/*] — the actual sanitized fixtures the parser must satisfy
 - [Source: components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php (lines 116-224, 361-401, 521-542)] — transport outcome shape + raw_result handoff
 - [Source: components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php (lines 17-18, 95-158)] — reusable constants, safe-XML, traceId
-- [Source: _bmad-output/implementation-artifacts/{3-1,0-1}-*.md, deferred-work.md] — predecessor patterns, hardening backlog, toolchain caveats
+- [Source: _bmad-output/kuickpay/implementation-artifacts/{3-1,0-1}-*.md, deferred-work.md] — predecessor patterns, hardening backlog, toolchain caveats
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, testing/workflow rules, secret-safety
 
 ## Dev Agent Record
@@ -324,8 +324,8 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-inquiry-pending.xml
 - plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/insert-voucher-success.xml
 - docs/kuickpay/testing-fixtures.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
-- _bmad-output/implementation-artifacts/3-2-normalize-kuickpay-evidence-with-fixtures.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/3-2-normalize-kuickpay-evidence-with-fixtures.md
 
 ### Change Log
 

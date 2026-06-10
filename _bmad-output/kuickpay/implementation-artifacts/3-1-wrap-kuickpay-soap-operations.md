@@ -176,16 +176,16 @@ Recent commits (`git log`): `8e5daa19 feat(kuickpay): add credential redaction b
 - **Transport-level credential errors:** a provider that rejects auth via HTTP/transport (vs. an in-body result code) will surface as `transport_error` here; in-body `credential_error` detection is 3.2's. Document this split so reconciliation (3.3) interprets outcomes correctly.
 
 ### References
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-3.1 (lines 580-598)] — story + ACs + sequencing note
-- [Source: _bmad-output/planning-artifacts/epics.md (lines 53,79,130-136)] — FR15, FR28, KuickPay SOAP additional requirements
-- [Source: _bmad-output/planning-artifacts/architecture.md#API-and-Communication-Patterns (lines 381-414)] — SOAP wrapper, flow, retry policy
-- [Source: _bmad-output/planning-artifacts/architecture.md#Parser-and-Evidence-Contract (lines 549-579)] — normalized fields + allowed error classes (3.2 boundary)
-- [Source: _bmad-output/planning-artifacts/architecture.md#Anti-Patterns / #Project-Structure (lines 648-661,663-802)] — anti-patterns, lib layout, ownership boundaries
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-3.1 (lines 580-598)] — story + ACs + sequencing note
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md (lines 53,79,130-136)] — FR15, FR28, KuickPay SOAP additional requirements
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#API-and-Communication-Patterns (lines 381-414)] — SOAP wrapper, flow, retry policy
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Parser-and-Evidence-Contract (lines 549-579)] — normalized fields + allowed error classes (3.2 boundary)
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Anti-Patterns / #Project-Structure (lines 648-661,663-802)] — anti-patterns, lib layout, ownership boundaries
 - [Source: components/gateways/nonmerchant/kuickpay/kuickpay.php (lines 11-44,94-294,301-419)] — existing gateway integration points
 - [Source: components/gateways/lib/gateway.php (lines 307-363)] — maskData/maskDataRecursive primitive to mirror
 - [Source: components/gateways/nonmerchant/{alipay,paystack,skrill}/*.php] — `Loader::load` gateway-lib pattern
 - [Source: docs/kuickpay/fixtures/, docs/kuickpay/phase-0-contract.md, docs/kuickpay/testing-fixtures.md] — APPROVED Phase 0 contract (shapes confirmed from live WHMCS) + still-provisional fixtures
-- [Source: _bmad-output/implementation-artifacts/{1-1,1-2,1-3,1-4,0-1}-*.md] — prior-story patterns & learnings
+- [Source: _bmad-output/kuickpay/implementation-artifacts/{1-1,1-2,1-3,1-4,0-1}-*.md] — prior-story patterns & learnings
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, testing & workflow rules
 
 ## Dev Agent Record
@@ -252,6 +252,6 @@ _Adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor),
 
 - [x] [Review][Defer] `isTimeout()` classification is message-text/locale-dependent [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php] — deferred; only the `error_class` label is affected (timeout and transport_error retry identically), acceptable until alerting/branching depends on the exact class.
 - [x] [Review][Defer] Redaction completeness vs an expanded provider contract — element-name redactor won't mask sensitive values carried in XML *attributes*, and the denylist is exact-local-name (misses aliases like `CustomerName`/`MobileNo`) [components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php:77] — deferred; not triggerable under the confirmed element-based contract, revisit if the provider contract changes.
-- [x] [Review][Defer] Verification record is internally contradictory and tests never ran under the target toolchain [_bmad-output/implementation-artifacts/3-1-wrap-kuickpay-soap-operations.md] — deferred; Risks say "php/ext-soap ABSENT" while the Completion note says "PHP 8.3.31 present with soap loaded" (verified: `php` = 8.3.31 with ext-soap, i.e. `php -l` ran on 8.3 not the 8.2 target, and the suite was only exercised by a "direct PHP fallback script", never an actual PHPUnit). Run `php -l` + the component suite under PHP 8.2 + PHPUnit ~8.5 before merge and reconcile the contradictory story statements.
+- [x] [Review][Defer] Verification record is internally contradictory and tests never ran under the target toolchain [_bmad-output/kuickpay/implementation-artifacts/3-1-wrap-kuickpay-soap-operations.md] — deferred; Risks say "php/ext-soap ABSENT" while the Completion note says "PHP 8.3.31 present with soap loaded" (verified: `php` = 8.3.31 with ext-soap, i.e. `php -l` ran on 8.3 not the 8.2 target, and the suite was only exercised by a "direct PHP fallback script", never an actual PHPUnit). Run `php -l` + the component suite under PHP 8.2 + PHPUnit ~8.5 before merge and reconcile the contradictory story statements.
 
 **Dismissed as noise (10):** Blind Hunter's "SOAP-fault-with-body ⇒ ok=true is a bug" (×2) — **false positive, AC6/AC7 mandate exactly this** (`05 INVALID_CREDENTIALS` is the parser's `credential_error` to make, not the client's); `assertRegExp` "errors under PHPUnit 10" — correct for the project's PHPUnit ~8.5 target, commit `5b686273` deliberately chose it; `ini_set` restore (self-confirmed correct); XPath operation-name interpolation (operation names are internal constants); inquiry retry breadth (inquiries idempotent; InsertVoucher correctly never retried); `traceId` collision (effectively impossible); `maskValue` negative-unmask (dead path, all call sites use length 0); `cache_wsdl` fallback `2` (== `WSDL_CACHE_MEMORY`); same-as-voucher strict `=== 'true'` (matches the stored `'true'/'false'` contract); `extractRawResult` first-of-multiple `*Result` (adversarial-only, defensible default).

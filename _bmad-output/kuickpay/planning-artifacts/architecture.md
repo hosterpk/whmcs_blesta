@@ -1,13 +1,13 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 inputDocuments:
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/prd.md
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/addendum.md
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/review-rubric.md
-  - _bmad-output/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/reconcile-source-intake.md
-  - _bmad-output/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/DESIGN.md
-  - _bmad-output/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/EXPERIENCE.md
-  - _bmad-output/planning-artifacts/research/technical-kuickpay-blesta-payment-gateway-research-2026-06-09.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/prd.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/addendum.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/review-rubric.md
+  - _bmad-output/kuickpay/planning-artifacts/prds/prd-whmcs_blesta-2026-06-09/reconcile-source-intake.md
+  - _bmad-output/kuickpay/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/DESIGN.md
+  - _bmad-output/kuickpay/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/EXPERIENCE.md
+  - _bmad-output/kuickpay/planning-artifacts/research/technical-kuickpay-blesta-payment-gateway-research-2026-06-09.md
   - _bmad-output/project-context.md
   - docs/index.md
   - docs/architecture.md

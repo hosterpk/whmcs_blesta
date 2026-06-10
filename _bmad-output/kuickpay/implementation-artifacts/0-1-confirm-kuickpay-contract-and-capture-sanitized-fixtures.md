@@ -95,7 +95,7 @@ so that voucher issuance and payment posting rely on verified evidence rather th
 
 This is the **Phase 0 release gate** ([Source: epics.md#Epic 0], [Source: architecture.md#Technical Constraints & Dependencies]). The architecture and PRD both make it a hard prerequisite:
 
-- **It gates Story 2.3 (success-path voucher issuance) and all of Epic 3 (parser, reconciliation, posting).** [Source: _bmad-output/implementation-artifacts/sprint-status.yaml#BUILD ORDER], [Source: sprint-change-proposal-2026-06-09.md#Section 4]
+- **It gates Story 2.3 (success-path voucher issuance) and all of Epic 3 (parser, reconciliation, posting).** [Source: _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml#BUILD ORDER], [Source: sprint-change-proposal-2026-06-09.md#Section 4]
 - **It can and should run in parallel with Epic 1** (scaffold/settings/credentials/connection-test/PKR). Epic 1 is fully unblocked today and does NOT wait on this story. [Source: sprint-status.yaml#PARALLELISM]
 - It exists because PRD **Open Question #2** (exact `InsertVoucherResult` / `BillPaymentInquiryResult` / `BillPaymentBulkInquiryResult` formats) is the crux external dependency, and the readiness review found Phase 0 had no owning story. [Source: prd.md#12 Open Questions], [Source: implementation-readiness-report-2026-06-09.md#C. Phase 0 Gate Has No Owning Story]
 
@@ -288,8 +288,8 @@ GPT-5 Codex
 - `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/unmatched.xml`
 - `docs/kuickpay/fixtures/bill-payment-bulk-inquiry/malformed-xml.xml`
 - `docs/kuickpay/fixtures/redaction/credentials.xml`
-- `_bmad-output/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md`
-- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/kuickpay/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md`
+- `_bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 

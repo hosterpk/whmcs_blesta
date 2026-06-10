@@ -546,8 +546,8 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_voucher_invoices.php
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php
-- _bmad-output/implementation-artifacts/2-1-create-durable-customer-voucher-records.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/2-1-create-durable-customer-voucher-records.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 
 ## Change Log
 

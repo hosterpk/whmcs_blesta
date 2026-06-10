@@ -221,18 +221,18 @@ Map these through `customerVoucherStatusDisplay()` (Task 3). All four badge vari
 [project-context.md Testing Rules]
 
 ### References
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-2.5 (530-551)] — story, ACs.
-- [Source: _bmad-output/planning-artifacts/epics.md — FR12:47, FR14:51; UX-DR3:156, UX-DR4:158, UX-DR6:162, UX-DR19:188, UX-DR20:190, UX-DR21:192, UX-DR22:194, UX-DR24:198, UX-DR25:200, UX-DR26:202, UX-DR28:206].
-- [Source: _bmad-output/planning-artifacts/architecture.md:416-439 (Frontend Architecture), :520-524 + :669-670 (Ownership / posting boundary), :595-607 (UI Display-State Matrix — customer column), :648-662 (Anti-Patterns; :655 posted-only success)].
-- [Source: _bmad-output/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/DESIGN.md:43-48 (monospace typography), :76-95 (status-badge color intent), :147 (single-column layout/reference-first), :153-155 + :172-183 (no custom elevation / do's & don'ts)].
-- [Source: _bmad-output/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/EXPERIENCE.md:55-63 (component patterns), :97-99 (copy-action primitive), :108-121 (accessibility floor), :124-131 (responsive), :132-142 (payment-safety UX)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-2.5 (530-551)] — story, ACs.
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md — FR12:47, FR14:51; UX-DR3:156, UX-DR4:158, UX-DR6:162, UX-DR19:188, UX-DR20:190, UX-DR21:192, UX-DR22:194, UX-DR24:198, UX-DR25:200, UX-DR26:202, UX-DR28:206].
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md:416-439 (Frontend Architecture), :520-524 + :669-670 (Ownership / posting boundary), :595-607 (UI Display-State Matrix — customer column), :648-662 (Anti-Patterns; :655 posted-only success)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/DESIGN.md:43-48 (monospace typography), :76-95 (status-badge color intent), :147 (single-column layout/reference-first), :153-155 + :172-183 (no custom elevation / do's & don'ts)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/EXPERIENCE.md:55-63 (component patterns), :97-99 (copy-action primitive), :108-121 (accessibility floor), :124-131 (responsive), :132-142 (payment-safety UX)].
 - [Source: components/gateways/nonmerchant/kuickpay/kuickpay.php — buildProcess():613-687; currency/companion gates:623-629; multi-invoice block→notice:640-645; reloadVoucherDecision():844-866; displayVoucherForContext():879-925; createVoucherForContext():940-962; block branch ($voucher=null):668-669; voucher!=null→view->set / else recordReferenceGenerationFailure:679-683; issueVoucherIfNeeded():1005-1096; voucherRowToView() (invoices=>[]):1104-1122; formatVoucherDate():1187-1192; recordReferenceGenerationFailure():1201-1222; institution_id in meta:548,747; Html-only helper load:618].
 - [Source: components/gateways/nonmerchant/kuickpay/views/default/process.pdt:1-25 (current 3-arm tree; raw-status fallback:5-7; payable markup:9-19; process_notice arm:21-22; retry_safe:23-24)].
 - [Source: components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php — name:2, retry_safe:8, amount_changed:9, multi_invoice_unsupported:10, consumer_number_label/amount_label/status_label/due_date_label/expiry_date_label:12-16, status.pending:17, institution_id setting:37].
 - [Source: app/views/client/bootstrap/client_pay_confirm.pdt:96-112 (gateway_buttons render outside the form); app/views/client/bootstrap/css/application.css:11 (Bootstrap v4.6.2), :5719 (.badge-success), :8716 (.sr-only), :11022 (.text-monospace)].
 - [Source: components/gateways/nonmerchant/{paypal_checkout,kassacompleetideal,blockonomics}/views/default/process.pdt — inline `<script>` precedent (paypal_checkout:4-17, kassacompleetideal:12-24; blockonomics is external-src only, do not model on it)].
 - [Source: components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php — subclass-`expose*` + fake-seam harness; `.pdt` not drivable].
-- [Source: _bmad-output/implementation-artifacts/2-4-gate-changed-amounts-and-multi-invoice-attempts.md:263-312 — completion notes, File List, review findings; key-concatenation safety lesson:312; testable-seam pattern:298,302; class-casing/language-ownership carry-forward].
+- [Source: _bmad-output/kuickpay/implementation-artifacts/2-4-gate-changed-amounts-and-multi-invoice-attempts.md:263-312 — completion notes, File List, review findings; key-concatenation safety lesson:312; testable-seam pattern:298,302; class-casing/language-ownership carry-forward].
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, loader/Input/Record/language rules, `.pdt` view rules, testing/tooling.
 
 ## Dev Agent Record
@@ -263,8 +263,8 @@ GPT-5 Codex
 - components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php
 - components/gateways/nonmerchant/kuickpay/views/default/process.pdt
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php
-- _bmad-output/implementation-artifacts/2-5-display-customer-payment-reference-panel.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/2-5-display-customer-payment-reference-panel.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 
 ### Change Log
 

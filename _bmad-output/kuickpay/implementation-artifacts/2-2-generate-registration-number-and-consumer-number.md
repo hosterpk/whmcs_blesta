@@ -217,7 +217,7 @@ _Reproduced verbatim from [Source: epics.md#Story 2.2, lines 439–461]._
       || echo "clean: 2.2 added no mutation/SOAP surface"
     ```
   - [x] 7.4 Confirm randomness source: `grep -n 'random_int\|mt_rand\|\brand(\|uniqid' plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php` shows `random_int` only (no `mt_rand`/`rand`/`uniqid` in the generator).
-  - [x] 7.5 `git status --porcelain` shows only the expected changed files under the two extension dirs plus this story file, `sprint-status.yaml`, and `_bmad-output/implementation-artifacts/deferred-work.md` (the resolved ledger entry — see "The load-bearing change" Dev Note). No core edits.
+  - [x] 7.5 `git status --porcelain` shows only the expected changed files under the two extension dirs plus this story file, `sprint-status.yaml`, and `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md` (the resolved ledger entry — see "The load-bearing change" Dev Note). No core edits.
   - [x] 7.6 If a live Blesta + MySQL stack is available: enable the plugin, open a PKR invoice pay page, confirm a Voucher row is created with a **random** 4-digit-prefixed reference; reload reuses the same row (still no duplicate); save a deliberately broken pattern (e.g. `{nope}`) and confirm no Voucher is issued, the customer sees `not_ready`, and a sanitized `reference_generation_failed` entry appears in the gateway log. If no runtime/DB, state that explicitly and rely on lint + component tests.
 
 ## Dev Notes
@@ -372,7 +372,7 @@ git status --porcelain
   - `components/gateways/nonmerchant/kuickpay/kuickpay.php` — pass patterns into context, record AC2 diagnostic
   - `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php` — pattern note docs
   - `components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherReferenceServiceTest.php` — rewrite deterministic test, add generation/collision tests
-  - `_bmad-output/implementation-artifacts/deferred-work.md` — mark the 2.1 "deterministic reference collides with a non-pending voucher → permanent `not_ready` deadlock" entry resolved by 2.2's random prefix (ledger housekeeping; see "The load-bearing change")
+  - `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md` — mark the 2.1 "deterministic reference collides with a non-pending voucher → permanent `not_ready` deadlock" entry resolved by 2.2's random prefix (ledger housekeeping; see "The load-bearing change")
 - **Files NOT changed:** `models/kuickpay_vouchers.php` (uniqueness methods already exist), `kuickpay_reconcile_plugin.php` (no schema change), `views/default/process.pdt` (data contract unchanged), `settings.pdt` (pattern fields already present).
 
 ## References

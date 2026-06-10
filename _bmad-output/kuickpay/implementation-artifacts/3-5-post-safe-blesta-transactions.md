@@ -16,7 +16,7 @@ so that invoices are paid only after validated evidence and duplicate checks.
 
 ## Acceptance Criteria
 
-> Epic source (BDD, [Source: _bmad-output/planning-artifacts/epics.md#Story-3.5]):
+> Epic source (BDD, [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-3.5]):
 > - **Given** a Voucher has validated confirmed evidence **When** `KuickPayPostingService` posts payment **Then** it re-reads and locks or compare-updates the Voucher, revalidates amount/reference/invoice state, creates/applies the Blesta transaction, stores the transaction ID, and transitions the Voucher to `posted`.
 > - **Given** posting fails after confirmation evidence exists **When** the transaction rolls back **Then** the Voucher does not become `posted` **And** confirmation evidence remains available for retry or Manual Review.
 
@@ -223,8 +223,8 @@ Reused as-is: `lib/KuickPayInvoiceReader.php`, `lib/KuickPayAuditService.php`/`K
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-3.5] — user story + BDD ACs; #Story-3.6 (out-of-scope exceptions); FR17/FR19/FR20 and NFR3 (epics.md:91, idempotency) / NFR13 (epics.md:111, no-float amounts) in #Requirements-Inventory. The no-float rule is echoed at architecture.md:593 and anti-pattern architecture.md:658.
-- [Source: _bmad-output/planning-artifacts/architecture.md#Posting-Contract (lines 581-593)] — re-read/lock/re-verify/create/apply/transition/audit sequence.
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-3.5] — user story + BDD ACs; #Story-3.6 (out-of-scope exceptions); FR17/FR19/FR20 and NFR3 (epics.md:91, idempotency) / NFR13 (epics.md:111, no-float amounts) in #Requirements-Inventory. The no-float rule is echoed at architecture.md:593 and anti-pattern architecture.md:658.
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Posting-Contract (lines 581-593)] — re-read/lock/re-verify/create/apply/transition/audit sequence.
 - [Source: architecture.md#Data-Architecture (lines 339-353)] — states; `posted` semantics; lock + idempotency requirement.
 - [Source: architecture.md#Anti-Patterns (lines 648-661)] — no transaction in `buildProcess()`, no posting outside `KuickPayPostingService`, no float amounts, cron posting needs row locks, no force-paid.
 - [Source: architecture.md#UI-Display-State-Matrix (lines 597-606)] — `confirmed_unposted` "post through service"; `posted` forbids duplicate posting; no success styling pre-`posted`.
@@ -235,7 +235,7 @@ Reused as-is: `lib/KuickPayInvoiceReader.php`, `lib/KuickPayAuditService.php`/`K
 - [Source: plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php] — schema, cron registration, install/upgrade.
 - [Source: app/models/transactions.php] — `add()/apply()/getByTransactionId()`.
 - [Source: components/gateways/nonmerchant/kuickpay/lib/KuickPayEvidence.php] — constructor for reconstructing evidence at posting time.
-- [Source: _bmad-output/implementation-artifacts/deferred-work.md:68,76,81,82] — items to close.
+- [Source: _bmad-output/kuickpay/implementation-artifacts/deferred-work.md:68,76,81,82] — items to close.
 - [Source: _bmad-output/project-context.md] — PHP 8.2, Blesta conventions, testing rules.
 
 ## Developer Context

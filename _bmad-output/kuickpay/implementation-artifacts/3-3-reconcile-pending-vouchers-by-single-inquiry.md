@@ -273,7 +273,7 @@ Recent KuickPay commits set the conventions you extend: `feat(kuickpay): wrap so
 - [Source: app/models/cron_tasks.php; app/models/gateway_manager.php:234-298,789-802] — cron + gateway-meta APIs
 - [Source: plugins/mass_mailer/mass_mailer_plugin.php; plugins/domains/domains_plugin.php:304-319] — cron register/upgrade precedent
 - [Source: docs/kuickpay/phase-0-contract.md; docs/kuickpay/whmcs-live-implementation-evidence.md] — confirmed provider contract
-- [Source: _bmad-output/implementation-artifacts/deferred-work.md:52] — `edit()` company-scoping (resolve here)
+- [Source: _bmad-output/kuickpay/implementation-artifacts/deferred-work.md:52] — `edit()` company-scoping (resolve here)
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, testing/workflow/secret-safety rules
 
 ## Dev Agent Record
@@ -315,7 +315,7 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php
 - plugins/kuickpay_reconcile/tests/bootstrap.php
-- _bmad-output/implementation-artifacts/3-3-reconcile-pending-vouchers-by-single-inquiry.md
+- _bmad-output/kuickpay/implementation-artifacts/3-3-reconcile-pending-vouchers-by-single-inquiry.md
 
 ### Change Log
 - 2026-06-10: Implemented pending voucher reconciliation by single inquiry and moved story to review.

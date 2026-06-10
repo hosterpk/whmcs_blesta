@@ -222,15 +222,15 @@ Do not put voucher persistence, paid-state decisions, retry logic, or audit writ
 Pure comparator/policy/gate tests first; component-local PHPUnit 8.5 via the external runner; `php -l` on every changed file; no root PHPUnit claim (no sibling `../tests`). Do not call live KuickPay. Redact credentials/PII in any fixture or log. DB-backed behavior (edit/audit/schema/upgrade) is not runtime-verifiable here — state it. [project-context.md Testing Rules; epics.md FR28/NFR11/NFR12]
 
 ### References
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-2.4] — story, ACs (FR6, FR9, FR11).
-- [Source: _bmad-output/planning-artifacts/epics.md — FR6/FR9/FR11; NFR3/NFR9/NFR13] — idempotency, fail-closed, amount handling.
-- [Source: _bmad-output/planning-artifacts/architecture.md:329-356 (Data Architecture / active payment context), :595-608 (UI Display-State Matrix), :610-634 (Audit), :648-661 (Anti-Patterns), :664-673/:782 (Ownership / reference-service)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-2.4] — story, ACs (FR6, FR9, FR11).
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md — FR6/FR9/FR11; NFR3/NFR9/NFR13] — idempotency, fail-closed, amount handling.
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md:329-356 (Data Architecture / active payment context), :595-608 (UI Display-State Matrix), :610-634 (Audit), :648-661 (Anti-Patterns), :664-673/:782 (Ownership / reference-service)].
 - [Source: components/gateways/nonmerchant/kuickpay/kuickpay.php — buildProcess():567, reloadVoucherDecision():776, issueVoucherIfNeeded():808, voucherRowToView():907, buildVoucherReferenceContext():668, normalizeAmount():1033, getSettings():81, editSettings():113].
 - [Source: components/gateways/nonmerchant/kuickpay/views/default/settings.pdt:180-199 (currency_policy/fee_policy select pattern); process.pdt:1-23].
 - [Source: plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php — getOrCreateForInvoiceContext():48, flatten():246; KuickPayVoucherRepository.php — getPendingByInvoiceId():67, getLatestByInvoiceId():81, getWithInvoices():122, edit():165; KuickPayAuditService.php — record():17].
 - [Source: plugins/kuickpay_reconcile/models/kuickpay_vouchers.php — FIELDS:24, STATUSES:13, edit():83; kuickpay_voucher_invoices.php — add():19, unique key; kuickpay_reconcile_plugin.php — install():31, voucher DDL:38-73, link DDL:75-84, upgrade():100].
-- [Source: _bmad-output/implementation-artifacts/deferred-work.md:49-50 (2.1 multi-invoice/duplicate-id/reuse-by-first), :72-73 (2.3 concurrency + stale-amount display)].
-- [Source: _bmad-output/implementation-artifacts/2-3-map-invoice-data-and-issue-kuickpay-voucher.md — issuance flow, reload matrix, CONCURRENCY RESIDUAL, test harness].
+- [Source: _bmad-output/kuickpay/implementation-artifacts/deferred-work.md:49-50 (2.1 multi-invoice/duplicate-id/reuse-by-first), :72-73 (2.3 concurrency + stale-amount display)].
+- [Source: _bmad-output/kuickpay/implementation-artifacts/2-3-map-invoice-data-and-issue-kuickpay-voucher.md — issuance flow, reload matrix, CONCURRENCY RESIDUAL, test harness].
 - [Source: app/controllers/client_pay.php confirm()/index()/method(); app/models/payments.php getBuildProcess(); components/gateway_payments/gateway_payments.php getBuildProcess()] — how `$amount`/`$invoice_amounts` are assembled (session-sourced; multi-invoice rows).
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, loader/Input/Record/language rules, testing/tooling.
 
@@ -285,8 +285,8 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
-- _bmad-output/implementation-artifacts/deferred-work.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/deferred-work.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 
 ### Change Log
 

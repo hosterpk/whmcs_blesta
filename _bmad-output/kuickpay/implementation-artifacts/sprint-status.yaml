@@ -3,7 +3,7 @@
 # project: whmcs_blesta
 # project_key: NOKEY
 # tracking_system: file-system
-# story_location: {project-root}/_bmad-output/implementation-artifacts
+# story_location: {project-root}/_bmad-output/kuickpay/implementation-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -65,11 +65,11 @@
 # =====================================================================
 
 generated: 2026-06-09
-last_updated: 2026-06-10
+last_updated: 2026-06-11
 project: whmcs_blesta
 project_key: NOKEY
 tracking_system: file-system
-story_location: "{project-root}/_bmad-output/implementation-artifacts"
+story_location: "{project-root}/_bmad-output/kuickpay/implementation-artifacts"
 
 development_status:
   # --- Epic 0: Phase 0 - KuickPay Contract Validation and Fixture Gate ---
@@ -88,14 +88,14 @@ development_status:
 
   # --- Epic 2: Customer Voucher Payment Reference ---
   # NOTE: 2-3 is gated by 0-1, 3-1(InsertVoucher), 3-2(creation parser). See BUILD ORDER.
-  epic-2: in-progress
+  epic-2: done
   2-1-create-durable-customer-voucher-records: done
   2-2-generate-registration-number-and-consumer-number: done
   2-3-map-invoice-data-and-issue-kuickpay-voucher: done
   2-4-gate-changed-amounts-and-multi-invoice-attempts: done
   2-5-display-customer-payment-reference-panel: done
   2-6-display-configurable-payment-instructions-and-status-expectations: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   # --- Epic 3: Trusted Reconciliation and Safe Posting ---
   # NOTE: 3-1(InsertVoucher) and 3-2(creation parser) slices precede 2-3.
@@ -106,7 +106,7 @@ development_status:
   3-4-validate-confirmed-payment-evidence: done
   3-5-post-safe-blesta-transactions: done
   3-6-handle-expiry-late-partial-and-overpayment-cases: done
-  3-7-run-bulk-reconciliation-safety-net: backlog
+  3-7-run-bulk-reconciliation-safety-net: ready-for-dev
   3-8-verify-payment-safety-contracts: backlog
   epic-3-retrospective: optional
 

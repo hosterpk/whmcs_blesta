@@ -1,0 +1,32 @@
+# BMM Module Configuration — USER OVERRIDE (profile layer)
+# Overrides _bmad/bmm/config.yaml. Only the keys in the ACTIVE block below win;
+# all other config.yaml values (user_name, communication_language, output_folder,
+# project_knowledge, ...) fall through unchanged.
+#
+# =====================================================================
+# INITIATIVE PROFILES — exactly ONE block active at a time
+# =====================================================================
+# This project runs two BMad initiatives, each in its own namespace:
+#   _bmad-output/kuickpay/{planning,implementation}-artifacts   (KuickPay gateway)
+#   _bmad-output/webnic/{planning,implementation}-artifacts     (WebNIC registrar)
+#
+# BMad reads ONE global config at skill activation — it cannot auto-route each
+# initiative to its own tree. The ACTIVE block below selects which initiative the
+# skills (PRD, architecture, epics, sprint-planning, create-story, dev-story,
+# sprint-status, retros, ...) read and write.
+#
+# TO SWITCH INITIATIVES: comment the active block, uncomment the other. Keep
+# exactly one block live. If both are commented, skills fall back to the unused
+# _bmad-output/{planning,implementation}-artifacts default root (now empty) —
+# don't run skills in that state.
+#
+# NOTE: output_folder is intentionally NOT overridden, so the shared
+# _bmad-output/project-context.md stays at the root for both initiatives.
+
+# ===== ACTIVE: KuickPay =====
+planning_artifacts:       "{project-root}/_bmad-output/kuickpay/planning-artifacts"
+implementation_artifacts: "{project-root}/_bmad-output/kuickpay/implementation-artifacts"
+
+# ===== INACTIVE: WebNIC  (uncomment these two + comment the KuickPay block to switch) =====
+# planning_artifacts:       "{project-root}/_bmad-output/webnic/planning-artifacts"
+# implementation_artifacts: "{project-root}/_bmad-output/webnic/implementation-artifacts"

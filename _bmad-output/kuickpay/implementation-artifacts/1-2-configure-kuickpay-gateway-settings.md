@@ -405,8 +405,8 @@ GPT-5 Codex
 - components/gateways/nonmerchant/kuickpay/kuickpay.php
 - components/gateways/nonmerchant/kuickpay/views/default/settings.pdt
 - components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php
-- _bmad-output/implementation-artifacts/1-2-configure-kuickpay-gateway-settings.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/1-2-configure-kuickpay-gateway-settings.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 
 ## Change Log
 

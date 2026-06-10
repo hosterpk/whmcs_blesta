@@ -222,18 +222,18 @@ STATUS-ONLY / NOTICE / RETRY arms: unchanged.
 [project-context.md Testing Rules]
 
 ### References
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-2.6 (553-574)] — story, ACs.
-- [Source: _bmad-output/planning-artifacts/epics.md — FR2:27, FR13:49, FR14:51; UX-DR5:160, UX-DR6:162, UX-DR19:188, UX-DR20:190, UX-DR21:192, UX-DR22:194, UX-DR24:198, UX-DR25:200, UX-DR26:202, UX-DR28:206; NFR6:97].
-- [Source: _bmad-output/planning-artifacts/architecture.md:410 (buildProcess/customer cannot mark paid), :416-439 (Frontend Architecture; :420-423 instruction groups before secondary content), :520-527 + :775-780 (Ownership / component boundaries), :595-607 (UI Display-State Matrix — customer + Forbidden columns; :602 no raw status), :648-662 (Anti-Patterns; :653,:655 posted-only success)].
-- [Source: _bmad-output/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/DESIGN.md:71-75 (instruction-group component), :122,:132-137 (semantic color; success-only-when-posted), :139-150 (typography/monospace; single-column), :153-159 (no custom elevation; inherit Blesta), :163-166 (customer reference panel + status expectation; status badges), :174-183 (Do/Don't)].
-- [Source: _bmad-output/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/EXPERIENCE.md:26 (reference before instructions), :44-53 (voice/tone Do/Don't; language-file rule), :59-66 (component patterns: instruction group, status expectation, check-status), :99-106 (interaction primitives; loading must not blank), :112-120 (accessibility floor), :126-130 (responsive), :132-148 (payment-safety UX; support path open decision), :148 (reserve support-path slot)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-2.6 (553-574)] — story, ACs.
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md — FR2:27, FR13:49, FR14:51; UX-DR5:160, UX-DR6:162, UX-DR19:188, UX-DR20:190, UX-DR21:192, UX-DR22:194, UX-DR24:198, UX-DR25:200, UX-DR26:202, UX-DR28:206; NFR6:97].
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md:410 (buildProcess/customer cannot mark paid), :416-439 (Frontend Architecture; :420-423 instruction groups before secondary content), :520-527 + :775-780 (Ownership / component boundaries), :595-607 (UI Display-State Matrix — customer + Forbidden columns; :602 no raw status), :648-662 (Anti-Patterns; :653,:655 posted-only success)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/DESIGN.md:71-75 (instruction-group component), :122,:132-137 (semantic color; success-only-when-posted), :139-150 (typography/monospace; single-column), :153-159 (no custom elevation; inherit Blesta), :163-166 (customer reference panel + status expectation; status badges), :174-183 (Do/Don't)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/ux-designs/ux-whmcs_blesta-2026-06-09/EXPERIENCE.md:26 (reference before instructions), :44-53 (voice/tone Do/Don't; language-file rule), :59-66 (component patterns: instruction group, status expectation, check-status), :99-106 (interaction primitives; loading must not blank), :112-120 (accessibility floor), :126-130 (responsive), :132-148 (payment-safety UX; support path open decision), :148 (reserve support-path slot)].
 - [Source: components/gateways/nonmerchant/kuickpay/kuickpay.php — buildProcess():613-694; meta read:632; voucher!=null view->set block:683-688; reloadVoucherDecision():852; resolveDisplayMode():883-890; customerVoucherStatusDisplay():898-915; voucherRowToView():1153; editSettings instruction defaults:139-151 + validation:313-329].
 - [Source: components/gateways/nonmerchant/kuickpay/views/default/process.pdt:1-172 — 4-arm tree; payable arm:24-141; expectation:84-88; copy script:91-141; status_only:142-169; retry_safe:170-171].
 - [Source: components/gateways/nonmerchant/kuickpay/views/default/settings.pdt:222-248 — Instruction Groups section; defaults & enabled-predicate:227-238].
 - [Source: components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php — name:2; process keys:7-29 (status_expectation:20, identity/copy:17-19, status.*:21-29); group.instruction_groups:33; institution_id:49; instruction_<channel> labels/notes:81-88].
 - [Source: components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php — subclass-`expose*` + fake-seam harness (exposeResolveDisplayMode:102, exposeCustomerVoucherStatusDisplay:107); `.pdt` not drivable].
 - [Source: components/gateways/nonmerchant/offline/views/default/{settings.pdt:2-7, process.pdt:2} + language/en_us/offline.php — admin-textarea + TextParser markdown pattern (the D1 alternative, NOT the default)].
-- [Source: _bmad-output/implementation-artifacts/2-5-display-customer-payment-reference-panel.md — panel/4-arm tree, status map, status_expectation, testable-seam pattern (now shipped/done at HEAD)].
+- [Source: _bmad-output/kuickpay/implementation-artifacts/2-5-display-customer-payment-reference-panel.md — panel/4-arm tree, status map, status_expectation, testable-seam pattern (now shipped/done at HEAD)].
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, loader/Input/Record/language rules, `.pdt` view rules, testing/tooling.
 
 ### Open questions for Israr (do not block implementation — binding defaults above apply unless you say otherwise)
@@ -271,8 +271,8 @@ Codex GPT-5
 - `components/gateways/nonmerchant/kuickpay/views/default/process.pdt`
 - `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php`
 - `components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php`
-- `_bmad-output/implementation-artifacts/2-6-display-configurable-payment-instructions-and-status-expectations.md`
-- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/kuickpay/implementation-artifacts/2-6-display-configurable-payment-instructions-and-status-expectations.md`
+- `_bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml`
 
 ### Change Log
 

@@ -254,8 +254,8 @@ GPT-5 Codex
 - plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
 - plugins/kuickpay_reconcile/tests/bootstrap.php
-- _bmad-output/implementation-artifacts/3-4-validate-confirmed-payment-evidence.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/3-4-validate-confirmed-payment-evidence.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 
 ### Change Log
 

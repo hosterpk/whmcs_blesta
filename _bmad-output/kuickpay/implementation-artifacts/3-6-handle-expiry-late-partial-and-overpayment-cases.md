@@ -16,7 +16,7 @@ so that unsafe payment states do not silently mark invoices paid.
 
 ## Acceptance Criteria
 
-> Epic source (BDD, [Source: _bmad-output/planning-artifacts/epics.md#Story-3.6 lines 671-687]):
+> Epic source (BDD, [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-3.6 lines 671-687]):
 > - **Given** a Voucher passes its configured expiry date unpaid **When** expiry processing runs **Then** it transitions out of active Pending state **And** the customer can generate a new Voucher if the invoice remains unpaid.
 > - **Given** payment evidence is underpaid, overpaid, late after expiry, or policy-dependent **When** validation runs **Then** configured policy is applied **And** unsupported or unsafe cases go to Manual Review without full invoice payment.
 
@@ -276,8 +276,8 @@ GPT-5 Codex
 - 2026-06-10: Implemented local voucher expiry, exception classification, manual-review policy settings, cron registration, and fixture-backed regression coverage for Story 3.6.
 
 ### File List
-- _bmad-output/implementation-artifacts/3-6-handle-expiry-late-partial-and-overpayment-cases.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/3-6-handle-expiry-late-partial-and-overpayment-cases.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 - plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
 - plugins/kuickpay_reconcile/config.json
 - plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php
@@ -307,4 +307,4 @@ _Code review 2026-06-10 (adversarial: Blind Hunter + Edge Case Hunter + Acceptan
 
 **Deferred:**
 
-- [x] [Review][Defer] **Story `baseline_commit` frontmatter is stale** [_bmad-output/implementation-artifacts/3-6-handle-expiry-late-partial-and-overpayment-cases.md:2] — `baseline_commit: d8b391a1` points to the "2.6 create story" commit, which predates Story 2-6's implementation; the literal `baseline..HEAD` diff therefore pulls in already-reviewed 2-6 work (`process.pdt`, payment-instruction rendering, the epic-2 retro). The review was correctly scoped to `7db4dc14..HEAD` (matches this story's File List exactly). Planning-artifact hygiene, not shipped code. — deferred, recommend updating frontmatter to the 3-6 base for future reviews. (Reviewer.)
+- [x] [Review][Defer] **Story `baseline_commit` frontmatter is stale** [_bmad-output/kuickpay/implementation-artifacts/3-6-handle-expiry-late-partial-and-overpayment-cases.md:2] — `baseline_commit: d8b391a1` points to the "2.6 create story" commit, which predates Story 2-6's implementation; the literal `baseline..HEAD` diff therefore pulls in already-reviewed 2-6 work (`process.pdt`, payment-instruction rendering, the epic-2 retro). The review was correctly scoped to `7db4dc14..HEAD` (matches this story's File List exactly). Planning-artifact hygiene, not shipped code. — deferred, recommend updating frontmatter to the 3-6 base for future reviews. (Reviewer.)

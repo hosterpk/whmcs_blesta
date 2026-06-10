@@ -233,7 +233,7 @@ Only `pending` (successfully issued) may show the payable reference. Map states 
 - **Gate ordering in `buildProcess()` is load-bearing**: PKR `currencyEligible()` → companion `companionInstalled()` → `if (!$this->Input->errors())` → create/reuse → **(new) issue**. Issuance must stay inside the `!errors()` block so ineligible currency / missing companion can never issue a voucher. [kuickpay.php:577-601]
 - **Model error language keys** for any new validation must live in the owning per-model language file, not the plugin file (the plugin class is not constructed during `buildProcess`). Gateway strings live in `components/gateways/nonmerchant/kuickpay/language/en_us/kuickpay.php`.
 - **`KuickpayVouchers::edit()` does not value-validate.** It only intersects field *names* against `self::FIELDS` and force-unsets `company_id`; `getRules()` runs in `add()` only. The persist step is safe because `$evidence->status()` is always a valid enum (the parser emits only `pending`/`failed`/`manual_review`/`retry`/…), but do not rely on `edit()` to reject an out-of-enum value — write only known-good values.
-- **2.3 is the first live mutation surface and first real caller of the redactor/masking boundary.** Several Epic-1 boundary items were deferred "to the first consumer" (mask non-array handling, mask-allowlist completeness, redactor value-based redaction). Re-read `_bmad-output/implementation-artifacts/deferred-work.md` before wiring logging.
+- **2.3 is the first live mutation surface and first real caller of the redactor/masking boundary.** Several Epic-1 boundary items were deferred "to the first consumer" (mask non-array handling, mask-allowlist completeness, redactor value-based redaction). Re-read `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md` before wiring logging.
 - **No live Blesta/MySQL verification has run** in any prior KuickPay story. DB-path behavior (edit/audit writes) cannot be runtime-verified here — keep logic in pure/injectable helpers and state the verification gap explicitly. `ext-soap` is present in this checkout but flag it as a deploy dependency.
 - **Testability pattern that works:** pure mapping helper + injectable SOAP-client factory / fake repository + fixtures fed through the parser. The `KuickPaySoapClient` constructor accepts a `$soapClientFactory` fake; `KuickPayVoucherReferenceService`/`KuickPayResponseParser` accept injected repo/redactor.
 - Commit convention: `<type>(<scope>): <summary>`, imperative, lowercase, ≤72 chars; keep BMad/docs artifacts out of the implementation commit. Allowed types: `feat fix docs test refactor chore`.
@@ -265,9 +265,9 @@ Parser/mapping fixture tests first; component-local PHPUnit 8.5 via the external
 - `fallback_email`/`default_branch` are additive gateway settings consistent with the existing `fallback_mobile`/`payment_head_label` pattern (FR2 — all voucher-creation config is gateway-owned).
 
 ### References
-- [Source: _bmad-output/planning-artifacts/epics.md#Story-2.3] — story, ACs, sequencing, FR8/FR10.
-- [Source: _bmad-output/planning-artifacts/epics.md — FR6-FR11, FR15-FR17; NFR2/NFR3/NFR9/NFR13] — voucher generation + safety requirements.
-- [Source: _bmad-output/planning-artifacts/architecture.md#Posting-Contract (581-593), #Anti-Patterns (650-660), #Ownership-Rule (664-673), #Parser-&-Evidence-Contract (549-579), #UI-Display-State-Matrix (595-608), #Audit-and-Logging (610-634)].
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md#Story-2.3] — story, ACs, sequencing, FR8/FR10.
+- [Source: _bmad-output/kuickpay/planning-artifacts/epics.md — FR6-FR11, FR15-FR17; NFR2/NFR3/NFR9/NFR13] — voucher generation + safety requirements.
+- [Source: _bmad-output/kuickpay/planning-artifacts/architecture.md#Posting-Contract (581-593), #Anti-Patterns (650-660), #Ownership-Rule (664-673), #Parser-&-Evidence-Contract (549-579), #UI-Display-State-Matrix (595-608), #Audit-and-Logging (610-634)].
 - [Source: components/gateways/nonmerchant/kuickpay/kuickpay.php — buildProcess():567, getSoapClient():492, buildVoucherReferenceContext():627, normalizeAmount():684, maskCredentials():316].
 - [Source: components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php — insertVoucher():61, withCredentials():233].
 - [Source: components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php — parse():61, parseInsertVoucher():282, inquiry single-identity:486-491].
@@ -276,8 +276,8 @@ Parser/mapping fixture tests first; component-local PHPUnit 8.5 via the external
 - [Source: plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php — edit(), getWithInvoices(), getPendingByInvoiceId()].
 - [Source: plugins/kuickpay_reconcile/lib/KuickPayAuditService.php — record()].
 - [Source: app/models/contacts.php — getNumbers():924 ('phone','fax' types; 'home','work','mobile' locations); get() email].
-- [Source: _bmad-output/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md] — InsertVoucher contract, fixtures, provisional caveats.
-- [Source: _bmad-output/implementation-artifacts/{2-1,2-2,3-1,3-2}-*.md; deferred-work.md; epic-1-retro-2026-06-10.md] — established patterns, deferred boundaries, test runner.
+- [Source: _bmad-output/kuickpay/implementation-artifacts/0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures.md] — InsertVoucher contract, fixtures, provisional caveats.
+- [Source: _bmad-output/kuickpay/implementation-artifacts/{2-1,2-2,3-1,3-2}-*.md; deferred-work.md; epic-1-retro-2026-06-10.md] — established patterns, deferred boundaries, test runner.
 - [Source: _bmad-output/project-context.md] — Blesta/PHP 8.2 conventions, loader/Input/Record/language rules, testing/tooling.
 - [Memory: kuickpay-parser-single-identity-contract] — single-inquiry one-identity rule (inquiry only, not InsertVoucher).
 
@@ -318,8 +318,8 @@ _TBD by dev agent_
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/KuickPayIssuanceServiceTest.php
-- _bmad-output/implementation-artifacts/2-3-map-invoice-data-and-issue-kuickpay-voucher.md
-- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/kuickpay/implementation-artifacts/2-3-map-invoice-data-and-issue-kuickpay-voucher.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
 
 ### Change Log
 
