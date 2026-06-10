@@ -402,6 +402,34 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Atomically transitions a still-active voucher to 'expired'.
+     *
+     * The status precondition makes the sweep safe against a concurrent
+     * reconcile/posting transition: getExpirable() reads without a row lock
+     * and the expire/reconcile crons hold distinct locks, so a row selected
+     * as expirable may already have become confirmed_unposted by the time
+     * this UPDATE runs. Guarding on status IN ('pending','retry') means a row
+     * that left the active set is never clobbered back to 'expired'.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @return bool True only when this call transitioned the row
+     */
+    public function expire(int $voucher_id, int $company_id): bool
+    {
+        $statement = $this->Record
+            ->where('id', '=', $voucher_id)
+            ->where('company_id', '=', $company_id)
+            ->where('status', 'in', ['pending', 'retry'])
+            ->update('kuickpay_vouchers', [
+                'status' => 'expired',
+                'date_updated' => date('Y-m-d H:i:s'),
+            ], ['status', 'date_updated']);
+
+        return $statement->rowCount() === 1;
+    }
+
+    /**
      * Locks and fetches a company-scoped voucher row.
      *
      * @param int $voucher_id The voucher ID

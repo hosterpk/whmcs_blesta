@@ -72,13 +72,18 @@ class KuickPayReconcileService
 
                 try {
                     $prior_status = (string) $voucher->status;
-                    $this->voucherRepository->edit((int) $voucher->id, $company_id, ['status' => 'expired']);
-                    $this->auditService->record('voucher.expired', [
-                        'company_id' => $company_id,
-                        'voucher_id' => (int) $voucher->id,
-                        'payload' => ['prior_status' => $prior_status],
-                    ]);
-                    $counts['expired']++;
+                    // Status-guarded UPDATE: only audit + count a row this call
+                    // actually transitioned, so a voucher concurrently moved out
+                    // of pending/retry (e.g. confirmed_unposted by reconcile under
+                    // a PHP/DB clock skew) is never clobbered back to 'expired'.
+                    if ($this->voucherRepository->expire((int) $voucher->id, $company_id)) {
+                        $this->auditService->record('voucher.expired', [
+                            'company_id' => $company_id,
+                            'voucher_id' => (int) $voucher->id,
+                            'payload' => ['prior_status' => $prior_status],
+                        ]);
+                        $counts['expired']++;
+                    }
                 } catch (Throwable $e) {
                     $counts['errors']++;
                 }

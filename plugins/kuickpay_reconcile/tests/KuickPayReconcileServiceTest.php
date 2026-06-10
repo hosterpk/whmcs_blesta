@@ -296,6 +296,34 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame([], $client->requests);
     }
 
+    public function testExpirePendingSkipsAuditAndCountWhenGuardedTransitionDoesNotApply()
+    {
+        $repo = new KuickPayReconcileFakeVoucherRepository([
+            $this->voucher(['id' => 1, 'status' => 'pending', 'date_expires' => '2026-06-08']),
+        ]);
+        // Simulate a voucher that left pending/retry between getExpirable() and
+        // the guarded UPDATE (e.g. reconcile confirmed it under a clock skew):
+        // expire() reports no transition, so the sweep must neither audit nor count it.
+        $repo->forcedExpireResult = false;
+        $lock = new KuickPayReconcileFakeLockRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $client = new KuickPayReconcileFakeClient([]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'lock_repository' => $lock,
+            'audit_service' => $audit,
+            'client' => $client,
+        ]);
+
+        $result = $service->expirePending(1);
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame(['processed' => 1, 'expired' => 0, 'errors' => 0], $result['counts']);
+        $this->assertSame([], $audit->events);
+        $this->assertSame([], $repo->edits);
+        $this->assertTrue($lock->released);
+    }
+
     public function testRunUsesResumeCursorAndClosesCompletedRunWithResetCursor()
     {
         $client = new KuickPayReconcileFakeClient([
@@ -414,6 +442,7 @@ class KuickPayReconcileFakeVoucherRepository
     public ?array $freshDataOverride = [];
     public ?stdClass $duplicateReference = null;
     public ?stdClass $activeSibling = null;
+    public ?bool $forcedExpireResult = null;
     private array $vouchers;
     private array $invoiceLinks;
 
@@ -454,6 +483,31 @@ class KuickPayReconcileFakeVoucherRepository
         }
 
         return $expirable;
+    }
+
+    public function expire(int $voucher_id, int $company_id): bool
+    {
+        if ($this->forcedExpireResult !== null) {
+            return $this->forcedExpireResult;
+        }
+
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id
+                && (int) $voucher->company_id === $company_id
+                && in_array((string) $voucher->status, ['pending', 'retry'], true)
+            ) {
+                $voucher->status = 'expired';
+                $this->edits[] = [
+                    'status' => 'expired',
+                    'voucher_id' => $voucher_id,
+                    'company_id_scope' => $company_id,
+                ];
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function edit(int $voucher_id, int $company_id, array $vars): void

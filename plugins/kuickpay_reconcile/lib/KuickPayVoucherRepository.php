@@ -239,6 +239,18 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Atomically transitions a still-active voucher to 'expired'.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @return bool True only when this call transitioned the row
+     */
+    public function expire(int $voucher_id, int $company_id): bool
+    {
+        return $this->KuickpayVouchers->expire($voucher_id, $company_id);
+    }
+
+    /**
      * Locks and fetches a company-scoped voucher row.
      *
      * @param int $voucher_id The voucher ID
