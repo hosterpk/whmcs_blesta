@@ -47,6 +47,21 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame(['posting.failed'], array_column($audit->events, 0));
     }
 
+    public function testMalformedPaidDateMovesToManualReviewWithoutTransaction()
+    {
+        $voucher = $this->voucher(['date_paid' => '0000-00-00 00:00:00']);
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $voucher);
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertSame(['missing_paid_date'], json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']);
+        $this->assertSame([], $transactions->adds);
+    }
+
     public function testAlreadyPostedVoucherIsNoOpAfterLock()
     {
         $locked = $this->voucher(['status' => 'posted', 'blesta_transaction_id' => 800]);
@@ -164,6 +179,65 @@ class KuickPayPostingServiceTest extends TestCase
             ['existing_transaction_mismatch'],
             json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']
         );
+    }
+
+    /**
+     * @dataProvider existingUnsafeTransactionProvider
+     */
+    public function testExistingUnsafeTransactionMovesToManualReview(array $transactionOverrides, array $applied, string $reason)
+    {
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $transactions->existing = $this->transaction($transactionOverrides);
+        $transactions->applied = $applied;
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertSame([], $transactions->adds);
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertSame([$reason], json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']);
+    }
+
+    public function existingUnsafeTransactionProvider(): array
+    {
+        return [
+            'non-approved' => [
+                ['status' => 'pending'],
+                [],
+                'existing_transaction_mismatch',
+            ],
+            'wrong currency' => [
+                ['currency' => 'USD'],
+                [],
+                'existing_transaction_mismatch',
+            ],
+            'wrong invoice applied' => [
+                [],
+                [(object) ['invoice_id' => 99, 'applied_amount' => '1000.00']],
+                'existing_transaction_partial_application',
+            ],
+            'partially applied' => [
+                [],
+                [(object) ['invoice_id' => 55, 'applied_amount' => '500.00']],
+                'existing_transaction_partial_application',
+            ],
+        ];
+    }
+
+    public function testDoubleAllocationRevalidationFailureMovesToManualReview()
+    {
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $validator = new KuickPayPostingFakeEvidenceValidator(false, ['stale_voucher']);
+        $service = $this->service($repo, $transactions, null, $validator);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertSame(['stale_voucher'], json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']);
+        $this->assertSame([], $transactions->adds);
     }
 
     public function testPostConfirmedUsesLockAndCountsOutcomes()

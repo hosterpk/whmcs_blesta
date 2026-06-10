@@ -272,6 +272,7 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - 2026-06-10: Added `KuickPayPostingService` with paid-date guard, locked re-read, validation, duplicate transaction adoption, Blesta transaction add/apply, rollback handling, and posting audits. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayPostingServiceTest.php` and `php -l` on new posting files.
 - 2026-06-10: Registered `post_confirmed` cron, bumped plugin config to 1.2.0, added posting language strings, and made upgrade version gates cumulative. Verified with `php -l` on plugin/language files and the posting service PHPUnit slice.
 - 2026-06-10: Added `plugins/kuickpay_reconcile/lib/README.md` documenting `KuickPayPostingService` as the only KuickPay payment posting boundary.
+- 2026-06-10: Expanded posting tests for malformed paid dates, unsafe existing transactions, partial applications, and double-allocation re-validation failures. Verified with the posting service PHPUnit slice and `php -l` on the test file.
 
 ### Completion Notes List
 - Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
@@ -281,6 +282,7 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - Task 5 complete: `post_confirmed` is registered idempotently, dispatches `KuickPayPostingService`, and uses a distinct DB lock.
 - Task 6 language strings complete: cron labels and the redacted transaction message are in the plugin language file.
 - Task 6 docs complete: library README documents the single posting boundary and forbids payment creation/application outside `KuickPayPostingService`.
+- Task 7 coverage expanded: posting tests now cover happy path, idempotency, duplicate/adopted transactions, invalid paid dates, re-validation failure, rollback failure paths, and unsafe existing transaction handling.
 
 ### File List
 - plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
