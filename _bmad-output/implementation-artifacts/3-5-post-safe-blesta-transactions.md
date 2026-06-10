@@ -116,9 +116,9 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
     `addCronTasks()` is already idempotent (`getByKey`/`getTaskRunByKey` guards), so re-running it is safe. Add a verification note: smoke-test a real `1.1.0 → 1.2.0` upgrade and confirm `post_confirmed` is registered and dispatchable.
   - [x] Use a distinct DB lock name (`post_confirmed`) via the existing `KuickPayReconcileLockRepository` — both locks coexist in the single `kuickpay_reconcile_locks` table keyed by `(company_id, lock_name)`, so the distinct names mean posting and reconciliation never contend. Honor TTL / stale-lock handling like the reconcile service.
 
-- [ ] **Task 6 — Language & docs (AC13)**.
+- [x] **Task 6 — Language & docs (AC13)**.
   - [x] Add new strings to `plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php`: the `post_confirmed` cron name/description, the `Transactions->add()` `message` text (e.g. `KuickpayReconcile.posting.transaction_message`), and any admin manual-review reason labels. Keep machine reason codes out of user copy.
-  - [ ] **Create** `plugins/kuickpay_reconcile/lib/README.md` (it does not exist yet) stating that `KuickPayPostingService` is the only class permitted to create/apply Blesta payments — this file is mandated by the architecture and this story is the natural owner since it introduces the service. [Source: architecture.md:906]
+  - [x] **Create** `plugins/kuickpay_reconcile/lib/README.md` (it does not exist yet) stating that `KuickPayPostingService` is the only class permitted to create/apply Blesta payments — this file is mandated by the architecture and this story is the natural owner since it introduces the service. [Source: architecture.md:906]
 
 - [ ] **Task 7 — Tests (AC15)** at `plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php` (+ the validator test updates from Task 2).
   - [ ] Reuse the fake-injection style from `KuickPayReconcileServiceTest`/`KuickPayEvidenceValidatorTest`: fake voucher repository (in-memory rows + invoice links), fake/stub `Transactions` (records `add`/`apply` calls, returns a fake id, can be forced to error, and lets the test seed `getByTransactionId`/`getApplied` return values), fake invoice reader, fake audit service (captures event names + payloads).
@@ -271,6 +271,7 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - 2026-06-10: Added postable voucher selection plus locked voucher/invoice-link reads. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherRepositoryTest.php` and `php -l` on touched repository/model files.
 - 2026-06-10: Added `KuickPayPostingService` with paid-date guard, locked re-read, validation, duplicate transaction adoption, Blesta transaction add/apply, rollback handling, and posting audits. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayPostingServiceTest.php` and `php -l` on new posting files.
 - 2026-06-10: Registered `post_confirmed` cron, bumped plugin config to 1.2.0, added posting language strings, and made upgrade version gates cumulative. Verified with `php -l` on plugin/language files and the posting service PHPUnit slice.
+- 2026-06-10: Added `plugins/kuickpay_reconcile/lib/README.md` documenting `KuickPayPostingService` as the only KuickPay payment posting boundary.
 
 ### Completion Notes List
 - Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
@@ -279,10 +280,12 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 - Task 3 complete: posting is centralized in `KuickPayPostingService` with DB lock batching, row-locked posting, idempotency, rollback-safe failures, and redacted audit events.
 - Task 5 complete: `post_confirmed` is registered idempotently, dispatches `KuickPayPostingService`, and uses a distinct DB lock.
 - Task 6 language strings complete: cron labels and the redacted transaction message are in the plugin language file.
+- Task 6 docs complete: library README documents the single posting boundary and forbids payment creation/application outside `KuickPayPostingService`.
 
 ### File List
 - plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
 - plugins/kuickpay_reconcile/lib/KuickPayPostingService.php
+- plugins/kuickpay_reconcile/lib/README.md
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
 - plugins/kuickpay_reconcile/config.json
 - plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
