@@ -20,6 +20,11 @@ class KuickPayVoucherReferenceService
     private $repository;
 
     /**
+     * @var KuickPayAuditService Audit service
+     */
+    private $auditService;
+
+    /**
      * @var string|null Last sanitized generation error code
      */
     private $lastError = null;
@@ -28,15 +33,22 @@ class KuickPayVoucherReferenceService
      * Constructs the reference service.
      *
      * @param mixed $repository Optional repository, primarily for tests
+     * @param mixed $auditService Optional audit service, primarily for tests
      */
-    public function __construct($repository = null)
+    public function __construct($repository = null, $auditService = null)
     {
+        $useDefaultServices = $repository === null;
         if ($repository === null) {
             Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherRepository.php');
             $repository = new KuickPayVoucherRepository();
         }
+        if ($auditService === null && $useDefaultServices) {
+            Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayAuditService.php');
+            $auditService = new KuickPayAuditService();
+        }
 
         $this->repository = $repository;
+        $this->auditService = $auditService;
     }
 
     /**
@@ -160,6 +172,40 @@ class KuickPayVoucherReferenceService
 
         return $this->canonicalInvoiceAmounts($voucherInvoices, 'invoice_id')
             === $this->canonicalInvoiceAmounts($contextInvoiceAmounts, 'id');
+    }
+
+    /**
+     * Retires a stale voucher and records replacement audit history.
+     *
+     * @param int $voucherId Voucher ID
+     * @param int $companyId Company ID scope
+     * @param string $reason Replacement reason
+     * @param array $auditPayload Additional audit payload fields
+     * @return bool True when the retire write was attempted successfully
+     */
+    public function retireVoucher(int $voucherId, int $companyId, string $reason, array $auditPayload = []): bool
+    {
+        try {
+            $this->repository->edit($voucherId, $companyId, ['status' => 'cancelled']);
+
+            if ($this->auditService === null) {
+                Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayAuditService.php');
+                $this->auditService = new KuickPayAuditService();
+            }
+
+            $redactedTraceId = $auditPayload['redacted_trace_id'] ?? null;
+            unset($auditPayload['redacted_trace_id']);
+            $this->auditService->record('voucher.replaced', [
+                'company_id' => $companyId,
+                'voucher_id' => $voucherId,
+                'redacted_trace_id' => $redactedTraceId,
+                'payload' => array_merge(['reason' => $reason], $auditPayload),
+            ]);
+
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     /**

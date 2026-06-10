@@ -18,6 +18,7 @@ class KuickPayVoucherReferenceServiceFakeRepository
     public $consumerLookups = [];
     public $registrationLookupReturns = [];
     public $consumerLookupReturns = [];
+    public array $edits = [];
 
     public function getPendingByInvoiceId(int $invoice_id, int $company_id)
     {
@@ -56,6 +57,11 @@ class KuickPayVoucherReferenceServiceFakeRepository
         return $this->nextLookupReturn($this->consumerLookupReturns, $consumer_number, $company_id);
     }
 
+    public function edit(int $voucher_id, int $company_id, array $vars): void
+    {
+        $this->edits[] = compact('voucher_id', 'company_id', 'vars');
+    }
+
     private function nextLookupReturn(array &$returns, string $reference, int $company_id)
     {
         if (empty($returns)) {
@@ -68,6 +74,16 @@ class KuickPayVoucherReferenceServiceFakeRepository
         }
 
         return $return;
+    }
+}
+
+class KuickPayVoucherReferenceServiceFakeAuditService
+{
+    public array $events = [];
+
+    public function record(string $eventName, array $context): void
+    {
+        $this->events[] = ['event' => $eventName, 'context' => $context];
     }
 }
 
@@ -242,6 +258,37 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
                 ['id' => 56, 'amount' => '500.00'],
             ]
         ));
+    }
+
+    public function testRetireVoucherCancelsVoucherAndRecordsReplacementAudit()
+    {
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $audit = new KuickPayVoucherReferenceServiceFakeAuditService();
+        $service = new KuickPayVoucherReferenceService($repository, $audit);
+
+        $this->assertTrue($service->retireVoucher(25, 1, 'amount_changed', [
+            'old_amount' => '1500.00',
+            'new_amount' => '1200.00',
+            'redacted_trace_id' => 'trace-retire',
+        ]));
+
+        $this->assertSame([
+            [
+                'voucher_id' => 25,
+                'company_id' => 1,
+                'vars' => ['status' => 'cancelled'],
+            ],
+        ], $repository->edits);
+        $this->assertSame('voucher.replaced', $audit->events[0]['event']);
+        $this->assertSame(1, $audit->events[0]['context']['company_id']);
+        $this->assertSame(25, $audit->events[0]['context']['voucher_id']);
+        $this->assertSame('trace-retire', $audit->events[0]['context']['redacted_trace_id']);
+        $this->assertSame([
+            'reason' => 'amount_changed',
+            'old_amount' => '1500.00',
+            'new_amount' => '1200.00',
+        ], $audit->events[0]['context']['payload']);
+        $this->assertArrayNotHasKey('run_id', $audit->events[0]['context']);
     }
 
     public function testFlatVoucherExposesIssuanceStateForIdempotency()
