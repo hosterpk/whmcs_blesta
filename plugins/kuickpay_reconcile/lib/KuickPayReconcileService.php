@@ -228,21 +228,18 @@ class KuickPayReconcileService
                     continue;
                 }
 
-                if (isset($seenConsumers[$consumerNumber])) {
-                    $evidence = $this->duplicateBulkEvidence($evidence);
-                    $new_status = $this->persistDuplicateBulkEvidence($company_id, $voucher, $evidence);
-                    $this->itemRepository->record([
-                        'run_id' => $run_id,
-                        'voucher_id' => (int) $voucher->id,
-                        'prior_status' => (string) $voucher->status,
-                        'new_status' => $new_status,
-                        'error_class' => $evidence->errorClass(),
-                        'evidence_hash' => $evidence->evidenceHash(),
-                        'redacted_trace_id' => $evidence->redactedTraceId(),
-                        'date_created' => date('Y-m-d H:i:s'),
-                    ]);
-                    $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $new_status);
-                    $counts = $this->countOutcome($counts, $new_status, false);
+                if (isset($seenConsumers[$consumerNumber])
+                    || !in_array((string) $voucher->status, ['pending', 'retry'], true)
+                ) {
+                    // Already handled: the provider echoed this Consumer Number twice in
+                    // one run, or the voucher already left pending/retry from a prior bulk
+                    // run / the scheduled single path. Reprocessing it would demote a valid
+                    // confirm (persistEvidence's stale guard rewrites it to manual_review),
+                    // and a second (run_id, voucher_id) item row would violate the unique
+                    // key and abort the whole run. Audit the duplicate only; leave the
+                    // voucher and its first item untouched (idempotent rerun).
+                    $counts['total_checked']++;
+                    $this->recordDuplicateBulkAudit($company_id, $run_id, $voucher, $evidence);
                     continue;
                 }
                 $seenConsumers[$consumerNumber] = true;
@@ -585,37 +582,19 @@ class KuickPayReconcileService
         return ['expected' => $expected, 'vouchers' => $vouchers];
     }
 
-    private function duplicateBulkEvidence(KuickPayEvidence $evidence): KuickPayEvidence
+    private function recordDuplicateBulkAudit(int $company_id, int $run_id, $voucher, KuickPayEvidence $evidence): void
     {
-        return new KuickPayEvidence(
-            'manual_review',
-            'duplicate_reference',
-            $evidence->reference(),
-            $evidence->consumerNumber(),
-            $evidence->registrationNumber(),
-            $evidence->amount(),
-            $evidence->currency(),
-            $evidence->paidAt(),
-            $evidence->rawStatus(),
-            $evidence->redactedTraceId(),
-            substr(hash('sha256', $evidence->evidenceHash() . '|duplicate'), 0, 24),
-            ['duplicate_reference'],
-            $evidence->operation()
-        );
-    }
-
-    private function persistDuplicateBulkEvidence(int $company_id, $voucher, KuickPayEvidence $evidence): string
-    {
-        $this->voucherRepository->edit((int) $voucher->id, $company_id, [
-            'status' => 'manual_review',
-            'date_last_checked' => date('Y-m-d H:i:s'),
-            'raw_status' => $evidence->rawStatus(),
-            'error_class' => $evidence->errorClass(),
+        $this->auditService->record('evidence.duplicate', [
+            'company_id' => $company_id,
+            'run_id' => $run_id,
+            'voucher_id' => (int) $voucher->id,
+            'redacted_trace_id' => $evidence->redactedTraceId(),
             'evidence_hash' => $evidence->evidenceHash(),
-            'diagnostic_summary' => $this->diagnosticSummary($evidence),
+            'payload' => [
+                'consumer_number' => $evidence->consumerNumber(),
+                'error_class' => 'duplicate_reference',
+            ],
         ]);
-
-        return 'manual_review';
     }
 
     private function recordUnmatchedBulkAudit(int $company_id, int $run_id, KuickPayEvidence $evidence): void

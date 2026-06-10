@@ -501,23 +501,64 @@ class KuickPayReconcileServiceTest extends TestCase
                 'BillPaymentBulkInquiry'
             ),
         ]);
-        $repo = new KuickPayReconcileFakeVoucherRepository([
-            $this->voucher([
-                'registration_number' => '1234INVOICE_ID',
-                'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
-            ]),
-        ], [$this->invoiceLink()]);
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
         $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
         $service = $this->service([
             'voucher_repository' => $repo,
             'item_repository' => $items,
+            'audit_service' => $audit,
             'client' => $client,
         ]);
 
         $service->runBulk(1, '2026-06-09');
 
-        $this->assertSame(['confirmed_unposted', 'manual_review'], array_column($items->items, 'new_status'));
-        $this->assertSame('duplicate_reference', $items->items[1]['error_class']);
+        // The provider echoed the same Consumer Number twice. The first row confirms the
+        // voucher; the duplicate must NOT write a second (run_id, voucher_id) item row
+        // (unique key would abort the run) and must NOT demote the confirmed voucher.
+        $this->assertSame(['confirmed_unposted'], array_column($items->items, 'new_status'));
+        $this->assertCount(1, $repo->edits);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertSame('confirmed_unposted', $voucher->status);
+        $this->assertContains('evidence.duplicate', array_column($audit->events, 0));
+    }
+
+    public function testRunBulkAlreadyConfirmedVoucherIsNotDemotedOnRerun()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-matched-paid.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+            'status' => 'confirmed_unposted',
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        // Re-running bulk for the same date over a voucher already past pending/retry must
+        // be idempotent: no demotion to manual_review, no mutation, no second item row.
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame('confirmed_unposted', $voucher->status);
+        $this->assertSame([], $repo->edits);
+        $this->assertSame([], $items->items);
+        $this->assertContains('evidence.duplicate', array_column($audit->events, 0));
     }
 
     public function testBuildBulkRequestValidatesAndFormatsTransactionDate()
