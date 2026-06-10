@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PRD Validation: WebNIC Registrar Module for Blesta</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+
+    --grade-exc: #16a34a;
+    --grade-good: #65a30d;
+    --grade-fair: #d97706;
+    --grade-poor: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .grade {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .grade-excellent { background: var(--grade-exc); }
+  .grade-good { background: var(--grade-good); }
+  .grade-fair { background: var(--grade-fair); }
+  .grade-poor { background: var(--grade-poor); }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="report-header">
+      <div class="title">
+        <h1>WebNIC Registrar Module for Blesta — Validation Report</h1>
+        <div class="subtitle">_bmad-output/webnic/planning-artifacts/research/research-prd-webnic-blesta-registrar.md</div>
+      </div>
+      <div class="grade grade-fair">Fair</div>
+    </header>
+
+    <div class="synthesis">
+      <p>This is a strong, unusually well-grounded brownfield capability spec. It has a real thesis — de-risk the migration by mirroring the proven LogicBoxes module first, then layer differentiators in Sections 2&ndash;3 — and §4's API findings (token/JWT auth + IP allowlist, no webhooks → polling, contact-handle + registrant-account prerequisite model, the specific pricing shape) are load-bearing: each drives a named FR. Structure, glossary, NFRs, and personas are largely earned, not furniture. The shape is correct for a single-integration registrar module against a fixed framework contract.</p>
+      <p><strong>Two reviewers disagreed on the single most important claim, and direct code inspection settles it against the PRD.</strong> The rubric walker certified §6 as &ldquo;verifiably accurate against the shipped <code>logicboxes</code> module&rdquo;; on inspection that certification holds only for the <em>abstract</em> <code>RegistrarModule</code> contract and the <code>config.json</code> feature flags — <em>not</em> for what the concrete module actually does. The shipped <code>logicboxes.php</code> overrides almost none of the domain-centric methods §6 lists (<code>registerDomain</code>, <code>transferDomain</code>, <code>getDomainContacts</code>, <code>lockDomain</code>, <code>sendEppEmail</code>…); it does the real work in <code>addService()</code> / <code>renewService()</code> and the <code>tab*</code> methods. And it ships URL/email forwarding and DNSSEC tabs to clients <em>today</em> (<code>getClientServiceTabs</code> registers <code>tabClientForwarder</code> unconditionally and <code>tabClientDnssec</code> whenever <code>dns_management</code> is on — and it is), which the PRD defers to Section 2 while still promising &ldquo;0 capability regressions vs LogicBoxes at MVP.&rdquo; That is a black-and-white self-contradiction.</p>
+      <p>None of this breaks the PRD — the FR substance is mostly sound and every issue is fixable from information the document already contains — but four High-severity items must be resolved before it is safe to drive architecture and epics: (1) re-derive the parity matrix and Goal&nbsp;G1 from the module's <em>actual</em> overridden surface; (2) decide forwarding/DNSSEC in-or-out and stop promising zero regression if they're out; (3) promote the net-new async pending-order/reconciliation subsystem to a first-class feature with WHAT-level failure-path acceptance criteria; and (4) specify the lost-response-after-submit recovery path for the irreversible, money-spending registration call. Hence the overall grade of <strong>Fair</strong>.</p>
+    </div>
+
+    <div class="dimension-summary">
+      <div class="dim-card">
+        <div class="dim-name">Decision-readiness</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Substance over theater</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">strong</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Strategic coherence</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">strong</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Done-ness clarity</div>
+        <div class="dim-verdict" style="color: var(--verdict-thin)">thin</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Scope honesty</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Downstream usability</div>
+        <div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-name">Shape fit</div>
+        <div class="dim-verdict" style="color: var(--verdict-strong)">strong</div>
+      </div>
+    </div>
+
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Decision-readiness</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>A decision-maker can mostly act on this: the release-section split (§1.1, §5) is stated as a decision rather than floated, each section is asserted independently shippable, and the Open Questions are genuinely consequential rather than rhetorical. It drops from <em>strong</em> to <em>adequate</em> because the two artifacts an architect would act on first — the §6 parity matrix (explicitly &ldquo;the definition of feature parity for Section 1&rdquo;) and §11 — are not yet safe to act on literally: the matrix measures against the abstract contract while labeling it &ldquo;LogicBoxes behaviour,&rdquo; and MVP-gating questions sit un-flagged beside deferrable ones.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">high</span>
+              <h3 class="finding-title">Parity matrix &amp; Goal&nbsp;G1 measure against the abstract contract, not the shipped module</h3>
+              <span class="finding-location">§6; G1</span>
+            </header>
+            <div class="finding-note"><strong>Verified by inspection.</strong> <code>logicboxes.php</code> overrides only <code>checkAvailability</code>, <code>getRegistrationDate</code>/<code>getExpirationDate</code>, <code>getServiceDomain</code>, <code>getTlds</code>/<code>getTldPricing</code>/<code>getFilteredTldPricing</code>, <code>getDomainNameServers</code>/<code>setDomainNameservers</code>, plus <code>addService</code>/<code>renewService</code>/<code>suspendService</code>/<code>unsuspendService</code>/<code>cancelService</code>/<code>changeServicePackage</code> and the <code>tab*</code> methods. The matrix rows for <code>registerDomain</code>, <code>transferDomain</code>, <code>renewDomain</code>, <code>restoreDomain</code>, <code>getDomainInfo</code>, <code>getDomainContacts</code>/<code>setDomainContacts</code>, <code>getDomainIsLocked</code>/<code>lockDomain</code>/<code>unlockDomain</code>, <code>sendEppEmail</code>, <code>updateEppCode</code> are abstract-base defaults LogicBoxes never overrides — it performs that work inside <code>addService</code>/<code>renewService</code> and the tabs. An architect who builds WebNIC by implementing those discrete methods will produce a module shaped unlike LogicBoxes, and G1's success signal (&ldquo;every LogicBoxes registrar method has a working WebNIC equivalent&rdquo;) is unverifiable as written.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Re-derive §6 from the module's actual overridden surface; for each row state whether the behavior lives in <code>addService</code>/<code>renewService</code>, in a discrete contract method, or is an abstract-default you are choosing to <em>upgrade</em> (net-new) vs <em>match</em>. Reword G1 to reference observable end-to-end flows, not a method inventory. (Designing WebNIC around the modern domain-centric contract is a defensible <em>improvement</em> — just stop calling it &ldquo;LogicBoxes behaviour.&rdquo;)</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">MVP-blocking open questions are mixed with genuinely deferrable ones</h3>
+              <span class="finding-location">§11 OQ2/OQ4/OQ5/OQ6/OQ8 vs OQ7</span>
+            </header>
+            <div class="finding-note">OQ4 (contact-handle reuse policy) and OQ5 (registrant-account provisioning) determine the data model and the whole contact-orchestration subsystem behind FR14; OQ6 determines the async state machine; OQ2 (auto-renew) determines renewal correctness (FR23/FR40); OQ8 governs irreversible deletion (FR26). Listing them alongside OQ7 (TLD coverage, genuinely deferrable) flattens the risk.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Split §11 into &ldquo;Blockers — must resolve before architecture&rdquo; (OQ2/OQ4/OQ5/OQ6/OQ8, plus OQ1 schema confirmation) and &ldquo;Deferrable&rdquo; (OQ3 mostly, OQ7), and bind each blocking FR to the question that gates it.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Substance over theater</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>The content is earned. §4 is the genuine spine — every finding carries an explicit &ldquo;Implication (requirements)&rdquo; line and maps to a named FR (FR5, FR39, FR14, FR7). The PRD is candid that the MVP is deliberately <em>un</em>-novel and reserves differentiation for later, which is honest framing rather than manufactured novelty. Personas are lean (four) and each surfaces in requirements; NFRs mostly avoid boilerplate (NFR1 ties to Blesta encrypted module-row fields, NFR7 pins PHP 8.2). No findings rise above the done-ness and security items captured elsewhere.</p>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Strategic coherence</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Clear parity-first thesis with differentiation explicitly sequenced behind it; prioritization follows the thesis, not implementation ease. Success metrics are outcome-oriented (no vanity DAU/MAU tell). The one structural crack is an <em>internal contradiction</em>: the &ldquo;0 regressions vs LogicBoxes&rdquo; metric is falsified by the PRD's own decision to defer forwarding and DNSSEC — both of which the baseline ships today.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">high</span>
+              <h3 class="finding-title">MVP drops capabilities LogicBoxes ships today, contradicting the &ldquo;0 regressions&rdquo; metric</h3>
+              <span class="finding-location">§7.2 FR45/FR46; §6; §12</span>
+            </header>
+            <div class="finding-note"><strong>Verified by inspection.</strong> <code>getClientServiceTabs</code> registers <code>tabClientForwarder</code> (URL + email forwarding) <em>unconditionally</em>, and <code>tabClientDnssec</code> + <code>tabClientDnsRecords</code> whenever <code>dns_management</code> is enabled — and <code>config.json</code> sets <code>dns_management: 1</code>. So both forwarding and DNSSEC are in LogicBoxes' default client experience. The PRD defers URL/email forwarding (FR45) and DNSSEC (FR46) to Section 2, yet §12 targets &ldquo;Capability regressions vs LogicBoxes at MVP: 0.&rdquo; A LogicBoxes→WebNIC migrator on the MVP would lose both tabs. The WebNIC endpoints exist (<code>Get/Add/Remove Zone URL/Email Forwarding</code>, <code>Check DNSSEC Supported</code>, <code>Get/Update/Delete DNSSEC</code>), so this is a scoping decision, not a capability limit.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Either pull forwarding (URL + email) and DNSSEC into Section&nbsp;1 to honor parity, <em>or</em> keep them in Section&nbsp;2 but delete the &ldquo;0 regressions&rdquo; claim and list them explicitly as accepted MVP regressions in §2.3/§12 with operator sign-off. Do not ship both the deferral and the zero-regression promise.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">low</span>
+              <h3 class="finding-title">No counter-metrics paired with success metrics</h3>
+              <span class="finding-location">§12 quantitative targets</span>
+            </header>
+            <div class="finding-note">A &ge;99% provisioning-success push could be gamed by aggressive retries that inflate API load or risk double-submission; nothing bounds that.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Add a guardrail metric — e.g. &ldquo;reconciliation cron stays within N&nbsp;minutes / M&nbsp;API calls per cycle&rdquo; or &ldquo;0 services flipped to a wrong terminal state on transient failure&rdquo; (NFR5 already states this as a quality bar — surface it as a metric).</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details open>
+        <summary>
+          <h2>Done-ness clarity</h2>
+          <span class="verdict-pill verdict-thin">thin</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>This is the weakest dimension and the one story creation leans on hardest. Many FRs are concrete and testable (FR2 named env toggle + base URLs, FR7 exact pricing target shape, FR17 explicit pending-vs-immediate branching). But the load-bearing async/idempotency FRs — exactly where bugs cost real, irreversible money — are the ones most reliant on untestable adjectives, and §12's only numeric targets are self-labeled &ldquo;illustrative,&rdquo; so the binding acceptance bar is softer than the PRD's parity claims imply. A PRD legitimately defers <em>mechanism</em> to architecture; the gap here is missing <em>WHAT</em>-level acceptance for the failure paths.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">high</span>
+              <h3 class="finding-title">Net-new async pending-order/reconciliation subsystem lacks failure-path acceptance criteria</h3>
+              <span class="finding-location">§4.2; FR17/FR21/FR39; OQ6</span>
+            </header>
+            <div class="finding-note"><strong>Verified by inspection.</strong> LogicBoxes is fully synchronous — no <code>cron()</code> method, no pending-order table, no polling — so this stateful subsystem (durable order/transfer state, scheduler, idempotent finalization, failure transitions) is net-new, yet §6 checks it off as &ldquo;parity.&rdquo; FR39 says &ldquo;finalises or fails&rdquo; but never defines when a stuck <code>pending</code> becomes <code>failed</code> (timeout, max attempts, backoff), what the client sees for a never-resolving service, whether Blesta keeps invoicing/renewing it, or whether the module owns its own cron vs piggybacks Domain Manager sync. OQ6 admits the timeout/give-up is undecided — and ships it as a checked parity item anyway.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Name the subsystem net-new. Add FRs specifying the service state machine and legal transitions; per-order poll cadence, max attempts, backoff, and hard timeout; the terminal give-up state + operator alert; client-facing presentation of a long-pending domain; whether renew/cancel are allowed while pending; and concrete persistence (a defined table with install/upgrade artifacts, not &ldquo;if needed&rdquo;). Promote OQ6 to a blocker.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-high">high</span>
+              <h3 class="finding-title">Idempotency / lost-response recovery is asserted, not specified — the irreversible-money path</h3>
+              <span class="finding-location">FR18; NFR4; G2; (with H3)</span>
+            </header>
+            <div class="finding-note">FR18's &ldquo;idempotent and payment-safe … durable local state + uniqueness&rdquo; is a slogan with no dedup key, no idempotency token, and no &ldquo;check pending order by domain before re-submitting&rdquo; step. With async register and no webhooks (§4.2), the dangerous window is concrete: submit <code>register</code>, the HTTP call dies before <code>pendingOrderId</code> is persisted, Blesta retries <code>addService</code>, and a <em>second</em> irreversible registry order is created. The PRD also never evidences that <code>Get Pending Order Info</code> can be queried <em>by domain</em> (vs only by a <code>pendingOrderId</code> you may have lost) — without which lost-response reconciliation is impossible.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Add an FR for &ldquo;recover from lost-response-after-submit&rdquo;: write a registration-intent row keyed by service+domain in its own committed transaction <em>before</em> the API call; on retry, query WebNIC for an existing pending/active order on that domain before ever calling <code>register</code> again; define behavior when the result is <em>unknown</em> (reconcile-by-query, never blind-resubmit). Confirm by-domain pending lookup exists in OTE; if it doesn't, escalate to Critical. Separate &ldquo;duplicate registration&rdquo; (module) from &ldquo;duplicate charge&rdquo; (Blesta invoicing) so the metric is attributable.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">Adjective-bound FRs without measurable acceptance criteria</h3>
+              <span class="finding-location">FR4/FR9/FR11/FR19/FR29/FR41; NFR6</span>
+            </header>
+            <div class="finding-note">&ldquo;efficiently,&rdquo; &ldquo;degrades gracefully,&rdquo; &ldquo;clear,&rdquo; &ldquo;actionable,&rdquo; &ldquo;the same way they do for LogicBoxes,&rdquo; &ldquo;without corrupting service state,&rdquo; &ldquo;expected latency&rdquo; recur on FRs that QA and the dev agent will each interpret differently.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Replace each with a bound/observable — e.g. FR11: &ldquo;bulk check of N domains issues &le;&nbsp;ceil(N/batch) calls; on any batch error the remaining domains are checked individually and returned with per-domain status.&rdquo; Define the FR41 retryable-vs-terminal error taxonomy once and reference it.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">Auth/EPP codes absent from the redaction policy</h3>
+              <span class="finding-location">NFR1; NFR9; FR33</span>
+            </header>
+            <div class="finding-note">NFR1 redacts &ldquo;secret/password&rdquo; and tokens but not EPP/auth codes, which are hijack-grade secrets — leaking or logging one can enable a domain takeover. FR33 introduces send/reset auth-code flows with no storage/expiry/redaction spec.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Add EPP/auth codes (and arguably order identifiers) to the NFR1/NFR9 redaction list; require they are never logged and never persisted in cleartext, with defined error handling on the reset/send flows.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">Quantitative success metrics self-labeled &ldquo;illustrative&rdquo;</h3>
+              <span class="finding-location">§12</span>
+            </header>
+            <div class="finding-note">Marking the only numeric targets non-binding undercuts the acceptance bar for an MVP otherwise pitched as a precise parity contract, leaving the qualitative bullet list + parity matrix as the real gate.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Either commit the numbers as MVP exit criteria, or move them to a clearly separate &ldquo;post-launch monitoring&rdquo; goal so the MVP acceptance set is unambiguous.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Scope honesty</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Omissions are openly stated — §1.3, §10, §2.3, and &ldquo;➕ Section 2&rdquo; markers — and the de-scoping is honest in intent (the PRD holds the MVP to parity even though WebNIC could exceed it). It lands at <em>adequate</em> rather than <em>strong</em> for two reasons: the openly-deferred forwarding/DNSSEC nonetheless contradict the parity promise in effect (see Strategic coherence), and the load-bearing §4.3 contact-model assertions are stated as firm fact while resting on an unverified source.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">Contact-handle / registrant-account model is load-bearing but unevidenced</h3>
+              <span class="finding-location">§4.3; FR14/FR15; OQ4/OQ5</span>
+            </header>
+            <div class="finding-note">The &ldquo;pre-created contact handles + <code>registrantUserId</code> + &ge;2 pre-registered hosts&rdquo; order model is asserted from endpoint names only; nothing quotes a source confirming registration is <em>blocked</em> without pre-registered hosts, or that handles are reusable, or the reuse scope. If WebNIC accepts inline contact data the whole orchestration subsystem is over-engineered; if it's stricter, the design under-delivers.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Mark §4.3 as unverified-against-a-quotable-source; gate FR14/FR15 on OTE confirmation; resolve OQ4 (reuse policy) and OQ5 (registrant-account provisioning) before freezing those FRs, since they drive table design, cleanup, and privacy exposure.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">Missing the BMAD inline assumption/non-goal/note tags</h3>
+              <span class="finding-location">whole doc; cf. §11</span>
+            </header>
+            <div class="finding-note">Assumptions live only in a prose list and scope deferrals only in table cells, so there is no inline-to-index roundtrip and downstream tooling can't source-extract them. The substance is honest; the machine-extractable tagging the rubric expects is absent.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Tag the strongest inferences inline where they bite — e.g. <code>[ASSUMPTION: Domain Manager v2.x present]</code> at FR9, <code>[NOTE FOR PM]</code> at FR14's handle-reuse choice (OQ4) — and keep §11 as the index.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Downstream usability</h2>
+          <span class="verdict-pill verdict-adequate">adequate</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>This PRD is chain-top (it feeds architecture and story creation), and it does several things well: clean unique FR IDs, §9 pre-sketches the file layout, and most domain nouns are defined in §1.4 and used consistently. Weaknesses are real but mechanical — the §6 framing risks pointing architecture at the wrong reference surface (see Decision-readiness), the Domain Manager contract is assumed rather than inspected, and a few terms drift outside the glossary.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">Domain Manager contract and version assumed, not verified</h3>
+              <span class="finding-location">FR9; NFR7; Assumption 2</span>
+            </header>
+            <div class="finding-note">The pricing-import/availability/storefront story (FR6&ndash;FR9, G3) hangs on the <code>plugins/domains</code> contract, but the PRD never inspects it to confirm how a registrar module's pricing/availability are consumed, the expected pricing array shape, or the sync hooks. &ldquo;v2.x&rdquo; is asserted without evidence from the checkout.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Inspect <code>plugins/domains</code> in this checkout; pin the real version; make FR9 reference concrete plugin hooks and the exact pricing shape rather than &ldquo;operate the same way as LogicBoxes.&rdquo;</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">&ldquo;Child nameserver / glue record / host object&rdquo; used as undefined synonyms</h3>
+              <span class="finding-location">FR15, FR31; §6</span>
+            </header>
+            <div class="finding-note">Three terms for overlapping concepts with no glossary anchor; architecture must guess whether WebNIC &ldquo;host&rdquo; objects and Blesta glue/child-NS are one mechanism.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Add a §1.4 entry mapping the WebNIC &ldquo;host&rdquo; object to Blesta's child-nameserver/glue concept, and use one term consistently.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">low</span>
+              <h3 class="finding-title">&ldquo;ID protection&rdquo; vs &ldquo;WHOIS privacy&rdquo; vs &ldquo;proxy&rdquo; not disambiguated</h3>
+              <span class="finding-location">§1.4; FR16/FR34/FR48</span>
+            </header>
+            <div class="finding-note">Treated as near-synonyms in MVP, but FR48 (Section 2) splits &ldquo;proxy subscription&rdquo; from &ldquo;WHOIS privacy&rdquo; — the relationship isn't pinned up front.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Add a glossary line distinguishing privacy (WHOIS redaction) from proxy (registrant substitution), and which maps to Blesta's <code>id_protection</code> flag.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary>
+          <h2>Shape fit</h2>
+          <span class="verdict-pill verdict-strong">strong</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>Correctly shaped. A brownfield single-integration registrar module against a fixed framework contract calls for a capability-spec shape (parity matrix + FR list + technical-constraint findings), and the absence of User Journeys is appropriate, not a defect — there is no multi-stakeholder UX arc to model; the &ldquo;journey&rdquo; is the registrar contract itself. New-vs-existing is cleanly distinguished and §9 is explicitly &ldquo;non-binding guidance&rdquo; so it doesn't over-formalize decisions the architect should own. Note the one factual carve-out: the parity-method <em>framing</em> issue (Decision-readiness) is separate from shape — the shape choice itself is right.</p>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="reviewer-section">
+      <details>
+        <summary>
+          <h2>Adversarial review</h2>
+          <span class="reviewer-source">review-adversarial-general.md</span>
+        </summary>
+        <div class="dim-body">
+          <div class="dim-judgment">
+            <p>The adversarial pass argued the PRD &ldquo;reads well but rests on a false parity premise.&rdquo; It raised 22 findings (5 Critical, 6 High, 6 Medium, 5 Low). <strong>Adjudication:</strong> its two flagship claims were checked against the actual module and <em>upheld</em> — C1 (parity matrix maps to methods LogicBoxes doesn't override) and C2 (forwarding/DNSSEC shipped today but deferred) are factually correct, and are carried above as High findings (down-calibrated from the reviewer's Critical because the FR substance survives and every fix is self-contained). Its async/idempotency criticals (C3/C4/H3) are upheld at the <em>WHAT</em>-level and carried under Done-ness; the reviewer over-escalated the &ldquo;mechanism not specified&rdquo; angle, since a PRD may defer mechanism to architecture. The findings below were verified or partially upheld but not promoted to top-level; the adversarial voice is preserved. Full detail in the source file.</p>
+          </div>
+        </div>
+        <div class="findings-list">
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">C5 — EPP/auth-code parity is mis-claimed; the feature flag is wrong relative to the baseline</h3>
+              <span class="finding-location">§6; FR33; §9</span>
+            </header>
+            <div class="finding-note"><code>config.json</code> does not enable <code>epp_code</code>, so LogicBoxes' <code>supportsEppCode()</code> is the abstract default (false) and it surfaces the auth code via the <em>Settings</em> tab (<code>manageSettings</code>), not <code>sendEppEmail</code>/<code>updateEppCode</code>. So §6's EPP rows are net-new, not parity — a specific instance of the C1 framing problem. (Security half of this is carried as the Medium auth-code-redaction finding under Done-ness.)</div>
+            <div class="finding-fix"><strong>Fix:</strong> Reclassify EPP send/reset as &ldquo;net-new, exceeds baseline&rdquo;; keep the Settings-tab read of the current auth code as the true LogicBoxes-equivalent.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">H1 — Pricing currency model ignores Blesta's conversion path</h3>
+              <span class="finding-location">FR7/FR8; §4.4; OQ3</span>
+            </header>
+            <div class="finding-note">LogicBoxes' <code>getFilteredTldPricing</code> uses <code>$this-&gt;Currencies-&gt;convert(...)</code> to convert registrar cost into the operator's configured currencies; FR7's &ldquo;USD plus any local currency WebNIC returns&rdquo; ignores that operators price in <em>their</em> currencies, which may be neither. This surfaces as empty TLD pricing for any operator whose currency WebNIC doesn't return.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Require the module to support Blesta's currency-conversion path (mirroring <code>Currencies-&gt;convert</code>); resolve OQ3 before freezing FR7.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">M2 — Token-refresh &ldquo;stampede&rdquo; clause contradicts NFR1's &ldquo;cache only&rdquo;</h3>
+              <span class="finding-location">FR5; NFR1; NFR6</span>
+            </header>
+            <div class="finding-note">Preventing a refresh stampede across concurrent PHP-FPM/cron workers needs shared, lockable state, but NFR1 says tokens live &ldquo;in memory/cache only, never persisted.&rdquo; In a classic deployment there is no shared in-process memory, and the cache backend/locking is never defined — so FR5 is unimplementable as written.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Specify the token cache backend and single-flight/locking strategy and reconcile with NFR1, or downgrade the no-stampede clause to best-effort-per-process.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-medium">medium</span>
+              <h3 class="finding-title">M6 — Multi-step registration saga has no partial-failure / orphan-cleanup spec</h3>
+              <span class="finding-location">FR14&ndash;FR16</span>
+            </header>
+            <div class="finding-note">Registration is now a saga (contacts → registrant account → hosts → register). If hosts are created then <code>register</code> fails, you accumulate orphaned WebNIC objects — the very orphans §4.3 warns about — with no compensation spec.</div>
+            <div class="finding-fix"><strong>Fix:</strong> Add an orchestration-failure FR: deterministic lookup-before-create so retries reuse, and a defined stance on orphans (reuse-on-retry over delete-on-failure). Tie to the idempotency FR.</div>
+          </article>
+          <article class="finding">
+            <header>
+              <span class="badge badge-sev-low">low</span>
+              <h3 class="finding-title">H4/H6/M3/M5/L1&ndash;L5 — further verified-or-plausible items</h3>
+              <span class="finding-location">see review-adversarial-general.md</span>
+            </header>
+            <div class="finding-note">Includes: &ldquo;basic vs full DNS&rdquo; boundary undefined (FR35); suspend/cancel semantics unverified against the baseline (FR25/FR26 — <code>cancelService</code> at logicboxes.php:596 should be read); auto-renew conflict risk with Blesta automation (OQ2/FR23/FR40); OTE-vs-production catalogue divergence (§12); cron-ownership fork left open (§9/FR39); dynamic rule endpoints lacking fallback (FR19/FR24).</div>
+            <div class="finding-fix"><strong>Fix:</strong> Triage these during the Update pass; most are &ldquo;confirm against the checkout / OTE&rdquo; or single-sentence clarifications.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <div class="mechanical">
+      <h3>Mechanical notes</h3>
+      <ul>
+        <li><strong>Adjudication of the reviewer conflict.</strong> The rubric walker certified §6 as &ldquo;verifiably accurate against the actual <code>RegistrarModule</code> contract and shipped <code>logicboxes</code> module.&rdquo; That holds for the <em>abstract contract</em> and the <code>config.json</code> feature flags only. Direct inspection of <code>components/modules/logicboxes/logicboxes.php</code> (<code>getClientServiceTabs</code> ~line 1273, <code>addService</code> line 185, and the absence of any <code>cron()</code> method) is the basis for the two High parity findings (C1, C2) and the async finding (C3).</li>
+        <li><strong>Dual FR/section numbering.</strong> FRs are flat (<code>FR1</code>&hellip;<code>FR59</code>) while parent sections are decimal (§7.1&ndash;§7.3). Harmless but mixed; no gaps or duplicates in FR1&ndash;FR59 or NFR1&ndash;NFR14. Downstream extractors should key on the flat FR IDs.</li>
+        <li><strong>Two overlapping &ldquo;out of scope&rdquo; sections</strong> (§1.3 and §10) plus §2.3 Non-goals — content is consistent across all three but the duplication invites drift; consider one canonical Non-Goals section with the others cross-referencing it.</li>
+        <li><strong>§6 endpoint names are descriptive labels, not literal API paths</strong> (e.g. &ldquo;Query Domain,&rdquo; &ldquo;Register Domain&rdquo;) except where a path is given. OQ1 already flags that exact schemas need OTE confirmation — architecture should not treat the label column as canonical endpoint identifiers.</li>
+        <li><strong>Cross-references resolve.</strong> &ldquo;see parity matrix §6,&rdquo; &ldquo;Section 2/3,&rdquo; and the §9↔§6 mapping all point to real targets; the <code>apidoc.webnic.dev/llms.txt</code> source and <code>components/modules/logicboxes/</code> baseline both exist in this checkout.</li>
+      </ul>
+    </div>
+
+    <footer class="report-footer">
+      <div class="meta">
+        <span>PRD: _bmad-output/webnic/planning-artifacts/research/research-prd-webnic-blesta-registrar.md</span>
+        <span>Rubric: .claude/skills/bmad-prd/assets/prd-validation-checklist.md</span>
+        <span>Generated: 2026-06-10</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
