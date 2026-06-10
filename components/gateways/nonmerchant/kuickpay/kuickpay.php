@@ -847,16 +847,41 @@ class Kuickpay extends NonmerchantGateway
                 'raw_status' => $evidence->rawStatus(),
             ]);
         } catch (Throwable $e) {
-            $this->log(
-                'kuickpay:voucher_issue',
-                json_encode([
-                    'event' => 'voucher_issue_exception',
-                    'reason' => 'issue_exception',
-                    'invoice' => $invoice_id,
-                ]),
-                'output',
-                false
-            );
+            try {
+                if (!class_exists('KuickPayEvidence')) {
+                    Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayEvidence.php');
+                }
+
+                $evidence = new KuickPayEvidence(
+                    'manual_review',
+                    'transport_error',
+                    null,
+                    null,
+                    (string) ($voucher['registration_number'] ?? ''),
+                    null,
+                    null,
+                    null,
+                    null,
+                    'issue_exception',
+                    substr(hash('sha256', 'issue_exception|' . $voucher_id . '|' . $invoice_id), 0, 24),
+                    ['issue_exception']
+                );
+                $this->getIssuanceService()->recordIssueOutcome($voucher_id, $company_id, $evidence);
+                $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta);
+            } catch (Throwable $persistError) {
+                if (($meta['logging_enabled'] ?? 'true') === 'true') {
+                    $this->log(
+                        'kuickpay:voucher_issue',
+                        json_encode([
+                            'event' => 'voucher_issue_exception',
+                            'reason' => 'issue_exception',
+                            'invoice' => $invoice_id,
+                        ]),
+                        'output',
+                        false
+                    );
+                }
+            }
 
             return null;
         }
