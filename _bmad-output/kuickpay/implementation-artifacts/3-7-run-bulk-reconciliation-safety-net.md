@@ -1,6 +1,10 @@
+---
+baseline_commit: 1be775983a17b2010320f83e6a3c688a51c6f729
+---
+
 # Story 3.7: Run Bulk Reconciliation Safety Net
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -45,55 +49,55 @@ Out of scope (Epic 4 / Story 4.4): run-list/run-detail admin views, Manual Revie
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Schema upgrade for bulk runs (AC3, AC4).** Bump plugin to `1.4.0` and add an idempotent upgrade block. (`plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php`, `config.json`, `models/kuickpay_reconciliation_runs.php`)
-  - [ ] In `config.json`, set `version` to `1.4.0`.
-  - [ ] In `upgrade()` (currently `:100–124`), add `if (version_compare($current_version, '1.4.0', '<')) { $this->addBulkReconciliationColumns(); }`.
-  - [ ] Add `private function addBulkReconciliationColumns()` mirroring `addVoucherEvidenceColumns()` (`:181`): guard each change with `columnExists()`/an enum-check, then run `ALTER TABLE`:
+- [x] **Task 1 — Schema upgrade for bulk runs (AC3, AC4).** Bump plugin to `1.4.0` and add an idempotent upgrade block. (`plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php`, `config.json`, `models/kuickpay_reconciliation_runs.php`)
+  - [x] In `config.json`, set `version` to `1.4.0`.
+  - [x] In `upgrade()` (currently `:100–124`), add `if (version_compare($current_version, '1.4.0', '<')) { $this->addBulkReconciliationColumns(); }`.
+  - [x] Add `private function addBulkReconciliationColumns()` mirroring `addVoucherEvidenceColumns()` (`:181`): guard each change with `columnExists()`/an enum-check, then run `ALTER TABLE`:
     - Extend `trigger_type` enum from `'cron','manual'` to **`'cron','manual','bulk'`** (`ALTER TABLE kuickpay_reconciliation_runs MODIFY trigger_type ENUM('cron','manual','bulk') NOT NULL`). Do not drop the existing values.
     - Add `run_date DATE NULL DEFAULT NULL` (the authorized bulk transaction date; NULL for single/cron runs).
     - Add `total_unmatched INT UNSIGNED NOT NULL DEFAULT 0`.
-  - [ ] Also add the same three field definitions to the **fresh-install** DDL in `createReconcileTables()` (`:201–221`) so new installs match upgraded installs (`trigger_type` enum gains `'bulk'`; add `run_date`, `total_unmatched`).
-  - [ ] Add `run_date` and `total_unmatched` to the `FIELDS` allow-list in `models/kuickpay_reconciliation_runs.php` so the model persists them. Verify `trigger_type` validation (if any) accepts `'bulk'`.
-  - [ ] **Verify fresh-install AND upgrade paths** (project-context: schema work needs both). Document the exact `php -l` + smoke result in the Dev Agent Record.
+  - [x] Also add the same three field definitions to the **fresh-install** DDL in `createReconcileTables()` (`:201–221`) so new installs match upgraded installs (`trigger_type` enum gains `'bulk'`; add `run_date`, `total_unmatched`).
+  - [x] Add `run_date` and `total_unmatched` to the `FIELDS` allow-list in `models/kuickpay_reconciliation_runs.php` so the model persists them. Verify `trigger_type` validation (if any) accepts `'bulk'`.
+  - [x] **Verify fresh-install AND upgrade paths** (project-context: schema work needs both). Document the exact `php -l` + smoke result in the Dev Agent Record.
 
-- [ ] **Task 2 — Run repository support for bulk runs (AC3, AC4).** (`plugins/kuickpay_reconcile/lib/KuickPayReconciliationRunRepository.php`)
-  - [ ] Add a way to open a bulk run that records `run_date`. Either add `openBulk(int $company_id, string $run_date): int` or widen `open()` to accept an optional `run_date`. Keep the existing `open(company_id, trigger_type, cursor)` signature working for the single path (`KuickPayReconcileService.php:120` calls it).
-  - [ ] Ensure `close()` persists `total_unmatched` — it already merges the `$counts` array via `array_merge` (`:28`), so adding `total_unmatched` to the counts array is sufficient; no signature change needed.
-  - [ ] **Do NOT** make the bulk path call `getResumeCursor()` — that method filters to aborted **cron** runs and is single-path-specific. Bulk uses its own bounding (Task 3), not the cron resume cursor.
+- [x] **Task 2 — Run repository support for bulk runs (AC3, AC4).** (`plugins/kuickpay_reconcile/lib/KuickPayReconciliationRunRepository.php`)
+  - [x] Add a way to open a bulk run that records `run_date`. Either add `openBulk(int $company_id, string $run_date): int` or widen `open()` to accept an optional `run_date`. Keep the existing `open(company_id, trigger_type, cursor)` signature working for the single path (`KuickPayReconcileService.php:120` calls it).
+  - [x] Ensure `close()` persists `total_unmatched` — it already merges the `$counts` array via `array_merge` (`:28`), so adding `total_unmatched` to the counts array is sufficient; no signature change needed.
+  - [x] **Do NOT** make the bulk path call `getResumeCursor()` — that method filters to aborted **cron** runs and is single-path-specific. Bulk uses its own bounding (Task 3), not the cron resume cursor.
 
-- [ ] **Task 3 — `runBulk()` engine in the reconcile service (AC1–AC5).** (`plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php`)
-  - [ ] Add `public function runBulk(int $company_id, string $run_date, string $trigger_type = 'bulk'): array`.
-  - [ ] **Config first, then thread it (critical):** resolve config exactly like `run()` (`:100–104`): `$gateway_config = $this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id);` return `['status'=>'skipped','reason'=>'kuickpay_unavailable']` if null; then **`$this->gatewayConfig = $gateway_config;`** so `persistEvidence()` can read `*_policy` keys. (See §"Config threading" — this is a real footgun.)
-  - [ ] **Lock:** acquire `self::LOCK_NAME` (`'reconcile_pending'`) with `self::LOCK_TTL_SECONDS`, release in `finally`. **Reuse the same lock name as the single path** so bulk and scheduled single reconciliation never touch the same Voucher concurrently. If the lock is held, return `['status'=>'skipped','reason'=>'lock_held']`. (See OQ-2.)
-  - [ ] **Open run:** `$run_id = $runRepository->openBulk($company_id, $run_date);` audit `reconciliation.run.started` with payload `{trigger_type:'bulk', run_date}`.
-  - [ ] **One bulk inquiry call:** build the bulk request (Task 4), `$transport = $client->billPaymentBulkInquiry($request);`. The SOAP client already retries timeout/transport up to 3× and returns a structured outcome — do not add retry here.
-  - [ ] **Parse + match + classify:** turn `$transport` into per-row evidence and match each row to a Voucher by Consumer Number (Task 5). For each matched row, reuse `$this->persistEvidence($company_id, $voucher, $evidence)` — it runs the validator, applies exception policy, and writes the Voucher. **Posting is NOT done here**; the existing `post_confirmed` cron picks up any `confirmed_unposted` Voucher (`getPostable`, `kuickpay_vouchers.php:366`) and posts it.
-  - [ ] **Record matched items:** for each matched Voucher, write a `kuickpay_reconciliation_items` row (reuse the `processVoucher` item shape, `:181–190`) and emit `recordEvidenceAudit(...)`.
-  - [ ] **Record unmatched rows:** for each returned row whose Consumer Number matches no stored Voucher, increment `total_unmatched` and emit an audit event (e.g. `evidence.unmatched`) with a **redacted** payload (Consumer Number + sanitized evidence hash/trace only — no raw XML, no PII). **Do not** write a `kuickpay_reconciliation_items` row for unmatched rows — `items.voucher_id` is `NOT NULL` and `(run_id, voucher_id)` is `UNIQUE` (`:226,:234`), so unmatched rows have no Voucher to key on. `kuickpay_audit_events.voucher_id` is nullable (`:253`) and is the correct home; the run summary's `total_unmatched` is the count.
-  - [ ] **Bound the run:** respect `self::MAX_RUNTIME_SECONDS` (set status `aborted` and stop if exceeded) and a sane row/Voucher cap (reuse `self::BATCH_SIZE` semantics or bound by `MAX_BULK_ROWS` already enforced in the parser). Per NFR7, avoid unbounded loops.
-  - [ ] **Close run:** `$runRepository->close($run_id, $status, $counts, 0, $summary)` with bulk counts incl. `total_unmatched`; audit `reconciliation.run.completed`. Best-effort close inside the `finally`, then release the lock (mirror `run()`'s `:150–166` structure).
-  - [ ] Return `['status'=>..., 'run_id'=>..., 'counts'=>..., 'run_date'=>...]`.
+- [x] **Task 3 — `runBulk()` engine in the reconcile service (AC1–AC5).** (`plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php`)
+  - [x] Add `public function runBulk(int $company_id, string $run_date, string $trigger_type = 'bulk'): array`.
+  - [x] **Config first, then thread it (critical):** resolve config exactly like `run()` (`:100–104`): `$gateway_config = $this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id);` return `['status'=>'skipped','reason'=>'kuickpay_unavailable']` if null; then **`$this->gatewayConfig = $gateway_config;`** so `persistEvidence()` can read `*_policy` keys. (See §"Config threading" — this is a real footgun.)
+  - [x] **Lock:** acquire `self::LOCK_NAME` (`'reconcile_pending'`) with `self::LOCK_TTL_SECONDS`, release in `finally`. **Reuse the same lock name as the single path** so bulk and scheduled single reconciliation never touch the same Voucher concurrently. If the lock is held, return `['status'=>'skipped','reason'=>'lock_held']`. (See OQ-2.)
+  - [x] **Open run:** `$run_id = $runRepository->openBulk($company_id, $run_date);` audit `reconciliation.run.started` with payload `{trigger_type:'bulk', run_date}`.
+  - [x] **One bulk inquiry call:** build the bulk request (Task 4), `$transport = $client->billPaymentBulkInquiry($request);`. The SOAP client already retries timeout/transport up to 3× and returns a structured outcome — do not add retry here.
+  - [x] **Parse + match + classify:** turn `$transport` into per-row evidence and match each row to a Voucher by Consumer Number (Task 5). For each matched row, reuse `$this->persistEvidence($company_id, $voucher, $evidence)` — it runs the validator, applies exception policy, and writes the Voucher. **Posting is NOT done here**; the existing `post_confirmed` cron picks up any `confirmed_unposted` Voucher (`getPostable`, `kuickpay_vouchers.php:366`) and posts it.
+  - [x] **Record matched items:** for each matched Voucher, write a `kuickpay_reconciliation_items` row (reuse the `processVoucher` item shape, `:181–190`) and emit `recordEvidenceAudit(...)`.
+  - [x] **Record unmatched rows:** for each returned row whose Consumer Number matches no stored Voucher, increment `total_unmatched` and emit an audit event (e.g. `evidence.unmatched`) with a **redacted** payload (Consumer Number + sanitized evidence hash/trace only — no raw XML, no PII). **Do not** write a `kuickpay_reconciliation_items` row for unmatched rows — `items.voucher_id` is `NOT NULL` and `(run_id, voucher_id)` is `UNIQUE` (`:226,:234`), so unmatched rows have no Voucher to key on. `kuickpay_audit_events.voucher_id` is nullable (`:253`) and is the correct home; the run summary's `total_unmatched` is the count.
+  - [x] **Bound the run:** respect `self::MAX_RUNTIME_SECONDS` (set status `aborted` and stop if exceeded) and a sane row/Voucher cap (reuse `self::BATCH_SIZE` semantics or bound by `MAX_BULK_ROWS` already enforced in the parser). Per NFR7, avoid unbounded loops.
+  - [x] **Close run:** `$runRepository->close($run_id, $status, $counts, 0, $summary)` with bulk counts incl. `total_unmatched`; audit `reconciliation.run.completed`. Best-effort close inside the `finally`, then release the lock (mirror `run()`'s `:150–166` structure).
+  - [x] Return `['status'=>..., 'run_id'=>..., 'counts'=>..., 'run_date'=>...]`.
 
-- [ ] **Task 4 — Bulk request builder (AC1, AC5).** (`KuickPayReconcileService.php`)
-  - [ ] Add `buildBulkRequest(string $run_date): array` returning the date-keyed params the KuickPay `BillPaymentBulkInquiry` operation expects. The `KuickPaySoapClient` auto-merges `inquiry_*` credentials + `institution_id` via `withCredentials($params, true)`, so this builder supplies **only** the transaction-date field(s). **VERIFY the exact field name(s)/format against the KuickPay contract** captured in Story 0.1 (the bulk fixtures and `addendum.md` §A.1 describe "Institution ID and transaction date"). Do not invent a field name — if 0.1 fixtures don't pin it, flag it (see OQ-3). Validate `run_date` is a real `YYYY-MM-DD` date before calling out.
+- [x] **Task 4 — Bulk request builder (AC1, AC5).** (`KuickPayReconcileService.php`)
+  - [x] Add `buildBulkRequest(string $run_date): array` returning the date-keyed params the KuickPay `BillPaymentBulkInquiry` operation expects. The `KuickPaySoapClient` auto-merges `inquiry_*` credentials + `institution_id` via `withCredentials($params, true)`, so this builder supplies **only** the transaction-date field(s). **VERIFY the exact field name(s)/format against the KuickPay contract** captured in Story 0.1 (the bulk fixtures and `addendum.md` §A.1 describe "Institution ID and transaction date"). Do not invent a field name — if 0.1 fixtures don't pin it, flag it (see OQ-3). Validate `run_date` is a real `YYYY-MM-DD` date before calling out.
 
-- [ ] **Task 5 — Bulk parse + Consumer-Number matching (AC1, AC2, AC3).** Decide and implement how rows are classified. **Recommended approach (per-consumer expectation map):** extend the parser; **fallback approach (per-voucher calls):** no parser change. See §"Key Implementation Decision" for the full trade-off and pick one.
-  - [ ] Whichever approach: matching is **exact Consumer Number** against stored Vouchers via `KuickPayVoucherRepository::getByConsumerNumber($cn, $company_id)` (already exists, `:129`). No suffix logic anywhere.
-  - [ ] A matched row's confirmed/amount-mismatch classification (amount fail-closed) **must be produced by the parser**, not re-derived in the service — see §"Must-Not-Break Invariants" #6.
-  - [ ] Handle `parseBulk` returning a single transport-failure or malformed evidence element (`parseBulk` returns `[transportFailure]` or `[malformedBulkEvidence]`, `:118,:123,:127,:139`): record run `failed`/`aborted` with the error class; match/post nothing.
-  - [ ] Duplicate handling: if two returned rows carry the same Consumer Number, the matched Voucher must not be double-processed into a second confirmed state. `persistEvidence`'s status guard (`mappedStatus` returns the current status unchanged once a Voucher leaves `pending`/`retry`, `:297–298`) and the validator's duplicate-reference check are the guards; ensure the second row routes to Manual Review, not a second confirm. Add a test.
+- [x] **Task 5 — Bulk parse + Consumer-Number matching (AC1, AC2, AC3).** Decide and implement how rows are classified. **Recommended approach (per-consumer expectation map):** extend the parser; **fallback approach (per-voucher calls):** no parser change. See §"Key Implementation Decision" for the full trade-off and pick one.
+  - [x] Whichever approach: matching is **exact Consumer Number** against stored Vouchers via `KuickPayVoucherRepository::getByConsumerNumber($cn, $company_id)` (already exists, `:129`). No suffix logic anywhere.
+  - [x] A matched row's confirmed/amount-mismatch classification (amount fail-closed) **must be produced by the parser**, not re-derived in the service — see §"Must-Not-Break Invariants" #6.
+  - [x] Handle `parseBulk` returning a single transport-failure or malformed evidence element (`parseBulk` returns `[transportFailure]` or `[malformedBulkEvidence]`, `:118,:123,:127,:139`): record run `failed`/`aborted` with the error class; match/post nothing.
+  - [x] Duplicate handling: if two returned rows carry the same Consumer Number, the matched Voucher must not be double-processed into a second confirmed state. `persistEvidence`'s status guard (`mappedStatus` returns the current status unchanged once a Voucher leaves `pending`/`retry`, `:297–298`) and the validator's duplicate-reference check are the guards; ensure the second row routes to Manual Review, not a second confirm. Add a test.
 
-- [ ] **Task 6 — Minimal authorized trigger (AC4; UX-DR15, UX-DR18).** **Decided (OQ-1): build the minimal trigger now.** Provide the minimum admin-intent entry point to invoke a bulk run for a date:
-  - [ ] Add `getActions()` to the plugin (does not exist today) and a thin admin controller method that: requires staff auth + plugin ACL, accepts a **POST** with CSRF, validates the transaction-date input, calls `KuickPayReconcileService::runBulk($company_id, $run_date)`, and shows a Blesta `setMessage`/`flashMessage` result. GET stays read-only (NFR14). Use `Language::_()` keys for all labels/messages.
-  - [ ] Keep it minimal — no run-list/detail views, no Manual Review queue, no search/filter (all Epic 4 / Story 4.4). Just enough UI to start a run for a date and confirm it ran.
-  - [ ] **Do NOT register a recurring cron task for bulk.** Bulk is authorized/manual (FR-22, UX-DR18, EXPERIENCE.md IA line 35). Leave `getCronTasks()`'s three existing tasks unchanged.
+- [x] **Task 6 — Minimal authorized trigger (AC4; UX-DR15, UX-DR18).** **Decided (OQ-1): build the minimal trigger now.** Provide the minimum admin-intent entry point to invoke a bulk run for a date:
+  - [x] Add `getActions()` to the plugin (does not exist today) and a thin admin controller method that: requires staff auth + plugin ACL, accepts a **POST** with CSRF, validates the transaction-date input, calls `KuickPayReconcileService::runBulk($company_id, $run_date)`, and shows a Blesta `setMessage`/`flashMessage` result. GET stays read-only (NFR14). Use `Language::_()` keys for all labels/messages.
+  - [x] Keep it minimal — no run-list/detail views, no Manual Review queue, no search/filter (all Epic 4 / Story 4.4). Just enough UI to start a run for a date and confirm it ran.
+  - [x] **Do NOT register a recurring cron task for bulk.** Bulk is authorized/manual (FR-22, UX-DR18, EXPERIENCE.md IA line 35). Leave `getCronTasks()`'s three existing tasks unchanged.
 
-- [ ] **Task 7 — Tests (AC1–AC5; Story 3.8 will extend).** Run with the external PHPUnit 8.5 runner (see §Testing). Reuse existing bulk fixtures under `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/{valid,ambiguous,malformed}/bill-payment-bulk-*.xml`.
-  - [ ] Service tests (`tests/KuickPayReconcileServiceTest.php`): `runBulk` happy path (matched-paid → `confirmed_unposted`, item + audit written, run summary counts correct); unmatched row → `total_unmatched`++ + audit, no item, no Voucher mutated; amount-mismatch/over/under matched row → `manual_review`; malformed/transport bulk response → `failed`/`aborted`, nothing posted; lock-held → skipped; **late payment on a still-`pending` past-expiry Voucher → `manual_review` with `late_payment` reason** (the materially-reachable late path — see §"Late payment").
-  - [ ] Matching tests: suffix-pair fixture proves exact-match-only (no suffix inference); blank Consumer Number never matches; duplicate Consumer Number rows don't double-confirm.
-  - [ ] Parser tests (only if you extend `parseBulk` — Task 5 recommended approach): per-consumer expectation map classifies each row against its own amount; backward-compatible with existing single-amount callers and all existing `KuickPayResponseParserTest` bulk tests still pass.
-  - [ ] Schema test or smoke: fresh install and 1.3.0→1.4.0 upgrade both yield `trigger_type` accepting `'bulk'`, plus `run_date` and `total_unmatched` columns.
-  - [ ] `php -l` on every changed PHP file. State exactly which suites ran and which prerequisites (sibling `../tests`, DB) were unavailable — do not overstate coverage.
+- [x] **Task 7 — Tests (AC1–AC5; Story 3.8 will extend).** Run with the external PHPUnit 8.5 runner (see §Testing). Reuse existing bulk fixtures under `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/{valid,ambiguous,malformed}/bill-payment-bulk-*.xml`.
+  - [x] Service tests (`tests/KuickPayReconcileServiceTest.php`): `runBulk` happy path (matched-paid → `confirmed_unposted`, item + audit written, run summary counts correct); unmatched row → `total_unmatched`++ + audit, no item, no Voucher mutated; amount-mismatch/over/under matched row → `manual_review`; malformed/transport bulk response → `failed`/`aborted`, nothing posted; lock-held → skipped; **late payment on a still-`pending` past-expiry Voucher → `manual_review` with `late_payment` reason** (the materially-reachable late path — see §"Late payment").
+  - [x] Matching tests: suffix-pair fixture proves exact-match-only (no suffix inference); blank Consumer Number never matches; duplicate Consumer Number rows don't double-confirm.
+  - [x] Parser tests (only if you extend `parseBulk` — Task 5 recommended approach): per-consumer expectation map classifies each row against its own amount; backward-compatible with existing single-amount callers and all existing `KuickPayResponseParserTest` bulk tests still pass.
+  - [x] Schema test or smoke: fresh install and 1.3.0→1.4.0 upgrade both yield `trigger_type` accepting `'bulk'`, plus `run_date` and `total_unmatched` columns.
+  - [x] `php -l` on every changed PHP file. State exactly which suites ran and which prerequisites (sibling `../tests`, DB) were unavailable — do not overstate coverage.
 
 ## Key Implementation Decision: how `parseBulk` classifies multi-amount rows
 
@@ -220,10 +224,49 @@ No external/web research required: this is an internal integration story. All de
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+GPT-5 Codex
 
 ### Debug Log References
 
+- 2026-06-11: Used `/usr/bin/python3.12` for BMad resolver because default `python3` lacked stdlib `tomllib`.
+- 2026-06-11: Red phase confirmed for parser expectation map: `testBulkExpectationMapUsesPerConsumerAmount` failed before parser support.
+- 2026-06-11: Red phase confirmed for service bulk API: seven `RunBulk|BuildBulk` tests failed before `runBulk()`/`buildBulkRequest()`.
+- 2026-06-11: Validation: `php -l` passed for every changed PHP file.
+- 2026-06-11: Validation: `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` passed: 80 tests, 307 assertions.
+- 2026-06-11: Validation: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` passed: 214 tests, 1114 assertions.
+- 2026-06-11: Schema smoke: static fresh-install and upgrade paths verified in code (`createReconcileTables()` and `addBulkReconciliationColumns()`); live DB install/upgrade smoke was not run because no Blesta DB-backed test harness was available in this workspace.
+- 2026-06-11: Commits: `11c0867e`, `533b90c8`, `6363eee4`, `87a66253`, `48f5ff09`.
+
 ### Completion Notes List
 
+- Added plugin version `1.4.0`, idempotent bulk-run schema upgrade, fresh-install run fields, and model allow-list fields for `run_date` and `total_unmatched`.
+- Added `openBulk()` run repository support while keeping the existing single reconciliation `open()` signature and cron resume behavior unchanged.
+- Extended `parseBulk()` with backward-compatible per-consumer expectations so amount/currency fail-closed decisions stay parser-owned for multi-voucher bulk runs.
+- Added `runBulk()` with config threading, shared `reconcile_pending` lock, one bulk SOAP call, exact Consumer Number matching, validator-backed matched-row persistence, unmatched audit-only handling, duplicate Consumer Number fail-closed handling, run close summary, and run start/completion audit events.
+- Added `buildBulkRequest()` using Phase 0 confirmed `TransactionDate` / `Ymd` bulk request format, with strict `YYYY-MM-DD` input validation.
+- Added minimal staff admin trigger with plugin action, ACL permission, POST-only run endpoint, form CSRF via Blesta Form helper, date validation, and localized result messages. No recurring bulk cron was added.
+- Added service tests for happy path, unmatched, malformed response, lock-held, late payment, duplicate Consumer Number, and request-date formatting; added parser test for per-consumer amount expectations.
+
 ### File List
+
+- components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPayResponseParserTest.php
+- plugins/kuickpay_reconcile/config.json
+- plugins/kuickpay_reconcile/controllers/admin_main.php
+- plugins/kuickpay_reconcile/kuickpay_reconcile_controller.php
+- plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/language/en_us/admin_main.php
+- plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php
+- plugins/kuickpay_reconcile/lib/KuickPayReconciliationRunRepository.php
+- plugins/kuickpay_reconcile/models/kuickpay_reconciliation_runs.php
+- plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php
+- plugins/kuickpay_reconcile/views/default/admin_main.pdt
+
+### Change Log
+
+- 2026-06-11: Added bulk run schema fields and version bump.
+- 2026-06-11: Added parser per-consumer expectation maps.
+- 2026-06-11: Added bulk run repository support.
+- 2026-06-11: Added bulk reconciliation engine and tests.
+- 2026-06-11: Added minimal authorized admin trigger.
