@@ -55,7 +55,7 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
 ## Tasks / Subtasks
 
 - [ ] **Task 1 — Resolve the paid-date prerequisite (AC8)** — fail closed when confirmed evidence lacks a usable paid date.
-  - [ ] Decide the enforcement point: simplest is a guard at the start of posting (`date_paid` empty/`'0000-00-00...'`/unparseable → route to `manual_review`, audit `posting.failed`, no transaction). Optionally also tighten the 3-4 confirmed path, but do NOT change 3-4 test expectations without updating them.
+  - [x] Decide the enforcement point: simplest is a guard at the start of posting (`date_paid` empty/`'0000-00-00...'`/unparseable → route to `manual_review`, audit `posting.failed`, no transaction). Optionally also tighten the 3-4 confirmed path, but do NOT change 3-4 test expectations without updating them.
   - [ ] Add a language key for the safe customer/admin label if any string surfaces; reason codes stay machine-readable (e.g. `missing_paid_date`).
 
 - [x] **Task 2 — Extend the validator for the `confirmed_unposted` posting state (AC3, AC9, AC14)** — without breaking 3-4.
@@ -63,7 +63,7 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
   - [x] Posting calls `validate($freshVoucher, $invoiceLinks, $evidence, ['confirmed_unposted'])`. Confirm the other sub-checks already behave correctly at posting time: `referenceIsUnique` and `findActiveByInvoiceId` exclude the current voucher id (sibling/duplicate detection still correct); `amountMatches`/`currencyMatches`/`invoiceMatches` re-verify live invoice state.
   - [x] Update/extend `KuickPayEvidenceValidatorTest.php` to cover the new `confirmed_unposted` allowed-status path AND assert the default still rejects `confirmed_unposted` as `stale_voucher` (regression guard).
 
-- [ ] **Task 3 — Build `KuickPayPostingService` (AC1–AC7, AC10, AC11, AC13)** at `plugins/kuickpay_reconcile/lib/KuickPayPostingService.php`.
+- [x] **Task 3 — Build `KuickPayPostingService` (AC1–AC7, AC10, AC11, AC13)** at `plugins/kuickpay_reconcile/lib/KuickPayPostingService.php`.
 
   Posting unit at a glance (the normative sequence is the numbered steps below):
   ```
@@ -79,10 +79,10 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
     9. edit voucher → posted, blesta_transaction_id, date_posted (AC5)
     10. posting.succeeded; commit()   |  any failure → rollBack + posting.failed (AC6)
   ```
-  - [ ] Define class constants mirroring `KuickPayReconcileService`: `BATCH_SIZE = 100`, `MAX_RUNTIME_SECONDS = 240`, and a distinct lock name `post_confirmed`.
-  - [ ] Constructor mirrors existing services: `__construct(array $dependencies = [])` with `loadRuntimeDependencies()` when empty; inject `voucher_repository`, `evidence_validator`, `audit_service`, `lock_repository`, plus the Blesta `Transactions` model (load via `Loader::loadModels($this, ['Transactions'])` in `loadRuntimeDependencies()`, matching `KuickPayReconcileService`) via a seam so tests can fake them. Follow the DI shape in `KuickPayReconcileService` / `KuickPayEvidenceValidator`.
-  - [ ] `postConfirmed(int $company_id): array` — acquire the `post_confirmed` DB lock (skip with `lock_held` if not acquired), bounded batch: fetch up to `BATCH_SIZE` postable vouchers via `getPostable($company_id, $limit, $afterId)` (Task 4), iterate with a `MAX_RUNTIME_SECONDS` guard, call `postVoucher()` per voucher, accumulate a counts summary, release the lock in `finally`. Return shape: `['status' => 'completed'|'skipped'|'aborted', 'counts' => ['processed','posted','already_posted','skipped','manual_review','failed','errors']]`.
-  - [ ] `postVoucher(int $company_id, $voucher): array` — the safe posting unit. Return shape: `['voucher_id' => int, 'outcome' => 'posted'|'already_posted'|'skipped'|'manual_review'|'failed', 'blesta_transaction_id' => ?int]`.
+  - [x] Define class constants mirroring `KuickPayReconcileService`: `BATCH_SIZE = 100`, `MAX_RUNTIME_SECONDS = 240`, and a distinct lock name `post_confirmed`.
+  - [x] Constructor mirrors existing services: `__construct(array $dependencies = [])` with `loadRuntimeDependencies()` when empty; inject `voucher_repository`, `evidence_validator`, `audit_service`, `lock_repository`, plus the Blesta `Transactions` model (load via `Loader::loadModels($this, ['Transactions'])` in `loadRuntimeDependencies()`, matching `KuickPayReconcileService`) via a seam so tests can fake them. Follow the DI shape in `KuickPayReconcileService` / `KuickPayEvidenceValidator`.
+  - [x] `postConfirmed(int $company_id): array` — acquire the `post_confirmed` DB lock (skip with `lock_held` if not acquired), bounded batch: fetch up to `BATCH_SIZE` postable vouchers via `getPostable($company_id, $limit, $afterId)` (Task 4), iterate with a `MAX_RUNTIME_SECONDS` guard, call `postVoucher()` per voucher, accumulate a counts summary, release the lock in `finally`. Return shape: `['status' => 'completed'|'skipped'|'aborted', 'counts' => ['processed','posted','already_posted','skipped','manual_review','failed','errors']]`.
+  - [x] `postVoucher(int $company_id, $voucher): array` — the safe posting unit. Return shape: `['voucher_id' => int, 'outcome' => 'posted'|'already_posted'|'skipped'|'manual_review'|'failed', 'blesta_transaction_id' => ?int]`.
     1. Run the Task 1 paid-date guard.
     2. `Record->begin()` (use the voucher model's Record — all models share one PDO connection, so this boundary also covers `Transactions->add/apply`). **Inside this transaction, use only plain UPDATE/SELECT (the model `edit()` and raw `query()`); never call a method that self-manages `begin()/commit()` — see the Dev Notes footgun warning.**
     3. Row-lock + re-read **the voucher AND its invoice-mapping rows** inside the open transaction: `Record->query('SELECT * FROM kuickpay_vouchers WHERE id = ? AND company_id = ? FOR UPDATE', $voucher->id, $company_id)->fetch()`, and lock the links via a `kuickpay_voucher_invoices ... WHERE voucher_id = ? FOR UPDATE` read (add a repo/model locked-read, e.g. `getInvoiceLinksForUpdate($voucher_id)`). All subsequent re-validation/allocation uses these locked rows.
@@ -93,7 +93,7 @@ The following testable criteria expand the two BDD scenarios above. Each is mapp
     8. `Transactions->apply($transaction_id, ['amounts' => $allocations, 'date' => $voucher->date_paid])`; check errors → `rollBack()`, audit `posting.failed`, return `failed`.
     9. Update voucher: `status='posted'`, `blesta_transaction_id=$transaction_id`, `date_posted=NOW()` via `voucher_repository->edit($id, $company_id, $vars)` (a plain `Record->update()` — safe inside the open transaction).
     10. `posting.succeeded` audit. `commit()`. Return `posted`.
-  - [ ] Wrap the whole unit in `try/catch (Throwable)`: on throw, `rollBack()` first, then a best-effort `posting.failed` audit on a fresh write **after** the rollback (`try { … } catch (Throwable) { /* swallow */ }`, mirroring `KuickPayReconcileService`'s `finally`/best-effort audit) so it survives the rollback and one voucher's failure cannot abort the rest of the batch.
+  - [x] Wrap the whole unit in `try/catch (Throwable)`: on throw, `rollBack()` first, then a best-effort `posting.failed` audit on a fresh write **after** the rollback (`try { … } catch (Throwable) { /* swallow */ }`, mirroring `KuickPayReconcileService`'s `finally`/best-effort audit) so it survives the rollback and one voucher's failure cannot abort the rest of the batch.
 
 - [x] **Task 4 — Repository/model support (AC2, AC9)**.
   - [x] Add `KuickpayVouchers::getPostable(int $company_id, int $limit, int $afterId = 0)` selecting `status='confirmed_unposted' AND currency='PKR' AND blesta_transaction_id IS NULL AND date_paid IS NOT NULL` ordered by id, plus a `KuickPayVoucherRepository::getPostable(...)` passthrough (mirror `getReconcilable`). The `date_paid IS NOT NULL` filter MUST live in the query (it is the primary gate); Task 1's paid-date guard is defense-in-depth for a row that slips through (e.g. a reconcile/posting race) — keep **both** layers.
@@ -269,15 +269,21 @@ Full agent rules: `_bmad-output/project-context.md`. Most load-bearing for this 
 ### Debug Log References
 - 2026-06-10: Extended `KuickPayEvidenceValidator::validate()` with an allowed-status parameter. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayEvidenceValidatorTest.php` and `php -l` on changed validator files.
 - 2026-06-10: Added postable voucher selection plus locked voucher/invoice-link reads. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherRepositoryTest.php` and `php -l` on touched repository/model files.
+- 2026-06-10: Added `KuickPayPostingService` with paid-date guard, locked re-read, validation, duplicate transaction adoption, Blesta transaction add/apply, rollback handling, and posting audits. Verified with `/root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayPostingServiceTest.php` and `php -l` on new posting files.
 
 ### Completion Notes List
 - Task 2 complete: posting can explicitly validate `confirmed_unposted` vouchers while reconcile-time defaults still reject that state as stale.
 - Task 4 complete: repository/model support now exposes bounded postable fetches and `FOR UPDATE` reads for the posting transaction.
+- Task 1 paid-date guard complete in `KuickPayPostingService::postVoucher()`; missing or malformed paid dates route to `manual_review` with `missing_paid_date` and no transaction.
+- Task 3 complete: posting is centralized in `KuickPayPostingService` with DB lock batching, row-locked posting, idempotency, rollback-safe failures, and redacted audit events.
 
 ### File List
 - plugins/kuickpay_reconcile/lib/KuickPayEvidenceValidator.php
+- plugins/kuickpay_reconcile/lib/KuickPayPostingService.php
 - plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php
 - plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
+- plugins/kuickpay_reconcile/tests/bootstrap.php
 - plugins/kuickpay_reconcile/tests/KuickPayEvidenceValidatorTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php

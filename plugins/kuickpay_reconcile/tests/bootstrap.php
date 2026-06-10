@@ -8,3 +8,4 @@ require_once __DIR__ . '/../lib/KuickPayValidationResult.php';
 require_once __DIR__ . '/../lib/KuickPayInvoiceReader.php';
 require_once __DIR__ . '/../lib/KuickPayEvidenceValidator.php';
 require_once __DIR__ . '/../lib/KuickPayReconcileService.php';
+require_once __DIR__ . '/../lib/KuickPayPostingService.php';
