@@ -387,7 +387,12 @@ class KuickPayResponseParserTest extends TestCase
     /**
      * @dataProvider insertVoucherFixtureProvider
      */
-    public function testInsertVoucherFixtureMappings(string $fixture, string $status, ?string $errorClass)
+    public function testInsertVoucherFixtureMappings(
+        string $fixture,
+        string $status,
+        ?string $errorClass,
+        ?string $reference
+    )
     {
         $evidence = $this->parser()->parse(
             $this->outcome('InsertVoucher', $this->fixtureResult($fixture)),
@@ -395,16 +400,17 @@ class KuickPayResponseParserTest extends TestCase
         );
 
         $this->assertEvidence($status, $errorClass, $evidence);
+        $this->assertSame($reference, $evidence->reference());
     }
 
     public function insertVoucherFixtureProvider(): array
     {
         return [
-            ['valid/insert-voucher-success.xml', 'pending', null],
-            ['malformed/insert-voucher-malformed.xml', 'manual_review', 'malformed_response'],
-            ['ambiguous/insert-voucher-duplicate.xml', 'manual_review', 'duplicate_reference'],
-            ['malformed/insert-voucher-invalid-credentials.xml', 'failed', 'credential_error'],
-            ['malformed/insert-voucher-non-2-char-status.xml', 'manual_review', 'malformed_response'],
+            ['valid/insert-voucher-success.xml', 'pending', null, 'VOUCHERID00001'],
+            ['malformed/insert-voucher-malformed.xml', 'manual_review', 'malformed_response', null],
+            ['ambiguous/insert-voucher-duplicate.xml', 'manual_review', 'duplicate_reference', null],
+            ['malformed/insert-voucher-invalid-credentials.xml', 'failed', 'credential_error', null],
+            ['malformed/insert-voucher-non-2-char-status.xml', 'manual_review', 'malformed_response', null],
         ];
     }
 
