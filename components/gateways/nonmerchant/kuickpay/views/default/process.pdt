@@ -89,7 +89,7 @@ $date_expires_display = $date_expires_ts !== false ? date('d-M-y', $date_expires
             <?php } ?>
         </dl>
     </div>
-    <?php if (!empty($instruction_groups)) { ?>
+    <?php if (!empty($instruction_groups) && $has_consumer_number) { ?>
         <div class="kuickpay-instructions mt-3">
             <p class="font-weight-bold mb-2"><?php echo $this->_('Kuickpay.process.instructions_heading'); ?></p>
             <?php foreach ($instruction_groups as $group) { ?>
