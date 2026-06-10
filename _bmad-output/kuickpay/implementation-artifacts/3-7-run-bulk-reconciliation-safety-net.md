@@ -4,7 +4,7 @@ baseline_commit: 1be775983a17b2010320f83e6a3c688a51c6f729
 
 # Story 3.7: Run Bulk Reconciliation Safety Net
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -270,3 +270,27 @@ GPT-5 Codex
 - 2026-06-11: Added bulk run repository support.
 - 2026-06-11: Added bulk reconciliation engine and tests.
 - 2026-06-11: Added minimal authorized admin trigger.
+
+### Review Findings
+
+Adversarial code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor), 2026-06-11, diff `1be77598..f7fce15c`. 2 patched (fixed), 2 deferred, 5 dismissed.
+
+**Patched (fixed in this review):**
+
+- [x] [Review][Patch] **Duplicate Consumer Number aborts the bulk run and demotes a confirmed voucher** [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:231] — the duplicate branch ran `persistDuplicateBulkEvidence` (rewriting an already-confirmed voucher to `manual_review`) and then wrote a second `(run_id, voucher_id)` item row, violating `uniq_kuickpay_items_run_voucher`. The model's plain `Record->insert` throws and the branch had no inner try/catch, so the throw bubbled to the outer catch and aborted the whole run as `failed`. The fake item repo (append-only) hid this; the shipped `mixed-multi-row.xml` fixture carries a real duplicate, so a production run on similar data would fail. **Fixed (`b0b1d91c`):** skip any voucher already seen this run or already past `pending`/`retry` — audit the duplicate only, leave the voucher and its first item untouched (idempotent rerun). Added a rerun-idempotency test. (Edge Case Hunter Critical / Blind Hunter High / merged with rerun-demotion — Acceptance Auditor Inv-5 CONCERN.)
+- [x] [Review][Patch] **Bulk confirm with no usable paid date sits unpostable forever** [components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php:256] — `parseBulk` confirmed a matched, amount-correct row without checking `Transaction_Date`; a present-but-empty/garbled date yielded `date_paid = NULL`, and `getPostable` requires a non-null `date_paid`, so the voucher stayed `confirmed_unposted` forever — never posting, never surfaced. **Fixed (`e04ac212`):** route such rows to `manual_review` with a `missing_paid_date` reason (fail closed, parser-owned per Invariant 6). This also closes the forward-looking 3-4 deferral ("enforce date presence on the confirmed path"). (Edge Case Hunter Medium.)
+
+**Deferred (LOW; recorded in deferred-work.md):**
+
+- [x] [Review][Defer] Bulk run-summary count overlap + `total_eligible` semantics [KuickPayReconcileService.php:212, :224] — reporting only; Epic 4 / Story 4.4 owns the run-summary view.
+- [x] [Review][Defer] Bulk `run_date` has no upper bound [controllers/admin_main.php:99] — minimal-trigger scope; the bounded date form is Epic 4 / Story 4.4.
+
+**Dismissed (false positives / by-spec / handled elsewhere):**
+
+- `buildBulkRequest` throws `InvalidArgumentException` out of the public `runBulk` array contract — the sole caller (the admin controller) pre-validates the date; throwing on a precondition violation is acceptable and leaks no lock (it runs before lock acquisition).
+- `reconciliation.run.completed` audit emitted on `failed` runs — matches the existing single-path `run()` convention; the payload carries `status` so consumers can distinguish.
+- `getByConsumerNumber` cross-/within-company over-match — `(company_id, consumer_number)` is UNIQUE, so a Consumer Number maps to exactly one voucher per company.
+- `consumer_number` in the unmatched audit "PII leak" — Dev Notes explicitly sanction "Consumer Number + sanitized evidence hash/trace" for the unmatched audit; it is a billing reference, not a credential (the redactor's `institution_id` rule targets credential keys, not this value).
+- Controller `run()` calls `redirect()` without a following `return` — `redirect()` exits; matches Blesta convention.
+
+**Compliance:** all 5 ACs and all 9 Must-Not-Break Invariants verified PASS after the fixes. Verification: `php -l` clean on all changed files; plugin suite 81 tests / 315 assertions green; gateway suite 215 tests / 1120 assertions green (external PHPUnit 8.5 runner). Live-DB schema install/upgrade smoke remained static-only (no Blesta DB harness in this workspace), as already disclosed in the Dev Agent Record.
