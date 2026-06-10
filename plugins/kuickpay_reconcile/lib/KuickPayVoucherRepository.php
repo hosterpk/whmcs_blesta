@@ -72,6 +72,20 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches the latest voucher by linked invoice.
+     *
+     * @param int $invoice_id The invoice ID
+     * @param int $company_id The company ID
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function getLatestByInvoiceId(int $invoice_id, int $company_id): ?stdClass
+    {
+        $voucher = $this->KuickpayVouchers->getLatestByInvoiceId($invoice_id, $company_id);
+
+        return $voucher ?: null;
+    }
+
+    /**
      * Fetches a voucher by registration number.
      *
      * @param string $registration_number The KuickPay registration number

@@ -168,6 +168,31 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Fetches the most recent voucher linked to an invoice, regardless of status.
+     *
+     * @param int $invoice_id The invoice ID
+     * @param int $company_id The company ID
+     * @return mixed The voucher row, or false when absent
+     */
+    public function getLatestByInvoiceId(int $invoice_id, int $company_id)
+    {
+        return $this->Record->select(['kuickpay_vouchers.*'])
+            ->from('kuickpay_vouchers')
+            ->innerJoin(
+                'kuickpay_voucher_invoices',
+                'kuickpay_voucher_invoices.voucher_id',
+                '=',
+                'kuickpay_vouchers.id',
+                false
+            )
+            ->where('kuickpay_voucher_invoices.invoice_id', '=', $invoice_id)
+            ->where('kuickpay_vouchers.company_id', '=', $company_id)
+            ->order(['kuickpay_vouchers.id' => 'DESC'])
+            ->limit(1)
+            ->fetch();
+    }
+
+    /**
      * Fetches vouchers matching optional filters.
      *
      * @param array $filters Supported filters: status, client_id, company_id
