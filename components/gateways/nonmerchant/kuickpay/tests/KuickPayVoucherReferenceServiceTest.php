@@ -142,6 +142,108 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame([['invoice_id' => 55, 'amount' => '1500.00']], $voucher['invoices']);
     }
 
+    public function testRequestMatchesVoucherComparesAmountsAsCanonicalStrings()
+    {
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertTrue($service->requestMatchesVoucher(
+            ['amount' => '1,500', 'invoices' => []],
+            '1500.00',
+            [['id' => 55, 'amount' => '1500.00']]
+        ));
+        $this->assertFalse($service->requestMatchesVoucher(
+            ['amount' => '1500.01', 'invoices' => []],
+            '1500.00',
+            [['id' => 55, 'amount' => '1500.00']]
+        ));
+    }
+
+    public function testRequestMatchesVoucherTreatsUnloadedLinksAsAmountOnly()
+    {
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertTrue($service->requestMatchesVoucher(
+            ['amount' => '1500.00', 'invoices' => []],
+            '1500.00',
+            [
+                ['id' => 55, 'amount' => '1000.00'],
+                ['id' => 56, 'amount' => '500.00'],
+            ]
+        ));
+    }
+
+    public function testRequestMatchesVoucherComparesLoadedLinksOrderIndependently()
+    {
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertTrue($service->requestMatchesVoucher(
+            [
+                'amount' => '1500.00',
+                'invoices' => [
+                    ['invoice_id' => 56, 'amount' => '500'],
+                    ['invoice_id' => 55, 'amount' => '1,000.00'],
+                ],
+            ],
+            '1500.00',
+            [
+                ['id' => 55, 'amount' => '1000.00'],
+                ['id' => 56, 'amount' => '500.00'],
+            ]
+        ));
+    }
+
+    public function testRequestMatchesVoucherAcceptsStdClassLinkRows()
+    {
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertTrue($service->requestMatchesVoucher(
+            [
+                'amount' => '1500.00',
+                'invoices' => [
+                    (object) ['invoice_id' => 55, 'amount' => '1000.00'],
+                    (object) ['invoice_id' => 56, 'amount' => '500.00'],
+                ],
+            ],
+            '1500.00',
+            [
+                ['id' => 56, 'amount' => '500.00'],
+                ['id' => 55, 'amount' => '1000.00'],
+            ]
+        ));
+    }
+
+    public function testRequestMatchesVoucherRejectsLoadedMappingChanges()
+    {
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceServiceFakeRepository());
+
+        $this->assertFalse($service->requestMatchesVoucher(
+            [
+                'amount' => '1500.00',
+                'invoices' => [
+                    ['invoice_id' => 55, 'amount' => '1500.00'],
+                ],
+            ],
+            '1500.00',
+            [
+                ['id' => 56, 'amount' => '1500.00'],
+            ]
+        ));
+        $this->assertFalse($service->requestMatchesVoucher(
+            [
+                'amount' => '1500.00',
+                'invoices' => [
+                    ['invoice_id' => 55, 'amount' => '1200.00'],
+                    ['invoice_id' => 56, 'amount' => '300.00'],
+                ],
+            ],
+            '1500.00',
+            [
+                ['id' => 55, 'amount' => '1000.00'],
+                ['id' => 56, 'amount' => '500.00'],
+            ]
+        ));
+    }
+
     public function testFlatVoucherExposesIssuanceStateForIdempotency()
     {
         $repository = new KuickPayVoucherReferenceServiceFakeRepository();

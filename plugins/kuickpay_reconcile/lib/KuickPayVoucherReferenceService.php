@@ -134,6 +134,35 @@ class KuickPayVoucherReferenceService
     }
 
     /**
+     * Determines whether a stored voucher still matches the requested payment context.
+     *
+     * @param array $voucherFlat Flat voucher data with optional invoice links
+     * @param string $contextAmount Requested total amount
+     * @param array $contextInvoiceAmounts Requested invoice allocations
+     * @return bool True when the stored voucher matches the request
+     */
+    public function requestMatchesVoucher(
+        array $voucherFlat,
+        string $contextAmount,
+        array $contextInvoiceAmounts
+    ): bool {
+        if (
+            $this->normalizeAmount((string) ($voucherFlat['amount'] ?? ''))
+            !== $this->normalizeAmount($contextAmount)
+        ) {
+            return false;
+        }
+
+        $voucherInvoices = (array) ($voucherFlat['invoices'] ?? []);
+        if (empty($voucherInvoices)) {
+            return true;
+        }
+
+        return $this->canonicalInvoiceAmounts($voucherInvoices, 'invoice_id')
+            === $this->canonicalInvoiceAmounts($contextInvoiceAmounts, 'id');
+    }
+
+    /**
      * Generates a secure random integer for the reference prefix.
      *
      * @return int Random integer in the 4-digit prefix range
@@ -235,6 +264,56 @@ class KuickPayVoucherReferenceService
         }
 
         return $expanded;
+    }
+
+    /**
+     * Builds an order-independent invoice allocation map.
+     *
+     * @param array $invoiceAmounts Invoice amount rows
+     * @param string $idKey Invoice ID key name
+     * @return array Canonical invoice allocations keyed by invoice ID
+     */
+    private function canonicalInvoiceAmounts(array $invoiceAmounts, string $idKey): array
+    {
+        $canonical = [];
+        foreach ($invoiceAmounts as $invoiceAmount) {
+            $row = (array) $invoiceAmount;
+            $invoice_id = (string) ($row[$idKey] ?? '');
+            if ($invoice_id === '') {
+                continue;
+            }
+
+            $canonical[$invoice_id] = $this->normalizeAmount((string) ($row['amount'] ?? ''));
+        }
+
+        ksort($canonical, SORT_NATURAL);
+
+        return $canonical;
+    }
+
+    /**
+     * Normalizes an amount as a decimal string without float math.
+     *
+     * @param string $amount The amount to normalize
+     * @return string The normalized amount, or original trimmed input when invalid
+     */
+    private function normalizeAmount(string $amount): string
+    {
+        $amount = trim($amount);
+        $normalized = str_replace(',', '', $amount);
+
+        if (!preg_match('/^\d+(?:\.\d+)?$/', $normalized)) {
+            return $amount;
+        }
+
+        $parts = explode('.', $normalized, 2);
+        $integer = ltrim($parts[0], '0');
+        if ($integer === '') {
+            $integer = '0';
+        }
+        $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2);
+
+        return $integer . '.' . $fraction;
     }
 
     /**
