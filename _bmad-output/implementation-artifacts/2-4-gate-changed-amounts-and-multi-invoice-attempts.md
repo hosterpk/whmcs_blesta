@@ -4,7 +4,7 @@ baseline_commit: a55dac93f5d8486a1a1c088fd5a33644cca5bf4f
 
 # Story 2.4: Gate Changed Amounts and Multi-Invoice Attempts
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -116,21 +116,21 @@ This story closes residuals explicitly assigned to it by earlier stories. All pr
     - This guarantees one active (`pending`) voucher per invoice-set per company: a concurrent second create fails the unique insert; the service's existing `Throwable` catch + race-recovery re-read (`KuickPayVoucherReferenceService.php:115-118`) then returns the winner. Keying on `pending` only (not every active state) closes the concrete residual while avoiding entanglement with provider-liveness of `retry`/`manual_review` (which the reload matrix already BLOCKs).
   - [x] Migration/lifecycle: add the column + key in `install()` (`kuickpay_reconcile_plugin.php:38-73`), add an `upgrade()` branch for `< 1.2.0` (current guard returns at `>= 1.1.0`, `:102`) with idempotent `columnExists`-style guards (`:252`) + backfill (`active_context_key = context_key` for existing `pending` rows), and **bump `config.json` version to `1.2.0`**. Add `context_key`/`active_context_key` to `KuickpayVouchers::FIELDS` (`kuickpay_vouchers.php:24-48`). Verify both fresh-install and upgrade paths (state the DB-verification gap if no live MySQL — see Testing).
 
-- [ ] **Task 10 — Tests (AC1-AC5)**
-  - [ ] **Gateway** (extend `KuickPayVoucherGatewayHelpersTest.php` via the `KuickPayVoucherGatewayHelpers extends Kuickpay` harness with `expose*` seams + fakes — the established pattern, `tests/KuickPayVoucherGatewayHelpersTest.php:35-205`):
+- [x] **Task 10 — Tests (AC1-AC5)**
+  - [x] **Gateway** (extend `KuickPayVoucherGatewayHelpersTest.php` via the `KuickPayVoucherGatewayHelpers extends Kuickpay` harness with `expose*` seams + fakes — the established pattern, `tests/KuickPayVoucherGatewayHelpersTest.php:35-205`):
     - **Testability prerequisite (do this first — full `buildProcess()` is NOT drivable in the harness).** The harness cannot run `buildProcess()` end-to-end: `companionInstalled()` is `private` (`kuickpay.php:1123`) so it can't be stubbed, and in a bare test env it returns false → `buildProcess()` sets the companion error at `:581` and never reaches the display branch (existing tests confirm this — they drive `exposeReloadVoucherDecision`/`exposeIssueVoucherIfNeeded`, never `buildProcess`). So **extract the display-branch decision** (compare → match/​block/​replace → `$voucher` + `process_notice`) into a `protected` method and add an `expose*` accessor (mirror `exposeReloadVoucherDecision():91`, `exposeIssueVoucherIfNeeded():96`). Also add a `getVoucherReferenceService()` override + `$fakeVoucherReferenceService` (the harness currently overrides only `getSoapClient`/`getIssuanceService`/`getVoucherRepository`/`log`). The display-branch cases below drive the exposed helper with the fake service injected. *(Alternative: change `companionInstalled()` to `protected` and drive `buildProcess()` — but the expose-helper route matches the established pattern and avoids view rendering.)*
     - **Regression guard (single-invoice reload — required):** a matching single-invoice `pending`+`kuickpay_reference` reload — `voucherRowToView()` row with `invoices => []` vs a context with one invoice at the same amount — **displays unchanged** (payable view set, `process_notice` null). Asserts the empty-links display row does an amount-total-only compare and is **not** falsely flagged as amount-changed.
     - Multi-invoice gate (AC4): >1 distinct invoice and duplicate-invoice-id, policy `block` → `isBlockedMultiInvoice()` returns true; policy `allow` → false; `null`/empty `invoice_amounts` → false. (Assert the blocked path makes **zero** service/repository/issuance calls when wired through a fake, and that no further gate runs — `process_notice === 'multi_invoice_unsupported'`.)
     - Amount-change display branch (AC2): latest = `pending`+reference with a changed amount → `block` yields no payable view + `amount_changed` notice; `replace` retires (asserts `retireVoucher()` → `cancelled` edit + `voucher.replaced` audit on the fake) and issues a fresh voucher.
     - **Service→notice mapping:** when the injected fake service returns `null` with `getLastError() === 'amount_changed'`, the gateway sets `process_notice === 'amount_changed'` (not `retry_safe`).
-  - [ ] **Service** (`KuickPayVoucherReferenceServiceTest.php` harness with the fake repository, `tests/KuickPayVoucherReferenceServiceTest.php`):
+  - [x] **Service** (`KuickPayVoucherReferenceServiceTest.php` harness with the fake repository, `tests/KuickPayVoucherReferenceServiceTest.php`):
     - `requestMatchesVoucher()` unit tests (the method now lives here): match vs amount-changed vs mapping-changed (single & multi); empty/unloaded `invoices` → amount-total-only (returns true when amount matches, regardless of context invoice count); links-present → both (a) and (b) enforced; **both link-row shapes** — associative-array links (reuse/`flatten()`) **and** `stdClass` links (display `getWithInvoices()`) — compare correctly (proves the `(array) $link` shape-tolerance); all comparisons via `normalizeAmount` (no float drift; assert `'100'` vs `'100.00'` match).
     - Reuse with matching amount/mapping → reuses, no create (regression guard for 2.3).
     - Reuse with mismatch, `block` → returns null with `getLastError()==='amount_changed'`, no create.
     - Reuse with mismatch, `replace` → retires the stale pending voucher + creates a new one for the new amount.
     - AC5: `allow` multi-invoice → dedupes invoice IDs (no unique-key abort), stores per-invoice amounts, reuse keyed on the sorted set is deterministic across two calls; **same-ID/different-amount duplicate** → null, no voucher (fail-closed dedupe). Do **not** test a `sum(invoice_amounts) === total` rule — that check was removed (it false-blocks on account credit).
-  - [ ] **Plugin/audit:** `voucher.replaced` recorded with redacted plain-array payload and required `company_id` (mirror `KuickPayIssuanceServiceTest.php`).
-  - [ ] Run gateway suite: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (**do NOT** use `-c build/phpunit.xml` — broken for this component, project-context.md:74). Run plugin suite under its own `tests/` layout. `php -l` every changed PHP/PDT file; state the exact PHP version (lint host is 8.3.x; **target is 8.2** — no >8.2 syntax). State that DB-backed behavior (edit/audit/schema) is not runtime-verified without a live MySQL/`../tests`.
+  - [x] **Plugin/audit:** `voucher.replaced` recorded with redacted plain-array payload and required `company_id` (mirror `KuickPayIssuanceServiceTest.php`).
+  - [x] Run gateway suite: `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (**do NOT** use `-c build/phpunit.xml` — broken for this component, project-context.md:74). Run plugin suite under its own `tests/` layout. `php -l` every changed PHP/PDT file; state the exact PHP version (lint host is 8.3.x; **target is 8.2** — no >8.2 syntax). State that DB-backed behavior (edit/audit/schema) is not runtime-verified without a live MySQL/`../tests`.
 
 ---
 
@@ -238,7 +238,7 @@ Pure comparator/policy/gate tests first; component-local PHPUnit 8.5 via the ext
 
 ### Agent Model Used
 
-_TBD by dev agent_
+GPT-5 Codex
 
 ### Debug Log References
 
@@ -258,6 +258,7 @@ _TBD by dev agent_
 - 2026-06-10: Task 7 green check: `php -l ../../../../plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php`; `php -l ../../../../plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php`; `php -l ../../../../plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`; `phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherReferenceServiceTest.php`; `phpunit --bootstrap ../../../../plugins/kuickpay_reconcile/tests/bootstrap.php ../../../../plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php` passed.
 - 2026-06-10: Task 8 green check: `php -l views/default/process.pdt`; `phpunit --bootstrap tests/bootstrap.php tests/KuickPayVoucherGatewayHelpersTest.php` passed.
 - 2026-06-10: Task 9 handled by explicit deferral in `deferred-work.md`; no schema/version change made without architect sign-off.
+- 2026-06-10: Final validation green: `php -l` on all changed PHP/PDT files passed; gateway suite passed (178 tests, 811 assertions); plugin suite passed (35 tests, 111 assertions). DB-backed schema/upgrade behavior for the deferred active-context key was not run because that schema change was not implemented.
 
 ### Completion Notes List
 
@@ -270,6 +271,7 @@ _TBD by dev agent_
 - Added deterministic multi-invoice storage for the gated `allow` policy, including sorted set reuse and duplicate-ID fail-closed behavior.
 - Added specific customer notice rendering for amount-changed and unsupported multi-invoice states while preserving the payable branch.
 - Re-deferred schema-level active-context uniqueness with the known concurrent double-submit limitation documented.
+- Story is ready for review; all implemented AC paths are covered by local component/plugin PHPUnit suites.
 
 ### File List
 
@@ -284,3 +286,8 @@ _TBD by dev agent_
 - plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
 - plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php
 - _bmad-output/implementation-artifacts/deferred-work.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+
+### Change Log
+
+- 2026-06-10: Implemented Story 2.4 gateway policy gates, amount/mapping comparison, replacement retire audit, deterministic multi-invoice storage, customer notices, tests, and explicit active-context uniqueness deferral.
