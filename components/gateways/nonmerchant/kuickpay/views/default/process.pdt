@@ -1,25 +1,168 @@
 <?php
-if (!empty($voucher) && $voucher['status'] === 'pending' && !empty($voucher['kuickpay_reference'])) {
-    $status_key = 'Kuickpay.process.status.' . $voucher['status'];
-    $status_label = $this->_($status_key);
-    if ($status_label === $status_key) {
-        $status_label = $voucher['status'];
-    }
+$display_mode = $display_mode ?? '';
+$status_display = is_array($status_display ?? null) ? $status_display : [];
+$status_label_key = $status_display['label_key'] ?? 'Kuickpay.process.status.unknown';
+$status_badge = $status_display['badge'] ?? 'badge-secondary';
+$status = (string) ($voucher['status'] ?? '');
+$has_payable_reference = !empty($voucher)
+    && $display_mode === 'payable'
+    && $status === 'pending'
+    && !empty($voucher['kuickpay_reference']);
+$has_consumer_number = !empty($voucher['consumer_number']);
+$show_expectation = $display_mode === 'payable'
+    || (
+        $display_mode === 'status_only'
+        && !in_array($status, ['posted', 'expired', 'cancelled'], true)
+    );
 ?>
-<div class="kuickpay-voucher-info">
-    <p><?php echo $this->_('Kuickpay.process.consumer_number_label'); ?>: <strong class="kuickpay-consumer-number"><?php echo $this->Html->safe($voucher['consumer_number']); ?></strong></p>
-    <p><?php echo $this->_('Kuickpay.process.amount_label'); ?>: <strong><?php echo $this->Html->safe($voucher['amount']); ?></strong></p>
-    <p><?php echo $this->_('Kuickpay.process.status_label'); ?>: <strong><?php echo $this->Html->safe($status_label); ?></strong></p>
-    <?php if (!empty($voucher['date_due'])) { ?>
-    <p><?php echo $this->_('Kuickpay.process.due_date_label'); ?>: <?php echo $this->Html->safe($voucher['date_due']); ?></p>
+<?php if (!empty($process_notice)) { ?>
+    <?php echo $this->_('Kuickpay.process.' . $process_notice); ?>
+<?php } elseif ($has_payable_reference) { ?>
+    <div class="kuickpay-voucher-info">
+        <dl class="row mb-0">
+            <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.identity_label'); ?></dt>
+            <dd class="col-12 col-md-8">
+                <span class="font-weight-bold"><?php echo $this->Html->safe($kuickpay_name ?? ''); ?></span>
+                <?php if (!empty($institution_id)) { ?>
+                    <span class="d-block text-muted">
+                        <?php echo $this->_('Kuickpay.institution_id'); ?>:
+                        <?php echo $this->Html->safe($institution_id); ?>
+                    </span>
+                <?php } ?>
+            </dd>
+
+            <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.consumer_number_label'); ?></dt>
+            <dd class="col-12 col-md-8">
+                <span
+                    id="kp-consumer-number"
+                    class="text-monospace font-weight-bold"
+                    <?php if ($has_consumer_number) { ?>
+                        data-value="<?php echo $this->Html->safe($voucher['consumer_number']); ?>"
+                    <?php } ?>
+                ><?php echo $this->Html->safe($voucher['consumer_number']); ?></span>
+                <?php if ($has_consumer_number) { ?>
+                    <button
+                        type="button"
+                        id="kp-copy-btn"
+                        class="btn btn-sm btn-secondary ml-md-2 mt-2 mt-md-0"
+                        aria-label="<?php echo $this->Html->safe($this->_('Kuickpay.process.copy_button')); ?>"
+                        data-label="<?php echo $this->Html->safe($this->_('Kuickpay.process.copy_button')); ?>"
+                        data-copied="<?php echo $this->Html->safe($this->_('Kuickpay.process.copy_feedback')); ?>"
+                    ><?php echo $this->_('Kuickpay.process.copy_button'); ?></button>
+                    <span id="kp-copy-feedback" class="ml-md-2 text-muted" role="status" aria-live="polite"></span>
+                <?php } ?>
+            </dd>
+
+            <?php if (!empty($voucher['amount'])) { ?>
+                <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.amount_label'); ?></dt>
+                <dd class="col-12 col-md-8 font-weight-bold">
+                    <?php echo $this->Html->safe(trim((string) ($voucher['currency'] ?? '') . ' ' . (string) $voucher['amount'])); ?>
+                </dd>
+            <?php } ?>
+
+            <?php if (!empty($voucher['date_due'])) { ?>
+                <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.due_date_label'); ?></dt>
+                <dd class="col-12 col-md-8"><?php echo $this->Html->safe($voucher['date_due']); ?></dd>
+            <?php } ?>
+
+            <?php if (!empty($voucher['date_expires'])) { ?>
+                <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.expiry_date_label'); ?></dt>
+                <dd class="col-12 col-md-8"><?php echo $this->Html->safe($voucher['date_expires']); ?></dd>
+            <?php } ?>
+
+            <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.status_label'); ?></dt>
+            <dd class="col-12 col-md-8">
+                <span class="badge <?php echo $this->Html->safe($status_badge); ?>">
+                    <?php echo $this->Html->safe($this->_($status_label_key)); ?>
+                </span>
+            </dd>
+
+            <?php if ($show_expectation) { ?>
+                <dd class="col-12 offset-md-4 col-md-8 text-muted mb-0">
+                    <?php echo $this->_('Kuickpay.process.status_expectation'); ?>
+                </dd>
+            <?php } ?>
+        </dl>
+    </div>
+    <?php if ($has_consumer_number) { ?>
+        <script>
+        (function () {
+            var btn = document.getElementById('kp-copy-btn');
+            var src = document.getElementById('kp-consumer-number');
+            var fb = document.getElementById('kp-copy-feedback');
+            if (!btn || !src || !fb) {
+                return;
+            }
+            btn.addEventListener('click', function (event) {
+                event.preventDefault();
+                var value = (src.getAttribute('data-value') || src.textContent || '').trim();
+                if (value === '') {
+                    return;
+                }
+                function done() {
+                    btn.textContent = btn.getAttribute('data-copied') || btn.textContent;
+                    fb.textContent = btn.getAttribute('data-copied') || '';
+                    window.setTimeout(function () {
+                        btn.textContent = btn.getAttribute('data-label') || btn.textContent;
+                        fb.textContent = '';
+                    }, 2000);
+                }
+                function fail() {}
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(value).then(done, fail);
+                    return;
+                }
+                var textarea = document.createElement('textarea');
+                textarea.value = value;
+                textarea.setAttribute('readonly', 'readonly');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                var copied = false;
+                try {
+                    copied = document.execCommand('copy');
+                } catch (err) {
+                    copied = false;
+                }
+                document.body.removeChild(textarea);
+                if (copied) {
+                    done();
+                } else {
+                    fail();
+                }
+            });
+        }());
+        </script>
     <?php } ?>
-    <?php if (!empty($voucher['date_expires'])) { ?>
-    <p><?php echo $this->_('Kuickpay.process.expiry_date_label'); ?>: <?php echo $this->Html->safe($voucher['date_expires']); ?></p>
-    <?php } ?>
-</div>
-<?php
-} elseif (!empty($process_notice)) {
-    echo $this->_('Kuickpay.process.' . $process_notice);
-} else {
-    echo $this->_('Kuickpay.process.retry_safe');
-}
+<?php } elseif (!empty($voucher) && $display_mode === 'status_only') { ?>
+    <div class="kuickpay-voucher-info">
+        <dl class="row mb-0">
+            <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.identity_label'); ?></dt>
+            <dd class="col-12 col-md-8">
+                <span class="font-weight-bold"><?php echo $this->Html->safe($kuickpay_name ?? ''); ?></span>
+                <?php if (!empty($institution_id)) { ?>
+                    <span class="d-block text-muted">
+                        <?php echo $this->_('Kuickpay.institution_id'); ?>:
+                        <?php echo $this->Html->safe($institution_id); ?>
+                    </span>
+                <?php } ?>
+            </dd>
+
+            <dt class="col-12 col-md-4"><?php echo $this->_('Kuickpay.process.status_label'); ?></dt>
+            <dd class="col-12 col-md-8">
+                <span class="badge <?php echo $this->Html->safe($status_badge); ?>">
+                    <?php echo $this->Html->safe($this->_($status_label_key)); ?>
+                </span>
+            </dd>
+
+            <?php if ($show_expectation) { ?>
+                <dd class="col-12 offset-md-4 col-md-8 text-muted mb-0">
+                    <?php echo $this->_('Kuickpay.process.status_expectation'); ?>
+                </dd>
+            <?php } ?>
+        </dl>
+    </div>
+<?php } else { ?>
+    <?php echo $this->_('Kuickpay.process.retry_safe'); ?>
+<?php } ?>
