@@ -17,6 +17,9 @@ error_log
 temp/
 *.log
 
+# BMad — per-checkout active-initiative profile (select with ./bmad-use; templates live in _bmad/bmm/profiles/)
+_bmad/bmm/config.user.yaml
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

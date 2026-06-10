@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# bmad-use — select the active BMad initiative profile for the CURRENT working copy.
+#
+# Copies _bmad/bmm/profiles/<name>.yaml to the local (gitignored)
+# _bmad/bmm/config.user.yaml, which the BMad skills read at activation. Because
+# config.user.yaml is per-checkout and untracked, each working copy / git worktree
+# can sit on a different profile simultaneously — enabling concurrent work on both
+# initiatives (e.g. KuickPay dev in one window, WebNIC in another).
+#
+# Usage:
+#   ./bmad-use kuickpay     # activate KuickPay for this checkout
+#   ./bmad-use webnic       # activate WebNIC for this checkout
+#   ./bmad-use              # show the currently active profile
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "bmad-use: run this from inside a git working tree" >&2; exit 1; }
+profiles_dir="$root/_bmad/bmm/profiles"
+target="$root/_bmad/bmm/config.user.yaml"
+
+show_current() {
+  if [[ -f "$target" ]]; then
+    local cur
+    cur="$(grep -m1 -oE '_bmad-output/[a-z]+/' "$target" 2>/dev/null | grep -oE '[a-z]+/' | tr -d '/')"
+    echo "active profile in '$(basename "$root")': ${cur:-unknown}"
+  else
+    echo "no config.user.yaml in '$(basename "$root")' — falls back to _bmad/bmm/config.yaml"
+  fi
+}
+
+name="${1:-}"
+if [[ -z "$name" ]]; then show_current; exit 0; fi
+
+src="$profiles_dir/$name.yaml"
+if [[ ! -f "$src" ]]; then
+  echo "bmad-use: unknown profile '$name'. Available:" >&2
+  ls -1 "$profiles_dir" 2>/dev/null | sed 's/\.yaml$//;s/^/  /' >&2
+  exit 2
+fi
+
+cp "$src" "$target"
+echo "✓ activated '$name' for '$(basename "$root")'"
+grep -E '^(planning|implementation)_artifacts:' "$target" | sed 's/^/    /'

@@ -1,0 +1,10 @@
+# BMM profile — WebNIC (registrar module initiative).
+#
+# Activate it for THIS working copy with:  ./bmad-use webnic
+# (that copies this file to the local, gitignored _bmad/bmm/config.user.yaml).
+#
+# Tracked template. The live config.user.yaml is per-checkout and NOT tracked,
+# so different working copies / worktrees can sit on different profiles at once.
+
+planning_artifacts:       "{project-root}/_bmad-output/webnic/planning-artifacts"
+implementation_artifacts: "{project-root}/_bmad-output/webnic/implementation-artifacts"
