@@ -199,13 +199,16 @@ class KuickPayPostingService
 
     private function adoptExistingTransaction($transaction, $voucher, array $links): array
     {
+        $transactionMinor = $this->toMinorUnitsOrNull((string) ($transaction->amount ?? ''));
+        $voucherMinor = $this->toMinorUnitsOrNull((string) $voucher->amount);
+
         $basicMismatch = (string) ($transaction->status ?? '') !== 'approved'
             || (int) ($transaction->client_id ?? 0) !== (int) $voucher->client_id
             || (int) ($transaction->gateway_id ?? 0) !== (int) $voucher->gateway_id
             || (string) ($transaction->currency ?? '') !== (string) $voucher->currency
-            || $this->toMinorUnitsOrNull((string) ($transaction->amount ?? '')) !== $this->toMinorUnitsOrNull(
-                (string) $voucher->amount
-            );
+            || $transactionMinor === null
+            || $voucherMinor === null
+            || $transactionMinor !== $voucherMinor;
 
         if ($basicMismatch) {
             return ['ok' => false, 'reason' => 'existing_transaction_mismatch'];
@@ -236,12 +239,22 @@ class KuickPayPostingService
     {
         $expected = [];
         foreach ($links as $link) {
-            $expected[(int) $link->invoice_id] = $this->toMinorUnitsOrNull((string) $link->amount);
+            $minor = $this->toMinorUnitsOrNull((string) $link->amount);
+            if ($minor === null) {
+                return false;
+            }
+
+            $expected[(int) $link->invoice_id] = $minor;
         }
 
         $actual = [];
         foreach ($this->transactions->getApplied($transaction_id) as $applied) {
-            $actual[(int) $applied->invoice_id] = $this->toMinorUnitsOrNull((string) $applied->applied_amount);
+            $minor = $this->toMinorUnitsOrNull((string) $applied->applied_amount);
+            if ($minor === null) {
+                return false;
+            }
+
+            $actual[(int) $applied->invoice_id] = $minor;
         }
 
         ksort($expected);
@@ -417,11 +430,25 @@ class KuickPayPostingService
 
     private function toMinorUnitsOrNull(string $amount): ?int
     {
-        if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $amount)) {
+        $amount = trim($amount);
+
+        // Accept Blesta's decimal(12,4) storage (transactions/transaction_applied
+        // return strings like "1000.0000") alongside the plugin's varchar 2dp
+        // amounts. PKR minor unit is paisa (2dp); digits beyond paisa must be zero
+        // or the value is not representable. Stays integer/string math (no floats).
+        if (!preg_match('/^\d+(?:\.\d+)?$/', $amount)) {
             return null;
         }
 
         [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+
+        if (strlen($fraction) > 2) {
+            if (rtrim(substr($fraction, 2), '0') !== '') {
+                return null;
+            }
+
+            $fraction = substr($fraction, 0, 2);
+        }
 
         return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
     }

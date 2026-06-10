@@ -147,6 +147,26 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame(['posting.started', 'posting.succeeded'], array_column($audit->events, 0));
     }
 
+    public function testAdoptsExistingTransactionWithBlestaFourDecimalAmounts()
+    {
+        // Blesta stores transactions.amount and transaction_applied.amount as
+        // decimal(12,4), so the DB returns 4-decimal strings. Adoption must treat
+        // "1000.0000" as equal to the voucher/link 2dp "1000.00" — not route to
+        // manual_review. Regression guard for the minor-unit parser.
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $transactions->existing = $this->transaction(['amount' => '1000.0000']);
+        $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.0000']];
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('posted', $result['outcome']);
+        $this->assertSame(777, $result['blesta_transaction_id']);
+        $this->assertSame([], $transactions->adds);
+        $this->assertSame('posted', $repo->edits[0]['status']);
+    }
+
     public function testExistingApprovedUnappliedTransactionIsAppliedThenAdopted()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
