@@ -1,6 +1,10 @@
+---
+baseline_commit: a55dac93f5d8486a1a1c088fd5a33644cca5bf4f
+---
+
 # Story 3.4: Validate Confirmed Payment Evidence
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
