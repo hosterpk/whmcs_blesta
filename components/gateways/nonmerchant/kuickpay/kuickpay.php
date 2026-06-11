@@ -796,7 +796,7 @@ class Kuickpay extends NonmerchantGateway
             'gateway_id' => $this->kuickpay_gateway_id,
             'client_id' => $contact_info['client_id'] ?? null,
             'currency' => $this->currency,
-            'amount' => $this->normalizeAmount((string) $amount),
+            'amount' => $this->normalizeAmount($this->roundWholeRupees((string) $amount)),
             'invoice_amounts' => $this->normalizeInvoiceAmounts($invoice_amounts),
             'institution_id' => $meta['institution_id'] ?? '',
             'registration_number_pattern' => $meta['registration_number_pattern'] ?? '',
@@ -818,7 +818,7 @@ class Kuickpay extends NonmerchantGateway
      */
     protected function buildVoucherRequest(array $voucher, array $contactData, array $meta): array
     {
-        $amount = $this->normalizeAmount((string) ($voucher['amount'] ?? ''));
+        $amount = $this->roundWholeRupees((string) ($voucher['amount'] ?? ''));
         $dueDate = (string) ($voucher['date_due'] ?? '');
         $dueTimestamp = $dueDate !== '' ? strtotime($dueDate) : false;
         $clientMobile = $this->normalizePkMobile((string) ($contactData['mobile'] ?? ''));
@@ -855,7 +855,7 @@ class Kuickpay extends NonmerchantGateway
 
         for ($i = 2; $i <= 10; $i++) {
             $request['Head' . $i] = '';
-            $request['Amount' . $i] = '0';
+            $request['Amount' . $i] = '';
         }
 
         return $request;
@@ -1316,19 +1316,14 @@ class Kuickpay extends NonmerchantGateway
             return null;
         }
 
-        if (preg_match('/^03\d{9}$/', $digits)) {
-            return $digits;
-        }
+        // KuickPay accepts the bare 10-digit local form starting with 3 (no
+        // country code, no leading zero). Strip a 92/0092 country code and any
+        // leading zeros, mirroring the WHMCS gateway sanitizer.
+        $digits = preg_replace('/^0092/', '', $digits);
+        $digits = preg_replace('/^92/', '', $digits);
+        $digits = ltrim($digits, '0');
 
-        if (preg_match('/^923\d{9}$/', $digits)) {
-            return '0' . substr($digits, 2);
-        }
-
-        if (preg_match('/^00923\d{9}$/', $digits)) {
-            return '0' . substr($digits, 4);
-        }
-
-        return null;
+        return preg_match('/^3\d{9}$/', $digits) === 1 ? $digits : null;
     }
 
     /**
@@ -1397,6 +1392,26 @@ class Kuickpay extends NonmerchantGateway
         $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2);
 
         return $integer . '.' . $fraction;
+    }
+
+    /**
+     * Rounds a numeric amount string to whole rupees.
+     *
+     * KuickPay issues vouchers in whole-rupee amounts; fractional values are
+     * rejected by InsertVoucher. Non-numeric input is returned unchanged so the
+     * caller's existing fail-closed handling still applies.
+     *
+     * @param string $amount The amount to round
+     * @return string The whole-rupee amount, or the original string when non-numeric
+     */
+    protected function roundWholeRupees(string $amount): string
+    {
+        $normalized = str_replace(',', '', trim($amount));
+        if (!is_numeric($normalized)) {
+            return $amount;
+        }
+
+        return number_format(round((float) $normalized), 0, '', '');
     }
 
     /**

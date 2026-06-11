@@ -490,19 +490,19 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
 
         $this->assertSame('REG55', $request['RegistrationNumber']);
         $this->assertSame('Hosting invoice', $request['Head1']);
-        $this->assertSame('1500.50', $request['Amount1']);
-        $this->assertSame('1500.50', $request['TotalAmount']);
+        $this->assertSame('1501', $request['Amount1']);
+        $this->assertSame('1501', $request['TotalAmount']);
         $this->assertSame('13-Jun-26', $request['DueDate']);
         $this->assertSame('17-Jun-26', $request['ExpiryDate']);
         $this->assertSame(date('d-M-y'), $request['IssueDate']);
         $this->assertSame('06', $request['VoucherMonth']);
         $this->assertSame('2026', $request['VoucherYear']);
         $this->assertSame('Ali Khan', $request['Name']);
-        $this->assertSame('03001234567', $request['Mobile']);
+        $this->assertSame('3001234567', $request['Mobile']);
         $this->assertSame('ali@example.test', $request['Email']);
         $this->assertSame('SD', $request['Branch']);
         $this->assertSame('', $request['Head2']);
-        $this->assertSame('0', $request['Amount2']);
+        $this->assertSame('', $request['Amount2']);
         $this->assertArrayNotHasKey('userName', $request);
         $this->assertArrayNotHasKey('password', $request);
         $this->assertArrayNotHasKey('InstitutionID', $request);
@@ -536,7 +536,7 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
 
         $this->assertSame('Invoice Payment', $request['Head1']);
         $this->assertSame('Example Co', $request['Name']);
-        $this->assertSame('03001234567', $request['Mobile']);
+        $this->assertSame('3001234567', $request['Mobile']);
         $this->assertSame('fallback@example.test', $request['Email']);
         $this->assertSame('PB', $request['Branch']);
     }
@@ -554,11 +554,11 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
     public function pkMobileProvider()
     {
         return [
-            ['03001234567', '03001234567'],
-            ['+923001234567', '03001234567'],
-            ['00923001234567', '03001234567'],
-            ['923001234567', '03001234567'],
-            ['+92 300-123-4567', '03001234567'],
+            ['03001234567', '3001234567'],
+            ['+923001234567', '3001234567'],
+            ['00923001234567', '3001234567'],
+            ['923001234567', '3001234567'],
+            ['+92 300-123-4567', '3001234567'],
             ['02134567890', null],
             ['+12025550123', null],
             ['', null],
