@@ -73,12 +73,12 @@ story_location: "{project-root}/_bmad-output/kuickpay/implementation-artifacts"
 
 development_status:
   # --- Epic 0: Phase 0 - KuickPay Contract Validation and Fixture Gate ---
-  epic-0: in-progress
+  epic-0: done
   0-1-confirm-kuickpay-contract-and-capture-sanitized-fixtures: done
   epic-0-retrospective: optional
 
   # --- Epic 1: Safe KuickPay Gateway Enablement (parallel with Phase 0) ---
-  epic-1: in-progress
+  epic-1: done
   1-1-install-kuickpay-gateway-and-companion-plugin-scaffold: done
   1-2-configure-kuickpay-gateway-settings: done
   1-3-encrypt-and-mask-kuickpay-credentials: done
@@ -99,7 +99,7 @@ development_status:
 
   # --- Epic 3: Trusted Reconciliation and Safe Posting ---
   # NOTE: 3-1(InsertVoucher) and 3-2(creation parser) slices precede 2-3.
-  epic-3: in-progress
+  epic-3: done
   3-1-wrap-kuickpay-soap-operations: done
   3-2-normalize-kuickpay-evidence-with-fixtures: done
   3-3-reconcile-pending-vouchers-by-single-inquiry: done
@@ -108,7 +108,7 @@ development_status:
   3-6-handle-expiry-late-partial-and-overpayment-cases: done
   3-7-run-bulk-reconciliation-safety-net: done
   3-8-verify-payment-safety-contracts: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # --- Epic 4: Admin Support and Manual Review Operations ---
   epic-4: backlog
