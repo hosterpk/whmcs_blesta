@@ -345,7 +345,9 @@ class KuickPayReconcileService
 
     public function buildInquiryRequest($voucher): array
     {
-        return ['RegistrationNumber' => (string) $voucher->registration_number];
+        // KuickPay's BillPaymentInquiry keys on the Consumer Number (WSDL field
+        // `consumerNumber`); it echoes that same number back in result field [1].
+        return ['consumerNumber' => (string) $voucher->consumer_number];
     }
 
     public function buildBulkRequest(string $run_date): array
@@ -360,10 +362,13 @@ class KuickPayReconcileService
 
     public function buildParserContext($voucher): array
     {
+        // Match the identity KuickPay echoes back in inquiry result field [1] --
+        // the Consumer Number -- not the Registration Number. Pass exactly ONE
+        // expected identity (see single-identity contract).
         return [
             'expected_amount' => (string) $voucher->amount,
             'expected_currency' => (string) $voucher->currency,
-            'expected_registration_number' => (string) $voucher->registration_number,
+            'expected_consumer_number' => (string) $voucher->consumer_number,
         ];
     }
 

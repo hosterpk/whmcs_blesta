@@ -523,7 +523,11 @@ class KuickPayResponseParser
             $errors[] = $this->amountMismatchReason($amount, $expectedAmount);
         }
 
-        if ($expectedCurrency !== '' && $currency !== $expectedCurrency) {
+        // KuickPay's live BillPaymentInquiry paid row carries no currency column
+        // (status,consumer,date,amount,txnRef,bankCode). Only flag a mismatch when
+        // the provider actually returns a currency that differs; an absent currency
+        // is not a mismatch (the voucher is PKR-only by gateway eligibility).
+        if ($currency !== null && $expectedCurrency !== '' && $currency !== $expectedCurrency) {
             $errors[] = 'currency_mismatch';
         }
 

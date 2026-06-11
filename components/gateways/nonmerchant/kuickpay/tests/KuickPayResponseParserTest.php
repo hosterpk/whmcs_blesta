@@ -502,9 +502,33 @@ class KuickPayResponseParserTest extends TestCase
             ['ambiguous/bill-payment-inquiry-overpayment.xml', 'manual_review', 'amount_mismatch', ['overpayment']],
             ['ambiguous/bill-payment-inquiry-unknown.xml', 'manual_review', 'unknown_status', ['unknown_status']],
             ['ambiguous/bill-payment-inquiry-non-pkr.xml', 'manual_review', null, ['currency_mismatch']],
-            ['ambiguous/bill-payment-inquiry-empty-currency.xml', 'manual_review', null, ['currency_mismatch']],
+            // KuickPay's live paid row carries no currency column; an absent
+            // currency must NOT be treated as a mismatch (PKR-only by eligibility).
+            ['ambiguous/bill-payment-inquiry-empty-currency.xml', 'confirmed_unposted', null, []],
             ['malformed/bill-payment-inquiry-short.xml', 'manual_review', 'malformed_response', ['malformed_result']],
         ];
+    }
+
+    public function testLiveKuickPayPaidInquiryConfirmsWithoutCurrencyField()
+    {
+        // The real KuickPay BillPaymentInquiry paid row is six comma-separated
+        // fields with NO currency column: status,consumer,date,amount,txnRef,bank.
+        $evidence = $this->parser()->parse(
+            $this->outcome('BillPaymentInquiry', '00,016303421457099,20260612,500.0000,022290,BAF'),
+            [
+                'expected_amount' => '500.00',
+                'expected_currency' => 'PKR',
+                'expected_consumer_number' => '016303421457099',
+            ]
+        );
+
+        $this->assertSame('confirmed_unposted', $evidence->status());
+        $this->assertNull($evidence->errorClass());
+        $this->assertSame([], $evidence->validationErrors());
+        $this->assertSame('500.00', $evidence->amount());
+        // KuickPay echoes the Consumer Number in field [1]; the inquiry parser
+        // captures it as the evidence registration_number.
+        $this->assertSame('016303421457099', $evidence->registrationNumber());
     }
 
     public function testBulkFixtureMappings()

@@ -26,8 +26,10 @@ class KuickPayReconcileServiceTest extends TestCase
         $result = $service->runCron(1);
 
         $this->assertSame('completed', $result['status']);
-        $this->assertSame(['RegistrationNumber' => 'REG-0000001'], $client->requests[0]);
-        $this->assertArrayNotHasKey('expected_consumer_number', $service->buildParserContext($voucher));
+        $this->assertSame(['consumerNumber' => 'REG-0000001'], $client->requests[0]);
+        $context = $service->buildParserContext($voucher);
+        $this->assertSame('REG-0000001', $context['expected_consumer_number']);
+        $this->assertArrayNotHasKey('expected_registration_number', $context);
         $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
         $this->assertSame('1000.00', $repo->edits[0]['amount']);
         $this->assertSame('2026-06-09 00:00:00', $repo->edits[0]['date_paid']);
@@ -616,7 +618,9 @@ class KuickPayReconcileServiceTest extends TestCase
             'amount' => '1000.00',
             'currency' => 'PKR',
             'registration_number' => 'REG-0000001',
-            'consumer_number' => 'INSTITUTION_IDREG-0000001',
+            // KuickPay echoes the Consumer Number in inquiry result field [1];
+            // the fixtures put 'REG-0000001' there, so keep them aligned.
+            'consumer_number' => 'REG-0000001',
             'retry_count' => 0,
         ], $overrides);
     }
