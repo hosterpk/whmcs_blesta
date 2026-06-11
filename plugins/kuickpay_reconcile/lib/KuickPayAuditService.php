@@ -11,7 +11,20 @@ class KuickPayAuditService
 
     public function __construct($repository = null)
     {
-        $this->repository = $repository ?: new KuickPayAuditRepository();
+        if (!$repository) {
+            if (!class_exists('KuickPayAuditRepository', false)) {
+                $repositoryFile = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'KuickPayAuditRepository.php';
+                if (class_exists('Loader', false)) {
+                    Loader::load($repositoryFile);
+                } else {
+                    require_once $repositoryFile;
+                }
+            }
+
+            $repository = new KuickPayAuditRepository();
+        }
+
+        $this->repository = $repository;
     }
 
     public function record(string $eventName, array $context): void
