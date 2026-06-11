@@ -65,11 +65,11 @@ class KuickpayReconcilePlugin extends Plugin
                 ->setField('diagnostic_summary', ['type'=>'text', 'is_null'=>true, 'default'=>null])
                 ->setField('admin_notes', ['type'=>'text', 'is_null'=>true, 'default'=>null])
                 ->setKey(['id'], 'primary')
-                ->setKey(['company_id', 'consumer_number'], 'unique')
-                ->setKey(['company_id', 'registration_number'], 'unique')
-                ->setKey(['status'], 'index')
-                ->setKey(['client_id'], 'index')
-                ->setKey(['blesta_transaction_id'], 'index')
+                ->setKey(['company_id', 'consumer_number'], 'unique', 'uniq_kuickpay_vouchers_consumer')
+                ->setKey(['company_id', 'registration_number'], 'unique', 'uniq_kuickpay_vouchers_reg')
+                ->setKey(['status'], 'index', 'idx_kuickpay_vouchers_status')
+                ->setKey(['client_id'], 'index', 'idx_kuickpay_vouchers_client')
+                ->setKey(['blesta_transaction_id'], 'index', 'idx_kuickpay_vouchers_txn')
                 ->create('kuickpay_vouchers', true);
 
             $this->Record
@@ -79,8 +79,8 @@ class KuickpayReconcilePlugin extends Plugin
                 ->setField('amount', ['type'=>'varchar', 'size'=>20])
                 ->setField('date_created', ['type'=>'datetime'])
                 ->setKey(['id'], 'primary')
-                ->setKey(['voucher_id', 'invoice_id'], 'unique')
-                ->setKey(['invoice_id'], 'index')
+                ->setKey(['voucher_id', 'invoice_id'], 'unique', 'uniq_kuickpay_voucher_invoices_link')
+                ->setKey(['invoice_id'], 'index', 'idx_kuickpay_voucher_invoices_inv')
                 ->create('kuickpay_voucher_invoices', true);
 
             $this->createReconcileTables();
