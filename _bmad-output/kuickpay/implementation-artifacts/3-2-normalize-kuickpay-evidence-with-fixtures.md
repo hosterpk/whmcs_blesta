@@ -338,6 +338,7 @@ Recent substantive 3.1 commits established the lib pattern this story extends: `
 - 2026-06-10: Completed verification and regression guard for parser evidence story.
 - 2026-06-10: Marked story ready for review after final completion gates.
 - 2026-06-10: Code review applied two fail-closed parser fixes (commits 9350b310, a5ec6b84); suite 89 tests / 543 assertions.
+- 2026-06-12: Post-completion fix (commit `4ab81a21`) — corrected the BillPaymentInquiry parser to KuickPay's **live** response shape (verified against app.kuickpay.com). The paid row is **six** comma-delimited fields `status,consumerNumber,date,amount,txnRef,bankCode` with **NO currency column** — the original assumed 7–8 field format (currency at `[6]`, registration at `[1]`) was fictional. `parseBillPaymentInquiry` no longer raises `currency_mismatch` when the provider returns no currency (only when a *present* currency differs); vouchers stay PKR-only by gateway eligibility. Added a parser test against the exact production response and flipped the `empty-currency` fixture expectation to `confirmed_unposted`. **Also recorded for 3-7:** `BillPaymentBulkInquiry` returns a typed .NET **DataSet** (`schema`+`diffgram` object), NOT a flat `NewDataSet`/`Table` XML string, so the bulk parse path cannot read it and needs rework. **Learning:** captured fixtures must be taken from the real endpoint — the assumed field layout drifted from production.
 
 ### Review Findings
 

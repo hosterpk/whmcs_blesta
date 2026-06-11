@@ -270,6 +270,7 @@ GPT-5 Codex
 - 2026-06-11: Added bulk run repository support.
 - 2026-06-11: Added bulk reconciliation engine and tests.
 - 2026-06-11: Added minimal authorized admin trigger.
+- 2026-06-12: **Known defect recorded for a bulk rework story** (found during live testing; not yet fixed). The bulk path is non-functional against the real KuickPay endpoint: (1) `BillPaymentBulkInquiry` returns a typed .NET **DataSet** (`schema` + `diffgram` object); `extractRawResult`/`parseBulk` expect a flat string / `NewDataSet`→`Table` XML, so every run is classified `failed` via `isBulkRunFailure` (the admin page shows "Bulk reconciliation did not complete. Status: failed."). (2) Per the confirmed KuickPay contract, the bulk inquiry lists vouchers **GENERATED on a date, not PAID ones** — so treating bulk rows as payment evidence is the wrong model; the correct design is enumerate-by-date then a single `BillPaymentInquiry` per consumer (as the production WHMCS hook does). The customer-facing payment detector is the `reconcile_pending` single-inquiry cron (fixed under 3-3/3-2); **bulk is only the safety net.** A `release()` TypeError that *blank-paged* this run was fixed under 3-3 (commit `12fedf62`); the run now fails gracefully rather than blank-paging. A failed bulk run is harmless — it posts/changes nothing.
 
 ### Review Findings
 

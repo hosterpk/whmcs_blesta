@@ -324,6 +324,7 @@ _TBD by dev agent_
 ### Change Log
 
 - 2026-06-10: Implemented Story 2.3 invoice-to-InsertVoucher mapping, issuance orchestration, evidence persistence, safe display, diagnostics, and regression tests.
+- 2026-06-12: Post-completion fix (commit `f67ec3bb`) — aligned the InsertVoucher request to KuickPay's **live** contract after the production call returned generic status `01` → `manual_review`. In `buildVoucherRequest`/`buildVoucherReferenceContext`: (1) amounts are rounded to **whole rupees** (KuickPay rejects fractional) via a new `roundWholeRupees()` applied at BOTH the voucher source and the request, so the stored amount equals what KuickPay is sent and what reconciliation later compares; (2) customer **Mobile** is normalized to the bare 10-digit local form starting with `3` (strip `92`/`0092` country code and leading zero) instead of the 11-digit `0`-prefixed form; (3) unused line items send **empty** `Amount2..Amount10` (not `"0"`). Due/expiry come from the gateway offset settings (date format `d-M-y` already matched WHMCS). Tests updated. **Learning for future stories:** the live KuickPay field semantics (whole-rupee amounts, `3`-prefixed mobile, empty unused slots) differ from the original assumed fixtures — validate request shape against the real endpoint, not just fixtures.
 
 ### Review Findings
 

@@ -434,6 +434,7 @@ git status --porcelain
 - 2026-06-10: Implemented Task 5 admin reference pattern token documentation.
 - 2026-06-10: Completed Task 6 generation, collision, and gateway wiring tests.
 - 2026-06-10: Completed Task 7 verification and moved story status to review.
+- 2026-06-12: **Known issue recorded for future work** (found during live testing; not yet fixed). The registration pattern `{random_prefix}{invoice_id}` resolves `{invoice_id}` to Blesta's **internal** `invoices.id` (e.g. `457099`), but the customer-facing invoice **number** is `invoices.id_value` (e.g. `756802`, formatted via `id_format`). The voucher/Consumer Number therefore embeds the wrong identifier (in WHMCS, `$invoiceid` was the displayed number). **Fix (pending):** resolve `id_value` for the `{invoice_id}` token while keeping the internal id for invoice linkage/posting (`getPendingByInvoiceId`, `kuickpay_voucher_invoices.invoice_id`, transaction posting must stay on the internal id). Only affects newly-issued vouchers.
 
 ## Review Findings
 
