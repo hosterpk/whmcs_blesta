@@ -44,10 +44,10 @@ class KuickpayReconcileLocks extends KuickpayReconcileModel
 
     public function release(int $company_id, string $lock_name, string $owner_token): void
     {
-        $this->Record
+        $this->Record->from('kuickpay_reconcile_locks')
             ->where('company_id', '=', $company_id)
             ->where('lock_name', '=', $lock_name)
             ->where('owner_token', '=', $owner_token)
-            ->delete('kuickpay_reconcile_locks');
+            ->delete();
     }
 }
