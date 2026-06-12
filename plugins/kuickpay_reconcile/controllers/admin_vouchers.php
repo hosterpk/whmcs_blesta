@@ -57,17 +57,22 @@ class AdminVouchers extends KuickpayReconcileController
         $sort = $this->presenter->allowedSort($sort_in, 'date_created');
         $order = $this->presenter->allowedOrder($order_in, 'desc');
 
-        $page = (isset($this->get[0]) && is_numeric($this->get[0])) ? (int) $this->get[0] : 1;
-
         // Read filters from GET (pagination/Back) then POST (fresh apply wins).
         $raw_filters = [];
+        $has_post_filters = false;
         if (isset($this->get['filters']) && is_array($this->get['filters'])) {
             $raw_filters = $this->get['filters'];
         }
         if (isset($this->post['filters']) && is_array($this->post['filters'])) {
+            $has_post_filters = true;
             $raw_filters = $this->post['filters'];
         }
         $filters = $this->presenter->sanitizeFilters($raw_filters);
+        $page = (
+            !$has_post_filters
+            && isset($this->get[0])
+            && is_numeric($this->get[0])
+        ) ? (int) $this->get[0] : 1;
 
         // Company scope is a dedicated, mandatory argument — never from request.
         $vouchers = $this->KuickpayVouchers->getList($company_id, $filters, $page, [$sort => $order]);
@@ -102,7 +107,7 @@ class AdminVouchers extends KuickpayReconcileController
         // nested array that the naive pagination URL builder cannot encode.
         $params = ['sort' => $sort, 'order' => $order];
         foreach ($filters as $key => $value) {
-            $params['filters[' . $key . ']'] = rawurlencode((string) $value);
+            $params[rawurlencode('filters[' . $key . ']')] = rawurlencode((string) $value);
         }
 
         $settings = array_merge(
@@ -122,7 +127,7 @@ class AdminVouchers extends KuickpayReconcileController
         unset($pagination_get['filters']);
         $this->setPagination($pagination_get, $settings);
 
-        return $this->renderAjaxWidgetIfAsync(isset($this->get[0]) || isset($this->get['sort']));
+        return $this->renderAjaxWidgetIfAsync($has_post_filters || isset($this->get[0]) || isset($this->get['sort']));
     }
 
     /**

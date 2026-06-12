@@ -6,10 +6,6 @@ echo ($message ?? null);
 // Base list URL and the active-filter query suffix, so sort-header links carry
 // the current filters (URL-driven persistence; AC2).
 $base_list = $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/';
-$filter_query = '';
-foreach (($filter_vars ?? []) as $filter_key => $filter_value) {
-    $filter_query .= '&filters[' . $filter_key . ']=' . rawurlencode((string) $filter_value);
-}
 
 $this->Widget->clear();
 $this->Widget->setFilters(($filters ?? null), $this->Html->safe($base_list), !empty($filter_vars));
@@ -43,7 +39,13 @@ if (($vouchers ?? false) && ($num_vouchers = count($vouchers)) > 0) {
                     }
 
                     $dir = ($sort == $column['sort'] ? $negate_order : $order);
-                    $href = $this->Html->safe($base_list . '?sort=' . $column['sort'] . '&order=' . $dir . $filter_query);
+                    $query = http_build_query(
+                        ['sort' => $column['sort'], 'order' => $dir] + (!empty($filter_vars) ? ['filters' => $filter_vars] : []),
+                        '',
+                        '&',
+                        PHP_QUERY_RFC3986
+                    );
+                    $href = $this->Html->safe($base_list . '?' . $query);
                     ?>
                     <th>
                         <a href="<?php echo $href;?>" class="ajax text-decoration-none">
