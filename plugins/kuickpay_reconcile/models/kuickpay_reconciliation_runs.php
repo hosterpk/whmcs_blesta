@@ -7,6 +7,21 @@
  */
 class KuickpayReconciliationRuns extends KuickpayReconcileModel
 {
+    /**
+     * @var array The canonical run trigger types. Single source of truth that
+     *  mirrors the trigger_type ENUM in
+     *  KuickpayReconcilePlugin::createReconcileTables()/addBulkReconciliationColumns().
+     *  Public so the pure presenter's allowlist can be cross-checked against it.
+     */
+    public const TRIGGER_TYPES = ['cron', 'manual', 'bulk'];
+
+    /**
+     * @var array The canonical run statuses. Single source of truth that mirrors
+     *  the status ENUM in KuickpayReconcilePlugin::createReconcileTables().
+     *  Public so the pure presenter's allowlist can be cross-checked against it.
+     */
+    public const STATUSES = ['running', 'completed', 'aborted', 'failed'];
+
     private const FIELDS = [
         'company_id',
         'trigger_type',

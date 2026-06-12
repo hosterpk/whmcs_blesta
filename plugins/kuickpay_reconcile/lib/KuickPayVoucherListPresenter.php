@@ -205,6 +205,55 @@ class KuickPayVoucherListPresenter
     public const DEFAULT_VALIDATION_REASON_LABEL_KEY = 'AdminVouchers.validation_reason.unknown';
 
     /**
+     * @var array Closed allowlist mapping each reconciliation run trigger type to
+     *  a language key. Kept in lock-step (key order included) with
+     *  KuickpayReconciliationRuns::TRIGGER_TYPES — the schema enum source of
+     *  truth — and verified by test. Labels live under the single AdminVouchers
+     *  presenter namespace.
+     */
+    public const RUN_TRIGGER_LABEL_KEYS = [
+        'cron' => 'AdminVouchers.run_trigger.cron',
+        'manual' => 'AdminVouchers.run_trigger.manual',
+        'bulk' => 'AdminVouchers.run_trigger.bulk',
+    ];
+
+    /**
+     * @var string Language key for an unknown/empty run trigger type.
+     */
+    public const DEFAULT_RUN_TRIGGER_LABEL_KEY = 'AdminVouchers.run_trigger.unknown';
+
+    /**
+     * @var array Closed allowlist mapping each reconciliation run status to a
+     *  language key. Kept in lock-step (key order included) with
+     *  KuickpayReconciliationRuns::STATUSES and verified by test.
+     */
+    public const RUN_STATUS_LABEL_KEYS = [
+        'running' => 'AdminVouchers.run_status.running',
+        'completed' => 'AdminVouchers.run_status.completed',
+        'aborted' => 'AdminVouchers.run_status.aborted',
+        'failed' => 'AdminVouchers.run_status.failed',
+    ];
+
+    /**
+     * @var string Language key for an unknown/empty run status.
+     */
+    public const DEFAULT_RUN_STATUS_LABEL_KEY = 'AdminVouchers.run_status.unknown';
+
+    /**
+     * @var array Closed allowlist mapping each reconciliation run status to a
+     *  badge class. Unlike the voucher status map, `completed` may be green here:
+     *  UX-DR20's "no success styling before posted" governs VOUCHER paid-state,
+     *  not a reconciliation run finishing — a completed run is a legitimate
+     *  operational success. No voucher row ever uses this map.
+     */
+    public const RUN_STATUS_BADGE_CLASSES = [
+        'running' => 'bg-info',
+        'completed' => 'bg-success',
+        'aborted' => 'bg-warning text-dark',
+        'failed' => 'bg-danger',
+    ];
+
+    /**
      * @var array Closed allowlist of diagnostic_summary keys the detail view may
      *  render, in fixed display order. Covers both the reconcile writer shape
      *  and the issuance writer shape. Guarantees AC7 even if a future writer
@@ -412,6 +461,55 @@ class KuickPayVoucherListPresenter
         }
 
         return self::VALIDATION_REASON_LABEL_KEYS[$reason] ?? self::DEFAULT_VALIDATION_REASON_LABEL_KEY;
+    }
+
+    /**
+     * Returns the language key for a reconciliation run trigger type via the
+     * closed allowlist. Null/unknown tokens resolve to the safe generic key — a
+     * DB value is never concatenated into a language key.
+     *
+     * @param string|null $type The stored trigger_type token
+     * @return string The language key
+     */
+    public function triggerTypeLabelKey(?string $type): string
+    {
+        if ($type === null || $type === '') {
+            return self::DEFAULT_RUN_TRIGGER_LABEL_KEY;
+        }
+
+        return self::RUN_TRIGGER_LABEL_KEYS[$type] ?? self::DEFAULT_RUN_TRIGGER_LABEL_KEY;
+    }
+
+    /**
+     * Returns the language key for a reconciliation run status via the closed
+     * allowlist. Null/unknown tokens resolve to the safe generic key.
+     *
+     * @param string|null $status The stored run status token
+     * @return string The language key
+     */
+    public function runStatusLabelKey(?string $status): string
+    {
+        if ($status === null || $status === '') {
+            return self::DEFAULT_RUN_STATUS_LABEL_KEY;
+        }
+
+        return self::RUN_STATUS_LABEL_KEYS[$status] ?? self::DEFAULT_RUN_STATUS_LABEL_KEY;
+    }
+
+    /**
+     * Returns the badge class for a reconciliation run status via the closed
+     * allowlist. Null/unknown tokens resolve to the neutral default badge.
+     *
+     * @param string|null $status The stored run status token
+     * @return string The badge class
+     */
+    public function runStatusBadgeClassFor(?string $status): string
+    {
+        if ($status === null || $status === '') {
+            return self::DEFAULT_BADGE_CLASS;
+        }
+
+        return self::RUN_STATUS_BADGE_CLASSES[$status] ?? self::DEFAULT_BADGE_CLASS;
     }
 
     /**

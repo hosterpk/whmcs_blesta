@@ -18,3 +18,4 @@ if (!class_exists('AppModel')) {
 }
 require_once __DIR__ . '/../kuickpay_reconcile_model.php';
 require_once __DIR__ . '/../models/kuickpay_vouchers.php';
+require_once __DIR__ . '/../models/kuickpay_reconciliation_runs.php';

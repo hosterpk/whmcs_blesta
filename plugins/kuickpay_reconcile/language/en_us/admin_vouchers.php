@@ -178,3 +178,17 @@ $lang['AdminVouchers.validation_reason.underpayment'] = 'Underpayment';
 $lang['AdminVouchers.validation_reason.overpayment'] = 'Overpayment';
 $lang['AdminVouchers.validation_reason.unknown_status'] = 'Unknown status';
 $lang['AdminVouchers.validation_reason.unknown'] = 'Unknown reason';
+
+// ===========================================================================
+// Story 4.4 — reconciliation run trigger-type and status labels (presenter
+// namespace; closed allowlist). Shared by the run list and run detail views.
+// ===========================================================================
+$lang['AdminVouchers.run_trigger.cron'] = 'Scheduled';
+$lang['AdminVouchers.run_trigger.manual'] = 'Manual';
+$lang['AdminVouchers.run_trigger.bulk'] = 'Bulk';
+$lang['AdminVouchers.run_trigger.unknown'] = 'Unknown';
+$lang['AdminVouchers.run_status.running'] = 'Running';
+$lang['AdminVouchers.run_status.completed'] = 'Completed';
+$lang['AdminVouchers.run_status.aborted'] = 'Aborted';
+$lang['AdminVouchers.run_status.failed'] = 'Failed';
+$lang['AdminVouchers.run_status.unknown'] = 'Unknown';

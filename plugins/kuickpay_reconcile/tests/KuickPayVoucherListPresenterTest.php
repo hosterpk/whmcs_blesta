@@ -673,6 +673,124 @@ class KuickPayVoucherListPresenterTest extends TestCase
         $this->assertSame([], $presenter->allowedDiagnosticFields([]));
     }
 
+    // ---------------------------------------------------------------------
+    // Story 4.4 — reconciliation run-trigger and run-status label/badge
+    // allowlists. Cross-checked against the model's own source-of-truth consts
+    // (KuickpayReconciliationRuns::TRIGGER_TYPES / ::STATUSES) so the presenter
+    // map can never drift from the schema enum.
+    // ---------------------------------------------------------------------
+
+    public function testTriggerTypeLabelKeyForEveryType()
+    {
+        $presenter = $this->presenter();
+
+        foreach (KuickpayReconciliationRuns::TRIGGER_TYPES as $type) {
+            $this->assertSame(
+                'AdminVouchers.run_trigger.' . $type,
+                $presenter->triggerTypeLabelKey($type)
+            );
+        }
+    }
+
+    public function testTriggerTypeLabelKeyUnknownAndNullFallBack()
+    {
+        $presenter = $this->presenter();
+
+        foreach ([null, '', 'bogus', 'CRON', 'manual '] as $type) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_RUN_TRIGGER_LABEL_KEY,
+                $presenter->triggerTypeLabelKey($type)
+            );
+        }
+    }
+
+    public function testRunTriggerMapKeysEqualModelTriggerTypes()
+    {
+        $this->assertSame(
+            KuickpayReconciliationRuns::TRIGGER_TYPES,
+            array_keys(KuickPayVoucherListPresenter::RUN_TRIGGER_LABEL_KEYS),
+            'Run-trigger map drifted from KuickpayReconciliationRuns::TRIGGER_TYPES'
+        );
+    }
+
+    public function testRunTriggerMapValuesAreCanonicalKeys()
+    {
+        foreach (KuickPayVoucherListPresenter::RUN_TRIGGER_LABEL_KEYS as $token => $key) {
+            $this->assertSame('AdminVouchers.run_trigger.' . $token, $key);
+        }
+    }
+
+    public function testRunStatusLabelKeyForEveryStatus()
+    {
+        $presenter = $this->presenter();
+
+        foreach (KuickpayReconciliationRuns::STATUSES as $status) {
+            $this->assertSame(
+                'AdminVouchers.run_status.' . $status,
+                $presenter->runStatusLabelKey($status)
+            );
+        }
+    }
+
+    public function testRunStatusLabelKeyUnknownAndNullFallBack()
+    {
+        $presenter = $this->presenter();
+
+        foreach ([null, '', 'bogus', 'COMPLETED', 'running '] as $status) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_RUN_STATUS_LABEL_KEY,
+                $presenter->runStatusLabelKey($status)
+            );
+        }
+    }
+
+    public function testRunStatusMapKeysEqualModelStatuses()
+    {
+        $this->assertSame(
+            KuickpayReconciliationRuns::STATUSES,
+            array_keys(KuickPayVoucherListPresenter::RUN_STATUS_LABEL_KEYS),
+            'Run-status map drifted from KuickpayReconciliationRuns::STATUSES'
+        );
+    }
+
+    public function testRunStatusMapValuesAreCanonicalKeys()
+    {
+        foreach (KuickPayVoucherListPresenter::RUN_STATUS_LABEL_KEYS as $token => $key) {
+            $this->assertSame('AdminVouchers.run_status.' . $token, $key);
+        }
+    }
+
+    public function testEveryRunStatusHasABadgeClass()
+    {
+        $presenter = $this->presenter();
+
+        $this->assertSame(
+            KuickpayReconciliationRuns::STATUSES,
+            array_keys(KuickPayVoucherListPresenter::RUN_STATUS_BADGE_CLASSES),
+            'Run-status badge map drifted from KuickpayReconciliationRuns::STATUSES'
+        );
+
+        foreach (KuickpayReconciliationRuns::STATUSES as $status) {
+            $this->assertNotSame(
+                '',
+                $presenter->runStatusBadgeClassFor($status),
+                $status . ' must resolve to a non-empty badge class'
+            );
+        }
+    }
+
+    public function testRunStatusBadgeClassUnknownFallsBackToNeutral()
+    {
+        $presenter = $this->presenter();
+
+        foreach ([null, '', 'bogus', 'Completed'] as $status) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_BADGE_CLASS,
+                $presenter->runStatusBadgeClassFor($status)
+            );
+        }
+    }
+
     /**
      * Cross-file drift guard: every label key the presenter can emit (and every
      * fallback) must be defined in the AdminVouchers language file, and every
@@ -691,6 +809,8 @@ class KuickPayVoucherListPresenterTest extends TestCase
             KuickPayVoucherListPresenter::ERROR_CLASS_LABEL_KEYS,
             KuickPayVoucherListPresenter::EVENT_LABEL_KEYS,
             KuickPayVoucherListPresenter::VALIDATION_REASON_LABEL_KEYS,
+            KuickPayVoucherListPresenter::RUN_TRIGGER_LABEL_KEYS,
+            KuickPayVoucherListPresenter::RUN_STATUS_LABEL_KEYS,
         ];
         foreach ($maps as $map) {
             foreach ($map as $token => $key) {
@@ -704,6 +824,8 @@ class KuickPayVoucherListPresenterTest extends TestCase
             KuickPayVoucherListPresenter::DEFAULT_ERROR_CLASS_LABEL_KEY,
             KuickPayVoucherListPresenter::DEFAULT_EVENT_LABEL_KEY,
             KuickPayVoucherListPresenter::DEFAULT_VALIDATION_REASON_LABEL_KEY,
+            KuickPayVoucherListPresenter::DEFAULT_RUN_TRIGGER_LABEL_KEY,
+            KuickPayVoucherListPresenter::DEFAULT_RUN_STATUS_LABEL_KEY,
         ];
         foreach ($fallbacks as $key) {
             $this->assertArrayHasKey($key, $lang, 'Missing fallback language key ' . $key);
