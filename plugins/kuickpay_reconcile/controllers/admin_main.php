@@ -8,6 +8,11 @@
 class AdminMain extends KuickpayReconcileController
 {
     /**
+     * @var int Maximum bulk run_date look-back, in days.
+     */
+    private const MAX_LOOKBACK_DAYS = 365;
+
+    /**
      * Setup
      */
     public function preAction()
@@ -38,10 +43,11 @@ class AdminMain extends KuickpayReconcileController
         }
 
         $run_date = trim((string) ($this->post['run_date'] ?? ''));
-        if (!$this->validRunDate($run_date)) {
+        $date_error = $this->runDateError($run_date);
+        if ($date_error !== null) {
             $this->setMessage(
                 'error',
-                Language::_('AdminMain.!error.run_date_format', true),
+                Language::_($date_error, true),
                 false,
                 null,
                 false
@@ -91,15 +97,34 @@ class AdminMain extends KuickpayReconcileController
     }
 
     /**
-     * Validates a YYYY-MM-DD run date.
+     * Validates and bounds a YYYY-MM-DD bulk run date.
+     *
+     * Returns null when the date is valid, otherwise the specific localized
+     * error key so run() can surface a distinct message per failure (malformed,
+     * future, or beyond the look-back window) instead of one generic format
+     * error. Comparison is date-only: createFromFormat('!Y-m-d') zeroes the time
+     * and the bounds are computed at midnight, so a same-day run date is allowed.
      *
      * @param string $run_date Requested run date
-     * @return bool True when valid
+     * @return string|null The localized error key, or null when valid
      */
-    private function validRunDate(string $run_date): bool
+    private function runDateError(string $run_date): ?string
     {
         $date = DateTime::createFromFormat('!Y-m-d', $run_date);
+        if (!$date || $date->format('Y-m-d') !== $run_date) {
+            return 'AdminMain.!error.run_date_format';
+        }
 
-        return $date && $date->format('Y-m-d') === $run_date;
+        $today = new DateTime('today');
+        if ($date > $today) {
+            return 'AdminMain.!error.run_date_future';
+        }
+
+        $oldest = (clone $today)->modify('-' . self::MAX_LOOKBACK_DAYS . ' days');
+        if ($date < $oldest) {
+            return 'AdminMain.!error.run_date_too_old';
+        }
+
+        return null;
     }
 }
