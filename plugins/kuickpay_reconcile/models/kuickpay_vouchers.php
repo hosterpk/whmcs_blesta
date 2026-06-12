@@ -357,14 +357,14 @@ class KuickpayVouchers extends KuickpayReconcileModel
         }
 
         // Client: exact integer id.
-        if (isset($filters['client_id']) && (int) $filters['client_id'] > 0) {
+        if (isset($filters['client_id']) && ctype_digit((string) $filters['client_id']) && (int) $filters['client_id'] > 0) {
             $this->Record->where('client_id', '=', (int) $filters['client_id']);
         }
 
         // Partial (LIKE) identity matches.
         foreach (['consumer_number', 'registration_number', 'kuickpay_reference'] as $like_field) {
             if (isset($filters[$like_field]) && $filters[$like_field] !== '') {
-                $this->Record->like($like_field, '%' . $filters[$like_field] . '%');
+                $this->Record->like($like_field, '%' . addcslashes($filters[$like_field], '%_\\') . '%');
             }
         }
 
@@ -394,7 +394,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
         // row multiplication. The id is integer-cast and inlined (injection-safe),
         // which also sidesteps the bound-value ordering hazard of a parametrized
         // subquery placed mid-WHERE.
-        if (isset($filters['invoice_id']) && (int) $filters['invoice_id'] > 0) {
+        if (isset($filters['invoice_id']) && ctype_digit((string) $filters['invoice_id']) && (int) $filters['invoice_id'] > 0) {
             $invoice_id = (int) $filters['invoice_id'];
             $this->Record->where(
                 'kuickpay_vouchers.id',
@@ -421,6 +421,11 @@ class KuickpayVouchers extends KuickpayReconcileModel
     {
         $amount = trim($amount);
         $normalized = str_replace(',', '', $amount);
+
+        // Normalize a leading decimal point (e.g. ".50" -> "0.50").
+        if (strpos($normalized, '.') === 0) {
+            $normalized = '0' . $normalized;
+        }
 
         if (!preg_match('/^\d+(?:\.\d+)?$/', $normalized)) {
             return $amount;

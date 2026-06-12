@@ -103,7 +103,7 @@ if (($vouchers ?? false) && ($num_vouchers = count($vouchers)) > 0) {
                     <?php
                     if ($voucher->status === 'posted' && !empty($voucher->blesta_transaction_id)) {
                         ?>
-                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . $voucher->client_id . '/' . $voucher->blesta_transaction_id . '/');?>" title="<?php $this->_('AdminVouchers.text.transaction_view');?>">
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . $voucher->client_id . '/' . $voucher->blesta_transaction_id . '/');?>" title="<?php echo $this->Html->safe($this->_('AdminVouchers.text.transaction_view', true));?>">
                             <span class="font-monospace"><?php echo $this->Html->safe($voucher->blesta_transaction_id);?></span>
                         </a>
                         <?php
@@ -122,7 +122,7 @@ if (($vouchers ?? false) && ($num_vouchers = count($vouchers)) > 0) {
 ?>
 <div class="card-body text-center text-muted py-5">
     <i class="bi bi-receipt" style="font-size: 3rem; opacity: 0.3;"></i>
-    <p class="mt-3 mb-0"><?php $this->_('AdminVouchers.no_results');?></p>
+    <p class="mt-3 mb-0"><?php echo $this->_('AdminVouchers.no_results', true);?></p>
 </div>
 <?php
 }

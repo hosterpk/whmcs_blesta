@@ -257,4 +257,52 @@ class KuickPayVoucherListPresenterTest extends TestCase
             $presenter->sanitizeFilters(['has_blesta_transaction' => ''])
         );
     }
+
+    public function testSanitizeFiltersRejectsNonNumericClientIdAndInvoiceId()
+    {
+        $presenter = $this->presenter();
+
+        $clean = $presenter->sanitizeFilters([
+            'client_id' => '42abc',
+            'invoice_id' => '7xyz',
+        ]);
+
+        $this->assertArrayNotHasKey('client_id', $clean, 'non-numeric client_id must be rejected');
+        $this->assertArrayNotHasKey('invoice_id', $clean, 'non-numeric invoice_id must be rejected');
+    }
+
+    public function testSanitizeFiltersKeepsZeroClientId()
+    {
+        $presenter = $this->presenter();
+
+        $clean = $presenter->sanitizeFilters(['client_id' => '0']);
+
+        $this->assertSame('0', $clean['client_id'], 'zero client_id is kept for the model to range-guard');
+    }
+
+    public function testSanitizeFiltersRejectsInvalidDates()
+    {
+        $presenter = $this->presenter();
+
+        $clean = $presenter->sanitizeFilters([
+            'date_from' => '2026-1-1',
+            'date_to' => '2026-13-01',
+        ]);
+
+        $this->assertArrayNotHasKey('date_from', $clean);
+        $this->assertArrayNotHasKey('date_to', $clean);
+    }
+
+    public function testSanitizeFiltersKeepsValidDates()
+    {
+        $presenter = $this->presenter();
+
+        $clean = $presenter->sanitizeFilters([
+            'date_from' => '2026-01-01',
+            'date_to' => '2026-12-31',
+        ]);
+
+        $this->assertSame('2026-01-01', $clean['date_from']);
+        $this->assertSame('2026-12-31', $clean['date_to']);
+    }
 }

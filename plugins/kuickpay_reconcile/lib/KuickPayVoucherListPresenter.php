@@ -186,6 +186,19 @@ class KuickPayVoucherListPresenter
                 continue;
             }
 
+            // Integer id filters must be purely numeric.
+            if (in_array($key, ['client_id', 'invoice_id'], true) && !ctype_digit((string) $value)) {
+                continue;
+            }
+
+            // Date range filters must be valid YYYY-MM-DD dates.
+            if (in_array($key, ['date_from', 'date_to'], true)) {
+                $date = DateTime::createFromFormat('!Y-m-d', $value);
+                if (!$date || $date->format('Y-m-d') !== $value) {
+                    continue;
+                }
+            }
+
             if ($key === 'status' && !array_key_exists($value, self::STATUS_LABEL_KEYS)) {
                 continue;
             }
