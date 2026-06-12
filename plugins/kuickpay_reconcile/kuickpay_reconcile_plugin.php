@@ -146,6 +146,15 @@ class KuickpayReconcilePlugin extends Plugin
                 // Intentionally empty — permission re-registration is driven by
                 // the version change, not by SQL here.
             }
+
+            // 1.8.0 adds the manual-review queue + reconciliation run views and
+            // their two read-only page permissions (Story 4.4). No schema change:
+            // the runs/items tables already exist; the bump exists only so
+            // PluginManager::upgrade() re-syncs nav + the permission set.
+            if (version_compare($current_version, '1.8.0', '<')) {
+                // Intentionally empty — nav/permission re-registration is driven
+                // by the version change, not by SQL here.
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -223,6 +232,18 @@ class KuickpayReconcilePlugin extends Plugin
                 'uri' => 'plugin/kuickpay_reconcile/admin_main/index/',
                 'name' => 'KuickpayReconcilePlugin.nav_secondary_staff.bulk_reconcile',
                 'options' => ['parent' => 'billing/']
+            ],
+            [
+                'action' => 'nav_secondary_staff',
+                'uri' => 'plugin/kuickpay_reconcile/admin_manual_review/index/',
+                'name' => 'KuickpayReconcilePlugin.nav_secondary_staff.manual_review',
+                'options' => ['parent' => 'billing/']
+            ],
+            [
+                'action' => 'nav_secondary_staff',
+                'uri' => 'plugin/kuickpay_reconcile/admin_reconciliation/index/',
+                'name' => 'KuickpayReconcilePlugin.nav_secondary_staff.reconciliation',
+                'options' => ['parent' => 'billing/']
             ]
         ];
     }
@@ -274,6 +295,22 @@ class KuickpayReconcilePlugin extends Plugin
                 'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers_cancel', true),
                 'alias' => 'kuickpay_reconcile.admin_vouchers',
                 'action' => 'cancel'
+            ],
+            // Read-only page permissions for the Story 4.4 visibility surfaces.
+            // The controllers never mutate, so action => '*' is correct here.
+            // Grant alongside admin_vouchers view: the queue/run views link to
+            // admin_vouchers/detail, which enforces its own view permission.
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.manual_review', true),
+                'alias' => 'kuickpay_reconcile.admin_manual_review',
+                'action' => '*'
+            ],
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.reconciliation', true),
+                'alias' => 'kuickpay_reconcile.admin_reconciliation',
+                'action' => '*'
             ]
         ];
     }
