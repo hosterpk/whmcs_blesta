@@ -376,6 +376,47 @@ class KuickPayVoucherListPresenterTest extends TestCase
         'unknown_status',
     ];
 
+    public function testPostingStateLabelKeyForEveryCanonicalStatus()
+    {
+        $presenter = $this->presenter();
+
+        foreach (self::CANONICAL_STATUSES as $status) {
+            $this->assertSame(
+                'AdminVouchers.posting_state.' . $status,
+                $presenter->postingStateLabelKey($status)
+            );
+        }
+    }
+
+    public function testPostingStateLabelKeyUnknownFallsBack()
+    {
+        $presenter = $this->presenter();
+
+        foreach (['', 'bogus', 'Posted', 'paid'] as $status) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_POSTING_STATE_LABEL_KEY,
+                $presenter->postingStateLabelKey($status)
+            );
+        }
+    }
+
+    public function testPostingStateMapKeysEqualCanonicalStatuses()
+    {
+        $keys = array_keys(KuickPayVoucherListPresenter::POSTING_STATE_LABEL_KEYS);
+        sort($keys);
+        $expected = self::CANONICAL_STATUSES;
+        sort($expected);
+
+        $this->assertSame($expected, $keys, 'Posting-state map drifted from the canonical 8 states');
+    }
+
+    public function testPostingStateMapValuesAreCanonicalKeys()
+    {
+        foreach (KuickPayVoucherListPresenter::POSTING_STATE_LABEL_KEYS as $status => $key) {
+            $this->assertSame('AdminVouchers.posting_state.' . $status, $key);
+        }
+    }
+
     public function testErrorClassLabelKeyForEveryStoredToken()
     {
         $presenter = $this->presenter();

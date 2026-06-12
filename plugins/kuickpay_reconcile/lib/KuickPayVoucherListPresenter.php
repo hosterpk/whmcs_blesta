@@ -88,6 +88,30 @@ class KuickPayVoucherListPresenter
     public const DEFAULT_BADGE_CLASS = 'bg-secondary';
 
     /**
+     * @var array Closed allowlist mapping each canonical status to the admin
+     *  posting-state label key from the UI display-state matrix
+     *  (architecture.md:595-606). This is the operational "what does this state
+     *  mean for posting" label — distinct from the short status badge label.
+     *  Only `posted` describes a posted-to-Blesta state; no other state is ever
+     *  labelled "paid".
+     */
+    public const POSTING_STATE_LABEL_KEYS = [
+        'pending' => 'AdminVouchers.posting_state.pending',
+        'retry' => 'AdminVouchers.posting_state.retry',
+        'confirmed_unposted' => 'AdminVouchers.posting_state.confirmed_unposted',
+        'posted' => 'AdminVouchers.posting_state.posted',
+        'failed' => 'AdminVouchers.posting_state.failed',
+        'expired' => 'AdminVouchers.posting_state.expired',
+        'manual_review' => 'AdminVouchers.posting_state.manual_review',
+        'cancelled' => 'AdminVouchers.posting_state.cancelled',
+    ];
+
+    /**
+     * @var string Language key for an unknown/empty posting state.
+     */
+    public const DEFAULT_POSTING_STATE_LABEL_KEY = 'AdminVouchers.posting_state.unknown';
+
+    /**
      * @var array Closed allowlist mapping every error-class token that can be
      *  stored on a voucher row to a language key. The stored domain is the
      *  parser's 8 canonical classes (KuickPayResponseParser::ALLOWED_ERRORS)
@@ -219,6 +243,19 @@ class KuickPayVoucherListPresenter
     public function badgeClassFor(string $status): string
     {
         return self::STATUS_BADGE_CLASSES[$status] ?? self::DEFAULT_BADGE_CLASS;
+    }
+
+    /**
+     * Returns the admin posting-state label key for a status via the closed
+     * allowlist (the UI display-state matrix). Unknown/empty input resolves to
+     * the safe generic key — the DB status is never concatenated into a key.
+     *
+     * @param string $status The raw status value
+     * @return string The posting-state language key
+     */
+    public function postingStateLabelKey(string $status): string
+    {
+        return self::POSTING_STATE_LABEL_KEYS[$status] ?? self::DEFAULT_POSTING_STATE_LABEL_KEY;
     }
 
     /**
