@@ -1,0 +1,31 @@
+<?php
+/**
+ * Admin unauthorized-access view.
+ *
+ * Rendered by AppController::requireLogin() when a logged-in staff member is not
+ * authorized for the requested resource. Restores the admin-theme counterpart of
+ * app/views/client/bootstrap/unauthorized.pdt (absent in this install), so a
+ * permission denial shows a clear message instead of an empty page.
+ *
+ * $message arrives as pre-rendered message markup; echo it raw (mirroring the
+ * client view) and fall back to the standard lang string when it is absent.
+ *
+ * @var View $this
+ */
+?>
+<div class="col-md-12">
+    <?php
+    if (isset($message) && $message !== '') {
+        echo $message;
+    } else {
+        ?>
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi-x-circle-fill me-3 fs-5"></i>
+            <div class="flex-grow-1">
+                <p class="m-0"><?php echo $this->Html->safe(Language::_('AppController.!error.unauthorized_access', true));?></p>
+            </div>
+        </div>
+        <?php
+    }
+    ?>
+</div>
