@@ -22,6 +22,18 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
      */
     public const STATUSES = ['running', 'completed', 'aborted', 'failed'];
 
+    /**
+     * @var array DB columns that public list reads may sort by.
+     */
+    private const ORDER_FIELDS = [
+        'id',
+        'trigger_type',
+        'status',
+        'date_started',
+        'date_completed',
+        'run_date',
+    ];
+
     private const FIELDS = [
         'company_id',
         'trigger_type',
@@ -88,7 +100,7 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
         $this->Record->select()->from('kuickpay_reconciliation_runs');
         $this->applyRunFilters($company_id, $filters);
 
-        return $this->Record->order($order_by)
+        return $this->Record->order($this->sanitizeOrderBy($order_by))
             ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
             ->fetchAll();
     }
@@ -153,5 +165,30 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
         if (isset($filters['status']) && in_array($filters['status'], self::STATUSES, true)) {
             $this->Record->where('status', '=', $filters['status']);
         }
+    }
+
+    /**
+     * Reduces caller-provided ordering to known columns and directions.
+     *
+     * @param array $order_by Requested order fields
+     * @return array Safe order fields
+     */
+    private function sanitizeOrderBy(array $order_by): array
+    {
+        $safe = [];
+        foreach ($order_by as $field => $direction) {
+            if (!is_string($field) || !in_array($field, self::ORDER_FIELDS, true)) {
+                continue;
+            }
+
+            $direction = strtoupper((string) $direction);
+            if ($direction !== 'ASC' && $direction !== 'DESC') {
+                continue;
+            }
+
+            $safe[$field] = $direction;
+        }
+
+        return $safe ?: ['date_started' => 'DESC'];
     }
 }
