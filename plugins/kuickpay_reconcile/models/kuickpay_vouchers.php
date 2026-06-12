@@ -436,7 +436,12 @@ class KuickpayVouchers extends KuickpayReconcileModel
         if ($integer === '') {
             $integer = '0';
         }
-        $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2);
+        $raw_fraction = $parts[1] ?? '';
+        $extra_fraction = substr($raw_fraction, 2);
+        if ($extra_fraction !== '' && trim($extra_fraction, '0') !== '') {
+            return $amount;
+        }
+        $fraction = substr(str_pad($raw_fraction, 2, '0'), 0, 2);
 
         return $integer . '.' . $fraction;
     }
