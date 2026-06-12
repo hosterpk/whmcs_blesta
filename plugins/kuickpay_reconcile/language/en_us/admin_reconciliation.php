@@ -26,3 +26,32 @@ $lang['AdminReconciliation.footnote.failed_errors'] = 'A wholesale bulk transpor
 
 // Empty state
 $lang['AdminReconciliation.no_results'] = 'No reconciliation runs have been recorded yet.';
+
+// ===========================================================================
+// Run detail (Task 3)
+// ===========================================================================
+$lang['AdminReconciliation.detail.boxtitle'] = 'Reconciliation Run';
+$lang['AdminReconciliation.link.back_to_runs'] = 'Back to Reconciliation Runs';
+$lang['AdminReconciliation.!error.not_found'] = 'The requested reconciliation run could not be found.';
+
+// Detail section headings
+$lang['AdminReconciliation.detail.heading.counts'] = 'Count Breakdown';
+$lang['AdminReconciliation.detail.heading.items'] = 'Processed Item Transitions';
+$lang['AdminReconciliation.detail.heading.audit_exceptions'] = 'Audit-Only Exceptions';
+
+// Item table headings
+$lang['AdminReconciliation.detail.heading.voucher'] = 'Voucher';
+$lang['AdminReconciliation.detail.heading.transition'] = 'Transition';
+$lang['AdminReconciliation.detail.heading.failure_class'] = 'Failure Class';
+$lang['AdminReconciliation.detail.heading.trace'] = 'Trace';
+$lang['AdminReconciliation.detail.heading.when'] = 'When';
+
+// Audit-only section headings
+$lang['AdminReconciliation.detail.heading.event'] = 'Event';
+$lang['AdminReconciliation.detail.heading.evidence'] = 'Evidence';
+
+// Detail notes / empty states
+$lang['AdminReconciliation.detail.running_note'] = 'This run is still in progress — counts are partial and may change.';
+$lang['AdminReconciliation.detail.no_items'] = 'No processed item transitions were recorded for this run.';
+$lang['AdminReconciliation.detail.items_truncated'] = 'Showing first %1$s of %2$s items.';
+$lang['AdminReconciliation.detail.no_audit_exceptions'] = 'No audit-only exceptions (unmatched or duplicate) were recorded for this run.';

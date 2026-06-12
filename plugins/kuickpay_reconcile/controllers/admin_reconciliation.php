@@ -13,6 +13,13 @@
 class AdminReconciliation extends KuickpayReconcileController
 {
     /**
+     * @var int Bounded number of item rows shown on the run-detail page (NFR7).
+     *  The detail view compares the true item count against this cap to render
+     *  an honest "showing first N of M" truncation notice.
+     */
+    private const ITEM_DISPLAY_LIMIT = 500;
+
+    /**
      * @var KuickPayVoucherListPresenter The pure presentation/allowlist seam
      */
     private $presenter;
@@ -75,5 +82,54 @@ class AdminReconciliation extends KuickpayReconcileController
             ]
         );
         $this->setPagination($this->get, $settings);
+    }
+
+    /**
+     * Read-only run detail with item + audit-only exception drill-down.
+     *
+     * Company scope is enforced by fetching the run via getForCompany() FIRST; a
+     * missing or cross-company run id resolves to a safe not-found redirect and
+     * never renders another company's data. Only after ownership is confirmed
+     * are the item/audit read models loaded and queried (themselves
+     * company-scoped). Writes nothing — the gated next actions and full
+     * sanitized evidence live on the linked admin_vouchers detail page (4.2/4.3).
+     */
+    public function detail()
+    {
+        $company_id = (int) $this->company_id;
+
+        // Stricter than the list's numeric guard — rejects "1e3", floats, signs.
+        $run_id = (isset($this->get[0]) && ctype_digit((string) $this->get[0]))
+            ? (int) $this->get[0]
+            : 0;
+
+        $run = ($run_id > 0)
+            ? $this->KuickpayReconciliationRuns->getForCompany($run_id, $company_id)
+            : false;
+        if ($run_id <= 0 || !$run) {
+            $this->flashMessage('error', Language::_('AdminReconciliation.!error.not_found', true), null, false);
+            $this->redirect($this->base_uri . 'plugin/kuickpay_reconcile/admin_reconciliation/index/');
+            return;
+        }
+
+        // Ownership confirmed: only now load the run-scoped read models (these
+        // are intentionally NOT loaded in preAction()).
+        Loader::loadModels($this, [
+            'KuickpayReconcile.KuickpayReconciliationItems',
+            'KuickpayReconcile.KuickpayAuditEvents',
+        ]);
+
+        $items = $this->KuickpayReconciliationItems->getByRun($run_id, $company_id, self::ITEM_DISPLAY_LIMIT);
+        $item_total = $this->KuickpayReconciliationItems->getCountByRun($run_id, $company_id);
+        // Audit-only bulk exceptions (unmatched/duplicate write no item row): the
+        // only per-row evidence behind the run's total_unmatched count (AC3).
+        $audit_exceptions = $this->KuickpayAuditEvents->getByRun($run_id, $company_id);
+
+        $this->set('run', $run);
+        $this->set('items', $items);
+        $this->set('item_total', $item_total);
+        $this->set('item_limit', self::ITEM_DISPLAY_LIMIT);
+        $this->set('audit_exceptions', $audit_exceptions);
+        $this->set('presenter', $this->presenter);
     }
 }

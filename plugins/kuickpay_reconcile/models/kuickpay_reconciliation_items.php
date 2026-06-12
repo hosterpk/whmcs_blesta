@@ -26,4 +26,61 @@ class KuickpayReconciliationItems extends KuickpayReconcileModel
 
         return $this->Record->lastInsertId();
     }
+
+    /**
+     * Fetches a bounded page of items for a run, scoped to a company.
+     *
+     * The items table has no company_id, so scope is enforced through a JOIN to
+     * the runs table (defense in depth — the method is safe even if a caller
+     * forgets the controller-side ownership fetch). The result is bounded
+     * (NFR7); the controller compares getCountByRun() to the cap to surface an
+     * honest truncation notice rather than silently dropping rows.
+     *
+     * @param int $run_id The run ID
+     * @param int $company_id The company ID scope
+     * @param int $limit Maximum rows to return
+     * @return array Item rows (stdClass), oldest first
+     */
+    public function getByRun(int $run_id, int $company_id, int $limit = 500): array
+    {
+        return $this->Record
+            ->select(['kuickpay_reconciliation_items.*'])
+            ->from('kuickpay_reconciliation_items')
+            ->innerJoin(
+                'kuickpay_reconciliation_runs',
+                'kuickpay_reconciliation_runs.id',
+                '=',
+                'kuickpay_reconciliation_items.run_id',
+                false
+            )
+            ->where('kuickpay_reconciliation_items.run_id', '=', $run_id)
+            ->where('kuickpay_reconciliation_runs.company_id', '=', $company_id)
+            ->order(['kuickpay_reconciliation_items.id' => 'ASC'])
+            ->limit(max(1, $limit))
+            ->fetchAll();
+    }
+
+    /**
+     * Counts items for a run, scoped to a company via the same JOIN.
+     *
+     * @param int $run_id The run ID
+     * @param int $company_id The company ID scope
+     * @return int The total matching item rows
+     */
+    public function getCountByRun(int $run_id, int $company_id): int
+    {
+        return $this->Record
+            ->select(['kuickpay_reconciliation_items.id'])
+            ->from('kuickpay_reconciliation_items')
+            ->innerJoin(
+                'kuickpay_reconciliation_runs',
+                'kuickpay_reconciliation_runs.id',
+                '=',
+                'kuickpay_reconciliation_items.run_id',
+                false
+            )
+            ->where('kuickpay_reconciliation_items.run_id', '=', $run_id)
+            ->where('kuickpay_reconciliation_runs.company_id', '=', $company_id)
+            ->numResults();
+    }
 }
