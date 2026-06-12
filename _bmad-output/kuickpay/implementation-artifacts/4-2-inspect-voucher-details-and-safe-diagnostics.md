@@ -4,7 +4,7 @@ baseline_commit: 7578534e7ab58621f0a28f4c43c7c561dd1b9ef6
 
 # Story 4.2: Inspect Voucher Details and Safe Diagnostics
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -677,3 +677,16 @@ Added:
   the separate `diagnostics` permission (plugin 1.6.0), detail language keys, and the
   list → detail link. Plugin suite green except the pre-existing 4.1 baseline
   `KuickPaySecretLeakageTest` failure (untouched file). Status → review.
+
+### Review Findings
+
+- [x] [Review][Defer] No controller/model/integration tests for detail page, permission gate, or company-scoped reads [`plugins/kuickpay_reconcile/controllers/admin_vouchers.php:143`, `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`, `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php`] — deferred, pre-existing (no DB/live admin stack in this checkout; spec already documents php -l + review fallback)
+
+- [x] [Review][Patch] Null or zero `client_id` produces broken client code lookup and detail links [`plugins/kuickpay_reconcile/controllers/admin_vouchers.php:169-170`, `plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:49`, `plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:138`]
+- [x] [Review][Patch] Null `event_name` in audit row can TypeError against strict `string` parameter [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:282`]
+- [x] [Review][Patch] `validation_errors` items cast to string without scalar check [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:231-239`]
+- [x] [Review][Patch] Invoice mapping entry may lack `invoice_id` key [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:117`]
+- [x] [Review][Patch] Null `voucher->status` can TypeError in presenter methods [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:41`, `plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:129`]
+- [x] [Review][Patch] `json_encode` failure on decoded audit payload yields `false` passed to `Html->safe` [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:272-277`]
+- [x] [Review][Patch] Diagnostics block renders `status` token raw instead of through closed status allowlist (AC6) [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:245`]
+- [x] [Review][Patch] `posted` transaction link rendered in separate row instead of inside posting-state row per spec (AC1) [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:127-147`]
