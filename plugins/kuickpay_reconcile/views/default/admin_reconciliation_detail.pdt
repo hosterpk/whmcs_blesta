@@ -186,6 +186,13 @@ $this->Widget->clear();
 $this->Widget->create($this->_('AdminReconciliation.detail.heading.audit_exceptions', true));
 
 if (($audit_exceptions ?? false) && ($num_audit = count($audit_exceptions)) > 0) {
+    if ((int) ($audit_total ?? 0) > (int) ($audit_limit ?? 0)) {
+        ?>
+        <div class="alert alert-warning mb-0">
+            <?php echo $this->_('AdminReconciliation.detail.audit_truncated', true, (int) $audit_limit, (int) $audit_total);?>
+        </div>
+        <?php
+    }
     ?>
     <div class="table-responsive">
         <table class="table table-hover mb-0" id="reconciliation_audit_table">

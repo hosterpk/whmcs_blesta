@@ -83,4 +83,22 @@ class KuickpayAuditEvents extends KuickpayReconcileModel
             ->limit(max(1, $limit))
             ->fetchAll();
     }
+
+    /**
+     * Counts run-scoped audit-only bulk exceptions for truncation honesty.
+     *
+     * @param int $run_id The run ID
+     * @param int $company_id The company ID scope
+     * @return int The total matching audit-only exception rows
+     */
+    public function getCountByRun(int $run_id, int $company_id): int
+    {
+        return $this->Record
+            ->select(['id'])
+            ->from('kuickpay_audit_events')
+            ->where('company_id', '=', $company_id)
+            ->where('run_id', '=', $run_id)
+            ->where('event_name', 'in', ['evidence.unmatched', 'evidence.duplicate'])
+            ->numResults();
+    }
 }

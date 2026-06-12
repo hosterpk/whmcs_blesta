@@ -54,4 +54,5 @@ $lang['AdminReconciliation.detail.heading.evidence'] = 'Evidence';
 $lang['AdminReconciliation.detail.running_note'] = 'This run is still in progress — counts are partial and may change.';
 $lang['AdminReconciliation.detail.no_items'] = 'No processed item transitions were recorded for this run.';
 $lang['AdminReconciliation.detail.items_truncated'] = 'Showing first %1$s of %2$s items.';
+$lang['AdminReconciliation.detail.audit_truncated'] = 'Showing first %1$s of %2$s audit-only exceptions.';
 $lang['AdminReconciliation.detail.no_audit_exceptions'] = 'No audit-only exceptions (unmatched or duplicate) were recorded for this run.';

@@ -129,13 +129,16 @@ class AdminReconciliation extends KuickpayReconcileController
         $item_total = $this->KuickpayReconciliationItems->getCountByRun($run_id, $company_id);
         // Audit-only bulk exceptions (unmatched/duplicate write no item row): the
         // only per-row evidence behind the run's total_unmatched count (AC3).
-        $audit_exceptions = $this->KuickpayAuditEvents->getByRun($run_id, $company_id);
+        $audit_exceptions = $this->KuickpayAuditEvents->getByRun($run_id, $company_id, self::ITEM_DISPLAY_LIMIT);
+        $audit_total = $this->KuickpayAuditEvents->getCountByRun($run_id, $company_id);
 
         $this->set('run', $run);
         $this->set('items', $items);
         $this->set('item_total', $item_total);
         $this->set('item_limit', self::ITEM_DISPLAY_LIMIT);
         $this->set('audit_exceptions', $audit_exceptions);
+        $this->set('audit_total', $audit_total);
+        $this->set('audit_limit', self::ITEM_DISPLAY_LIMIT);
         $this->set('presenter', $this->presenter);
     }
 }
