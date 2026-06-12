@@ -129,6 +129,15 @@ class KuickpayReconcilePlugin extends Plugin
                 // Intentionally empty — nav/permission re-registration is driven
                 // by the version change, not by SQL here.
             }
+
+            // 1.6.0 adds the voucher detail page + the separate "view
+            // diagnostics" permission (Story 4.2). No schema change: the bump
+            // exists only so PluginManager::upgrade() re-syncs the permission
+            // set from getPermissions() and registers the new diagnostics ACO.
+            if (version_compare($current_version, '1.6.0', '<')) {
+                // Intentionally empty — permission re-registration is driven by
+                // the version change, not by SQL here.
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -229,6 +238,16 @@ class KuickpayReconcilePlugin extends Plugin
                 'name' => Language::_('KuickpayReconcilePlugin.permission.bulk_reconcile', true),
                 'alias' => 'kuickpay_reconcile.admin_main',
                 'action' => '*'
+            ],
+            // Separate "view diagnostics" permission: same alias as the
+            // view-records row above, distinct action. Gates only the
+            // diagnostics SECTION of admin_vouchers/detail (Story 4.2) — there
+            // is no public diagnostics() method, so it never gates a route.
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers_diagnostics', true),
+                'alias' => 'kuickpay_reconcile.admin_vouchers',
+                'action' => 'diagnostics'
             ]
         ];
     }

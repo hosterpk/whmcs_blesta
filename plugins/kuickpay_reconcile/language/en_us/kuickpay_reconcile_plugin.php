@@ -11,4 +11,5 @@ $lang['KuickpayReconcilePlugin.nav_secondary_staff.bulk_reconcile'] = 'KuickPay 
 $lang['KuickpayReconcilePlugin.nav_secondary_staff.vouchers'] = 'KuickPay Vouchers';
 $lang['KuickpayReconcilePlugin.permission.bulk_reconcile'] = 'KuickPay Bulk Reconciliation';
 $lang['KuickpayReconcilePlugin.permission.vouchers'] = 'KuickPay Vouchers';
+$lang['KuickpayReconcilePlugin.permission.vouchers_diagnostics'] = 'KuickPay Voucher Diagnostics';
 $lang['KuickpayReconcile.posting.transaction_message'] = 'KuickPay payment posted';
