@@ -38,17 +38,26 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.summary', true));
         <tr>
             <th class="w-25"><?php echo $this->_('AdminVouchers.detail.field.status', true);?></th>
             <td>
-                <span class="badge <?php echo $presenter->badgeClassFor($voucher->status);?>">
-                    <?php echo $this->Html->safe($this->_($presenter->labelKeyFor($voucher->status), true));?>
+                <?php $status = (string) ($voucher->status ?? ''); ?>
+                <span class="badge <?php echo $presenter->badgeClassFor($status);?>">
+                    <?php echo $this->Html->safe($this->_($presenter->labelKeyFor($status), true));?>
                 </span>
             </td>
         </tr>
         <tr>
             <th><?php echo $this->_('AdminVouchers.detail.field.client', true);?></th>
             <td>
-                <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . $voucher->client_id . '/');?>">
-                    <?php echo $this->Html->safe($client_code);?>
-                </a>
+                <?php
+                if (!empty($voucher->client_id)) {
+                    ?>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . $voucher->client_id . '/');?>">
+                        <?php echo $this->Html->safe($client_code);?>
+                    </a>
+                    <?php
+                } else {
+                    echo $empty;
+                }
+                ?>
             </td>
         </tr>
         <tr>
@@ -113,11 +122,15 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.invoices', true));
                 if (!empty($invoices)) {
                     $invoice_cells = [];
                     foreach ($invoices as $link) {
+                        $invoice_id = $link['invoice_id'] ?? null;
+                        if ($invoice_id === null) {
+                            continue;
+                        }
                         $invoice_cells[] = '<a href="'
-                            . $this->Html->safe($this->base_uri . 'clients/editinvoice/' . $voucher->client_id . '/' . $link['invoice_id'] . '/')
-                            . '">' . $this->Html->safe($link['invoice_id']) . '</a>';
+                            . $this->Html->safe($this->base_uri . 'clients/editinvoice/' . $voucher->client_id . '/' . $invoice_id . '/')
+                            . '">' . $this->Html->safe($invoice_id) . '</a>';
                     }
-                    echo implode(', ', $invoice_cells);
+                    echo empty($invoice_cells) ? $empty : implode(', ', $invoice_cells);
                 } else {
                     echo $empty;
                 }
@@ -126,21 +139,18 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.invoices', true));
         </tr>
         <tr>
             <th><?php echo $this->_('AdminVouchers.detail.field.posting_state', true);?></th>
-            <td><?php echo $this->Html->safe($this->_($presenter->postingStateLabelKey($voucher->status), true));?></td>
-        </tr>
-        <tr>
-            <th><?php echo $this->_('AdminVouchers.detail.field.transaction', true);?></th>
             <td>
                 <?php
-                // Transaction link appears ONLY for the posted state (UX-DR20).
-                if ($voucher->status === 'posted' && !empty($voucher->blesta_transaction_id)) {
+                // Transaction link appears ONLY for the posted state (UX-DR20),
+                // replacing the posting-state label with the deep link.
+                if ($status === 'posted' && !empty($voucher->blesta_transaction_id) && !empty($voucher->client_id)) {
                     ?>
                     <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . $voucher->client_id . '/' . $voucher->blesta_transaction_id . '/');?>" title="<?php echo $this->Html->safe($this->_('AdminVouchers.text.transaction_view', true));?>">
                         <span class="font-monospace"><?php echo $this->Html->safe($voucher->blesta_transaction_id);?></span>
                     </a>
                     <?php
                 } else {
-                    echo $empty;
+                    echo $this->Html->safe($this->_($presenter->postingStateLabelKey($status), true));
                 }
                 ?>
             </td>
@@ -175,7 +185,7 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.parsed_summary', tr
     <tbody>
         <tr>
             <th class="w-25"><?php echo $this->_('AdminVouchers.detail.field.status', true);?></th>
-            <td><?php echo $this->Html->safe($this->_($presenter->labelKeyFor($voucher->status), true));?></td>
+            <td><?php echo $this->Html->safe($this->_($presenter->labelKeyFor($status), true));?></td>
         </tr>
         <tr>
             <th><?php echo $this->_('AdminVouchers.detail.field.error_class', true);?></th>
@@ -232,14 +242,24 @@ if ($can_view_diagnostics) {
                                     // Each token mapped through the closed allowlist; escaped per item.
                                     $reason_items = [];
                                     foreach ($value as $reason) {
+                                        if (!is_scalar($reason)) {
+                                            continue;
+                                        }
                                         $reason_items[] = '<li class="font-monospace">'
                                             . $this->Html->safe($this->_($presenter->validationReasonLabelKey((string) $reason), true))
                                             . '</li>';
                                     }
-                                    echo '<ul class="mb-0">' . implode('', $reason_items) . '</ul>';
+                                    echo empty($reason_items)
+                                        ? $empty
+                                        : '<ul class="mb-0">' . implode('', $reason_items) . '</ul>';
                                 } elseif ($field === 'error_class') {
                                     echo '<span class="font-monospace">'
                                         . $this->Html->safe($this->_($presenter->errorClassLabelKey((string) $value), true))
+                                        . '</span>';
+                                } elseif ($field === 'status') {
+                                    // Status must also route through the closed allowlist in diagnostics (AC6).
+                                    echo '<span class="badge ' . $presenter->badgeClassFor((string) $value) . '">'
+                                        . $this->Html->safe($this->_($presenter->labelKeyFor((string) $value), true))
                                         . '</span>';
                                 } else {
                                     echo $mono($value);
@@ -266,21 +286,22 @@ if ($can_view_diagnostics) {
                 // Render payload as ONE escaped, pretty-printed JSON blob — never
                 // a per-key echo, never per-event label mapping (AC7). It is
                 // already past the single redaction boundary.
-                $payload_out = '';
-                $decoded_payload = json_decode((string) $event->payload, true);
+                $payload_raw = (string) ($event->payload ?? '');
+                $decoded_payload = json_decode($payload_raw, true);
                 if (is_array($decoded_payload)) {
-                    $payload_out = json_encode(
+                    $encoded = json_encode(
                         $decoded_payload,
                         JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
                     );
+                    $payload_out = $encoded !== false ? $encoded : $payload_raw;
                 } else {
-                    $payload_out = (string) ($event->payload ?? '');
+                    $payload_out = $payload_raw;
                 }
                 ?>
                 <div class="mb-3 pb-2 border-bottom">
                     <div>
-                        <strong><?php echo $this->Html->safe($this->_($presenter->eventLabelKey($event->event_name), true));?></strong>
-                        <span class="text-muted ms-2"><?php echo $this->Date->cast($event->date_created);?></span>
+                        <strong><?php echo $this->Html->safe($this->_($presenter->eventLabelKey((string) ($event->event_name ?? '')), true));?></strong>
+                        <span class="text-muted ms-2"><?php echo $event->date_created ? $this->Date->cast($event->date_created) : $empty;?></span>
                     </div>
                     <div class="small">
                         <?php echo $mono($event->redacted_trace_id);?>

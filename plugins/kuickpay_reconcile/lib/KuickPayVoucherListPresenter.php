@@ -381,13 +381,17 @@ class KuickPayVoucherListPresenter
 
     /**
      * Returns the language key for an audit event name via the closed allowlist.
-     * Unknown tokens resolve to the generic event key.
+     * Unknown/empty tokens resolve to the generic event key.
      *
-     * @param string $event The audit event_name token
+     * @param string|null $event The audit event_name token
      * @return string The language key
      */
-    public function eventLabelKey(string $event): string
+    public function eventLabelKey(?string $event): string
     {
+        if ($event === null || $event === '') {
+            return self::DEFAULT_EVENT_LABEL_KEY;
+        }
+
         return self::EVENT_LABEL_KEYS[$event] ?? self::DEFAULT_EVENT_LABEL_KEY;
     }
 
@@ -395,11 +399,15 @@ class KuickPayVoucherListPresenter
      * Returns the language key for a validation-reason token via the closed
      * allowlist. Unknown/empty tokens resolve to the safe generic key.
      *
-     * @param string $reason The validation_errors token
+     * @param string|null $reason The validation_errors token
      * @return string The language key
      */
-    public function validationReasonLabelKey(string $reason): string
+    public function validationReasonLabelKey(?string $reason): string
     {
+        if ($reason === null || $reason === '') {
+            return self::DEFAULT_VALIDATION_REASON_LABEL_KEY;
+        }
+
         return self::VALIDATION_REASON_LABEL_KEYS[$reason] ?? self::DEFAULT_VALIDATION_REASON_LABEL_KEY;
     }
 

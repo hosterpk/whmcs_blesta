@@ -166,8 +166,10 @@ class AdminVouchers extends KuickpayReconcileController
         // Reuse 4.1's already company-scoped batched lookups (no new unscoped
         // queries): invoice mappings and the human-readable client code.
         $invoices = $this->KuickpayVoucherInvoices->getByVoucherIds([$voucher_id], $company_id)[$voucher_id] ?? [];
-        $client_codes = $this->KuickpayVouchers->getClientCodes([(int) $voucher->client_id], $company_id);
-        $client_code = $client_codes[(int) $voucher->client_id] ?? $voucher->client_id;
+        $client_id = !empty($voucher->client_id) ? (int) $voucher->client_id : null;
+        $client_code = $client_id !== null
+            ? ($this->KuickpayVouchers->getClientCodes([$client_id], $company_id)[$client_id] ?? $voucher->client_id)
+            : null;
 
         // Decode the already-sanitized normalized evidence, then reduce it to
         // the allowlisted known keys (AC7) before it reaches the view.
