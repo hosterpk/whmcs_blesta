@@ -4,7 +4,7 @@ baseline_commit: 6977be67b9d7a047c5678fb3f70f91594d3735fc
 
 # Story 4.4: Manage Manual Review Queue and Run Results
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -266,6 +266,13 @@ From `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md`:
 - [Source: _bmad-output/kuickpay/implementation-artifacts/deferred-work.md:118-119]
 - [Source: _bmad-output/project-context.md — Blesta/minPHP conventions, PHP 8.2, language files, Record/Input patterns, verification honesty]
 
+### Review Findings
+
+- [x] [Review][Patch] New read-only controllers did not explicitly reject non-GET requests [plugins/kuickpay_reconcile/controllers/admin_manual_review.php:55] — fixed by adding a shared `requireGetOnly()` guard and applying it to `AdminManualReview::index()`, `AdminReconciliation::index()`, and `AdminReconciliation::detail()`.
+- [x] [Review][Patch] Audit-only exceptions could be silently truncated after 500 rows [plugins/kuickpay_reconcile/controllers/admin_reconciliation.php:126] — fixed by adding a company/run-scoped audit exception count and a localized truncation notice in the run-detail view.
+- [x] [Review][Patch] Run list ordering accepted arbitrary public model order fields [plugins/kuickpay_reconcile/models/kuickpay_reconciliation_runs.php:82] — fixed by reducing `getListForCompany()` ordering to allowlisted columns and `ASC`/`DESC` directions.
+- [x] [Review][Patch] Route page/run-id parsing accepted loose numeric forms or oversized integers [plugins/kuickpay_reconcile/controllers/admin_reconciliation.php:101] — fixed by using the shared positive route integer parser for the new list/detail routes.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -275,9 +282,10 @@ claude-opus-4-8[1m] (Claude Opus 4.8, 1M context)
 ### Debug Log References
 
 - Baseline commit captured to frontmatter: `6977be67`.
-- `php -l` run clean on all 20 changed/new PHP files (controllers, base controller, runs/items/audit models, presenter, plugin, 5 language files, test bootstrap, presenter test, 3 `.pdt` views).
+- Code-review patch verification: `php -l` run clean on `kuickpay_reconcile_controller.php`, `admin_manual_review.php`, `admin_reconciliation.php`, `kuickpay_audit_events.php`, `kuickpay_reconciliation_runs.php`, and `admin_reconciliation.php` language file after review fixes.
+- `php -l` run clean on all 20 original changed/new PHP files (controllers, base controller, runs/items/audit models, presenter, plugin, 5 language files, test bootstrap, presenter test, 3 `.pdt` views).
 - Presenter unit tests (external PHPUnit 8.5): `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` — 56 tests / 370 assertions pass (was 46/326; +10 run-trigger/run-status tests).
-- Full plugin suite: 154 tests, 890 assertions, **1 failure** = the pre-existing `KuickPaySecretLeakageTest::testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes` (line 87) baseline red carried since 4.3, owned by 4.5. Confirmed byte-identical to baseline (`git show 6977be67:…KuickPaySecretLeakageTest.php` diff empty); not added to.
+- Full plugin suite after review fixes: 154 tests, 890 assertions, **1 failure** = the pre-existing `KuickPaySecretLeakageTest::testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes` (line 87) assertion expecting `confirmed_unposted` but receiving `manual_review`; unrelated to the review patches. Baseline note: this was already recorded as red since 4.3 and owned by 4.5; the test file is byte-identical to baseline (`git show 6977be67:…KuickPaySecretLeakageTest.php` diff empty); not added to.
 - `runDateError()` bound logic verified against edge cases (today=ok, tomorrow=future, −365d=ok edge-inclusive, −366d=too_old, malformed/empty=format).
 - Cross-checked every `AdminManualReview.*` / `AdminReconciliation.*` / `AdminMain.*` key used by the new views and controllers against the loaded language files — all resolve, no missing keys.
 
@@ -285,7 +293,7 @@ claude-opus-4-8[1m] (Claude Opus 4.8, 1M context)
 
 - **AC1 (Manual Review queue):** `AdminManualReview` lists only company-scoped `manual_review` vouchers via the already-allowlisted `status` filter; reason summary branches explicitly on null `error_class` → `posting_state.manual_review` ("Duplicate or ambiguous evidence"); columns are reason/client/invoice/amount/consumer/last-inquiry/next-action; empty queue renders the localized `AdminManualReview.no_results` card.
 - **AC2 (run summaries):** `AdminReconciliation::index` renders run type/status/timestamps and the durable `total_*` counters via the resolved count model; no secrets/raw SOAP — the `summary` JSON column is never decoded/rendered.
-- **AC3 (exception drill-down):** run detail shows matched item transitions (link into voucher detail 4.2/4.3) AND audit-only bulk exceptions read from `KuickpayAuditEvents->getByRun()` — a `duplicate` row links to its voucher, an `unmatched` row (null `voucher_id`) renders redacted evidence only with no link/action; no Force Paid / Mark Paid; success styling reserved for run `completed` (not voucher state).
+- **AC3 (exception drill-down):** run detail shows matched item transitions (link into voucher detail 4.2/4.3) AND audit-only bulk exceptions read from `KuickpayAuditEvents->getByRun()` — a `duplicate` row links to its voucher, an `unmatched` row (null `voucher_id`) renders redacted evidence only with no link/action; bounded audit reads now also fetch `getCountByRun()` and disclose truncation with a localized "showing first N of M" notice; no Force Paid / Mark Paid; success styling reserved for run `completed` (not voucher state).
 - **AC4 (company scope):** `company_id` resolved server-side; runs gated by company-scoped `getForCompany` before items/audit are touched; items table (no `company_id`) scoped via JOIN to runs in `getByRun`/`getCountByRun`; cross-company run id → safe not-found redirect.
 - **AC5 (read-only):** both new controllers are GET-only, no writes/SOAP/transition; mutations stay on `admin_vouchers` endpoints.
 - **AC6 (next-action authority):** queue derives next action from `KuickpayVouchers::ALLOWED_ACTIONS_BY_STATE` intersected with `staffGroupAllows()` (promoted to the base controller, alias hardcoded to `admin_vouchers`); links to the existing detail-page forms.
@@ -312,12 +320,12 @@ CREATE:
 - `plugins/kuickpay_reconcile/language/en_us/admin_reconciliation.php`
 
 UPDATE:
-- `plugins/kuickpay_reconcile/kuickpay_reconcile_controller.php` (promoted protected `staffGroupAllows()` + `canViewDiagnostics()`)
+- `plugins/kuickpay_reconcile/kuickpay_reconcile_controller.php` (promoted protected `staffGroupAllows()` + `canViewDiagnostics()`; shared `requireGetOnly()` and `positiveRouteInt()` review guards)
 - `plugins/kuickpay_reconcile/controllers/admin_vouchers.php` (dropped private copies; calls inherited)
 - `plugins/kuickpay_reconcile/controllers/admin_main.php` (keyed `runDateError()` bound contract)
-- `plugins/kuickpay_reconcile/models/kuickpay_reconciliation_runs.php` (`TRIGGER_TYPES`/`STATUSES` consts; `getListForCompany`/`getListCountForCompany`/`getForCompany`/`applyRunFilters`)
+- `plugins/kuickpay_reconcile/models/kuickpay_reconciliation_runs.php` (`TRIGGER_TYPES`/`STATUSES` consts; `getListForCompany`/`getListCountForCompany`/`getForCompany`/`applyRunFilters`; review hardening for allowlisted ordering)
 - `plugins/kuickpay_reconcile/models/kuickpay_reconciliation_items.php` (`getByRun`/`getCountByRun`, company-scoped via JOIN)
-- `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php` (`getByRun` run-scoped audit-only read)
+- `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php` (`getByRun` run-scoped audit-only read; `getCountByRun` for truncation honesty)
 - `plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php` (run-trigger/run-status label + badge maps + accessors)
 - `plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php` (`getActions` +2, `getPermissions` +2, empty 1.8.0 upgrade branch)
 - `plugins/kuickpay_reconcile/config.json` (version 1.7.0 → 1.8.0)
