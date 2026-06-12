@@ -275,56 +275,6 @@ class AdminVouchers extends KuickpayReconcileController
         $this->noteTransitionAction('cancel', 'cancelled', 'admin.cancelled', 'AdminVouchers.!success.cancel');
     }
 
-    /**
-     * Checks the dedicated diagnostics permission without wildcard fallback.
-     *
-     * The plugin intentionally has both a general admin_vouchers `*` permission
-     * for the page and a separate admin_vouchers `diagnostics` permission for
-     * the sensitive section. MinPHP ACL treats `*` as a wildcard for arbitrary
-     * actions, so this check inspects the current staff group's ACL entries and
-     * requires an explicit diagnostics allow.
-     *
-     * @return bool True when the current staff group explicitly allows diagnostics
-     */
-    private function canViewDiagnostics(): bool
-    {
-        return $this->staffGroupAllows('diagnostics');
-    }
-
-    /**
-     * Checks a dedicated admin_vouchers permission without wildcard fallback.
-     *
-     * @param string $action The exact ACL action token
-     * @return bool True when the current staff group explicitly allows the action
-     */
-    private function staffGroupAllows(string $action): bool
-    {
-        Loader::loadComponents($this, ['Acl']);
-        Loader::loadModels($this, ['StaffGroups']);
-
-        $staff_group = $this->StaffGroups->getStaffGroupByStaff(
-            $this->Session->read('blesta_staff_id'),
-            $this->company_id
-        );
-        if (!$staff_group) {
-            return false;
-        }
-
-        $access_list = $this->Acl->getAccessList(
-            'staff_group_' . $staff_group->id,
-            'kuickpay_reconcile.admin_vouchers'
-        );
-        foreach ($access_list as $access) {
-            if (($access->action ?? null) !== $action) {
-                continue;
-            }
-
-            return ($access->permission ?? null) === 'allow';
-        }
-
-        return false;
-    }
-
     private function noteTransitionAction(string $action, string $new_status, string $event, string $successKey): void
     {
         $company_id = (int) $this->company_id;
