@@ -1,5 +1,5 @@
 # generated: 2026-06-09
-# last_updated: 2026-06-12
+# last_updated: 2026-06-13
 # project: whmcs_blesta
 # project_key: NOKEY
 # tracking_system: file-system
@@ -61,11 +61,22 @@
 #   Then: 3-1(InsertVoucher) + 3-2(creation parser) -> 2-1 -> 2-2 -> 2-3 -> 2-4 -> 2-5 -> 2-6
 #   Then: 3-1(rest) -> 3-2(rest) -> 3-3 -> 3-4 -> 3-5 -> 3-6 -> 3-7 -> 3-8
 #   Then: 4-1 -> 4-2 -> 4-3 -> 4-4 -> 4-5
-#   Then: 5-1 -> 5-2 -> 5-3 -> 5-4
+#   Then (TERMINAL EPIC, absorbs all open tech-debt / deferred-work):
+#         5-1(live gate) -> 5-2(schema concurrency) -> 5-3..5-6(hardening)
+#         -> 5-7(opt-in live) -> 5-8..5-10(docs).
+# ---------------------------------------------------------------------
+# EPIC 5 NOTE (expanded 2026-06-13 after Epic 4 retro): the live-verification
+# gate (deferred 4 epics) is EXECUTABLE now — a real Blesta/MySQL stack runs
+# locally (creds in config/blesta.php) and beta.hosterpk.com is pre-dev (not
+# live), so full DB-backed tests are safe. KuickPay has NO sandbox, so the SOAP
+# leg replays sanitized Phase-0 fixtures; the only real-provider path is the
+# manual opt-in smoke (5-7). 5-1 must run the real reconcile->post round-trip +
+# admin mutations against the real stack, OR ship a signed risk-acceptance.
+# Anything not landed in Epic 5 ships as a written, signed risk-acceptance.
 # =====================================================================
 
 generated: 2026-06-09
-last_updated: 2026-06-12
+last_updated: 2026-06-13
 project: whmcs_blesta
 project_key: NOKEY
 tracking_system: file-system
@@ -111,18 +122,26 @@ development_status:
   epic-3-retrospective: done
 
   # --- Epic 4: Admin Support and Manual Review Operations ---
-  epic-4: in-progress
+  epic-4: done
   4-1-search-and-filter-kuickpay-vouchers: done
   4-2-inspect-voucher-details-and-safe-diagnostics: done
   4-3-run-safe-manual-voucher-actions: done
   4-4-manage-manual-review-queue-and-run-results: done
   4-5-record-structured-logs-and-audit-events: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
-  # --- Epic 5: Launch Validation and Operational Handoff ---
+  # --- Epic 5: Launch Hardening, Verification, and Operational Handoff ---
+  # TERMINAL epic. Build order: 5-1 (live gate) -> 5-2 (schema) ->
+  # 5-3..5-6 (hardening) -> 5-7 (opt-in live) -> 5-8..5-10 (docs).
   epic-5: backlog
-  5-1-add-opt-in-live-and-sandbox-kuickpay-tests: backlog
-  5-2-document-deployment-and-configuration: backlog
-  5-3-document-reconciliation-and-support-operations: backlog
-  5-4-document-rollback-upgrade-and-production-launch: backlog
+  5-1-stand-up-the-live-verification-stack-and-prove-a-real-reconcile-post-round-trip: backlog
+  5-2-schema-level-active-context-concurrency-guard: backlog
+  5-3-reconcile-and-posting-safety-hardening: backlog
+  5-4-audit-logging-and-redaction-completeness: backlog
+  5-5-structural-company-scoping-and-test-fidelity-guarantees: backlog
+  5-6-gateway-settings-and-endpoint-hardening: backlog
+  5-7-opt-in-live-kuickpay-smoke-no-sandbox: backlog
+  5-8-document-deployment-and-configuration: backlog
+  5-9-document-reconciliation-and-support-operations: backlog
+  5-10-document-rollback-upgrade-and-production-launch: backlog
   epic-5-retrospective: optional

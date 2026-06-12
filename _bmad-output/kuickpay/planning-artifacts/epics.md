@@ -260,9 +260,9 @@ Finance can trust KuickPay evidence, reconcile pending Vouchers, validate amount
 Support and finance staff can find Vouchers, inspect safe diagnostics, run approved actions, and resolve ambiguous or delayed payments without unsafe paid-state shortcuts.
 **FRs covered:** FR24, FR25, FR26, FR27.
 
-### Epic 5: Launch Validation and Operational Handoff
-Operators can run opt-in live/sandbox checks and use deployment, reconciliation, troubleshooting, rollback, upgrade, and support documentation for production rollout.
-**FRs covered:** FR29, FR30.
+### Epic 5: Launch Hardening, Verification, and Operational Handoff
+The terminal epic. It (a) runs the live-stack verification the prior four epics deferred — now executable against the local pre-dev Blesta/MySQL stack — (b) closes every still-open tech-debt and deferred-work item (schema concurrency, money-path safety residuals, audit/redaction completeness, structural company-scoping + test fidelity, gateway/endpoint hardening), and (c) ships the opt-in live smoke and the deployment/reconciliation/rollback/launch documentation. Because Epic 5 is terminal, every remaining structural debt either lands here or ships as a written, signed risk-acceptance.
+**FRs covered:** FR28, FR29, FR30 (docs/launch) + NFR8, NFR9, NFR12, NFR13, NFR14 (hardening/verification). Absorbs all open `deferred-work.md` items and Epic 1–4 retro action items.
 
 ## Epic 0: Phase 0 - KuickPay Contract Validation and Fixture Gate
 
@@ -840,33 +840,189 @@ So that support and finance can investigate safely without leaking secrets.
 **Then** raw diagnostics remain admin-only
 **And** customer messages stay generic and safe.
 
-## Epic 5: Launch Validation and Operational Handoff
+## Epic 5: Launch Hardening, Verification, and Operational Handoff
 
-Operators can run opt-in live/sandbox checks and use deployment, reconciliation, troubleshooting, rollback, upgrade, and support documentation for production rollout.
+The terminal epic. It runs the live-stack verification deferred since Epic 1, closes every still-open tech-debt and `deferred-work.md` item, and ships the launch documentation. The verification environment is now known to be available: a real Blesta + MySQL stack runs locally (DB credentials in `config/blesta.php`), and `beta.hosterpk.com` is a pre-dev project (data-rich but **not** live), so full-spectrum DB-backed tests are safe to run. KuickPay provides **no sandbox**, so the SOAP leg of automated verification replays sanitized Phase-0 fixtures; the only real-provider path is the manual, opt-in, default-skipped smoke (Story 5.7). Build order: **5.1 (live gate) → 5.2 (schema concurrency) → 5.3–5.6 (hardening) → 5.7 (opt-in live) → 5.8–5.10 (docs)**. Because Epic 5 is terminal, any remaining item either lands here or ships as a written, Israr-signed risk-acceptance.
 
-### Story 5.1: Add Opt-In Live and Sandbox KuickPay Tests
+### Story 5.1: Stand Up the Live Verification Stack and Prove a Real Reconcile→Post Round-Trip
 
-As an operator and developer,
-I want live or sandbox KuickPay checks to be explicit and redacted,
-So that production credentials and data are never exercised accidentally.
+As an architect and developer,
+I want the gateway and plugin verified against the real Blesta/MySQL stack on the target runtime,
+So that the money-moving and admin-mutation paths are proven by execution, not only by fakes.
 
 **Acceptance Criteria:**
 
-**Given** live or sandbox test code exists
+**Given** the local Blesta DB (`config/blesta.php`) on PHP 8.2 with `ext-soap`
+**When** the plugin and gateway are installed and then upgraded from the current version
+**Then** the schema install/upgrade and the `PluginManager` permission/action re-sync complete against the real DB
+**And** the run is evidenced (commands, PHP version, before/after schema and permission state).
+
+**Given** a pending voucher and a confirmed-payment SOAP response replayed from sanitized Phase-0 fixtures
+**When** scheduled reconciliation runs against the real DB
+**Then** a real `confirmed_unposted → posted` round-trip creates and applies an actual Blesta transaction
+**And** idempotency is proven — a second run creates no duplicate transaction and no double-allocation.
+
+**Given** the admin workbench on the real stack
+**When** an admin runs Check Now, Cancel, and Mark Manual Review
+**Then** each executes through live Blesta auth/ACL/CSRF, the two-group ACL separation holds (a `*`-only group is denied recheck/review/cancel and diagnostics), and the durable audit events are written.
+
+**Given** KuickPay provides no sandbox
+**When** the SOAP leg cannot be exercised against a live provider
+**Then** it is replayed from fixtures and the report states exactly what ran against the real stack versus fixtures, on PHP 8.2
+**And** any residual that still cannot run ships as a written, Israr-signed risk-acceptance enumerating what goes to production unverified.
+
+_Closes: Epic 1→4 retro AI-1 (live-verification gate, deferred 4×); NFR12; the per-story PHP-8.2 verification notes in `deferred-work.md` (3-1, 1-4, 3-4)._
+
+### Story 5.2: Schema-Level Active-Context Concurrency Guard
+
+As an architect,
+I want a schema-enforced unique active payment context per invoice set,
+So that two concurrent submissions can never mint two pending Vouchers for the same invoice.
+
+**Acceptance Criteria:**
+
+**Given** the Voucher schema
+**When** the migration adds `context_key` plus a status-derived `active_context_key` and a company-scoped unique key (avoiding nullable-unique MySQL traps)
+**Then** two concurrent same-invoice issuance attempts resolve to exactly one active pending Voucher, proven against the real DB.
+
+**Given** the new schema guarantee
+**When** `replace` / concurrent issuance (gated off since Story 2.4) is reconsidered
+**Then** it is un-gated only behind this unique key
+**And** the application-layer double-allocation residual at Stories 3.4/3.5 closes at the schema layer, not just the posting row lock.
+
+**Given** an upgrade from the current installed version
+**When** the migration runs against the real DB
+**Then** existing rows backfill safely and the upgrade is verified end to end.
+
+_Closes: Epic 3→4 retro AI-5 (carried 4×); `deferred-work.md` 2-4 schema residual, 2-3 concurrent double-submit, 3-4 double-pending; architecture "active payment context" idempotency; NFR9._
+
+### Story 5.3: Reconcile and Posting Safety Hardening
+
+As a developer,
+I want the known money-path concurrency and lifecycle residuals closed,
+So that manual and scheduled reconciliation cannot demote or strand a confirmed payment.
+
+**Acceptance Criteria:**
+
+**Given** manual Check Now skips the `reconcile_pending` batch lock
+**When** it races a cron confirmation on the same Voucher
+**Then** the terminal `persistEvidence()` write is status-guarded (`WHERE status IN ('pending','retry')`) so the racing manual reconcile matches zero rows instead of demoting a `confirmed_unposted` Voucher to `manual_review` with a dangling paid date.
+
+**Given** a single-inquiry confirmed row with an empty/unparseable `Transaction_Date`
+**When** it is parsed
+**Then** it routes to `manual_review` at parse time, mirroring the bulk `missing_paid_date` guard.
+
+**Given** `getReconcilable()` (PHP clock) and `getExpirable()` (DB clock)
+**When** both select "today"
+**Then** they derive it from the same clock and the expiry/confirm limbo window is eliminated, not merely guarded.
+
+**Given** the resolved gateway config and the resume cursor
+**When** a run or bulk run starts
+**Then** `gatewayConfig` is threaded structurally (set once at entry or passed explicitly) so the null-in-production footgun cannot recur, and `getResumeCursor` is scoped by the current run's `trigger_type` now that manual/Check-Now callers exist.
+
+**Given** per-Voucher reconcile writes and the bounded posting batch
+**When** they execute
+**Then** per-Voucher writes (Voucher edit + item + audit) are wrapped in a transaction, `insertLock()` distinguishes duplicate-key from infrastructure failure (surfacing the latter), a posting retry cap / skip-cursor prevents head-of-line blocking, and `getByTransactionId()` selects the most-recent approved+applied match.
+
+_Closes: `deferred-work.md` 4-3 `:435` guard, single-inquiry paid-date (AI-3), resume-cursor trigger scope, per-Voucher txn, `insertLock`, config-keys guard, posting retry cap, `getByTransactionId`; Epic 3 retro AI-6 + AI-7; NFR9._
+
+### Story 5.4: Audit, Logging, and Redaction Completeness
+
+As an operator,
+I want every operation path to leave a durable, fully-redacted trace,
+So that investigations are complete and no sink can leak secrets.
+
+**Acceptance Criteria:**
+
+**Given** a per-Voucher exception during a bulk run
+**When** the bulk loop catches it
+**Then** it emits a best-effort `evidence.error` audit event and a `kuickpay_reconciliation_items` row, symmetric with the single-Voucher path.
+
+**Given** a `voucher.generation_failed` on the `duplicate_invoice_id` multi-invoice path
+**When** the event is emitted
+**Then** it names the actually-conflicting `invoice_id`
+**And** benign `create()` fall-through paths set a `create_failed` diagnostic so no failure is traceless.
+
+**Given** the SOAP redactor and the credential masker
+**When** envelopes carry sensitive values in XML attributes or aliased element names, or non-array/object/non-string inputs reach `maskCredentials()`
+**Then** all are masked safely with a case-insensitive credential allowlist.
+
+**Given** the secret-leakage suite
+**When** fixtures diversify
+**Then** the PII/credential patterns cover alternate formats and mixed placeholder styles
+**And** `isTimeout()` classification is locale-independent.
+
+_Closes: `deferred-work.md` bulk `evidence.error`, `invoice_id` mislabel, `create_failed`, `redactEnvelope` attributes/aliases, `maskCredentials` hardening, leak-scan patterns, `isTimeout` locale; NFR8 + NFR13._
+
+### Story 5.5: Structural Company-Scoping and Test-Fidelity Guarantees
+
+As a developer,
+I want the recurring company-scope and fake-fidelity classes converted to structural guarantees,
+So that the most-repeated review finding cannot recur by omission.
+
+**Acceptance Criteria:**
+
+**Given** every plugin/gateway query
+**When** a model method runs
+**Then** `company_id` scoping is applied through a base helper/convention unconditionally, so omitting it is impossible rather than caught in review.
+
+**Given** the test doubles
+**When** the fake-fidelity checklist is applied
+**Then** fake repositories enforce `NOT NULL`/`UNIQUE`, fake Blesta amount sources return `decimal(12,4)` 4-decimal strings, and fixtures include numeric and non-numeric transaction refs plus blank/populated identities.
+
+**Given** admin controllers and the remaining coverage gaps
+**When** an action is dispatched
+**Then** admin permission is explicitly enforced (not only assumed at the framework route), the posting confirmed→post→rerun call-count is directly asserted, the `getCurrencies()`→`config.json` wiring is covered against the real framework, `normalizeAmount()` rounds rather than truncates and rejects invalid input, and `retireVoucher()` surfaces affected-row count.
+
+_Closes: Epic 4 retro AI-8 (company-scoping structural) + Epic 3 retro AI-2 (fake-fidelity); `deferred-work.md` admin-permission, post-rerun assertion, `getCurrencies` wiring, `normalizeAmount`, `retireVoucher`; NFR14._
+
+### Story 5.6: Gateway Settings and Endpoint Hardening
+
+As an operator,
+I want the gateway settings and outbound endpoint surface hardened,
+So that misconfiguration and SSRF cannot reach an unsafe request.
+
+**Acceptance Criteria:**
+
+**Given** the `wsdl_url` setting
+**When** it is saved
+**Then** embedded userinfo (`user:pass@host`) is rejected, hosts are validated against the confirmed KuickPay endpoint allowlist, and the existing private-range/DNS-rebinding guard is extended to the IPv6-only-DNS gap.
+
+**Given** numeric settings
+**When** they are saved
+**Then** `soap_timeout` must be greater than 0, large/leading-zero values are bounded, and `expiry_date_offset_days >= due_date_offset_days` is enforced.
+
+**Given** the connection test and the admin extension card
+**When** the endpoint returns 4xx/5xx/redirect, or the card renders
+**Then** reachability is reported honestly per the documented contract and a real `logo.png` is shown rather than a broken image.
+
+_Closes: `deferred-work.md` `wsdl_url` SSRF/userinfo, host allowlist + IPv6 DNS + 4xx-as-reachable, numeric bounds; Epic 1→4 retro logo item; NFR8._
+
+### Story 5.7: Opt-In Live KuickPay Smoke (No Sandbox)
+
+As an operator and developer,
+I want an explicit, redacted, default-skipped live check against the real KuickPay endpoint,
+So that production credentials and data are never exercised accidentally and there is one sanctioned real-provider smoke.
+
+**Acceptance Criteria:**
+
+**Given** KuickPay provides no sandbox
 **When** the default automated test suite runs
-**Then** live KuickPay endpoints are not called
-**And** tests require explicit protected configuration or environment variables.
+**Then** the live endpoint is never called
+**And** the smoke requires explicit protected configuration or environment variables to run.
 
-**Given** live or sandbox tests are enabled intentionally
-**When** the tests run
+**Given** the live smoke is enabled intentionally
+**When** it runs against the real endpoint with real credentials
 **Then** output redacts credentials, customer contact details, raw sensitive response values, and production data
-**And** failures do not leave invoices marked paid.
+**And** any failure leaves no invoice marked paid.
 
-**Given** sanitized live or sandbox fixtures are captured
+**Given** sanitized live fixtures are captured
 **When** they are committed or documented
 **Then** they exclude passwords, unredacted SOAP envelopes, customer secrets, and environment-specific values.
 
-### Story 5.2: Document Deployment and Configuration
+_Supersedes the original live/sandbox story — the sandbox arm is removed because KuickPay has none; the automated full-stack verification is Story 5.1. Closes: FR28; NFR8 + NFR12._
+
+### Story 5.8: Document Deployment and Configuration
 
 As an operator,
 I want install and configuration documentation,
@@ -883,7 +1039,17 @@ So that KuickPay can be deployed without guessing extension paths or settings.
 **Then** it uses placeholders only
 **And** it does not copy values from `config/blesta.php`, logs, cache, `.env`, or production settings.
 
-### Story 5.3: Document Reconciliation and Support Operations
+**Given** the developer footgun note under `docs/kuickpay/`
+**When** a future author reads it
+**Then** it captures the cumulative Blesta framework footguns surfaced across Epics 1–4 (no nested transactions / no `forUpdate()` builder; `Transactions->add()` int|void + `addBefore` veto; `outcomeStatus()` returns current state; `upgrade()` permission-wipe and `>=` early-return; `FIELDS` allowlist drops columns; `Record->fetch()`→`stdClass`; models don't auto-load for plugin controllers; computed `clients.id_code`; VARCHAR-amount lexicographic compare; `Widget::setFilters(InputFields)` type contract; `Permissions::authorized()` short-circuit semantics; per-controller language-file auto-load scope; items table without `company_id`; audit table not indexed on `run_id`; DB-clock vs PHP-clock divergence) so later authors stop rediscovering them.
+
+**Given** the credential keep-if-blank behavior
+**When** the deploy/config docs are written
+**Then** the keep-if-blank vs rotation-on-blank decision (Epic 1 #5, carried) is recorded explicitly so operators understand re-save behavior.
+
+_Adds: Epic 1→4 retro AI — Blesta footgun dev note (4 epics overdue) + credential keep-if-blank decision._
+
+### Story 5.9: Document Reconciliation and Support Operations
 
 As a support or finance operator,
 I want reconciliation and troubleshooting runbooks,
@@ -899,7 +1065,7 @@ So that delayed, ambiguous, or failed payments can be handled consistently.
 **When** staff investigate a customer claim
 **Then** it explains how to search by invoice ID or Consumer Number, inspect Voucher Detail, interpret safe statuses, collect sanitized escalation evidence, and avoid unsafe paid-state claims.
 
-### Story 5.4: Document Rollback, Upgrade, and Production Launch
+### Story 5.10: Document Rollback, Upgrade, and Production Launch
 
 As an operator,
 I want rollback, upgrade, and launch guidance,
