@@ -4,7 +4,7 @@ baseline_commit: 7578534e7ab58621f0a28f4c43c7c561dd1b9ef6
 
 # Story 4.2: Inspect Voucher Details and Safe Diagnostics
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -81,20 +81,20 @@ ALL of these hold; treat as ACs):
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Add the company-scoped single-voucher read method** (AC: 1,4)
-  - [ ] In `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php` add
+- [x] **Task 1 — Add the company-scoped single-voucher read method** (AC: 1,4)
+  - [x] In `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php` add
     `public function getForCompany(int $voucher_id, int $company_id)` returning the row or `false`, scoped by
     **both** `id` and `company_id`:
     `$this->Record->select()->from('kuickpay_vouchers')->where('id','=',$voucher_id)->where('company_id','=',$company_id)->fetch();`
     Mirror the existing `getByConsumerNumber()` shape (`:121-128`).
-  - [ ] **Do NOT change `get(int $voucher_id)` (`:106-112`)** — it is called by
+  - [x] **Do NOT change `get(int $voucher_id)` (`:106-112`)** — it is called by
     `KuickPayVoucherRepository::getWithInvoices()` (`lib/KuickPayVoucherRepository.php:144`); leave that caller
     untouched. Add the new scoped method rather than re-signing `get()`. (Every other read method in this model —
     `getByConsumerNumber`, `getPostable`, `getForUpdate`, … — already takes `int $company_id`; this closes the one
     gap.)
 
-- [ ] **Task 2 — Add the company-scoped audit-history read method** (AC: 2)
-  - [ ] The audit model `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php` is currently **write-only**
+- [x] **Task 2 — Add the company-scoped audit-history read method** (AC: 2)
+  - [x] The audit model `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php` is currently **write-only**
     (`add()` only) and so is `lib/KuickPayAuditRepository.php`. Add a read method to the **model**:
     `public function getByVoucher(int $voucher_id, int $company_id, int $limit = 100): array` →
     `select(['event_name','redacted_trace_id','evidence_hash','payload','date_created'])->from('kuickpay_audit_events')
@@ -102,11 +102,11 @@ ALL of these hold; treat as ACs):
     ->limit(max(1,$limit))->fetchAll();`
     Select an explicit column list (NOT `*`) — never select `company_id`/`run_id`/`id` into the view. The table has
     indexes on `voucher_id` and `company_id` (`kuickpay_reconcile_plugin.php:348-350`).
-  - [ ] Optionally add a thin pass-through on `KuickPayAuditRepository` (`getByVoucher(...)`) to match the
+  - [x] Optionally add a thin pass-through on `KuickPayAuditRepository` (`getByVoucher(...)`) to match the
     write-side `add()` pattern, but the controller may load the model directly — keep it minimal.
 
-- [ ] **Task 3 — Extend the presenter with closed label allowlists (pure, testable seam)** (AC: 6,7)
-  - [ ] In `plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php` (pure PHP, no DB) add:
+- [x] **Task 3 — Extend the presenter with closed label allowlists (pure, testable seam)** (AC: 6,7)
+  - [x] In `plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php` (pure PHP, no DB) add:
     - `public const ERROR_CLASS_LABEL_KEYS` mapping the error-class tokens that can actually be stored on the voucher
       row to `AdminVouchers.error_class.<class>` keys, and `errorClassLabelKey(?string $class): string` returning the
       mapped key or `AdminVouchers.error_class.unknown` for null/unknown. **The stored domain is the parser's 8 canonical
@@ -152,42 +152,42 @@ ALL of these hold; treat as ACs):
       value of `'0'` (e.g. a `raw_status` of `'0'`, the exact diagnostic evidence support is reading) is **kept**, while
       `null` / `''` / `[]` are dropped. Note `validation_errors` is an **array** value: preserve it as an array (do not
       stringify it here) so the view can iterate it through `validationReasonLabelKey()`.
-  - [ ] Keep these as pure constants/methods (no `Language::_`, no DB) so they stay unit-testable without the framework,
+  - [x] Keep these as pure constants/methods (no `Language::_`, no DB) so they stay unit-testable without the framework,
     exactly like the existing `STATUS_LABEL_KEYS` seam.
 
-- [ ] **Task 4 — Add the `detail()` action to the `admin_vouchers` controller** (AC: 1,2,4,5,6,8)
-  - [ ] In `plugins/kuickpay_reconcile/controllers/admin_vouchers.php` add `public function detail()`. **First line:**
+- [x] **Task 4 — Add the `detail()` action to the `admin_vouchers` controller** (AC: 1,2,4,5,6,8)
+  - [x] In `plugins/kuickpay_reconcile/controllers/admin_vouchers.php` add `public function detail()`. **First line:**
     resolve the company explicitly — `$company_id = (int) $this->company_id;` (the snippets below all use `$company_id`;
     `index()` does the same at `:51`, so make it explicit and never read `company_id` from the request). Then resolve the
     voucher id from the route: `$voucher_id = (isset($this->get[0]) && ctype_digit((string) $this->get[0])) ? (int) $this->get[0] : 0;`
     The URL is `plugin/kuickpay_reconcile/admin_vouchers/detail/{id}/` so the id is `$this->get[0]`. (`ctype_digit` is
     **deliberately stricter** than the list `index()`'s `is_numeric` page-param check — it rejects `"1e3"`, floats, and
     signs; do not "align" it to the list's looser check.)
-  - [ ] Fetch **company-scoped**: `$voucher = $this->KuickpayVouchers->getForCompany($voucher_id, $company_id);`
+  - [x] Fetch **company-scoped**: `$voucher = $this->KuickpayVouchers->getForCompany($voucher_id, $company_id);`
     If `$voucher_id <= 0` or `!$voucher` → `$this->flashMessage('error', Language::_('AdminVouchers.!error.not_found', true), null, false);`
     then `$this->redirect($this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/');` and `return;`.
     This single guard covers both "missing id" and "another company's voucher" (cross-company fetch returns `false`).
-  - [ ] Resolve display data reusing the **already company-scoped** batched methods from 4.1 (no new unscoped queries):
+  - [x] Resolve display data reusing the **already company-scoped** batched methods from 4.1 (no new unscoped queries):
     - `$invoices = $this->KuickpayVoucherInvoices->getByVoucherIds([$voucher_id], $company_id)[$voucher_id] ?? [];`
     - `$client_codes = $this->KuickpayVouchers->getClientCodes([(int) $voucher->client_id], $company_id);`
       → `$client_code = $client_codes[(int) $voucher->client_id] ?? $voucher->client_id;`
-  - [ ] Decode the sanitized normalized evidence for the "parsed response summary" / diagnostics:
+  - [x] Decode the sanitized normalized evidence for the "parsed response summary" / diagnostics:
     `$diagnostic = json_decode((string) $voucher->diagnostic_summary, true); if (!is_array($diagnostic)) { $diagnostic = []; }`
     then `$diagnostic = $this->presenter->allowedDiagnosticFields($diagnostic);` (allowlist filter — Task 3).
-  - [ ] **Permission gate (AC8):** `$can_view_diagnostics = $this->authorized('kuickpay_reconcile.admin_vouchers', 'diagnostics');`
+  - [x] **Permission gate (AC8):** `$can_view_diagnostics = $this->authorized('kuickpay_reconcile.admin_vouchers', 'diagnostics');`
     Only when `$can_view_diagnostics` is true, load the audit history:
     `Loader::loadModels($this, ['KuickpayReconcile.KuickpayAuditEvents']);` then
     `$events = $this->KuickpayAuditEvents->getByVoucher($voucher_id, $company_id);` (load lazily inside the gate so an
     unauthorized admin never even runs the audit query). Otherwise `$events = []`.
-  - [ ] `set()` to the view: `voucher`, `invoices`, `client_code`, `diagnostic` (allowlisted decoded array),
+  - [x] `set()` to the view: `voucher`, `invoices`, `client_code`, `diagnostic` (allowlisted decoded array),
     `events`, `can_view_diagnostics`, and `presenter`. No business logic in the view.
-  - [ ] **Read-only:** the action has no `$this->post` branch, no model `edit()`/`add()`, no service call that mutates
+  - [x] **Read-only:** the action has no `$this->post` branch, no model `edit()`/`add()`, no service call that mutates
     state, and no SOAP. (`AdminMain::run()` at `controllers/admin_main.php:34` is the mutating pattern — `detail()` must
     NOT resemble it.) The view auto-resolves to `admin_vouchers_detail.pdt` (see Dev Notes "View file resolution");
     no `setView()` call needed.
 
-- [ ] **Task 5 — Register the diagnostics permission and bump the version** (AC: 8)
-  - [ ] In `kuickpay_reconcile_plugin.php::getPermissions()` (`:218-234`) **ADD** a third entry, keeping the existing two:
+- [x] **Task 5 — Register the diagnostics permission and bump the version** (AC: 8)
+  - [x] In `kuickpay_reconcile_plugin.php::getPermissions()` (`:218-234`) **ADD** a third entry, keeping the existing two:
     ```php
     [
         'group_alias' => 'admin_billing',
@@ -198,15 +198,15 @@ ALL of these hold; treat as ACs):
     ```
     Same `alias` as the view-records row, distinct `action`. **All three entries must be returned** — upgrade
     deletes + re-adds the whole permission set (see Dev Notes "Plugin upgrade re-sync"; 4-1).
-  - [ ] Add the language key `KuickpayReconcilePlugin.permission.vouchers_diagnostics` to
+  - [x] Add the language key `KuickpayReconcilePlugin.permission.vouchers_diagnostics` to
     `language/en_us/kuickpay_reconcile_plugin.php` (next to the existing `permission.vouchers` / `permission.bulk_reconcile` keys).
-  - [ ] Bump `config.json` `version` `1.5.0` → `1.6.0`, and add a `version_compare($current_version, '1.6.0', '<')`
+  - [x] Bump `config.json` `version` `1.5.0` → `1.6.0`, and add a `version_compare($current_version, '1.6.0', '<')`
     branch to `upgrade()` (intentionally empty — **no schema change**; the bump exists only so
     `PluginManager::upgrade()` re-syncs the permission set from `getPermissions()` and registers the new
     `diagnostics` ACO).
 
-- [ ] **Task 6 — Build the detail view** (AC: 1,2,3,6,7)
-  - [ ] Create `plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt`. Use `$this->Widget` boxes (mirror
+- [x] **Task 6 — Build the detail view** (AC: 1,2,3,6,7)
+  - [x] Create `plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt`. Use `$this->Widget` boxes (mirror
     `views/default/admin_vouchers.pdt:10-14` and `admin_main.pdt`), NOT the filter list widget. Include a **"Back to
     Voucher List"** link at the top → `plugin/kuickpay_reconcile/admin_vouchers/index/` (plain GET; the list restores its
     own filter state per 4.1; the back-link text comes from `AdminVouchers.link.back_to_list`, not a literal). Suggested boxes:
@@ -238,24 +238,24 @@ ALL of these hold; treat as ACs):
        into a per-key echo loop and do NOT map payload keys to UI labels** — its shape varies per event and includes
        nested arrays (`counts`, `cursor`); it is already past the redaction boundary (AC7). Render the `diagnostic`
        allowlisted fields by pulling known keys only — never a blind `foreach` echo.
-  - [ ] **Contained, keyboard-readable diagnostics block (AC3):** wrap long diagnostic/audit content in a scrollable
+  - [x] **Contained, keyboard-readable diagnostics block (AC3):** wrap long diagnostic/audit content in a scrollable
     region — e.g. `<div class="border rounded p-2" style="max-height:24rem;overflow:auto" tabindex="0" role="region"
     aria-label="...">` so it scrolls within itself, is keyboard-focusable/scrollable, and cannot break the admin
     layout. Use `font-monospace` for the evidence/diagnostic values (UX-DR26).
-  - [ ] **Monospace (UX-DR26):** `consumer_number`, `registration_number`, `kuickpay_reference`, `blesta_transaction_id`,
+  - [x] **Monospace (UX-DR26):** `consumer_number`, `registration_number`, `kuickpay_reference`, `blesta_transaction_id`,
     `evidence_hash`, `redacted_trace_id`, `raw_status`, and the sanitized diagnostic/audit values → `font-monospace`
     (Bootstrap **5.3.8** admin paradigm theme; `text-monospace` is a dead no-op here — 4-1 finding). Everything else
     inherits normal typography.
-  - [ ] Escape **every** dynamic value with `$this->Html->safe(...)`. No SQL/business logic in the view.
+  - [x] Escape **every** dynamic value with `$this->Html->safe(...)`. No SQL/business logic in the view.
 
-- [ ] **Task 7 — Link the list rows to the detail page** (AC: 1)
-  - [ ] In `plugins/kuickpay_reconcile/views/default/admin_vouchers.pdt`, make the **Consumer Number** cell (`:91`)
+- [x] **Task 7 — Link the list rows to the detail page** (AC: 1)
+  - [x] In `plugins/kuickpay_reconcile/views/default/admin_vouchers.pdt`, make the **Consumer Number** cell (`:91`)
     a link to `plugin/kuickpay_reconcile/admin_vouchers/detail/{voucher->id}/` (keep the `font-monospace`, keep
     `$this->Html->safe(...)`). This is the row's entry point to the detail page. (No new column needed; the list
     already links client/invoice/transaction to Blesta core pages.)
 
-- [ ] **Task 8 — Language keys for the detail page** (AC: 1,2,3,6)
-  - [ ] Add keys to `plugins/kuickpay_reconcile/language/en_us/admin_vouchers.php` (auto-loaded for the `AdminVouchers`
+- [x] **Task 8 — Language keys for the detail page** (AC: 1,2,3,6)
+  - [x] Add keys to `plugins/kuickpay_reconcile/language/en_us/admin_vouchers.php` (auto-loaded for the `AdminVouchers`
     controller): detail box titles, every field label (registration number, `kuickpay_reference`, dates, posting state,
     admin notes, parsed-summary fields), `AdminVouchers.error_class.*` for **all 10 stored tokens** (the 8 parser classes
     + `posting_failed` + `reconcile_exception`) **plus `unknown`** — match `ERROR_CLASS_LABEL_KEYS` exactly (Task 3), do
@@ -268,8 +268,8 @@ ALL of these hold; treat as ACs):
     *no error class* case in the parsed summary — semantically distinct from `—`), and a **new**
     `AdminVouchers.link.back_to_list` (the back-link text). NO hard-coded UI strings in controller/view.
 
-- [ ] **Task 9 — Tests + verification** (AC: 6,7,8)
-  - [ ] Extend `plugins/kuickpay_reconcile/tests/KuickPayVoucherListPresenterTest.php` (no bootstrap change needed —
+- [x] **Task 9 — Tests + verification** (AC: 6,7,8)
+  - [x] Extend `plugins/kuickpay_reconcile/tests/KuickPayVoucherListPresenterTest.php` (no bootstrap change needed —
     the presenter is already required at `tests/bootstrap.php:6`): cover `errorClassLabelKey()` (each of the 10 stored
     tokens — 8 parser classes + `posting_failed` + `reconcile_exception` → its key; null/unknown →
     `AdminVouchers.error_class.unknown`), `eventLabelKey()` (each known event → its key; unknown → generic fallback),
@@ -284,13 +284,13 @@ ALL of these hold; treat as ACs):
     `AdminVouchers.validation_reason.*` language key — no dead entries) and that it **covers the plugin-local reasons**
     (the validator + posting sets); do **not** assert strict equality with an exhaustive domain — the gateway-parser tail
     is open-ended and the generic `unknown` fallback covers it (AC6).
-  - [ ] Run the plugin suite with the external runner: `cd plugins/kuickpay_reconcile &&
+  - [x] Run the plugin suite with the external runner: `cd plugins/kuickpay_reconcile &&
     /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` (NEVER `-c build/phpunit.xml` —
     broken bootstrap path). Note the **pre-existing** `KuickPaySecretLeakageTest` 1 failure baseline (see 4-1 Debug Log)
     — do not attribute it to this story; confirm no NEW failures.
-  - [ ] `php -l` on every changed/added PHP file (controller, both models, presenter, plugin handler, both language
+  - [x] `php -l` on every changed/added PHP file (controller, both models, presenter, plugin handler, both language
     files, the new `.pdt`, the test). Validate `config.json` as JSON; version `1.6.0`.
-  - [ ] State exactly what ran and what could not (DB-backed install/upgrade smoke, live admin render of the detail
+  - [x] State exactly what ran and what could not (DB-backed install/upgrade smoke, live admin render of the detail
     page + the `authorized()` gate) per NFR12 — do not claim root/`../tests` coverage.
 
 ## Dev Notes
@@ -575,8 +575,105 @@ verify with `php -l` + component PHPUnit 8.5, never claim root `../tests`.
 
 ### Agent Model Used
 
+Claude Opus 4.8 (1M context) — `claude-opus-4-8[1m]`.
+
 ### Debug Log References
+
+- **Plugin test suite** (external runner, per project-context):
+  `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`
+  → **137 tests, 802 assertions, 1 failure.** The single failure is the
+  **pre-existing baseline** `KuickPaySecretLeakageTest::testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes`
+  (asserts `confirmed_unposted` but gets `manual_review`) — documented in the
+  4.1 Debug Log; it lives in a file this story never touched and exercises no
+  code this story changed. **No NEW failures** introduced. This story added
+  **23 new presenter tests** (incl. drift detectors for the error-class, event,
+  posting-state domains and a language-file ↔ presenter sync guard), all green.
+- **PHP runtime note (NFR12 honesty):** the only PHP CLI available in this
+  checkout is **8.3.31**, not the 8.2 target. `php -l` and the unit suite ran
+  under 8.3.31. All additions were written to **PHP 8.2 syntax only** (nullable
+  params, typed returns, const arrays, `??` — no 8.3-only features), so this is
+  source-compatible with the 8.2 target, but 8.2 was not exercised here.
 
 ### Completion Notes List
 
+Implemented the read-only Voucher Detail page + permission-gated diagnostics on
+the existing `admin_vouchers` controller (no new controller). All 8 ACs satisfied:
+
+- **AC1** — `detail()` + `admin_vouchers_detail.pdt` render the full safe record:
+  client (linked), invoice mapping (linked), registration/consumer numbers,
+  `kuickpay_reference`, amount + currency, all dates, status badge, parsed-response
+  summary, posting state, read-only admin notes, and Blesta invoice/transaction
+  deep-links (`clients/view|editinvoice|edittransaction`).
+- **AC2 / AC8** — diagnostics gated by a **separate** plugin permission
+  (`kuickpay_reconcile.admin_vouchers` + `action 'diagnostics'`, declared
+  alongside the existing `'*'` row, version bumped 1.5.0→1.6.0 to re-sync the
+  ACO). Controller checks `authorized('kuickpay_reconcile.admin_vouchers',
+  'diagnostics')` as a boolean guard (no redirect) and loads the audit model
+  **lazily inside the gate**, so an unauthorized admin never runs the audit query.
+- **AC3** — diagnostics live in a contained, keyboard-focusable, self-scrolling
+  region (`max-height:24rem; overflow:auto; tabindex=0; role=region; aria-label`).
+- **AC4** — fetch via the new **company-scoped** `getForCompany($id, $company_id)`;
+  a missing id (`ctype_digit` guard) or a cross-company/absent voucher both
+  redirect to the list with a not-found flash. The unscoped `get()` is never used.
+- **AC5** — GET-only: no `$this->post` branch, no model edit/add, no service/SOAP,
+  no state transition; no notes form / Check Now / cancel / Force Paid.
+- **AC6** — closed presenter allowlists for status, posting-state, error-class,
+  event-name, validation-reason, and diagnostic-field keys, each with a safe
+  generic fallback; a DB value is never concatenated into a language key.
+  Success badge + transaction link appear **only** for `posted`.
+- **AC7** — `diagnostic_summary` rendered via `allowedDiagnosticFields()`
+  (known keys only); `validation_errors` mapped per-token; audit `payload`
+  rendered as **one escaped, pretty-printed JSON blob** (no per-key echo, no
+  per-event label mapping); every dynamic value `Html->safe()`'d; amount shown
+  as the stored decimal string.
+
+**Disclosed boundaries / what could NOT be run here (NFR12):**
+- No DB / live admin web stack in this checkout, so the **DB-backed plugin
+  upgrade smoke** (1.6.0 re-syncing the permission set + registering the
+  `diagnostics` ACO) and the **live `authorized()` gate behaviour** — including
+  the two-group separation test (a group with `diagnostics` granted sees the box;
+  a group with view-records `'*'` but **without** `diagnostics` does not) and the
+  transient post-upgrade default-deny window — were **not** executed. They rest on
+  the readable `permissions.php` flow + the shipped `support_manager` precedent
+  cited in Dev Notes; `app/components/acl/acl.php` and `app_controller.php` are
+  ionCube-protected and unreadable here.
+- The controller, both model reads, and the live `.pdt` render hit `Record`/the
+  view stack and cannot be unit-tested in this checkout; verified by `php -l` +
+  review against the confirmed Blesta APIs (`flashMessage(type,msg,null,false)` +
+  redirect, and non-index plugin action template auto-resolution, both confirmed
+  against real core/plugin call sites).
+- **Audit timeline is capped at 100 rows** (most recent); vouchers with >100
+  events show only the latest 100 (no pagination this story — acceptable for MVP).
+
 ### File List
+
+Modified:
+- `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php` — `getForCompany()`
+- `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php` — `getByVoucher()`
+- `plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php` — error-class /
+  event / validation-reason / posting-state / diagnostic-field allowlists + methods
+- `plugins/kuickpay_reconcile/controllers/admin_vouchers.php` — `detail()` action
+- `plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php` — diagnostics permission
+  + empty 1.6.0 upgrade branch
+- `plugins/kuickpay_reconcile/config.json` — version 1.5.0 → 1.6.0
+- `plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php` —
+  `permission.vouchers_diagnostics` key
+- `plugins/kuickpay_reconcile/language/en_us/admin_vouchers.php` — detail-page keys
+  (titles, field labels, posting-state / error-class / event / validation-reason
+  labels, diagnostics chrome, not-found, `text.none`, `link.back_to_list`)
+- `plugins/kuickpay_reconcile/views/default/admin_vouchers.pdt` — consumer-number
+  cell links to the detail page
+- `plugins/kuickpay_reconcile/tests/KuickPayVoucherListPresenterTest.php` — 23 new
+  presenter tests + a language-file ↔ presenter sync guard
+
+Added:
+- `plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt` — the detail view
+
+### Change Log
+
+- 2026-06-12 — Story 4.2 implemented: read-only voucher detail page + permission-gated
+  safe diagnostics. Company-scoped reads (`getForCompany`, `getByVoucher`), pure
+  presenter label allowlists (+23 unit tests), `detail()` action, the detail `.pdt`,
+  the separate `diagnostics` permission (plugin 1.6.0), detail language keys, and the
+  list → detail link. Plugin suite green except the pre-existing 4.1 baseline
+  `KuickPaySecretLeakageTest` failure (untouched file). Status → review.
