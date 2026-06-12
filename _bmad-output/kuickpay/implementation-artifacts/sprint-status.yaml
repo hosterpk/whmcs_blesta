@@ -115,7 +115,7 @@ development_status:
   4-1-search-and-filter-kuickpay-vouchers: done
   4-2-inspect-voucher-details-and-safe-diagnostics: done
   4-3-run-safe-manual-voucher-actions: done
-  4-4-manage-manual-review-queue-and-run-results: backlog
+  4-4-manage-manual-review-queue-and-run-results: ready-for-dev
   4-5-record-structured-logs-and-audit-events: ready-for-dev
   epic-4-retrospective: optional
 
