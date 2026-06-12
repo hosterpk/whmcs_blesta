@@ -6,7 +6,7 @@ baseline_commit: 9a68e138db16275c33c01166e54fb05599244058
 
 # Story 4.3: Run Safe Manual Voucher Actions
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -690,3 +690,48 @@ Codex GPT-5
 - 2026-06-12: Added admin voucher Check Now, Manual Review, and Cancel actions with ACL, notes, audit, and localized result messages.
 - 2026-06-12: Added detail-page action controls and registered new audit events across presenter, language, and tests.
 - 2026-06-12: Completed verification and moved story to review.
+
+## Review Findings (Code Review 2026-06-12)
+
+Adversarial review — Blind Hunter + Edge Case Hunter + Acceptance Auditor (all at session model
+capability) + PHPUnit verification. No review layers failed. Result: **1 patch (applied), 0
+decision-needed, 0 deferred, 5 dismissed.** AC1–AC10 all pass; AC10 verification honesty confirmed
+(144 tests / 846 assertions, only the documented `KuickPaySecretLeakageTest` baseline failure).
+
+### Patch — applied
+
+- [x] **[Review][Patch][HIGH] Check Now reported "Check failed" for still-pending / expired
+      vouchers** `[controllers/admin_vouchers.php:455,469; language/en_us/admin_vouchers.php]` —
+      `reconcileVoucher()` legitimately returns `pending` (provider still unpaid — the *most common*
+      Check Now result) or `expired` (`mappedStatus():533` passes both through). The controller's
+      `safeRecheckOutcome()` allowlist omitted both, coercing them to `failed` → admin saw a red
+      "Check failed — please try again later." flash and the durable `admin.rechecked` audit payload
+      recorded `outcome='failed'` for a benign result. Violated **AC1** ("result reflecting the real
+      outcome") and the **AC9** terminal-token contract. Found independently by all three layers.
+      Fix: added `pending`/`expired` to the allowlist (the safe default still catches truly-unknown
+      tokens) + non-error informational messages; also corrected the `confirmed_unposted` label
+      (was "routed to manual review") to report a confirmed payment. Fixed in commit `d6e0cc73`.
+
+### Dismissed (5 — false positive / spec-compliant / pre-existing, no action)
+
+- **[Blind, HIGH] "Cancel button inert (`type="button"`)"** — false positive. The
+  `modal-confirm-warning` handler is verified present in the admin theme JS (`app.js:99876`) and
+  submits the nearest form on confirm (`:99970-99973`), identical to the shipped
+  `modal-confirm-delete`. Matches the spec's documented pattern.
+- **[Blind/Auditor] "post→`skipped` coerced to `failed`"** — spec-compliant: Task 7's outcome table
+  maps `post→skipped` to `recheck_failed` by design.
+- **[Blind] "Existence-leak: voucher lookup before ACL gate"** — no real exposure; a staffer
+  reaching the action already holds the `*` view grant on the same company-scoped voucher (the page
+  is viewable via `detail()`), so found/not-found reveals nothing new.
+- **[Blind] "CSRF token not visible in diff"** — disclosed/accepted; rests on the ionCube
+  `app_controller` framework gate + `Form->create()` precedent, per AC10's honesty disclosure.
+- **[Blind] "`reconcileVoucher` mutates `$this->gatewayConfig`"** — pre-existing cron pattern
+  (`run()`/`runBulk()`); the controller instantiates a fresh service per request, so unreachable.
+
+### Verification
+
+- `php -l` clean on all changed files. Full component suite: **144 tests / 846 assertions**, only
+  the documented pre-existing `KuickPaySecretLeakageTest` baseline failure (no new failures).
+  Runtime PHP 8.3.31, PHP 8.2-compatible syntax. Controller action methods, the live two-group ACL
+  separation, framework CSRF enforcement, and the `.pdt` render remain `php -l` + review only (no
+  live admin/DB stack in this checkout), consistent with the story's AC10 disclosure.
