@@ -607,9 +607,10 @@ the existing `admin_vouchers` controller (no new controller). All 8 ACs satisfie
 - **AC2 / AC8** — diagnostics gated by a **separate** plugin permission
   (`kuickpay_reconcile.admin_vouchers` + `action 'diagnostics'`, declared
   alongside the existing `'*'` row, version bumped 1.5.0→1.6.0 to re-sync the
-  ACO). Controller checks `authorized('kuickpay_reconcile.admin_vouchers',
-  'diagnostics')` as a boolean guard (no redirect) and loads the audit model
-  **lazily inside the gate**, so an unauthorized admin never runs the audit query.
+  ACO). Controller uses an exact-action `canViewDiagnostics()` ACL check so the
+  existing `'*'` view permission cannot satisfy diagnostics by wildcard fallback,
+  then loads the audit model **lazily inside the gate**, so an unauthorized admin
+  never runs the audit query.
 - **AC3** — diagnostics live in a contained, keyboard-focusable, self-scrolling
   region (`max-height:24rem; overflow:auto; tabindex=0; role=region; aria-label`).
 - **AC4** — fetch via the new **company-scoped** `getForCompany($id, $company_id)`;
@@ -637,7 +638,8 @@ the existing `admin_vouchers` controller (no new controller). All 8 ACs satisfie
   the readable `permissions.php` flow + the shipped `support_manager` precedent
   cited in Dev Notes; `app/components/acl/acl.php` and `app_controller.php` are
   ionCube-protected and unreadable here.
-- The controller, both model reads, and the live `.pdt` render hit `Record`/the
+- The controller, both model reads, the exact diagnostics ACL branch, and the
+  live `.pdt` render hit `Record`/the
   view stack and cannot be unit-tested in this checkout; verified by `php -l` +
   review against the confirmed Blesta APIs (`flashMessage(type,msg,null,false)` +
   redirect, and non-index plugin action template auto-resolution, both confirmed
@@ -677,6 +679,10 @@ Added:
   the separate `diagnostics` permission (plugin 1.6.0), detail language keys, and the
   list → detail link. Plugin suite green except the pre-existing 4.1 baseline
   `KuickPaySecretLeakageTest` failure (untouched file). Status → review.
+- 2026-06-12 — Code-review fixes applied: diagnostics gate now requires an exact
+  `diagnostics` ACL allow instead of accepting wildcard view permission; malformed
+  diagnostic values are dropped before rendering; date output is escaped; posted
+  detail rows show both posting state and transaction link.
 
 ### Review Findings
 
@@ -690,3 +696,11 @@ Added:
 - [x] [Review][Patch] `json_encode` failure on decoded audit payload yields `false` passed to `Html->safe` [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:272-277`]
 - [x] [Review][Patch] Diagnostics block renders `status` token raw instead of through closed status allowlist (AC6) [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:245`]
 - [x] [Review][Patch] `posted` transaction link rendered in separate row instead of inside posting-state row per spec (AC1) [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:127-147`]
+
+### Review Findings - Code Review 2026-06-12
+
+- [x] [Review][Patch] Diagnostics gate is bypassed by existing wildcard permission [`plugins/kuickpay_reconcile/controllers/admin_vouchers.php:185`] — fixed with an exact-action ACL check that requires `diagnostics` and ignores `*` fallback.
+- [x] [Review][Patch] Malformed `validation_errors` can render raw instead of mapped [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:241`] — fixed by preserving `validation_errors` only as an array and keeping the view on the mapped reason path.
+- [x] [Review][Patch] Malformed non-scalar diagnostic values can render warnings/placeholders [`plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php:436`] — fixed by dropping non-scalar diagnostic fields before they reach the view.
+- [x] [Review][Patch] Date fields are rendered without the required escape wrapper [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:11`] — fixed by escaping `Date->cast()` output through `$this->Html->safe(...)`.
+- [x] [Review][Patch] Posted vouchers lose the posting-state label when a transaction link exists [`plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt:141`] — fixed by rendering the posting-state label and transaction link together.

@@ -438,6 +438,17 @@ class KuickPayVoucherListPresenter
                 continue;
             }
 
+            if ($key === 'validation_errors') {
+                if (is_array($value)) {
+                    $fields[$key] = $value;
+                }
+                continue;
+            }
+
+            if (!is_scalar($value)) {
+                continue;
+            }
+
             $fields[$key] = $value;
         }
 

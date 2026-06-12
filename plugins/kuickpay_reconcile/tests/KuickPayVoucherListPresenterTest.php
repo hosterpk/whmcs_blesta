@@ -637,6 +637,32 @@ class KuickPayVoucherListPresenterTest extends TestCase
         $this->assertSame(['amount_mismatch', 'late_payment'], $result['validation_errors']);
     }
 
+    public function testAllowedDiagnosticFieldsDropsScalarValidationErrors()
+    {
+        $presenter = $this->presenter();
+
+        $result = $presenter->allowedDiagnosticFields([
+            'validation_errors' => 'amount_mismatch',
+        ]);
+
+        $this->assertArrayNotHasKey('validation_errors', $result);
+    }
+
+    public function testAllowedDiagnosticFieldsDropsNonScalarDiagnosticValues()
+    {
+        $presenter = $this->presenter();
+
+        $result = $presenter->allowedDiagnosticFields([
+            'raw_status' => ['nested' => 'unexpected'],
+            'amount' => (object) ['value' => '100.00'],
+            'currency' => 'PKR',
+        ]);
+
+        $this->assertArrayNotHasKey('raw_status', $result);
+        $this->assertArrayNotHasKey('amount', $result);
+        $this->assertSame('PKR', $result['currency']);
+    }
+
     public function testAllowedDiagnosticFieldsEmptyInputYieldsEmpty()
     {
         $presenter = $this->presenter();

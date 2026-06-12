@@ -180,9 +180,11 @@ class AdminVouchers extends KuickpayReconcileController
         $diagnostic = $this->presenter->allowedDiagnosticFields($diagnostic);
 
         // Permission gate (AC8): only when the separate "view diagnostics"
-        // permission is granted do we load the audit history — load the model
-        // lazily inside the gate so an unauthorized admin never runs the query.
-        $can_view_diagnostics = $this->authorized('kuickpay_reconcile.admin_vouchers', 'diagnostics');
+        // permission is granted do we load the audit history. This must be an
+        // exact-action check: Blesta's normal authorized() wildcard fallback
+        // would let the existing `action => *` view permission satisfy
+        // diagnostics on the same alias.
+        $can_view_diagnostics = $this->canViewDiagnostics();
         $events = [];
         if ($can_view_diagnostics) {
             Loader::loadModels($this, ['KuickpayReconcile.KuickpayAuditEvents']);
@@ -196,6 +198,45 @@ class AdminVouchers extends KuickpayReconcileController
         $this->set('events', $events);
         $this->set('can_view_diagnostics', $can_view_diagnostics);
         $this->set('presenter', $this->presenter);
+    }
+
+    /**
+     * Checks the dedicated diagnostics permission without wildcard fallback.
+     *
+     * The plugin intentionally has both a general admin_vouchers `*` permission
+     * for the page and a separate admin_vouchers `diagnostics` permission for
+     * the sensitive section. MinPHP ACL treats `*` as a wildcard for arbitrary
+     * actions, so this check inspects the current staff group's ACL entries and
+     * requires an explicit diagnostics allow.
+     *
+     * @return bool True when the current staff group explicitly allows diagnostics
+     */
+    private function canViewDiagnostics(): bool
+    {
+        Loader::loadComponents($this, ['Acl']);
+        Loader::loadModels($this, ['StaffGroups']);
+
+        $staff_group = $this->StaffGroups->getStaffGroupByStaff(
+            $this->Session->read('blesta_staff_id'),
+            $this->company_id
+        );
+        if (!$staff_group) {
+            return false;
+        }
+
+        $access_list = $this->Acl->getAccessList(
+            'staff_group_' . $staff_group->id,
+            'kuickpay_reconcile.admin_vouchers'
+        );
+        foreach ($access_list as $access) {
+            if (($access->action ?? null) !== 'diagnostics') {
+                continue;
+            }
+
+            return ($access->permission ?? null) === 'allow';
+        }
+
+        return false;
     }
 
     /**

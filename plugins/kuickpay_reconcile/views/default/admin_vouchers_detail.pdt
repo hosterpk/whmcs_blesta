@@ -9,7 +9,7 @@ echo ($message ?? null);
 $empty = $this->_('AdminVouchers.text.empty', true);
 
 $dateOr = function ($value) use ($empty) {
-    return $value ? $this->Date->cast($value) : $empty;
+    return $value ? $this->Html->safe($this->Date->cast($value)) : $empty;
 };
 
 $mono = function ($value) use ($empty) {
@@ -142,12 +142,15 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.invoices', true));
             <td>
                 <?php
                 // Transaction link appears ONLY for the posted state (UX-DR20),
-                // replacing the posting-state label with the deep link.
+                // alongside the explicit posting-state label.
                 if ($status === 'posted' && !empty($voucher->blesta_transaction_id) && !empty($voucher->client_id)) {
                     ?>
+                    <?php echo $this->Html->safe($this->_($presenter->postingStateLabelKey($status), true));?>
+                    <span class="ms-2">
                     <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . $voucher->client_id . '/' . $voucher->blesta_transaction_id . '/');?>" title="<?php echo $this->Html->safe($this->_('AdminVouchers.text.transaction_view', true));?>">
                         <span class="font-monospace"><?php echo $this->Html->safe($voucher->blesta_transaction_id);?></span>
                     </a>
+                    </span>
                     <?php
                 } else {
                     echo $this->Html->safe($this->_($presenter->postingStateLabelKey($status), true));
@@ -238,10 +241,11 @@ if ($can_view_diagnostics) {
                             <th class="w-25"><?php echo $this->Html->safe($this->_('AdminVouchers.detail.field.' . $field, true));?></th>
                             <td>
                                 <?php
-                                if ($field === 'validation_errors' && is_array($value)) {
+                                if ($field === 'validation_errors') {
                                     // Each token mapped through the closed allowlist; escaped per item.
                                     $reason_items = [];
-                                    foreach ($value as $reason) {
+                                    $reasons = is_array($value) ? $value : [$value];
+                                    foreach ($reasons as $reason) {
                                         if (!is_scalar($reason)) {
                                             continue;
                                         }
@@ -301,7 +305,7 @@ if ($can_view_diagnostics) {
                 <div class="mb-3 pb-2 border-bottom">
                     <div>
                         <strong><?php echo $this->Html->safe($this->_($presenter->eventLabelKey((string) ($event->event_name ?? '')), true));?></strong>
-                        <span class="text-muted ms-2"><?php echo $event->date_created ? $this->Date->cast($event->date_created) : $empty;?></span>
+                        <span class="text-muted ms-2"><?php echo $dateOr($event->date_created);?></span>
                     </div>
                     <div class="small">
                         <?php echo $mono($event->redacted_trace_id);?>
