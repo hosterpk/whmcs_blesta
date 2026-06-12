@@ -42,3 +42,113 @@ $lang['AdminVouchers.status.unknown'] = 'Unknown';
 $lang['AdminVouchers.text.empty'] = '—';
 $lang['AdminVouchers.text.transaction_view'] = 'View transaction';
 $lang['AdminVouchers.no_results'] = 'No Vouchers match these filters.';
+
+// ===========================================================================
+// Story 4.2 — Voucher detail page
+// ===========================================================================
+
+// Not found / navigation / generic placeholders
+$lang['AdminVouchers.!error.not_found'] = 'The requested voucher could not be found.';
+$lang['AdminVouchers.link.back_to_list'] = 'Back to Voucher List';
+$lang['AdminVouchers.text.none'] = 'None';
+
+// Detail box titles
+$lang['AdminVouchers.detail.heading.summary'] = 'Voucher Summary';
+$lang['AdminVouchers.detail.heading.invoices'] = 'Invoice Mapping & Related Records';
+$lang['AdminVouchers.detail.heading.admin_notes'] = 'Admin Notes';
+$lang['AdminVouchers.detail.heading.parsed_summary'] = 'Parsed Response Summary';
+$lang['AdminVouchers.detail.heading.diagnostics'] = 'Diagnostics';
+$lang['AdminVouchers.detail.heading.audit_timeline'] = 'Audit Timeline';
+
+// Detail field labels
+$lang['AdminVouchers.detail.field.status'] = 'Status';
+$lang['AdminVouchers.detail.field.client'] = 'Client';
+$lang['AdminVouchers.detail.field.registration_number'] = 'Registration Number';
+$lang['AdminVouchers.detail.field.consumer_number'] = 'Consumer Number';
+$lang['AdminVouchers.detail.field.kuickpay_reference'] = 'KuickPay Reference';
+$lang['AdminVouchers.detail.field.amount'] = 'Amount';
+$lang['AdminVouchers.detail.field.date_created'] = 'Created';
+$lang['AdminVouchers.detail.field.date_updated'] = 'Updated';
+$lang['AdminVouchers.detail.field.date_due'] = 'Due';
+$lang['AdminVouchers.detail.field.date_expires'] = 'Expires';
+$lang['AdminVouchers.detail.field.date_last_checked'] = 'Last Inquiry';
+$lang['AdminVouchers.detail.field.date_paid'] = 'Paid';
+$lang['AdminVouchers.detail.field.date_posted'] = 'Posted';
+$lang['AdminVouchers.detail.field.invoices'] = 'Invoices';
+$lang['AdminVouchers.detail.field.posting_state'] = 'Posting State';
+$lang['AdminVouchers.detail.field.transaction'] = 'Blesta Transaction';
+$lang['AdminVouchers.detail.field.error_class'] = 'Error Class';
+$lang['AdminVouchers.detail.field.retry_count'] = 'Retry Count';
+$lang['AdminVouchers.detail.field.raw_status'] = 'Raw Status';
+$lang['AdminVouchers.detail.field.evidence_hash'] = 'Evidence Hash';
+$lang['AdminVouchers.detail.field.redacted_trace_id'] = 'Redacted Trace ID';
+$lang['AdminVouchers.detail.field.validation_errors'] = 'Validation Errors';
+$lang['AdminVouchers.detail.field.reference'] = 'Reference';
+$lang['AdminVouchers.detail.field.currency'] = 'Currency';
+$lang['AdminVouchers.detail.field.paid_at'] = 'Paid At';
+
+// Detail placeholders / diagnostics chrome
+$lang['AdminVouchers.detail.admin_notes.empty'] = 'No admin notes.';
+$lang['AdminVouchers.detail.diagnostics.none'] = 'No diagnostic evidence available.';
+$lang['AdminVouchers.detail.diagnostics.aria_label'] = 'Voucher diagnostics and audit timeline';
+$lang['AdminVouchers.detail.audit.none'] = 'No audit events recorded for this voucher.';
+
+// Posting-state matrix (admin labels; success/transaction link only for posted)
+$lang['AdminVouchers.posting_state.pending'] = 'Voucher active, not posted';
+$lang['AdminVouchers.posting_state.retry'] = 'Provider unavailable';
+$lang['AdminVouchers.posting_state.confirmed_unposted'] = 'Validated evidence, ready to post';
+$lang['AdminVouchers.posting_state.posted'] = 'Posted to Blesta';
+$lang['AdminVouchers.posting_state.failed'] = 'Evidence mismatch, review required';
+$lang['AdminVouchers.posting_state.expired'] = 'Expired, not posted';
+$lang['AdminVouchers.posting_state.manual_review'] = 'Duplicate or ambiguous evidence';
+$lang['AdminVouchers.posting_state.cancelled'] = 'Cancelled, not posted';
+$lang['AdminVouchers.posting_state.unknown'] = 'Unknown';
+
+// Error-class labels (closed allowlist via presenter; all 10 stored + unknown)
+$lang['AdminVouchers.error_class.timeout'] = 'Timeout';
+$lang['AdminVouchers.error_class.transport_error'] = 'Transport Error';
+$lang['AdminVouchers.error_class.credential_error'] = 'Credential Error';
+$lang['AdminVouchers.error_class.malformed_response'] = 'Malformed Response';
+$lang['AdminVouchers.error_class.unknown_status'] = 'Unknown Status';
+$lang['AdminVouchers.error_class.amount_mismatch'] = 'Amount Mismatch';
+$lang['AdminVouchers.error_class.duplicate_reference'] = 'Duplicate Reference';
+$lang['AdminVouchers.error_class.unmatched_reference'] = 'Unmatched Reference';
+$lang['AdminVouchers.error_class.posting_failed'] = 'Posting Failed';
+$lang['AdminVouchers.error_class.reconcile_exception'] = 'Reconcile Exception';
+$lang['AdminVouchers.error_class.unknown'] = 'Unknown';
+
+// Audit event labels (closed allowlist via presenter; 14 events + generic)
+$lang['AdminVouchers.event.voucher.issued'] = 'Voucher Issued';
+$lang['AdminVouchers.event.voucher.replaced'] = 'Voucher Replaced';
+$lang['AdminVouchers.event.voucher.expired'] = 'Voucher Expired';
+$lang['AdminVouchers.event.evidence.received'] = 'Evidence Received';
+$lang['AdminVouchers.event.evidence.matched'] = 'Evidence Matched';
+$lang['AdminVouchers.event.evidence.retry_decision'] = 'Retry Decision';
+$lang['AdminVouchers.event.evidence.rejected'] = 'Evidence Rejected';
+$lang['AdminVouchers.event.evidence.duplicate'] = 'Duplicate Evidence';
+$lang['AdminVouchers.event.evidence.unmatched'] = 'Unmatched Evidence';
+$lang['AdminVouchers.event.reconciliation.run.started'] = 'Reconciliation Run Started';
+$lang['AdminVouchers.event.reconciliation.run.completed'] = 'Reconciliation Run Completed';
+$lang['AdminVouchers.event.posting.started'] = 'Posting Started';
+$lang['AdminVouchers.event.posting.succeeded'] = 'Posting Succeeded';
+$lang['AdminVouchers.event.posting.failed'] = 'Posting Failed';
+$lang['AdminVouchers.event.unknown'] = 'Event';
+
+// Validation-reason labels (closed allowlist via presenter; all mapped + unknown)
+$lang['AdminVouchers.validation_reason.currency_mismatch'] = 'Currency mismatch';
+$lang['AdminVouchers.validation_reason.amount_mismatch'] = 'Amount mismatch';
+$lang['AdminVouchers.validation_reason.unmatched_reference'] = 'Unmatched reference';
+$lang['AdminVouchers.validation_reason.invoice_mismatch'] = 'Invoice mismatch';
+$lang['AdminVouchers.validation_reason.stale_voucher'] = 'Stale voucher';
+$lang['AdminVouchers.validation_reason.duplicate_reference'] = 'Duplicate reference';
+$lang['AdminVouchers.validation_reason.late_payment'] = 'Late payment';
+$lang['AdminVouchers.validation_reason.missing_paid_date'] = 'Missing paid date';
+$lang['AdminVouchers.validation_reason.existing_transaction_mismatch'] = 'Existing transaction mismatch';
+$lang['AdminVouchers.validation_reason.existing_transaction_partial_application'] = 'Existing transaction partially applied';
+$lang['AdminVouchers.validation_reason.existing_transaction_apply_failed'] = 'Existing transaction apply failed';
+$lang['AdminVouchers.validation_reason.existing_transaction_unverified'] = 'Existing transaction unverified';
+$lang['AdminVouchers.validation_reason.missing_expected_context'] = 'Missing expected context';
+$lang['AdminVouchers.validation_reason.underpayment'] = 'Underpayment';
+$lang['AdminVouchers.validation_reason.overpayment'] = 'Overpayment';
+$lang['AdminVouchers.validation_reason.unknown_status'] = 'Unknown status';
+$lang['AdminVouchers.validation_reason.unknown'] = 'Unknown reason';

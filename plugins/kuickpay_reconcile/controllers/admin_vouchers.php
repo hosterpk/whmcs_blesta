@@ -131,6 +131,72 @@ class AdminVouchers extends KuickpayReconcileController
     }
 
     /**
+     * Read-only voucher detail page with permission-gated diagnostics.
+     *
+     * GET only: performs no writes, no SOAP, no posting, and no state
+     * transition. The fetch is company-scoped so a voucher ID outside the
+     * authenticated staff company resolves to a safe not-found redirect and
+     * never renders another company's row. The diagnostics section (sanitized
+     * evidence + redacted audit history) is gated behind a separate plugin
+     * permission; the audit query runs only when that permission is granted.
+     */
+    public function detail()
+    {
+        // Company scope is resolved explicitly and never read from the request.
+        $company_id = (int) $this->company_id;
+
+        // The id is the first route segment: detail/{id}/. ctype_digit is
+        // deliberately stricter than the list's is_numeric — it rejects "1e3",
+        // floats, and signs.
+        $voucher_id = (isset($this->get[0]) && ctype_digit((string) $this->get[0]))
+            ? (int) $this->get[0]
+            : 0;
+
+        // Company-scoped fetch. A missing id or a cross-company/absent voucher
+        // both resolve to the same safe not-found outcome.
+        $voucher = ($voucher_id > 0)
+            ? $this->KuickpayVouchers->getForCompany($voucher_id, $company_id)
+            : false;
+        if ($voucher_id <= 0 || !$voucher) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.not_found', true), null, false);
+            $this->redirect($this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/');
+            return;
+        }
+
+        // Reuse 4.1's already company-scoped batched lookups (no new unscoped
+        // queries): invoice mappings and the human-readable client code.
+        $invoices = $this->KuickpayVoucherInvoices->getByVoucherIds([$voucher_id], $company_id)[$voucher_id] ?? [];
+        $client_codes = $this->KuickpayVouchers->getClientCodes([(int) $voucher->client_id], $company_id);
+        $client_code = $client_codes[(int) $voucher->client_id] ?? $voucher->client_id;
+
+        // Decode the already-sanitized normalized evidence, then reduce it to
+        // the allowlisted known keys (AC7) before it reaches the view.
+        $diagnostic = json_decode((string) $voucher->diagnostic_summary, true);
+        if (!is_array($diagnostic)) {
+            $diagnostic = [];
+        }
+        $diagnostic = $this->presenter->allowedDiagnosticFields($diagnostic);
+
+        // Permission gate (AC8): only when the separate "view diagnostics"
+        // permission is granted do we load the audit history — load the model
+        // lazily inside the gate so an unauthorized admin never runs the query.
+        $can_view_diagnostics = $this->authorized('kuickpay_reconcile.admin_vouchers', 'diagnostics');
+        $events = [];
+        if ($can_view_diagnostics) {
+            Loader::loadModels($this, ['KuickpayReconcile.KuickpayAuditEvents']);
+            $events = $this->KuickpayAuditEvents->getByVoucher($voucher_id, $company_id);
+        }
+
+        $this->set('voucher', $voucher);
+        $this->set('invoices', $invoices);
+        $this->set('client_code', $client_code);
+        $this->set('diagnostic', $diagnostic);
+        $this->set('events', $events);
+        $this->set('can_view_diagnostics', $can_view_diagnostics);
+        $this->set('presenter', $this->presenter);
+    }
+
+    /**
      * Builds the InputFields filter widget for the list.
      *
      * Returns an InputFields object (Widget::setFilters is type-hinted on it; a

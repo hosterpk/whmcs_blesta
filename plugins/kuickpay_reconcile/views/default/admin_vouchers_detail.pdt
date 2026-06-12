@@ -1,0 +1,301 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo ($message ?? null);
+
+// Shared placeholder + small render helpers. These are presentational only
+// (no SQL / business logic): a date-or-empty caster and an escaped-monospace
+// value-or-empty wrapper, so each field row stays terse and consistently safe.
+$empty = $this->_('AdminVouchers.text.empty', true);
+
+$dateOr = function ($value) use ($empty) {
+    return $value ? $this->Date->cast($value) : $empty;
+};
+
+$mono = function ($value) use ($empty) {
+    $value = (string) ($value ?? '');
+    if ($value === '') {
+        return $empty;
+    }
+
+    return '<span class="font-monospace">' . $this->Html->safe($value) . '</span>';
+};
+?>
+
+<p>
+    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/');?>" class="btn btn-link ps-0">
+        <i class="bi bi-arrow-left"></i> <?php echo $this->_('AdminVouchers.link.back_to_list', true);?>
+    </a>
+</p>
+
+<?php
+// --- Box 1: Voucher summary (always) -------------------------------------
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminVouchers.detail.heading.summary', true));
+?>
+<table class="table table-sm mb-0">
+    <tbody>
+        <tr>
+            <th class="w-25"><?php echo $this->_('AdminVouchers.detail.field.status', true);?></th>
+            <td>
+                <span class="badge <?php echo $presenter->badgeClassFor($voucher->status);?>">
+                    <?php echo $this->Html->safe($this->_($presenter->labelKeyFor($voucher->status), true));?>
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.client', true);?></th>
+            <td>
+                <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . $voucher->client_id . '/');?>">
+                    <?php echo $this->Html->safe($client_code);?>
+                </a>
+            </td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.registration_number', true);?></th>
+            <td><?php echo $mono($voucher->registration_number);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.consumer_number', true);?></th>
+            <td><?php echo $mono($voucher->consumer_number);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.kuickpay_reference', true);?></th>
+            <td><?php echo $mono($voucher->kuickpay_reference);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.amount', true);?></th>
+            <td><?php echo $this->Html->safe($voucher->amount) . ' ' . $this->Html->safe($voucher->currency);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_created', true);?></th>
+            <td><?php echo $dateOr($voucher->date_created);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_updated', true);?></th>
+            <td><?php echo $dateOr($voucher->date_updated);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_due', true);?></th>
+            <td><?php echo $dateOr($voucher->date_due);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_expires', true);?></th>
+            <td><?php echo $dateOr($voucher->date_expires);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_last_checked', true);?></th>
+            <td><?php echo $dateOr($voucher->date_last_checked);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_paid', true);?></th>
+            <td><?php echo $dateOr($voucher->date_paid);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_posted', true);?></th>
+            <td><?php echo $dateOr($voucher->date_posted);?></td>
+        </tr>
+    </tbody>
+</table>
+<?php
+$this->Widget->end();
+
+// --- Box 2: Invoice mapping & related Blesta records (always) ------------
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminVouchers.detail.heading.invoices', true));
+?>
+<table class="table table-sm mb-0">
+    <tbody>
+        <tr>
+            <th class="w-25"><?php echo $this->_('AdminVouchers.detail.field.invoices', true);?></th>
+            <td>
+                <?php
+                if (!empty($invoices)) {
+                    $invoice_cells = [];
+                    foreach ($invoices as $link) {
+                        $invoice_cells[] = '<a href="'
+                            . $this->Html->safe($this->base_uri . 'clients/editinvoice/' . $voucher->client_id . '/' . $link['invoice_id'] . '/')
+                            . '">' . $this->Html->safe($link['invoice_id']) . '</a>';
+                    }
+                    echo implode(', ', $invoice_cells);
+                } else {
+                    echo $empty;
+                }
+                ?>
+            </td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.posting_state', true);?></th>
+            <td><?php echo $this->Html->safe($this->_($presenter->postingStateLabelKey($voucher->status), true));?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.transaction', true);?></th>
+            <td>
+                <?php
+                // Transaction link appears ONLY for the posted state (UX-DR20).
+                if ($voucher->status === 'posted' && !empty($voucher->blesta_transaction_id)) {
+                    ?>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . $voucher->client_id . '/' . $voucher->blesta_transaction_id . '/');?>" title="<?php echo $this->Html->safe($this->_('AdminVouchers.text.transaction_view', true));?>">
+                        <span class="font-monospace"><?php echo $this->Html->safe($voucher->blesta_transaction_id);?></span>
+                    </a>
+                    <?php
+                } else {
+                    echo $empty;
+                }
+                ?>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<?php
+$this->Widget->end();
+
+// --- Box 3: Admin notes (always; read-only — editing is Story 4.3) -------
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminVouchers.detail.heading.admin_notes', true));
+?>
+<div class="p-1">
+    <?php
+    $admin_notes = (string) ($voucher->admin_notes ?? '');
+    if ($admin_notes === '') {
+        echo '<span class="text-muted">' . $this->_('AdminVouchers.detail.admin_notes.empty', true) . '</span>';
+    } else {
+        echo nl2br($this->Html->safe($admin_notes));
+    }
+    ?>
+</div>
+<?php
+$this->Widget->end();
+
+// --- Box 4: Parsed response summary (always; mapped labels only) ---------
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminVouchers.detail.heading.parsed_summary', true));
+?>
+<table class="table table-sm mb-0">
+    <tbody>
+        <tr>
+            <th class="w-25"><?php echo $this->_('AdminVouchers.detail.field.status', true);?></th>
+            <td><?php echo $this->Html->safe($this->_($presenter->labelKeyFor($voucher->status), true));?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.error_class', true);?></th>
+            <td>
+                <?php
+                // Mapped label, or the dedicated "None" key when no error class.
+                echo $this->Html->safe($this->_(
+                    $voucher->error_class
+                        ? $presenter->errorClassLabelKey($voucher->error_class)
+                        : 'AdminVouchers.text.none',
+                    true
+                ));
+                ?>
+            </td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.retry_count', true);?></th>
+            <td><?php echo $this->Html->safe((string) (int) $voucher->retry_count);?></td>
+        </tr>
+        <tr>
+            <th><?php echo $this->_('AdminVouchers.detail.field.date_last_checked', true);?></th>
+            <td><?php echo $dateOr($voucher->date_last_checked);?></td>
+        </tr>
+    </tbody>
+</table>
+<?php
+$this->Widget->end();
+
+// --- Box 5: Diagnostics (permission-gated) -------------------------------
+if ($can_view_diagnostics) {
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminVouchers.detail.heading.diagnostics', true));
+    ?>
+    <div class="border rounded p-2" style="max-height:24rem;overflow:auto" tabindex="0" role="region" aria-label="<?php echo $this->Html->safe($this->_('AdminVouchers.detail.diagnostics.aria_label', true));?>">
+        <?php
+        // Allowlisted diagnostic_summary fields — pull known keys only (AC7).
+        if (empty($diagnostic)) {
+            echo '<p class="text-muted mb-2">' . $this->_('AdminVouchers.detail.diagnostics.none', true) . '</p>';
+        } else {
+            ?>
+            <table class="table table-sm mb-3">
+                <tbody>
+                    <?php
+                    foreach ($diagnostic as $field => $value) {
+                        // $field is a member of the closed DIAGNOSTIC_FIELD_KEYS
+                        // allowlist (not a DB value), so deriving its label key
+                        // by name is safe.
+                        ?>
+                        <tr>
+                            <th class="w-25"><?php echo $this->Html->safe($this->_('AdminVouchers.detail.field.' . $field, true));?></th>
+                            <td>
+                                <?php
+                                if ($field === 'validation_errors' && is_array($value)) {
+                                    // Each token mapped through the closed allowlist; escaped per item.
+                                    $reason_items = [];
+                                    foreach ($value as $reason) {
+                                        $reason_items[] = '<li class="font-monospace">'
+                                            . $this->Html->safe($this->_($presenter->validationReasonLabelKey((string) $reason), true))
+                                            . '</li>';
+                                    }
+                                    echo '<ul class="mb-0">' . implode('', $reason_items) . '</ul>';
+                                } elseif ($field === 'error_class') {
+                                    echo '<span class="font-monospace">'
+                                        . $this->Html->safe($this->_($presenter->errorClassLabelKey((string) $value), true))
+                                        . '</span>';
+                                } else {
+                                    echo $mono($value);
+                                }
+                                ?>
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                    ?>
+                </tbody>
+            </table>
+            <?php
+        }
+
+        // Redacted audit timeline.
+        ?>
+        <h3 class="h6 mb-2"><?php echo $this->_('AdminVouchers.detail.heading.audit_timeline', true);?></h3>
+        <?php
+        if (empty($events)) {
+            echo '<p class="text-muted mb-0">' . $this->_('AdminVouchers.detail.audit.none', true) . '</p>';
+        } else {
+            foreach ($events as $event) {
+                // Render payload as ONE escaped, pretty-printed JSON blob — never
+                // a per-key echo, never per-event label mapping (AC7). It is
+                // already past the single redaction boundary.
+                $payload_out = '';
+                $decoded_payload = json_decode((string) $event->payload, true);
+                if (is_array($decoded_payload)) {
+                    $payload_out = json_encode(
+                        $decoded_payload,
+                        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                    );
+                } else {
+                    $payload_out = (string) ($event->payload ?? '');
+                }
+                ?>
+                <div class="mb-3 pb-2 border-bottom">
+                    <div>
+                        <strong><?php echo $this->Html->safe($this->_($presenter->eventLabelKey($event->event_name), true));?></strong>
+                        <span class="text-muted ms-2"><?php echo $this->Date->cast($event->date_created);?></span>
+                    </div>
+                    <div class="small">
+                        <?php echo $mono($event->redacted_trace_id);?>
+                        <span class="ms-2"><?php echo $mono($event->evidence_hash);?></span>
+                    </div>
+                    <?php if ($payload_out !== '' && $payload_out !== 'null') { ?>
+                        <pre class="mb-0 small font-monospace"><?php echo $this->Html->safe($payload_out);?></pre>
+                    <?php } ?>
+                </div>
+                <?php
+            }
+        }
+        ?>
+    </div>
+    <?php
+    $this->Widget->end();
+}
+?>
