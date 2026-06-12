@@ -643,4 +643,49 @@ class KuickPayVoucherListPresenterTest extends TestCase
 
         $this->assertSame([], $presenter->allowedDiagnosticFields([]));
     }
+
+    /**
+     * Cross-file drift guard: every label key the presenter can emit (and every
+     * fallback) must be defined in the AdminVouchers language file, and every
+     * allowlisted diagnostic field must have a detail label. Catches the
+     * "mapped a token but forgot the translation" class of bug (e.g. adding the
+     * 9th/10th error class to the map but stopping the language file at 8).
+     */
+    public function testLanguageFileDefinesEveryAllowlistedLabelKey()
+    {
+        $lang = [];
+        include __DIR__ . '/../language/en_us/admin_vouchers.php';
+
+        $maps = [
+            KuickPayVoucherListPresenter::STATUS_LABEL_KEYS,
+            KuickPayVoucherListPresenter::POSTING_STATE_LABEL_KEYS,
+            KuickPayVoucherListPresenter::ERROR_CLASS_LABEL_KEYS,
+            KuickPayVoucherListPresenter::EVENT_LABEL_KEYS,
+            KuickPayVoucherListPresenter::VALIDATION_REASON_LABEL_KEYS,
+        ];
+        foreach ($maps as $map) {
+            foreach ($map as $token => $key) {
+                $this->assertArrayHasKey($key, $lang, 'Missing language key ' . $key . ' for token ' . $token);
+            }
+        }
+
+        $fallbacks = [
+            KuickPayVoucherListPresenter::DEFAULT_STATUS_LABEL_KEY,
+            KuickPayVoucherListPresenter::DEFAULT_POSTING_STATE_LABEL_KEY,
+            KuickPayVoucherListPresenter::DEFAULT_ERROR_CLASS_LABEL_KEY,
+            KuickPayVoucherListPresenter::DEFAULT_EVENT_LABEL_KEY,
+            KuickPayVoucherListPresenter::DEFAULT_VALIDATION_REASON_LABEL_KEY,
+        ];
+        foreach ($fallbacks as $key) {
+            $this->assertArrayHasKey($key, $lang, 'Missing fallback language key ' . $key);
+        }
+
+        foreach (KuickPayVoucherListPresenter::DIAGNOSTIC_FIELD_KEYS as $field) {
+            $this->assertArrayHasKey(
+                'AdminVouchers.detail.field.' . $field,
+                $lang,
+                'Missing diagnostic field label AdminVouchers.detail.field.' . $field
+            );
+        }
+    }
 }
