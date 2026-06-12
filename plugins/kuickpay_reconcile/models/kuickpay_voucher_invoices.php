@@ -63,6 +63,54 @@ class KuickpayVoucherInvoices extends KuickpayReconcileModel
     }
 
     /**
+     * Batch-fetches invoice links for a set of voucher IDs, company-scoped.
+     *
+     * One query joined to kuickpay_vouchers for the company scope (the links
+     * table has no company_id of its own), grouped in PHP. Avoids the per-row
+     * N+1 the admin voucher list would otherwise incur.
+     *
+     * @param array $voucher_ids The voucher IDs to resolve
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @return array Map of [voucher_id => [{invoice_id, amount}, ...]]
+     */
+    public function getByVoucherIds(array $voucher_ids, int $company_id): array
+    {
+        $voucher_ids = array_values(array_unique(array_map('intval', $voucher_ids)));
+        if (empty($voucher_ids)) {
+            return [];
+        }
+
+        $rows = $this->Record
+            ->select([
+                'kuickpay_voucher_invoices.voucher_id',
+                'kuickpay_voucher_invoices.invoice_id',
+                'kuickpay_voucher_invoices.amount',
+            ])
+            ->from('kuickpay_voucher_invoices')
+            ->innerJoin(
+                'kuickpay_vouchers',
+                'kuickpay_vouchers.id',
+                '=',
+                'kuickpay_voucher_invoices.voucher_id',
+                false
+            )
+            ->where('kuickpay_vouchers.company_id', '=', $company_id)
+            ->where('kuickpay_voucher_invoices.voucher_id', 'in', $voucher_ids)
+            ->order(['kuickpay_voucher_invoices.invoice_id' => 'ASC'])
+            ->fetchAll();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[(int) $row->voucher_id][] = [
+                'invoice_id' => $row->invoice_id,
+                'amount' => $row->amount,
+            ];
+        }
+
+        return $grouped;
+    }
+
+    /**
      * Fetches invoice links by invoice ID.
      *
      * @param int $invoice_id The invoice ID

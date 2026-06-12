@@ -279,26 +279,197 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
-     * Fetches vouchers matching optional filters.
+     * Returns the canonical set of voucher statuses.
      *
-     * @param array $filters Supported filters: status, client_id, company_id
+     * Exposes the private STATUSES allowlist so the admin controller can build
+     * status-select options without leaking the constant. The pure presenter
+     * keeps its own copy (it cannot load this DB-backed model at unit time).
+     *
+     * @return array The canonical voucher statuses
+     */
+    public static function getStatuses(): array
+    {
+        return self::STATUSES;
+    }
+
+    /**
+     * Fetches a page of company-scoped vouchers matching the allowlisted filters.
+     *
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @param array $filters Allowlisted filters (see applyListFilters)
      * @param int $page The page number
      * @param array $order_by The order fields
      * @return array Voucher rows
      */
-    public function getList(array $filters, int $page = 1, array $order_by = ['date_created' => 'DESC'])
-    {
+    public function getList(
+        int $company_id,
+        array $filters = [],
+        int $page = 1,
+        array $order_by = ['date_created' => 'DESC']
+    ): array {
         $this->Record->select()->from('kuickpay_vouchers');
-
-        foreach (['status', 'client_id', 'company_id'] as $filter) {
-            if (isset($filters[$filter]) && $filters[$filter] !== '') {
-                $this->Record->where($filter, '=', $filters[$filter]);
-            }
-        }
+        $this->applyListFilters($company_id, $filters);
 
         return $this->Record->order($order_by)
             ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
             ->fetchAll();
+    }
+
+    /**
+     * Counts company-scoped vouchers matching the allowlisted filters.
+     *
+     * Shares applyListFilters() with getList() so the count can never drift
+     * from the page it paginates.
+     *
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @param array $filters Allowlisted filters (see applyListFilters)
+     * @return int The total matching rows
+     */
+    public function getListCount(int $company_id, array $filters = []): int
+    {
+        $this->Record->select()->from('kuickpay_vouchers');
+        $this->applyListFilters($company_id, $filters);
+
+        return $this->Record->numResults();
+    }
+
+    /**
+     * Applies the mandatory company scope and the allowlisted list filters.
+     *
+     * Company scope is applied UNCONDITIONALLY and never sourced from $filters,
+     * so a caller can never omit it and leak another company's vouchers. Each
+     * remaining filter is matched per the FR24 filter map; request values reach
+     * the query only as bound parameters or as integer-cast subqueries.
+     *
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @param array $filters Allowlisted filters: status, client_id,
+     *  consumer_number, registration_number, kuickpay_reference, amount,
+     *  invoice_id, date_from, date_to, has_blesta_transaction
+     */
+    private function applyListFilters(int $company_id, array $filters): void
+    {
+        // Mandatory tenant scope — never from request input.
+        $this->Record->where('company_id', '=', $company_id);
+
+        // Status: exact, validated against the model's own allowlist.
+        if (isset($filters['status']) && in_array($filters['status'], self::STATUSES, true)) {
+            $this->Record->where('status', '=', $filters['status']);
+        }
+
+        // Client: exact integer id.
+        if (isset($filters['client_id']) && (int) $filters['client_id'] > 0) {
+            $this->Record->where('client_id', '=', (int) $filters['client_id']);
+        }
+
+        // Partial (LIKE) identity matches.
+        foreach (['consumer_number', 'registration_number', 'kuickpay_reference'] as $like_field) {
+            if (isset($filters[$like_field]) && $filters[$like_field] !== '') {
+                $this->Record->like($like_field, '%' . $filters[$like_field] . '%');
+            }
+        }
+
+        // Amount: exact match on a normalized decimal string (never float, never range).
+        if (isset($filters['amount']) && $filters['amount'] !== '') {
+            $this->Record->where('amount', '=', $this->normalizeAmountFilter((string) $filters['amount']));
+        }
+
+        // Created-date range (date_created BETWEEN date_from .. date_to inclusive).
+        if (isset($filters['date_from']) && $filters['date_from'] !== '') {
+            $this->Record->where('date_created', '>=', $filters['date_from']);
+        }
+        if (isset($filters['date_to']) && $filters['date_to'] !== '') {
+            $date_to = $filters['date_to'];
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date_to)) {
+                $date_to .= ' 23:59:59';
+            }
+            $this->Record->where('date_created', '<=', $date_to);
+        }
+
+        // "Has Blesta transaction" toggle → blesta_transaction_id IS NOT NULL.
+        if (!empty($filters['has_blesta_transaction'])) {
+            $this->Record->where('blesta_transaction_id', '!=', null);
+        }
+
+        // Invoice id: EXISTS via an id IN (subquery) on the links table to avoid
+        // row multiplication. The id is integer-cast and inlined (injection-safe),
+        // which also sidesteps the bound-value ordering hazard of a parametrized
+        // subquery placed mid-WHERE.
+        if (isset($filters['invoice_id']) && (int) $filters['invoice_id'] > 0) {
+            $invoice_id = (int) $filters['invoice_id'];
+            $this->Record->where(
+                'kuickpay_vouchers.id',
+                'in',
+                ['SELECT voucher_id FROM kuickpay_voucher_invoices WHERE invoice_id = ' . $invoice_id],
+                false,
+                false
+            );
+        }
+    }
+
+    /**
+     * Normalizes a user-entered amount to the canonical stored decimal string.
+     *
+     * Mirrors KuickPayVoucherReferenceService::normalizeAmount so the filter
+     * compares like-for-like against the stored varchar amount: strip commas,
+     * drop leading zeros, and pad/truncate to exactly two decimal places. A
+     * non-numeric value is returned trimmed (it simply matches nothing).
+     *
+     * @param string $amount The raw amount filter value
+     * @return string The normalized decimal string
+     */
+    private function normalizeAmountFilter(string $amount): string
+    {
+        $amount = trim($amount);
+        $normalized = str_replace(',', '', $amount);
+
+        if (!preg_match('/^\d+(?:\.\d+)?$/', $normalized)) {
+            return $amount;
+        }
+
+        $parts = explode('.', $normalized, 2);
+        $integer = ltrim($parts[0], '0');
+        if ($integer === '') {
+            $integer = '0';
+        }
+        $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2);
+
+        return $integer . '.' . $fraction;
+    }
+
+    /**
+     * Resolves human-readable client codes for a set of client IDs.
+     *
+     * One company-scoped query selecting only the computed id_code (no contact
+     * PII). id_code is REPLACE(id_format, '{num}', id_value) — a computed
+     * expression, never a selectable column — so it is built here rather than
+     * joined into the voucher query.
+     *
+     * @param array $client_ids The client IDs to resolve
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @return array Map of [client_id => id_code]
+     */
+    public function getClientCodes(array $client_ids, int $company_id): array
+    {
+        $client_ids = array_values(array_unique(array_map('intval', $client_ids)));
+        if (empty($client_ids)) {
+            return [];
+        }
+
+        $rows = $this->Record
+            ->select(['clients.id', 'REPLACE(clients.id_format, ?, clients.id_value)' => 'id_code'])
+            ->appendValues(['{num}'])
+            ->from('clients')
+            ->innerJoin('client_groups', 'client_groups.id', '=', 'clients.client_group_id', false)
+            ->where('client_groups.company_id', '=', $company_id)
+            ->where('clients.id', 'in', $client_ids)
+            ->fetchAll();
+
+        $codes = [];
+        foreach ($rows as $row) {
+            $codes[(int) $row->id] = $row->id_code;
+        }
+
+        return $codes;
     }
 
     /**
