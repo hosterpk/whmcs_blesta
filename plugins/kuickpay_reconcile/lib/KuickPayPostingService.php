@@ -385,13 +385,23 @@ class KuickPayPostingService
             $this->auditService->record($event, [
                 'company_id' => $company_id,
                 'voucher_id' => (int) ($voucher->id ?? 0),
-                'redacted_trace_id' => '',
+                'redacted_trace_id' => $this->redactedTraceId($voucher),
                 'evidence_hash' => (string) ($voucher->evidence_hash ?? ''),
                 'payload' => $payload,
             ]);
         } catch (Throwable $e) {
             // Audit writes must not abort the posting batch.
         }
+    }
+
+    private function redactedTraceId($voucher): string
+    {
+        $summary = json_decode((string) ($voucher->diagnostic_summary ?? ''), true);
+        if (!is_array($summary)) {
+            return '';
+        }
+
+        return is_string($summary['redacted_trace_id'] ?? null) ? $summary['redacted_trace_id'] : '';
     }
 
     private function result(int $voucher_id, string $outcome, ?int $transaction_id = null): array

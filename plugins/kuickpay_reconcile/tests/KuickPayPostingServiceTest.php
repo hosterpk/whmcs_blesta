@@ -6,12 +6,19 @@ class KuickPayPostingServiceTest extends TestCase
 {
     public function testHappyPathCreatesAppliesAndMarksVoucherPosted()
     {
-        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $voucher = $this->voucher([
+            'diagnostic_summary' => json_encode([
+                'status' => 'confirmed_unposted',
+                'redacted_trace_id' => 'kp_1234567890abcdef',
+                'validation_errors' => [],
+            ]),
+        ]);
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
         $audit = new KuickPayPostingFakeAuditService();
         $service = $this->service($repo, $transactions, $audit);
 
-        $result = $service->postVoucher(1, $this->voucher());
+        $result = $service->postVoucher(1, $voucher);
 
         $this->assertSame('posted', $result['outcome']);
         $this->assertSame(9001, $result['blesta_transaction_id']);
@@ -25,6 +32,8 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertNull($transactions->adds[0]['reference_id']);
         $this->assertSame([['invoice_id' => 55, 'amount' => '1000.00']], $transactions->applies[0]['vars']['amounts']);
         $this->assertSame(['posting.started', 'posting.succeeded'], array_column($audit->events, 0));
+        $this->assertSame('kp_1234567890abcdef', $audit->events[0][1]['redacted_trace_id']);
+        $this->assertSame('kp_1234567890abcdef', $audit->events[1][1]['redacted_trace_id']);
         $this->assertStringNotContainsString('BillPaymentInquiry', json_encode($audit->events));
         $this->assertStringNotContainsString('password', json_encode($audit->events));
     }
