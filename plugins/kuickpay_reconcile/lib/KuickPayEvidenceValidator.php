@@ -85,7 +85,15 @@ class KuickPayEvidenceValidator
 
     private function currencyMatches(stdClass $voucher, array $invoiceMap, KuickPayEvidence $evidence): bool
     {
-        if ($evidence->currency() !== 'PKR' || (string) ($voucher->currency ?? '') !== 'PKR') {
+        // KuickPay is PKR-only and its live BillPaymentInquiry paid row carries no
+        // currency column, so the parser leaves evidence currency null. An absent
+        // (null) currency is NOT a mismatch; only a present, non-PKR currency is.
+        // PKR safety is still enforced structurally on the voucher and its invoices.
+        if ($evidence->currency() !== null && $evidence->currency() !== 'PKR') {
+            return false;
+        }
+
+        if ((string) ($voucher->currency ?? '') !== 'PKR') {
             return false;
         }
 
@@ -116,7 +124,17 @@ class KuickPayEvidenceValidator
 
     private function referenceMatches(stdClass $voucher, KuickPayEvidence $evidence): bool
     {
-        if ((string) $evidence->registrationNumber() !== (string) ($voucher->registration_number ?? '')) {
+        // The single BillPaymentInquiry is keyed on the Consumer Number and KuickPay
+        // echoes that identity back in result field [1], which the parser stores as
+        // the evidence registration number; InsertVoucher evidence instead carries the
+        // Registration Number. Both are per-voucher-unique, and the parser has already
+        // matched the echoed value against the expected identity, so accept a match on
+        // EITHER identity. A blank echo never matches (fail closed).
+        $echoed = (string) $evidence->registrationNumber();
+        if ($echoed === ''
+            || ($echoed !== (string) ($voucher->registration_number ?? '')
+                && $echoed !== (string) ($voucher->consumer_number ?? ''))
+        ) {
             return false;
         }
 

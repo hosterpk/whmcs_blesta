@@ -265,6 +265,23 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Fetches a company-scoped voucher by id.
+     *
+     * Required by KuickPayReconcileService::reconcileVoucher() (the admin
+     * "Check Now" path); delegates to the model, mirroring getForUpdate().
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID
+     * @return stdClass|null The voucher row, or null when absent
+     */
+    public function getForCompany(int $voucher_id, int $company_id): ?stdClass
+    {
+        $voucher = $this->KuickpayVouchers->getForCompany($voucher_id, $company_id);
+
+        return $voucher ?: null;
+    }
+
+    /**
      * Locks and fetches invoice links for a voucher.
      *
      * @param int $voucher_id The voucher ID
