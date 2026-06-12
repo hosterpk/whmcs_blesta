@@ -387,10 +387,12 @@ class KuickPayReconcileService
     {
         $prior_status = (string) $voucher->status;
         $error = false;
+        $redactedTraceId = '';
 
         try {
             $transport = $client->billPaymentInquiry($this->buildInquiryRequest($voucher));
             $evidence = $this->parser->parse($transport, $this->buildParserContext($voucher));
+            $redactedTraceId = $evidence->redactedTraceId();
             $new_status = $this->persistEvidence($company_id, $voucher, $evidence);
 
             $this->itemRepository->record([
@@ -418,10 +420,23 @@ class KuickPayReconcileService
                     'prior_status' => $prior_status,
                     'new_status' => $new_status,
                     'error_class' => 'reconcile_exception',
+                    'redacted_trace_id' => $redactedTraceId,
                     'date_created' => date('Y-m-d H:i:s'),
                 ]);
             } catch (Throwable $recordError) {
                 // One voucher's failed item write must not abort the rest of the batch.
+            }
+
+            try {
+                $this->auditService->record('evidence.error', [
+                    'company_id' => $company_id,
+                    'voucher_id' => (int) $voucher->id,
+                    'run_id' => $run_id,
+                    'redacted_trace_id' => $redactedTraceId,
+                    'payload' => ['error_class' => 'reconcile_exception'],
+                ]);
+            } catch (Throwable $auditError) {
+                // Audit writes must not abort the rest of the batch.
             }
         }
 

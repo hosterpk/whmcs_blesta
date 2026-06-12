@@ -329,9 +329,11 @@ class KuickPayReconcileServiceTest extends TestCase
             new RuntimeException('provider timed out'),
         ]);
         $run = new KuickPayReconcileFakeRunRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
         $service = $this->service([
             'voucher_repository' => new KuickPayReconcileFakeVoucherRepository([$this->voucher()]),
             'run_repository' => $run,
+            'audit_service' => $audit,
             'client' => $client,
         ]);
 
@@ -341,6 +343,13 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame('provider_unreachable', $result['reason']);
         $this->assertSame(10, $result['run_id']);
         $this->assertSame(1, $run->closedCounts['total_errors']);
+        $this->assertContains('evidence.error', array_column($audit->events, 0));
+        $errorEvent = $audit->events[array_search('evidence.error', array_column($audit->events, 0), true)];
+        $this->assertSame(1, $errorEvent[1]['company_id']);
+        $this->assertSame(1, $errorEvent[1]['voucher_id']);
+        $this->assertSame(10, $errorEvent[1]['run_id']);
+        $this->assertSame('', $errorEvent[1]['redacted_trace_id']);
+        $this->assertSame(['error_class' => 'reconcile_exception'], $errorEvent[1]['payload']);
     }
 
     public function testManualActionSafetyMapsMatchDisplayStateMatrix()
