@@ -113,7 +113,7 @@ development_status:
   # --- Epic 4: Admin Support and Manual Review Operations ---
   epic-4: in-progress
   4-1-search-and-filter-kuickpay-vouchers: done
-  4-2-inspect-voucher-details-and-safe-diagnostics: backlog
+  4-2-inspect-voucher-details-and-safe-diagnostics: ready-for-dev
   4-3-run-safe-manual-voucher-actions: backlog
   4-4-manage-manual-review-queue-and-run-results: backlog
   4-5-record-structured-logs-and-audit-events: backlog
