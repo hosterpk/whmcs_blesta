@@ -7,6 +7,7 @@ echo ($message ?? null);
 // (no SQL / business logic): a date-or-empty caster and an escaped-monospace
 // value-or-empty wrapper, so each field row stays terse and consistently safe.
 $empty = $this->_('AdminVouchers.text.empty', true);
+$status = (string) ($voucher->status ?? '');
 
 $dateOr = function ($value) use ($empty) {
     return $value ? $this->Html->safe($this->Date->cast($value)) : $empty;
@@ -20,6 +21,8 @@ $mono = function ($value) use ($empty) {
 
     return '<span class="font-monospace">' . $this->Html->safe($value) . '</span>';
 };
+
+$allowed_actions = KuickpayVouchers::ALLOWED_ACTIONS_BY_STATE[$status] ?? [];
 ?>
 
 <p>
@@ -38,7 +41,6 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.summary', true));
         <tr>
             <th class="w-25"><?php echo $this->_('AdminVouchers.detail.field.status', true);?></th>
             <td>
-                <?php $status = (string) ($voucher->status ?? ''); ?>
                 <span class="badge <?php echo $presenter->badgeClassFor($status);?>">
                     <?php echo $this->Html->safe($this->_($presenter->labelKeyFor($status), true));?>
                 </span>
@@ -180,7 +182,90 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.admin_notes', true)
 <?php
 $this->Widget->end();
 
-// --- Box 4: Parsed response summary (always; mapped labels only) ---------
+// --- Box 4: Manual actions (permission- and state-gated) ----------------
+$show_recheck = in_array('recheck', $allowed_actions, true) && !empty($can_recheck);
+$show_review = in_array('review', $allowed_actions, true) && !empty($can_review);
+$show_cancel = in_array('cancel', $allowed_actions, true) && !empty($can_cancel);
+if ($show_recheck || $show_review || $show_cancel) {
+    $this->Widget->clear();
+    $this->Widget->create($this->_('AdminVouchers.detail.heading.actions', true));
+    ?>
+    <div class="row g-3">
+        <?php if ($show_recheck) { ?>
+            <div class="col-md-4">
+                <?php
+                $this->Form->create(
+                    $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/recheck/' . (int) $voucher->id . '/',
+                    ['class' => 'disable-on-submit']
+                );
+                ?>
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <?php echo $this->_('AdminVouchers.action.recheck', true);?>
+                </button>
+                <?php $this->Form->end(); ?>
+            </div>
+        <?php } ?>
+        <?php if ($show_review) { ?>
+            <div class="col-md-4">
+                <?php
+                $this->Form->create(
+                    $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/review/' . (int) $voucher->id . '/',
+                    ['class' => 'disable-on-submit']
+                );
+                ?>
+                <label class="form-label" for="review_admin_note">
+                    <?php echo $this->_('AdminVouchers.label.admin_note', true);?>
+                </label>
+                <?php
+                $this->Form->fieldTextarea(
+                    'admin_note',
+                    null,
+                    ['id' => 'review_admin_note', 'class' => 'form-control mb-2', 'rows' => 3, 'required' => 'required']
+                );
+                ?>
+                <button type="submit" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-pencil-square"></i>
+                    <?php echo $this->_('AdminVouchers.action.review', true);?>
+                </button>
+                <?php $this->Form->end(); ?>
+            </div>
+        <?php } ?>
+        <?php if ($show_cancel) { ?>
+            <div class="col-md-4">
+                <?php
+                $this->Form->create(
+                    $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/cancel/' . (int) $voucher->id . '/',
+                    ['class' => 'disable-on-submit']
+                );
+                ?>
+                <label class="form-label" for="cancel_admin_note">
+                    <?php echo $this->_('AdminVouchers.label.admin_note', true);?>
+                </label>
+                <?php
+                $this->Form->fieldTextarea(
+                    'admin_note',
+                    null,
+                    ['id' => 'cancel_admin_note', 'class' => 'form-control mb-2', 'rows' => 3, 'required' => 'required']
+                );
+                ?>
+                <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 modal-confirm-warning"
+                    data-confirm-message="<?php echo $this->Html->safe($this->_('AdminVouchers.confirm.cancel', true));?>"
+                >
+                    <i class="bi bi-x-circle"></i>
+                    <?php echo $this->_('AdminVouchers.action.cancel', true);?>
+                </button>
+                <?php $this->Form->end(); ?>
+            </div>
+        <?php } ?>
+    </div>
+    <?php
+    $this->Widget->end();
+}
+
+// --- Box 5: Parsed response summary (always; mapped labels only) ---------
 $this->Widget->clear();
 $this->Widget->create($this->_('AdminVouchers.detail.heading.parsed_summary', true));
 ?>
@@ -217,7 +302,7 @@ $this->Widget->create($this->_('AdminVouchers.detail.heading.parsed_summary', tr
 <?php
 $this->Widget->end();
 
-// --- Box 5: Diagnostics (permission-gated) -------------------------------
+// --- Box 6: Diagnostics (permission-gated) -------------------------------
 if ($can_view_diagnostics) {
     $this->Widget->clear();
     $this->Widget->create($this->_('AdminVouchers.detail.heading.diagnostics', true));

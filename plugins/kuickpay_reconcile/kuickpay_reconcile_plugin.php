@@ -138,6 +138,14 @@ class KuickpayReconcilePlugin extends Plugin
                 // Intentionally empty — permission re-registration is driven by
                 // the version change, not by SQL here.
             }
+
+            // 1.7.0 adds the per-voucher manual action permissions (Story 4.3).
+            // No schema change: the bump exists only so PluginManager::upgrade()
+            // re-syncs the permission set from getPermissions().
+            if (version_compare($current_version, '1.7.0', '<')) {
+                // Intentionally empty — permission re-registration is driven by
+                // the version change, not by SQL here.
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -248,6 +256,24 @@ class KuickpayReconcilePlugin extends Plugin
                 'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers_diagnostics', true),
                 'alias' => 'kuickpay_reconcile.admin_vouchers',
                 'action' => 'diagnostics'
+            ],
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers_recheck', true),
+                'alias' => 'kuickpay_reconcile.admin_vouchers',
+                'action' => 'recheck'
+            ],
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers_review', true),
+                'alias' => 'kuickpay_reconcile.admin_vouchers',
+                'action' => 'review'
+            ],
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers_cancel', true),
+                'alias' => 'kuickpay_reconcile.admin_vouchers',
+                'action' => 'cancel'
             ]
         ];
     }

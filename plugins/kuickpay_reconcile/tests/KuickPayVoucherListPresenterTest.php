@@ -330,7 +330,7 @@ class KuickPayVoucherListPresenterTest extends TestCase
         'reconcile_exception',
     ];
 
-    /** The 14 emitted audit event names (grep-verified across the plugin lib). */
+    /** The 17 emitted audit event names (grep-verified across the plugin lib). */
     private const KNOWN_EVENTS = [
         'voucher.issued',
         'voucher.replaced',
@@ -346,6 +346,9 @@ class KuickPayVoucherListPresenterTest extends TestCase
         'posting.started',
         'posting.succeeded',
         'posting.failed',
+        'admin.rechecked',
+        'admin.reviewed',
+        'admin.cancelled',
     ];
 
     /** Plugin evidence-validator reasons merged into validation_errors. */
@@ -499,7 +502,7 @@ class KuickPayVoucherListPresenterTest extends TestCase
         $expected = self::KNOWN_EVENTS;
         sort($expected);
 
-        $this->assertSame($expected, $keys, 'Event map drifted from the 14 emitted event names');
+        $this->assertSame($expected, $keys, 'Event map drifted from the 17 emitted event names');
     }
 
     public function testEventMapValuesAreCanonicalKeys()

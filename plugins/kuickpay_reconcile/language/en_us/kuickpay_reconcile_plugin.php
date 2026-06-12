@@ -12,4 +12,7 @@ $lang['KuickpayReconcilePlugin.nav_secondary_staff.vouchers'] = 'KuickPay Vouche
 $lang['KuickpayReconcilePlugin.permission.bulk_reconcile'] = 'KuickPay Bulk Reconciliation';
 $lang['KuickpayReconcilePlugin.permission.vouchers'] = 'KuickPay Vouchers';
 $lang['KuickpayReconcilePlugin.permission.vouchers_diagnostics'] = 'KuickPay Voucher Diagnostics';
+$lang['KuickpayReconcilePlugin.permission.vouchers_recheck'] = 'KuickPay Voucher Check Now';
+$lang['KuickpayReconcilePlugin.permission.vouchers_review'] = 'KuickPay Voucher Manual Review';
+$lang['KuickpayReconcilePlugin.permission.vouchers_cancel'] = 'KuickPay Voucher Cancel';
 $lang['KuickpayReconcile.posting.transaction_message'] = 'KuickPay payment posted';

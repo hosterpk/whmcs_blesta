@@ -197,7 +197,82 @@ class AdminVouchers extends KuickpayReconcileController
         $this->set('diagnostic', $diagnostic);
         $this->set('events', $events);
         $this->set('can_view_diagnostics', $can_view_diagnostics);
+        $this->set('can_recheck', $this->staffGroupAllows('recheck'));
+        $this->set('can_review', $this->staffGroupAllows('review'));
+        $this->set('can_cancel', $this->staffGroupAllows('cancel'));
         $this->set('presenter', $this->presenter);
+    }
+
+    public function recheck()
+    {
+        $company_id = (int) $this->company_id;
+        $voucher_id = $this->routeVoucherId();
+        $detail_url = $this->detailUrl($voucher_id);
+
+        if (empty($this->post)) {
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $voucher = $this->voucherForAction($voucher_id, $company_id);
+        if (!$voucher) {
+            return;
+        }
+
+        if (!$this->staffGroupAllows('recheck')) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.acl_denied', true), null, false);
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $prior_status = (string) $voucher->status;
+        if (!in_array('recheck', KuickpayVouchers::ALLOWED_ACTIONS_BY_STATE[$prior_status] ?? [], true)) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.invalid_state', true), null, false);
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $run_id = null;
+        $outcome = 'failed';
+        Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayReconcileService.php');
+        Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayPostingService.php');
+
+        if (in_array($prior_status, ['pending', 'retry'], true)) {
+            $result = (new KuickPayReconcileService())->reconcileVoucher($company_id, $voucher_id);
+            $run_id = $result['run_id'] ?? null;
+            $outcome = $this->safeRecheckOutcome((string) ($result['status'] ?? 'failed'));
+
+            $fresh = $this->KuickpayVouchers->getForCompany($voucher_id, $company_id);
+            if ($fresh && (string) ($fresh->status ?? '') === 'confirmed_unposted') {
+                $post_result = (new KuickPayPostingService())->postVoucher($company_id, $fresh);
+                $post_outcome = (string) ($post_result['outcome'] ?? 'failed');
+                $outcome = $this->safeRecheckOutcome($post_outcome === 'skipped' ? 'failed' : $post_outcome);
+            }
+        } elseif ($prior_status === 'confirmed_unposted') {
+            $post_result = (new KuickPayPostingService())->postVoucher($company_id, $voucher);
+            $post_outcome = (string) ($post_result['outcome'] ?? 'failed');
+            $outcome = $this->safeRecheckOutcome($post_outcome === 'skipped' ? 'failed' : $post_outcome);
+        }
+
+        $this->recordAdminAudit('admin.rechecked', $company_id, $voucher_id, [
+            'staff_id' => $this->staffId(),
+            'prior_status' => $prior_status,
+            'outcome' => $outcome,
+        ], $run_id);
+
+        $message = $this->recheckMessage($outcome);
+        $this->flashMessage($message['type'], Language::_($message['key'], true), null, false);
+        $this->redirect($detail_url);
+    }
+
+    public function review()
+    {
+        $this->noteTransitionAction('review', 'manual_review', 'admin.reviewed', 'AdminVouchers.!success.review');
+    }
+
+    public function cancel()
+    {
+        $this->noteTransitionAction('cancel', 'cancelled', 'admin.cancelled', 'AdminVouchers.!success.cancel');
     }
 
     /**
@@ -212,6 +287,17 @@ class AdminVouchers extends KuickpayReconcileController
      * @return bool True when the current staff group explicitly allows diagnostics
      */
     private function canViewDiagnostics(): bool
+    {
+        return $this->staffGroupAllows('diagnostics');
+    }
+
+    /**
+     * Checks a dedicated admin_vouchers permission without wildcard fallback.
+     *
+     * @param string $action The exact ACL action token
+     * @return bool True when the current staff group explicitly allows the action
+     */
+    private function staffGroupAllows(string $action): bool
     {
         Loader::loadComponents($this, ['Acl']);
         Loader::loadModels($this, ['StaffGroups']);
@@ -229,7 +315,7 @@ class AdminVouchers extends KuickpayReconcileController
             'kuickpay_reconcile.admin_vouchers'
         );
         foreach ($access_list as $access) {
-            if (($access->action ?? null) !== 'diagnostics') {
+            if (($access->action ?? null) !== $action) {
                 continue;
             }
 
@@ -237,6 +323,163 @@ class AdminVouchers extends KuickpayReconcileController
         }
 
         return false;
+    }
+
+    private function noteTransitionAction(string $action, string $new_status, string $event, string $successKey): void
+    {
+        $company_id = (int) $this->company_id;
+        $voucher_id = $this->routeVoucherId();
+        $detail_url = $this->detailUrl($voucher_id);
+
+        if (empty($this->post)) {
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $voucher = $this->voucherForAction($voucher_id, $company_id);
+        if (!$voucher) {
+            return;
+        }
+
+        if (!$this->staffGroupAllows($action)) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.acl_denied', true), null, false);
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $note = trim((string) ($this->post['admin_note'] ?? ''));
+        if ($note === '') {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.note_required', true), null, false);
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $prior_status = (string) $voucher->status;
+        if (!in_array($action, KuickpayVouchers::ALLOWED_ACTIONS_BY_STATE[$prior_status] ?? [], true)) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.invalid_state', true), null, false);
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $admin_notes = $this->prependAdminNote((string) ($voucher->admin_notes ?? ''), $note, $this->staffId());
+        $transitioned = $this->KuickpayVouchers->transition(
+            $voucher_id,
+            $company_id,
+            $new_status,
+            KuickpayVouchers::ALLOWED_FROM_BY_ACTION[$action] ?? [],
+            ['admin_notes' => $admin_notes]
+        );
+
+        if (!$transitioned) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.invalid_state', true), null, false);
+            $this->redirect($detail_url);
+            return;
+        }
+
+        $this->recordAdminAudit($event, $company_id, $voucher_id, [
+            'staff_id' => $this->staffId(),
+            'prior_status' => $prior_status,
+        ]);
+
+        $this->flashMessage('message', Language::_($successKey, true), null, false);
+        $this->redirect($detail_url);
+    }
+
+    private function routeVoucherId(): int
+    {
+        return (isset($this->get[0]) && ctype_digit((string) $this->get[0]))
+            ? (int) $this->get[0]
+            : 0;
+    }
+
+    private function detailUrl(int $voucher_id): string
+    {
+        if ($voucher_id <= 0) {
+            return $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/';
+        }
+
+        return $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/detail/' . $voucher_id . '/';
+    }
+
+    private function voucherForAction(int $voucher_id, int $company_id)
+    {
+        $voucher = ($voucher_id > 0)
+            ? $this->KuickpayVouchers->getForCompany($voucher_id, $company_id)
+            : false;
+        if ($voucher_id <= 0 || !$voucher) {
+            $this->flashMessage('error', Language::_('AdminVouchers.!error.not_found', true), null, false);
+            $this->redirect($this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/');
+            return false;
+        }
+
+        return $voucher;
+    }
+
+    private function prependAdminNote(string $existing, string $note, int $staff_id): string
+    {
+        $line = '[' . date('c') . '] (staff #' . $staff_id . ') ' . $note;
+
+        return $existing === '' ? $line : $line . "\n" . $existing;
+    }
+
+    private function staffId(): int
+    {
+        return (int) $this->Session->read('blesta_staff_id');
+    }
+
+    private function recordAdminAudit(
+        string $event,
+        int $company_id,
+        int $voucher_id,
+        array $payload,
+        ?int $run_id = null
+    ): void {
+        try {
+            Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayAuditService.php');
+            $context = [
+                'company_id' => $company_id,
+                'voucher_id' => $voucher_id,
+                'payload' => $payload,
+            ];
+            if ($run_id !== null) {
+                $context['run_id'] = $run_id;
+            }
+            (new KuickPayAuditService())->record($event, $context);
+        } catch (Throwable $e) {
+            // Admin decisions should not fail because the audit write failed.
+        }
+    }
+
+    private function safeRecheckOutcome(string $outcome): string
+    {
+        $allowed = [
+            'posted',
+            'already_posted',
+            'confirmed_unposted',
+            'retry',
+            'manual_review',
+            'failed',
+            'unavailable',
+            'skipped',
+        ];
+
+        return in_array($outcome, $allowed, true) ? $outcome : 'failed';
+    }
+
+    private function recheckMessage(string $outcome): array
+    {
+        $messages = [
+            'posted' => ['type' => 'message', 'key' => 'AdminVouchers.!success.recheck_posted'],
+            'already_posted' => ['type' => 'message', 'key' => 'AdminVouchers.!success.recheck_already_posted'],
+            'confirmed_unposted' => ['type' => 'message', 'key' => 'AdminVouchers.!success.recheck_manual_review'],
+            'manual_review' => ['type' => 'message', 'key' => 'AdminVouchers.!success.recheck_manual_review'],
+            'retry' => ['type' => 'message', 'key' => 'AdminVouchers.!success.recheck_retry'],
+            'unavailable' => ['type' => 'error', 'key' => 'AdminVouchers.!error.recheck_unreachable'],
+            'skipped' => ['type' => 'error', 'key' => 'AdminVouchers.!error.recheck_unavailable'],
+            'failed' => ['type' => 'error', 'key' => 'AdminVouchers.!error.recheck_failed'],
+        ];
+
+        return $messages[$outcome] ?? $messages['failed'];
     }
 
     /**

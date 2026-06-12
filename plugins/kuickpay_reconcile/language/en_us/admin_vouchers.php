@@ -56,6 +56,7 @@ $lang['AdminVouchers.text.none'] = 'None';
 $lang['AdminVouchers.detail.heading.summary'] = 'Voucher Summary';
 $lang['AdminVouchers.detail.heading.invoices'] = 'Invoice Mapping & Related Records';
 $lang['AdminVouchers.detail.heading.admin_notes'] = 'Admin Notes';
+$lang['AdminVouchers.detail.heading.actions'] = 'Actions';
 $lang['AdminVouchers.detail.heading.parsed_summary'] = 'Parsed Response Summary';
 $lang['AdminVouchers.detail.heading.diagnostics'] = 'Diagnostics';
 $lang['AdminVouchers.detail.heading.audit_timeline'] = 'Audit Timeline';
@@ -92,6 +93,25 @@ $lang['AdminVouchers.detail.admin_notes.empty'] = 'No admin notes.';
 $lang['AdminVouchers.detail.diagnostics.none'] = 'No diagnostic evidence available.';
 $lang['AdminVouchers.detail.diagnostics.aria_label'] = 'Voucher diagnostics and audit timeline';
 $lang['AdminVouchers.detail.audit.none'] = 'No audit events recorded for this voucher.';
+
+// Manual action labels, prompts, and outcomes
+$lang['AdminVouchers.action.recheck'] = 'Check Now';
+$lang['AdminVouchers.action.review'] = 'Mark Manual Review';
+$lang['AdminVouchers.action.cancel'] = 'Cancel';
+$lang['AdminVouchers.label.admin_note'] = 'Admin Note';
+$lang['AdminVouchers.confirm.cancel'] = 'Cancel this voucher? Existing evidence and audit history will be preserved.';
+$lang['AdminVouchers.!error.note_required'] = 'An admin note is required.';
+$lang['AdminVouchers.!error.invalid_state'] = 'The voucher state changed. Refresh the page and try again.';
+$lang['AdminVouchers.!error.acl_denied'] = 'You do not have permission to run this voucher action.';
+$lang['AdminVouchers.!success.review'] = 'Voucher routed to manual review.';
+$lang['AdminVouchers.!success.cancel'] = 'Voucher cancelled.';
+$lang['AdminVouchers.!success.recheck_posted'] = 'Checked — payment posted.';
+$lang['AdminVouchers.!success.recheck_manual_review'] = 'Checked — routed to manual review.';
+$lang['AdminVouchers.!success.recheck_retry'] = 'Checked — provider still unavailable, will retry.';
+$lang['AdminVouchers.!success.recheck_already_posted'] = 'Already posted.';
+$lang['AdminVouchers.!error.recheck_unreachable'] = 'Couldn\'t reach KuickPay — please try again.';
+$lang['AdminVouchers.!error.recheck_unavailable'] = 'KuickPay reconciliation is unavailable.';
+$lang['AdminVouchers.!error.recheck_failed'] = 'Check failed — please try again later.';
 
 // Posting-state matrix (admin labels; success/transaction link only for posted)
 $lang['AdminVouchers.posting_state.pending'] = 'Voucher active, not posted';
@@ -132,6 +152,9 @@ $lang['AdminVouchers.event.reconciliation.run.completed'] = 'Reconciliation Run 
 $lang['AdminVouchers.event.posting.started'] = 'Posting Started';
 $lang['AdminVouchers.event.posting.succeeded'] = 'Posting Succeeded';
 $lang['AdminVouchers.event.posting.failed'] = 'Posting Failed';
+$lang['AdminVouchers.event.admin.rechecked'] = 'Admin Checked Voucher';
+$lang['AdminVouchers.event.admin.reviewed'] = 'Admin Marked Manual Review';
+$lang['AdminVouchers.event.admin.cancelled'] = 'Admin Cancelled Voucher';
 $lang['AdminVouchers.event.unknown'] = 'Event';
 
 // Validation-reason labels (closed allowlist via presenter; all mapped + unknown)

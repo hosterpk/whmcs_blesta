@@ -157,6 +157,9 @@ class KuickPayVoucherListPresenter
         'posting.started' => 'AdminVouchers.event.posting.started',
         'posting.succeeded' => 'AdminVouchers.event.posting.succeeded',
         'posting.failed' => 'AdminVouchers.event.posting.failed',
+        'admin.rechecked' => 'AdminVouchers.event.admin.rechecked',
+        'admin.reviewed' => 'AdminVouchers.event.admin.reviewed',
+        'admin.cancelled' => 'AdminVouchers.event.admin.cancelled',
     ];
 
     /**
