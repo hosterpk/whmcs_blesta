@@ -24,12 +24,13 @@ class KuickPayReconcileService
     private $parser;
     private $evidenceValidator;
     private $clientFactory;
+    private $logger;
     private $gatewayConfig;
     private bool $hasGatewayConfigOverride = false;
 
     public function __construct(array $dependencies = [])
     {
-        if (empty($dependencies)) {
+        if ($this->needsRuntimeDependencies($dependencies)) {
             $this->loadRuntimeDependencies();
         }
 
@@ -41,6 +42,7 @@ class KuickPayReconcileService
         $this->parser = $dependencies['parser'] ?? new KuickPayResponseParser();
         $this->evidenceValidator = $dependencies['evidence_validator'] ?? new KuickPayEvidenceValidator();
         $this->clientFactory = $dependencies['client_factory'] ?? null;
+        $this->logger = $dependencies['logger'] ?? null;
         $this->hasGatewayConfigOverride = array_key_exists('gateway_config', $dependencies);
         $this->gatewayConfig = $dependencies['gateway_config'] ?? null;
     }
@@ -738,7 +740,50 @@ class KuickPayReconcileService
             return call_user_func($this->clientFactory, $gateway_config);
         }
 
-        return new KuickPaySoapClient($gateway_config);
+        return new KuickPaySoapClient($gateway_config, null, $this->operationLogger($gateway_config));
+    }
+
+    private function operationLogger(array $gateway_config): ?callable
+    {
+        if (!$this->truthy($gateway_config['logging_enabled'] ?? 'false') || $this->logger === null) {
+            return null;
+        }
+
+        $logger = $this->logger;
+
+        return function (array $fields, bool $ok) use ($logger): void {
+            $operation = (string) ($fields['operation'] ?? 'soap');
+            $message = 'kuickpay:' . $operation;
+
+            try {
+                if ($ok && is_callable([$logger, 'info'])) {
+                    $logger->info($message, $fields);
+                } elseif (!$ok && is_callable([$logger, 'error'])) {
+                    $logger->error($message, $fields);
+                }
+            } catch (Throwable $e) {
+                // Operational logging must never affect reconciliation.
+            }
+        };
+    }
+
+    private function needsRuntimeDependencies(array $dependencies): bool
+    {
+        foreach ([
+            'voucher_repository',
+            'run_repository',
+            'item_repository',
+            'lock_repository',
+            'audit_service',
+            'parser',
+            'evidence_validator',
+        ] as $key) {
+            if (!array_key_exists($key, $dependencies)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function truthy($value): bool

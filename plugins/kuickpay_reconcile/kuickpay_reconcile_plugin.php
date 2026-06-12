@@ -194,7 +194,14 @@ class KuickpayReconcilePlugin extends Plugin
         if ($key === 'reconcile_pending') {
             Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayReconcileService.php');
 
-            $service = new KuickPayReconcileService();
+            $dependencies = [];
+            try {
+                $dependencies['logger'] = $this->getFromContainer('logger');
+            } catch (Throwable $e) {
+                // Missing logger falls back to no operational SOAP logs.
+            }
+
+            $service = new KuickPayReconcileService($dependencies);
             $service->runCron((int) Configure::get('Blesta.company_id'));
             return;
         }

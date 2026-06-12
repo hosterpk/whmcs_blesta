@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../../components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php';
 require_once __DIR__ . '/../../../components/gateways/nonmerchant/kuickpay/lib/KuickPayEvidence.php';
 require_once __DIR__ . '/../../../components/gateways/nonmerchant/kuickpay/lib/KuickPayResponseParser.php';
+require_once __DIR__ . '/../../../components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php';
 require_once __DIR__ . '/../lib/KuickPayVoucherListPresenter.php';
 require_once __DIR__ . '/../lib/KuickPayVoucherRepository.php';
 require_once __DIR__ . '/../lib/KuickPayValidationResult.php';

@@ -238,7 +238,14 @@ class AdminVouchers extends KuickpayReconcileController
         Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayPostingService.php');
 
         if (in_array($prior_status, ['pending', 'retry'], true)) {
-            $result = (new KuickPayReconcileService())->reconcileVoucher($company_id, $voucher_id);
+            $dependencies = [];
+            try {
+                $dependencies['logger'] = $this->getFromContainer('logger');
+            } catch (Throwable $e) {
+                // Missing logger falls back to no operational SOAP logs.
+            }
+
+            $result = (new KuickPayReconcileService($dependencies))->reconcileVoucher($company_id, $voucher_id);
             $run_id = $result['run_id'] ?? null;
             $outcome = $this->safeRecheckOutcome((string) ($result['status'] ?? 'failed'));
 

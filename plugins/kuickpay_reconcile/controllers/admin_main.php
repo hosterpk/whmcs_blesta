@@ -59,7 +59,14 @@ class AdminMain extends KuickpayReconcileController
 
         Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayReconcileService.php');
 
-        $service = new KuickPayReconcileService();
+        $dependencies = [];
+        try {
+            $dependencies['logger'] = $this->getFromContainer('logger');
+        } catch (Throwable $e) {
+            // Missing logger falls back to no operational SOAP logs.
+        }
+
+        $service = new KuickPayReconcileService($dependencies);
         $result = $service->runBulk((int) $this->company_id, $run_date);
 
         if (($result['status'] ?? null) === 'completed') {

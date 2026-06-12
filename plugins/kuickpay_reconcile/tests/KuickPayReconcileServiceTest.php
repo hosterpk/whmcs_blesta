@@ -718,6 +718,28 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame('unmatched_reference', $evidence->errorClass());
     }
 
+    public function testRealSoapClientReceivesOperationalLoggerOnlyWhenEnabled()
+    {
+        $service = new KuickPayReconcileService([
+            'voucher_repository' => new KuickPayReconcileFakeVoucherRepository([]),
+            'run_repository' => new KuickPayReconcileFakeRunRepository(),
+            'item_repository' => new KuickPayReconcileFakeItemRepository(),
+            'lock_repository' => new KuickPayReconcileFakeLockRepository(),
+            'audit_service' => new KuickPayReconcileFakeAuditService(),
+            'parser' => new KuickPayResponseParser(),
+            'evidence_validator' => new KuickPayReconcileFakeEvidenceValidator(true),
+            'gateway_config' => ['reconciliation_enabled' => 'true'],
+            'logger' => new KuickPayReconcileFakeLogger(),
+        ]);
+
+        $enabledClient = $this->invokeClient($service, ['logging_enabled' => 'true']);
+        $disabledClient = $this->invokeClient($service, ['logging_enabled' => 'false']);
+
+        $this->assertInstanceOf(KuickPaySoapClient::class, $enabledClient);
+        $this->assertNotNull($this->readPrivate($enabledClient, 'logger'));
+        $this->assertNull($this->readPrivate($disabledClient, 'logger'));
+    }
+
     private function service(array $overrides = []): KuickPayReconcileService
     {
         $client = $overrides['client'] ?? new KuickPayReconcileFakeClient([]);
@@ -735,6 +757,31 @@ class KuickPayReconcileServiceTest extends TestCase
                 return $client;
             },
         ]);
+    }
+
+    private function invokeClient(KuickPayReconcileService $service, array $overrides)
+    {
+        $method = new ReflectionMethod($service, 'client');
+        $method->setAccessible(true);
+
+        return $method->invoke($service, array_merge([
+            'wsdl_url' => 'https://example.com/api.asmx?WSDL',
+            'soap_timeout' => '30',
+            'institution_id' => 'KP01',
+            'voucher_username' => 'voucher-user',
+            'voucher_password' => 'voucher-secret',
+            'inquiry_username' => 'inquiry-user',
+            'inquiry_password' => 'inquiry-secret',
+            'inquiry_same_as_voucher' => 'false',
+        ], $overrides));
+    }
+
+    private function readPrivate($object, string $property)
+    {
+        $property = new ReflectionProperty($object, $property);
+        $property->setAccessible(true);
+
+        return $property->getValue($object);
     }
 
     private function voucher(array $overrides = [])
@@ -1077,6 +1124,22 @@ class KuickPayReconcileFakeAuditService
     public function record(string $eventName, array $context): void
     {
         $this->events[] = [$eventName, $context];
+    }
+}
+
+class KuickPayReconcileFakeLogger
+{
+    public array $info = [];
+    public array $errors = [];
+
+    public function info(string $message, array $context = []): void
+    {
+        $this->info[] = compact('message', 'context');
+    }
+
+    public function error(string $message, array $context = []): void
+    {
+        $this->errors[] = compact('message', 'context');
     }
 }
 
