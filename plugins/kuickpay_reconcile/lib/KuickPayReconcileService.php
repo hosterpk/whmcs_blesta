@@ -25,6 +25,7 @@ class KuickPayReconcileService
     private $evidenceValidator;
     private $clientFactory;
     private $gatewayConfig;
+    private bool $hasGatewayConfigOverride = false;
 
     public function __construct(array $dependencies = [])
     {
@@ -40,6 +41,7 @@ class KuickPayReconcileService
         $this->parser = $dependencies['parser'] ?? new KuickPayResponseParser();
         $this->evidenceValidator = $dependencies['evidence_validator'] ?? new KuickPayEvidenceValidator();
         $this->clientFactory = $dependencies['client_factory'] ?? null;
+        $this->hasGatewayConfigOverride = array_key_exists('gateway_config', $dependencies);
         $this->gatewayConfig = $dependencies['gateway_config'] ?? null;
     }
 
@@ -97,7 +99,9 @@ class KuickPayReconcileService
 
     public function run(int $company_id, string $trigger_type = 'cron'): array
     {
-        $gateway_config = $this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id);
+        $gateway_config = $this->hasGatewayConfigOverride
+            ? $this->gatewayConfig
+            : ($this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id));
         if ($gateway_config === null) {
             return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable'];
         }
@@ -168,10 +172,89 @@ class KuickPayReconcileService
         return ['status' => $status, 'run_id' => $run_id, 'counts' => $counts, 'cursor' => $cursor];
     }
 
+    public function reconcileVoucher(int $company_id, int $voucher_id): array
+    {
+        $gateway_config = $this->hasGatewayConfigOverride
+            ? $this->gatewayConfig
+            : ($this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id));
+        if ($gateway_config === null) {
+            return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable', 'voucher_id' => $voucher_id];
+        }
+        $this->gatewayConfig = $gateway_config;
+
+        $voucher = $this->voucherRepository->getForCompany($voucher_id, $company_id);
+        if (!$voucher) {
+            return ['status' => 'failed', 'reason' => 'voucher_not_found', 'voucher_id' => $voucher_id];
+        }
+
+        $currentStatus = (string) ($voucher->status ?? '');
+        if (!in_array($currentStatus, ['pending', 'retry'], true)) {
+            return ['status' => $currentStatus, 'voucher_id' => $voucher_id];
+        }
+
+        $run_id = 0;
+        $counts = $this->initialCounts();
+        $status = 'completed';
+
+        try {
+            $run_id = $this->runRepository->open($company_id, 'manual', 0);
+            $this->auditService->record('reconciliation.run.started', [
+                'company_id' => $company_id,
+                'run_id' => $run_id,
+                'payload' => ['trigger_type' => 'manual', 'cursor' => 0],
+            ]);
+
+            $client = $this->client($gateway_config);
+            $counts['total_eligible'] = 1;
+            $outcome = $this->processVoucher($company_id, $run_id, $voucher, $client);
+            $counts = $this->countOutcome($counts, $outcome['new_status'], $outcome['error']);
+
+            if ($outcome['error']) {
+                return [
+                    'status' => 'unavailable',
+                    'reason' => 'provider_unreachable',
+                    'run_id' => $run_id,
+                    'voucher_id' => $voucher_id,
+                ];
+            }
+
+            return [
+                'status' => $outcome['new_status'],
+                'run_id' => $run_id,
+                'voucher_id' => $voucher_id,
+            ];
+        } catch (Throwable $e) {
+            $status = 'failed';
+            $counts['total_errors']++;
+
+            return [
+                'status' => 'failed',
+                'reason' => 'run_open_failed',
+                'voucher_id' => $voucher_id,
+            ];
+        } finally {
+            try {
+                if ($run_id > 0) {
+                    $summary = json_encode(['status' => $status, 'counts' => $counts]);
+                    $this->runRepository->close($run_id, $status, $counts, 0, $summary);
+                    $this->auditService->record('reconciliation.run.completed', [
+                        'company_id' => $company_id,
+                        'run_id' => $run_id,
+                        'payload' => ['status' => $status, 'counts' => $counts],
+                    ]);
+                }
+            } catch (Throwable $closeError) {
+                // Manual run close/audit is best-effort, matching the cron path.
+            }
+        }
+    }
+
     public function runBulk(int $company_id, string $run_date, string $trigger_type = 'bulk'): array
     {
         $request = $this->buildBulkRequest($run_date);
-        $gateway_config = $this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id);
+        $gateway_config = $this->hasGatewayConfigOverride
+            ? $this->gatewayConfig
+            : ($this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id));
         if ($gateway_config === null) {
             return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable'];
         }

@@ -47,6 +47,23 @@ class KuickpayVouchers extends KuickpayReconcileModel
         'admin_notes',
     ];
 
+    public const ALLOWED_ACTIONS_BY_STATE = [
+        'pending' => ['recheck', 'review', 'cancel'],
+        'retry' => ['recheck', 'review', 'cancel'],
+        'confirmed_unposted' => ['recheck', 'review'],
+        'posted' => [],
+        'failed' => ['review', 'cancel'],
+        'expired' => ['review', 'cancel'],
+        'manual_review' => ['cancel'],
+        'cancelled' => [],
+    ];
+
+    public const ALLOWED_FROM_BY_ACTION = [
+        'recheck' => ['pending', 'retry', 'confirmed_unposted'],
+        'review' => ['pending', 'retry', 'failed', 'expired', 'confirmed_unposted'],
+        'cancel' => ['pending', 'retry', 'failed', 'expired', 'manual_review'],
+    ];
+
     /**
      * Adds a voucher.
      *
@@ -628,6 +645,48 @@ class KuickpayVouchers extends KuickpayReconcileModel
                 'status' => 'expired',
                 'date_updated' => date('Y-m-d H:i:s'),
             ], ['status', 'date_updated']);
+
+        return $statement->rowCount() === 1;
+    }
+
+    /**
+     * Atomically transitions a company-scoped voucher when it is still in an
+     * allowed source state.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @param string $new_status The target status
+     * @param array $allowed_from Source statuses that may transition
+     * @param array $extra Additional allowlisted voucher fields to write
+     * @return bool True only when this call transitioned the row
+     */
+    public function transition(
+        int $voucher_id,
+        int $company_id,
+        string $new_status,
+        array $allowed_from,
+        array $extra = []
+    ): bool {
+        if (!in_array($new_status, self::STATUSES, true)) {
+            return false;
+        }
+
+        $allowed_from = array_values(array_intersect($allowed_from, self::STATUSES));
+        if (empty($allowed_from)) {
+            return false;
+        }
+
+        unset($extra['company_id']);
+        $vars = array_intersect_key($extra, array_flip(self::FIELDS));
+        $vars['status'] = $new_status;
+        $vars['date_updated'] = date('Y-m-d H:i:s');
+        $fields = array_values(array_intersect(array_keys($vars), self::FIELDS));
+
+        $statement = $this->Record
+            ->where('id', '=', $voucher_id)
+            ->where('company_id', '=', $company_id)
+            ->where('status', 'in', $allowed_from)
+            ->update('kuickpay_vouchers', $vars, $fields);
 
         return $statement->rowCount() === 1;
     }

@@ -10,3 +10,10 @@ require_once __DIR__ . '/../lib/KuickPayInvoiceReader.php';
 require_once __DIR__ . '/../lib/KuickPayEvidenceValidator.php';
 require_once __DIR__ . '/../lib/KuickPayReconcileService.php';
 require_once __DIR__ . '/../lib/KuickPayPostingService.php';
+
+if (!class_exists('KuickpayReconcileModel')) {
+    class KuickpayReconcileModel
+    {
+    }
+}
+require_once __DIR__ . '/../models/kuickpay_vouchers.php';

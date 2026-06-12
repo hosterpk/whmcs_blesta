@@ -245,6 +245,135 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(0, $run->opened);
     }
 
+    public function testReconcileVoucherConfirmsOneVoucherInManualRunWithoutPosting()
+    {
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'run_repository' => $run,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->reconcileVoucher(1, 1);
+
+        $this->assertSame('confirmed_unposted', $result['status']);
+        $this->assertSame(10, $result['run_id']);
+        $this->assertSame(1, $result['voucher_id']);
+        $this->assertSame('manual', $run->openedTriggerType);
+        $this->assertSame(0, $run->openedCursor);
+        $this->assertSame(0, $run->resumeCalls, 'manual single-voucher reconcile must not use the cron cursor');
+        $this->assertSame(0, $run->closedCursor);
+        $this->assertSame(1, $run->closedCounts['total_eligible']);
+        $this->assertSame(1, $run->closedCounts['total_confirmed']);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertNotSame('posted', $repo->edits[0]['status']);
+        $this->assertContains('reconciliation.run.started', array_column($audit->events, 0));
+        $this->assertContains('reconciliation.run.completed', array_column($audit->events, 0));
+    }
+
+    public function testReconcileVoucherSkipsWhenGatewayConfigUnavailable()
+    {
+        $service = new KuickPayReconcileService([
+            'voucher_repository' => new KuickPayReconcileFakeVoucherRepository([$this->voucher()]),
+            'run_repository' => new KuickPayReconcileFakeRunRepository(),
+            'item_repository' => new KuickPayReconcileFakeItemRepository(),
+            'lock_repository' => new KuickPayReconcileFakeLockRepository(),
+            'audit_service' => new KuickPayReconcileFakeAuditService(),
+            'parser' => new KuickPayResponseParser(),
+            'evidence_validator' => new KuickPayReconcileFakeEvidenceValidator(true),
+            'gateway_config' => null,
+        ]);
+
+        $result = $service->reconcileVoucher(1, 1);
+
+        $this->assertSame('skipped', $result['status']);
+        $this->assertSame('kuickpay_unavailable', $result['reason']);
+    }
+
+    public function testReconcileVoucherShortCircuitsNonReconcilableFreshStatusWithoutProviderCall()
+    {
+        $voucher = $this->voucher(['status' => 'confirmed_unposted']);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $service = $this->service([
+            'voucher_repository' => new KuickPayReconcileFakeVoucherRepository([$voucher]),
+            'run_repository' => $run,
+            'client' => $client,
+        ]);
+
+        $result = $service->reconcileVoucher(1, 1);
+
+        $this->assertSame('confirmed_unposted', $result['status']);
+        $this->assertSame(1, $result['voucher_id']);
+        $this->assertSame([], $client->requests);
+        $this->assertSame(0, $run->opened);
+    }
+
+    public function testReconcileVoucherProviderExceptionReturnsUnavailableToken()
+    {
+        $client = new KuickPayReconcileFakeClient([
+            new RuntimeException('provider timed out'),
+        ]);
+        $run = new KuickPayReconcileFakeRunRepository();
+        $service = $this->service([
+            'voucher_repository' => new KuickPayReconcileFakeVoucherRepository([$this->voucher()]),
+            'run_repository' => $run,
+            'client' => $client,
+        ]);
+
+        $result = $service->reconcileVoucher(1, 1);
+
+        $this->assertSame('unavailable', $result['status']);
+        $this->assertSame('provider_unreachable', $result['reason']);
+        $this->assertSame(10, $result['run_id']);
+        $this->assertSame(1, $run->closedCounts['total_errors']);
+    }
+
+    public function testManualActionSafetyMapsMatchDisplayStateMatrix()
+    {
+        $this->assertSame(
+            [
+                'pending' => ['recheck', 'review', 'cancel'],
+                'retry' => ['recheck', 'review', 'cancel'],
+                'confirmed_unposted' => ['recheck', 'review'],
+                'posted' => [],
+                'failed' => ['review', 'cancel'],
+                'expired' => ['review', 'cancel'],
+                'manual_review' => ['cancel'],
+                'cancelled' => [],
+            ],
+            KuickpayVouchers::ALLOWED_ACTIONS_BY_STATE
+        );
+
+        $this->assertSame(
+            ['pending', 'retry', 'failed', 'expired', 'confirmed_unposted'],
+            KuickpayVouchers::ALLOWED_FROM_BY_ACTION['review']
+        );
+        $this->assertSame(
+            ['pending', 'retry', 'failed', 'expired', 'manual_review'],
+            KuickpayVouchers::ALLOWED_FROM_BY_ACTION['cancel']
+        );
+        $this->assertNotContains('confirmed_unposted', KuickpayVouchers::ALLOWED_FROM_BY_ACTION['cancel']);
+        $this->assertNotContains('posted', KuickpayVouchers::ALLOWED_FROM_BY_ACTION['cancel']);
+        $this->assertNotContains('cancelled', KuickpayVouchers::ALLOWED_FROM_BY_ACTION['cancel']);
+        $this->assertNotContains('posted', KuickpayVouchers::ALLOWED_FROM_BY_ACTION['review']);
+        $this->assertNotContains('cancelled', KuickpayVouchers::ALLOWED_FROM_BY_ACTION['review']);
+    }
+
     public function testExpirePendingSkipsWhenExpiryLockHeld()
     {
         $lock = new KuickPayReconcileFakeLockRepository(false);
@@ -795,6 +924,17 @@ class KuickPayReconcileFakeVoucherRepository
         return null;
     }
 
+    public function getForCompany(int $voucher_id, int $company_id)
+    {
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                return $voucher;
+            }
+        }
+
+        return false;
+    }
+
     public function findActiveByKuickpayReference(string $reference, int $company_id, int $excludeVoucherId = 0): ?stdClass
     {
         return $this->duplicateReference;
@@ -851,6 +991,8 @@ class KuickPayReconcileFakeRunRepository
     public int $closedCursor = -1;
     public int $resumeCalls = 0;
     public ?string $openedBulkDate = null;
+    public ?string $openedTriggerType = null;
+    public ?int $openedCursor = null;
     public array $closedCounts = [];
     private int $resumeCursor;
 
@@ -869,6 +1011,8 @@ class KuickPayReconcileFakeRunRepository
     public function open(int $company_id, string $trigger_type, int $cursor): int
     {
         $this->opened++;
+        $this->openedTriggerType = $trigger_type;
+        $this->openedCursor = $cursor;
 
         return 10;
     }
