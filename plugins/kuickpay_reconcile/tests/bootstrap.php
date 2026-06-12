@@ -11,6 +11,7 @@ require_once __DIR__ . '/../lib/KuickPayInvoiceReader.php';
 require_once __DIR__ . '/../lib/KuickPayEvidenceValidator.php';
 require_once __DIR__ . '/../lib/KuickPayReconcileService.php';
 require_once __DIR__ . '/../lib/KuickPayPostingService.php';
+require_once __DIR__ . '/../lib/KuickPayVoucherReferenceService.php';
 
 if (!class_exists('AppModel')) {
     class AppModel

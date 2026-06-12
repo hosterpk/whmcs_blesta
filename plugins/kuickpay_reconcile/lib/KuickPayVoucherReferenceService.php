@@ -64,6 +64,13 @@ class KuickPayVoucherReferenceService
         try {
             $invoiceAmounts = $this->normalizeContextInvoiceAmounts((array) ($context['invoice_amounts'] ?? []));
             if ($invoiceAmounts === null) {
+                if ($this->lastError === 'duplicate_invoice_id') {
+                    $this->recordGenerationFailed(
+                        (int) ($context['company_id'] ?? 0),
+                        $this->firstContextInvoiceId((array) ($context['invoice_amounts'] ?? [])),
+                        $this->lastError
+                    );
+                }
                 return null;
             }
             $context['invoice_amounts'] = $invoiceAmounts;
@@ -115,6 +122,9 @@ class KuickPayVoucherReferenceService
             for ($attempt = 1; $attempt <= self::MAX_REFERENCE_ATTEMPTS; $attempt++) {
                 $refs = $this->generateReferences($context);
                 if ($refs['registration_number'] === '' || $refs['consumer_number'] === '') {
+                    if (in_array($this->lastError, ['invalid_registration_pattern', 'invalid_consumer_pattern'], true)) {
+                        $this->recordGenerationFailed($company_id, $invoice_id, (string) $this->lastError);
+                    }
                     return null;
                 }
 
@@ -127,6 +137,7 @@ class KuickPayVoucherReferenceService
 
                 if ($attempt === self::MAX_REFERENCE_ATTEMPTS) {
                     $this->lastError = 'uniqueness_exhausted';
+                    $this->recordGenerationFailed($company_id, $invoice_id, $this->lastError);
                     return null;
                 }
             }
@@ -245,6 +256,42 @@ class KuickPayVoucherReferenceService
         } catch (Throwable $e) {
             return false;
         }
+    }
+
+    /**
+     * Records a durable, redacted reference-generation failure audit event.
+     *
+     * @param int $companyId Company scope
+     * @param int $invoiceId Invoice id related to the generation attempt
+     * @param string $reason Safe reason code
+     * @param int|null $voucherId Voucher id when one exists
+     */
+    private function recordGenerationFailed(int $companyId, int $invoiceId, string $reason, ?int $voucherId = null): void
+    {
+        try {
+            if ($this->auditService === null) {
+                Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayAuditService.php');
+                $this->auditService = new KuickPayAuditService();
+            }
+
+            $this->auditService->record('voucher.generation_failed', [
+                'company_id' => $companyId,
+                'voucher_id' => $voucherId,
+                'payload' => [
+                    'reason' => $reason,
+                    'invoice_id' => $invoiceId,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            // Audit writes must not abort reference generation.
+        }
+    }
+
+    private function firstContextInvoiceId(array $invoiceAmounts): int
+    {
+        $first = reset($invoiceAmounts);
+
+        return is_array($first) ? (int) ($first['id'] ?? 0) : 0;
     }
 
     /**
