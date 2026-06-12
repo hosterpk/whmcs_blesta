@@ -63,6 +63,13 @@ unless ALL of these hold; treat as ACs):
 
 ## Tasks / Subtasks
 
+### Review Findings
+
+- [x] [Review][Patch] AJAX filter requests render the full page instead of the widget response [plugins/kuickpay_reconcile/controllers/admin_vouchers.php:125]
+- [x] [Review][Patch] Fresh POST filters keep the old page number and can show false no-results [plugins/kuickpay_reconcile/controllers/admin_vouchers.php:60]
+- [x] [Review][Patch] Filter URLs are manually encoded and can produce malformed persisted filter query strings [plugins/kuickpay_reconcile/controllers/admin_vouchers.php:103]
+- [x] [Review][Patch] Amount filter truncates non-zero extra decimal places instead of treating them as no-match input [plugins/kuickpay_reconcile/models/kuickpay_vouchers.php:439]
+
 - [x] **Task 1 — Create the `admin_vouchers` controller** (AC: 1,2,3,4,5,8)
   - [x] Create `plugins/kuickpay_reconcile/controllers/admin_vouchers.php`, class `AdminVouchers extends KuickpayReconcileController`, mirroring the `AdminMain` preAction wiring (`parent::preAction()`, `$this->requireLogin()`, restore `structure->setView(null, $this->orig_structure_view)`). See `controllers/admin_main.php:8-21`.
   - [x] In `preAction()` (after `parent::preAction()`), **explicitly load the models and presenter** — they are NOT auto-loaded (the existing `admin_main` controller loads none, so do not assume it): `Loader::loadModels($this, ['KuickpayReconcile.KuickpayVouchers', 'KuickpayReconcile.KuickpayVoucherInvoices'])` and `Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayVoucherListPresenter.php')`. Calling an unloaded model (e.g. `$this->KuickpayVouchers->getList()`) is a fatal error. Loader pattern reference: `lib/KuickPayVoucherRepository.php:18-21`.
