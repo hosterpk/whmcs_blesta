@@ -19,7 +19,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ## Technology Stack & Versions
 
 - PHP app: Blesta `6.0.0-b1`, Composer package `blesta/blesta`, proprietary.
-- Runtime PHP: PHP `>=8.2.0`; Composer platform is pinned to PHP `8.2`. Do not add PHP 8.3+ syntax, APIs, or package requirements without explicit approval.
+- Runtime PHP: **production runs on PHP `8.3` (ea-php83)** — confirmed by the cPanel `.htaccess` handler (`application/x-httpd-ea-php83`) and required by the ionCube-15-encoded Blesta core (it will not load on 8.2). The `>=8.2.0` requirement and the Composer `platform.php 8.2` pin are a **source-compatibility floor, not the runtime**: keep code runnable on 8.2 (do not add PHP 8.3+ syntax, APIs, or package requirements without explicit approval), but install, run, and verify the application on PHP 8.3.
 - Dependency path: Composer installs to `vendors/`, not `vendor/`; autoload and tooling paths must account for this.
 - Architecture: PHP MVC monolith using Blesta/minPHP routing. Request flow is `index.php -> lib/init.php -> config/services.php -> config/routes.php -> app/controllers or extension controllers -> models/components/core -> MySQL/external integrations`.
 - Services/routes: `config/services.php` registration order matters; preserve it unless intentionally changing bootstrap behavior. Routes follow Blesta conventions: admin paths map to `admin_*`, client paths to `client_*`, plus API/feed/plugin/widget routes.
@@ -36,7 +36,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ### Language-Specific Rules
 
-- Target PHP 8.2 syntax and runtime behavior. Do not introduce PHP 8.3+ syntax, attributes, standard-library APIs, or package assumptions while Composer platform is pinned to PHP 8.2.
+- Target PHP 8.2 **source syntax** as the compatibility floor; the production **runtime is PHP 8.3 (ea-php83)**. Do not introduce PHP 8.3+ syntax, attributes, standard-library APIs, or package assumptions while the Composer platform is pinned to PHP 8.2 — but treat 8.3 as the runtime for installing, running, and verifying the app (the ionCube-encoded core only loads on the 8.3 build's ionCube 15 loader).
 - Preserve each file family's namespace style. `core/` uses `Blesta\Core\...`, many `app/models` use `Blesta\App\Models`, and controllers, plugins, modules, gateways, reports, and helpers commonly use legacy global classes. Do not add namespaces to legacy extension files unless that extension already uses one.
 - Do not add `declare(strict_types=1)` broadly. The codebase mixes legacy and modern PHP typing; match the target file's existing type-hint style.
 - Preserve inherited Blesta method signatures. Do not add parameter or return types to framework override methods unless the parent contract already supports them.

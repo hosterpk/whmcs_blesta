@@ -66,7 +66,7 @@ The repository is a Blesta `6.0.0-b1` PHP monolith using Blesta/minPHP routing, 
 
 Key constraints:
 
-- Target PHP 8.2 only.
+- Source-compatibility floor: PHP 8.2 (no 8.3-only syntax/APIs). Production and verification **runtime: PHP 8.3 (ea-php83, ionCube 15)** — the ionCube-encoded Blesta core does not load on the 8.2 build. (Clarified 2026-06-13; "8.2" was a Composer floor, not the runtime.)
 - Do not modify Blesta core files.
 - Keep gateway behavior inside `components/gateways/nonmerchant/...`.
 - Keep plugin/admin/cron behavior inside plugin boundaries if a companion plugin is selected.
@@ -214,7 +214,7 @@ Use `kuickpay` consistently for folder names, class prefixes, language namespace
 ### Architectural Decisions Provided by Scaffold
 
 **Language & Runtime:**
-PHP 8.2-compatible Blesta extension code. No PHP 8.3+ syntax or APIs.
+PHP 8.2-compatible source as the floor (no PHP 8.3+ syntax or APIs), executed on the production runtime **PHP 8.3 (ea-php83, ionCube 15)**.
 
 **Styling Solution:**
 No new styling stack. Use Blesta admin/client `.pdt` templates, inherited Bootstrap/Paradigm UI classes, existing helper patterns, and language files.

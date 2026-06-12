@@ -1,0 +1,75 @@
+SNAPSHOT TYPE: BEFORE   (captured via PHP 8.2 read-only PDO)
+
+----- plugins row (kuickpay_reconcile) -----
+{"id":11,"0":11,"dir":"kuickpay_reconcile","1":"kuickpay_reconcile","name":"KuickPay Reconcile","2":"KuickPay Reconcile","version":"1.4.0","3":"1.4.0","enabled":1,"4":1,"company_id":1,"5":1}
+
+----- gateways row (kuickpay) -----
+{"id":5,"0":5,"class":"kuickpay","1":"kuickpay","version":"1.0.0","2":"1.0.0","company_id":1,"3":1}
+
+----- permissions (full rows, kuickpay_reconcile) -----
+{"id":233,"0":233,"group_id":3,"1":3,"plugin_id":11,"2":11,"name":"KuickPay Bulk Reconciliation","3":"KuickPay Bulk Reconciliation","alias":"kuickpay_reconcile.admin_main","4":"kuickpay_reconcile.admin_main","action":"*","5":"*"}
+
+----- permission count (kuickpay_reconcile) -----
+{"permission_count":1,"0":1}
+
+----- actions/nav rows for plugin -----
+{"id":73,"0":73,"plugin_id":11,"1":11,"location":"nav_staff","2":"nav_staff","url":"plugin/kuickpay_reconcile/admin_main/index/","3":"plugin/kuickpay_reconcile/admin_main/index/","name":"KuickpayReconcilePlugin.nav_secondary_staff.bulk_reconcile","4":"KuickpayReconcilePlugin.nav_secondary_staff.bulk_reconcile","enabled":1,"5":1}
+
+----- kuickpay tables present -----
+{"Tables_in_hosterpk_blesta (kuickpay\\_%)":"kuickpay_audit_events","0":"kuickpay_audit_events"}
+{"Tables_in_hosterpk_blesta (kuickpay\\_%)":"kuickpay_reconcile_locks","0":"kuickpay_reconcile_locks"}
+{"Tables_in_hosterpk_blesta (kuickpay\\_%)":"kuickpay_reconciliation_items","0":"kuickpay_reconciliation_items"}
+{"Tables_in_hosterpk_blesta (kuickpay\\_%)":"kuickpay_reconciliation_runs","0":"kuickpay_reconciliation_runs"}
+{"Tables_in_hosterpk_blesta (kuickpay\\_%)":"kuickpay_voucher_invoices","0":"kuickpay_voucher_invoices"}
+{"Tables_in_hosterpk_blesta (kuickpay\\_%)":"kuickpay_vouchers","0":"kuickpay_vouchers"}
+
+----- kuickpay_vouchers columns -----
+{"COLUMN_NAME":"id","0":"id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"company_id","0":"company_id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"gateway_id","0":"gateway_id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"client_id","0":"client_id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"currency","0":"currency","COLUMN_TYPE":"varchar(3)","1":"varchar(3)","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"amount","0":"amount","COLUMN_TYPE":"varchar(20)","1":"varchar(20)","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"status","0":"status","COLUMN_TYPE":"enum('pending','retry','confirmed_unposted','posted','failed','expired','manual_review','cancelled')","1":"enum('pending','retry','confirmed_unposted','posted','failed','expired','manual_review','cancelled')","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":"'pending'","3":"'pending'"}
+{"COLUMN_NAME":"registration_number","0":"registration_number","COLUMN_TYPE":"varchar(64)","1":"varchar(64)","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"consumer_number","0":"consumer_number","COLUMN_TYPE":"varchar(64)","1":"varchar(64)","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"date_due","0":"date_due","COLUMN_TYPE":"date","1":"date","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"date_expires","0":"date_expires","COLUMN_TYPE":"date","1":"date","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"date_created","0":"date_created","COLUMN_TYPE":"datetime","1":"datetime","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"date_updated","0":"date_updated","COLUMN_TYPE":"datetime","1":"datetime","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":null,"3":null}
+{"COLUMN_NAME":"date_posted","0":"date_posted","COLUMN_TYPE":"datetime","1":"datetime","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"date_paid","0":"date_paid","COLUMN_TYPE":"datetime","1":"datetime","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"date_last_checked","0":"date_last_checked","COLUMN_TYPE":"datetime","1":"datetime","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"retry_count","0":"retry_count","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned","IS_NULLABLE":"NO","2":"NO","COLUMN_DEFAULT":"0","3":"0"}
+{"COLUMN_NAME":"error_class","0":"error_class","COLUMN_TYPE":"varchar(32)","1":"varchar(32)","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"raw_status","0":"raw_status","COLUMN_TYPE":"varchar(8)","1":"varchar(8)","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"evidence_hash","0":"evidence_hash","COLUMN_TYPE":"varchar(24)","1":"varchar(24)","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"kuickpay_reference","0":"kuickpay_reference","COLUMN_TYPE":"varchar(128)","1":"varchar(128)","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"blesta_transaction_id","0":"blesta_transaction_id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"diagnostic_summary","0":"diagnostic_summary","COLUMN_TYPE":"text","1":"text","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+{"COLUMN_NAME":"admin_notes","0":"admin_notes","COLUMN_TYPE":"text","1":"text","IS_NULLABLE":"YES","2":"YES","COLUMN_DEFAULT":"NULL","3":"NULL"}
+
+----- kuickpay_reconciliation_runs columns -----
+{"COLUMN_NAME":"id","0":"id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"company_id","0":"company_id","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"trigger_type","0":"trigger_type","COLUMN_TYPE":"enum('cron','manual','bulk')","1":"enum('cron','manual','bulk')"}
+{"COLUMN_NAME":"status","0":"status","COLUMN_TYPE":"enum('running','completed','aborted','failed')","1":"enum('running','completed','aborted','failed')"}
+{"COLUMN_NAME":"date_started","0":"date_started","COLUMN_TYPE":"datetime","1":"datetime"}
+{"COLUMN_NAME":"date_completed","0":"date_completed","COLUMN_TYPE":"datetime","1":"datetime"}
+{"COLUMN_NAME":"run_date","0":"run_date","COLUMN_TYPE":"date","1":"date"}
+{"COLUMN_NAME":"cursor","0":"cursor","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_eligible","0":"total_eligible","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_checked","0":"total_checked","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_confirmed","0":"total_confirmed","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_retry","0":"total_retry","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_manual_review","0":"total_manual_review","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_expired","0":"total_expired","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_failed","0":"total_failed","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_errors","0":"total_errors","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"total_unmatched","0":"total_unmatched","COLUMN_TYPE":"int(10) unsigned","1":"int(10) unsigned"}
+{"COLUMN_NAME":"summary","0":"summary","COLUMN_TYPE":"text","1":"text"}
+
+----- voucher status counts -----
+{"status":"pending","0":"pending","n":1,"1":1}
+{"status":"manual_review","0":"manual_review","n":1,"1":1}
+
