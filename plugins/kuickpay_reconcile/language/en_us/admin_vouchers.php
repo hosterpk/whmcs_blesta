@@ -140,16 +140,18 @@ $lang['AdminVouchers.error_class.posting_failed'] = 'Posting Failed';
 $lang['AdminVouchers.error_class.reconcile_exception'] = 'Reconcile Exception';
 $lang['AdminVouchers.error_class.unknown'] = 'Unknown';
 
-// Audit event labels (closed allowlist via presenter; 14 events + generic)
+// Audit event labels (closed allowlist via presenter; 19 events + generic)
 $lang['AdminVouchers.event.voucher.issued'] = 'Voucher Issued';
 $lang['AdminVouchers.event.voucher.replaced'] = 'Voucher Replaced';
 $lang['AdminVouchers.event.voucher.expired'] = 'Voucher Expired';
+$lang['AdminVouchers.event.voucher.generation_failed'] = 'Reference Generation Failed';
 $lang['AdminVouchers.event.evidence.received'] = 'Evidence Received';
 $lang['AdminVouchers.event.evidence.matched'] = 'Evidence Matched';
 $lang['AdminVouchers.event.evidence.retry_decision'] = 'Retry Decision';
 $lang['AdminVouchers.event.evidence.rejected'] = 'Evidence Rejected';
 $lang['AdminVouchers.event.evidence.duplicate'] = 'Duplicate Evidence';
 $lang['AdminVouchers.event.evidence.unmatched'] = 'Unmatched Evidence';
+$lang['AdminVouchers.event.evidence.error'] = 'Processing Error';
 $lang['AdminVouchers.event.reconciliation.run.started'] = 'Reconciliation Run Started';
 $lang['AdminVouchers.event.reconciliation.run.completed'] = 'Reconciliation Run Completed';
 $lang['AdminVouchers.event.posting.started'] = 'Posting Started';

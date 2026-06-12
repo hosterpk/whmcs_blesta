@@ -330,17 +330,19 @@ class KuickPayVoucherListPresenterTest extends TestCase
         'reconcile_exception',
     ];
 
-    /** The 17 emitted audit event names (grep-verified across the plugin lib). */
+    /** The 19 emitted audit event names (grep-verified across the plugin lib). */
     private const KNOWN_EVENTS = [
         'voucher.issued',
         'voucher.replaced',
         'voucher.expired',
+        'voucher.generation_failed',
         'evidence.received',
         'evidence.matched',
         'evidence.retry_decision',
         'evidence.rejected',
         'evidence.duplicate',
         'evidence.unmatched',
+        'evidence.error',
         'reconciliation.run.started',
         'reconciliation.run.completed',
         'posting.started',
@@ -502,7 +504,14 @@ class KuickPayVoucherListPresenterTest extends TestCase
         $expected = self::KNOWN_EVENTS;
         sort($expected);
 
-        $this->assertSame($expected, $keys, 'Event map drifted from the 17 emitted event names');
+        $this->assertSame($expected, $keys, 'Event map drifted from the 19 emitted event names');
+    }
+
+    public function testKnownEventsUseLowerDotNotation()
+    {
+        foreach (self::KNOWN_EVENTS as $event) {
+            $this->assertRegExp('/^[a-z][a-z_]*(\.[a-z][a-z_]*)+$/', $event);
+        }
     }
 
     public function testEventMapValuesAreCanonicalKeys()
