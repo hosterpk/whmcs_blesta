@@ -88,6 +88,117 @@ class KuickPayVoucherListPresenter
     public const DEFAULT_BADGE_CLASS = 'bg-secondary';
 
     /**
+     * @var array Closed allowlist mapping every error-class token that can be
+     *  stored on a voucher row to a language key. The stored domain is the
+     *  parser's 8 canonical classes (KuickPayResponseParser::ALLOWED_ERRORS)
+     *  PLUS two operational tokens written outside the parser: posting_failed
+     *  (KuickPayPostingService) and reconcile_exception (KuickPayReconcileService).
+     *  Any token outside this set falls back to the safe unknown label.
+     */
+    public const ERROR_CLASS_LABEL_KEYS = [
+        'timeout' => 'AdminVouchers.error_class.timeout',
+        'transport_error' => 'AdminVouchers.error_class.transport_error',
+        'credential_error' => 'AdminVouchers.error_class.credential_error',
+        'malformed_response' => 'AdminVouchers.error_class.malformed_response',
+        'unknown_status' => 'AdminVouchers.error_class.unknown_status',
+        'amount_mismatch' => 'AdminVouchers.error_class.amount_mismatch',
+        'duplicate_reference' => 'AdminVouchers.error_class.duplicate_reference',
+        'unmatched_reference' => 'AdminVouchers.error_class.unmatched_reference',
+        'posting_failed' => 'AdminVouchers.error_class.posting_failed',
+        'reconcile_exception' => 'AdminVouchers.error_class.reconcile_exception',
+    ];
+
+    /**
+     * @var string Language key for an unknown/absent error class.
+     */
+    public const DEFAULT_ERROR_CLASS_LABEL_KEY = 'AdminVouchers.error_class.unknown';
+
+    /**
+     * @var array Closed allowlist mapping every emitted audit event name to a
+     *  language key. The raw event token is itself non-secret, but display
+     *  always routes through this map; an unknown token gets the generic key.
+     */
+    public const EVENT_LABEL_KEYS = [
+        'voucher.issued' => 'AdminVouchers.event.voucher.issued',
+        'voucher.replaced' => 'AdminVouchers.event.voucher.replaced',
+        'voucher.expired' => 'AdminVouchers.event.voucher.expired',
+        'evidence.received' => 'AdminVouchers.event.evidence.received',
+        'evidence.matched' => 'AdminVouchers.event.evidence.matched',
+        'evidence.retry_decision' => 'AdminVouchers.event.evidence.retry_decision',
+        'evidence.rejected' => 'AdminVouchers.event.evidence.rejected',
+        'evidence.duplicate' => 'AdminVouchers.event.evidence.duplicate',
+        'evidence.unmatched' => 'AdminVouchers.event.evidence.unmatched',
+        'reconciliation.run.started' => 'AdminVouchers.event.reconciliation.run.started',
+        'reconciliation.run.completed' => 'AdminVouchers.event.reconciliation.run.completed',
+        'posting.started' => 'AdminVouchers.event.posting.started',
+        'posting.succeeded' => 'AdminVouchers.event.posting.succeeded',
+        'posting.failed' => 'AdminVouchers.event.posting.failed',
+    ];
+
+    /**
+     * @var string Language key for an unknown audit event name.
+     */
+    public const DEFAULT_EVENT_LABEL_KEY = 'AdminVouchers.event.unknown';
+
+    /**
+     * @var array Closed allowlist mapping every validation-reason token stored
+     *  inside diagnostic_summary.validation_errors to a language key. Populated
+     *  from three sources: the plugin evidence validator, the posting service
+     *  (merged via moveToManualReview), and the gateway response parser. The
+     *  parser tail is open-ended, so any unmapped token falls back to the safe
+     *  generic unknown label (AC6). The audit-only transaction_add_failed /
+     *  transaction_apply_failed reasons are deliberately absent: they live in
+     *  the escaped audit payload, never in validation_errors.
+     */
+    public const VALIDATION_REASON_LABEL_KEYS = [
+        // Plugin evidence validator (KuickPayEvidenceValidator).
+        'currency_mismatch' => 'AdminVouchers.validation_reason.currency_mismatch',
+        'amount_mismatch' => 'AdminVouchers.validation_reason.amount_mismatch',
+        'unmatched_reference' => 'AdminVouchers.validation_reason.unmatched_reference',
+        'invoice_mismatch' => 'AdminVouchers.validation_reason.invoice_mismatch',
+        'stale_voucher' => 'AdminVouchers.validation_reason.stale_voucher',
+        'duplicate_reference' => 'AdminVouchers.validation_reason.duplicate_reference',
+        'late_payment' => 'AdminVouchers.validation_reason.late_payment',
+        // Posting service (merged into validation_errors on manual review).
+        'missing_paid_date' => 'AdminVouchers.validation_reason.missing_paid_date',
+        'existing_transaction_mismatch' => 'AdminVouchers.validation_reason.existing_transaction_mismatch',
+        'existing_transaction_partial_application' => 'AdminVouchers.validation_reason.existing_transaction_partial_application',
+        'existing_transaction_apply_failed' => 'AdminVouchers.validation_reason.existing_transaction_apply_failed',
+        'existing_transaction_unverified' => 'AdminVouchers.validation_reason.existing_transaction_unverified',
+        // Gateway response parser (open-ended tail; generic fallback covers the rest).
+        'missing_expected_context' => 'AdminVouchers.validation_reason.missing_expected_context',
+        'underpayment' => 'AdminVouchers.validation_reason.underpayment',
+        'overpayment' => 'AdminVouchers.validation_reason.overpayment',
+        'unknown_status' => 'AdminVouchers.validation_reason.unknown_status',
+    ];
+
+    /**
+     * @var string Language key for an unknown/empty validation reason.
+     */
+    public const DEFAULT_VALIDATION_REASON_LABEL_KEY = 'AdminVouchers.validation_reason.unknown';
+
+    /**
+     * @var array Closed allowlist of diagnostic_summary keys the detail view may
+     *  render, in fixed display order. Covers both the reconcile writer shape
+     *  and the issuance writer shape. Guarantees AC7 even if a future writer
+     *  adds a new key to the JSON: only these keys are ever surfaced.
+     */
+    public const DIAGNOSTIC_FIELD_KEYS = [
+        'status',
+        'raw_status',
+        'error_class',
+        'evidence_hash',
+        'redacted_trace_id',
+        'validation_errors',
+        'reference',
+        'consumer_number',
+        'registration_number',
+        'amount',
+        'currency',
+        'paid_at',
+    ];
+
+    /**
      * Returns the language key for a status via the closed allowlist.
      *
      * @param string $status The raw status value
@@ -212,5 +323,79 @@ class KuickPayVoucherListPresenter
         }
 
         return $clean;
+    }
+
+    /**
+     * Returns the language key for a stored error-class token via the closed
+     * allowlist. Null (no error class) and any unknown token resolve to the
+     * safe generic key — a DB value is never concatenated into a language key.
+     *
+     * @param string|null $class The stored error_class token
+     * @return string The language key
+     */
+    public function errorClassLabelKey(?string $class): string
+    {
+        if ($class === null) {
+            return self::DEFAULT_ERROR_CLASS_LABEL_KEY;
+        }
+
+        return self::ERROR_CLASS_LABEL_KEYS[$class] ?? self::DEFAULT_ERROR_CLASS_LABEL_KEY;
+    }
+
+    /**
+     * Returns the language key for an audit event name via the closed allowlist.
+     * Unknown tokens resolve to the generic event key.
+     *
+     * @param string $event The audit event_name token
+     * @return string The language key
+     */
+    public function eventLabelKey(string $event): string
+    {
+        return self::EVENT_LABEL_KEYS[$event] ?? self::DEFAULT_EVENT_LABEL_KEY;
+    }
+
+    /**
+     * Returns the language key for a validation-reason token via the closed
+     * allowlist. Unknown/empty tokens resolve to the safe generic key.
+     *
+     * @param string $reason The validation_errors token
+     * @return string The language key
+     */
+    public function validationReasonLabelKey(string $reason): string
+    {
+        return self::VALIDATION_REASON_LABEL_KEYS[$reason] ?? self::DEFAULT_VALIDATION_REASON_LABEL_KEY;
+    }
+
+    /**
+     * Reduces a decoded diagnostic_summary to the allowlisted, non-empty keys,
+     * in fixed display order.
+     *
+     * "Non-empty" is `$v !== null && $v !== '' && $v !== []` — NOT empty() — so
+     * a legitimate provider value of '0' (e.g. a raw_status of '0') is kept,
+     * while null/''/[] are dropped. The validation_errors array value is
+     * preserved as an array (not stringified) so the view can iterate it
+     * through validationReasonLabelKey().
+     *
+     * @param array $decoded The json_decode(diagnostic_summary, true) array
+     * @return array The allowlisted fields, key => value, in display order
+     */
+    public function allowedDiagnosticFields(array $decoded): array
+    {
+        $fields = [];
+
+        foreach (self::DIAGNOSTIC_FIELD_KEYS as $key) {
+            if (!array_key_exists($key, $decoded)) {
+                continue;
+            }
+
+            $value = $decoded[$key];
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            $fields[$key] = $value;
+        }
+
+        return $fields;
     }
 }

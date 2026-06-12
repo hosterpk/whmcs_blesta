@@ -305,4 +305,301 @@ class KuickPayVoucherListPresenterTest extends TestCase
         $this->assertSame('2026-01-01', $clean['date_from']);
         $this->assertSame('2026-12-31', $clean['date_to']);
     }
+
+    // ---------------------------------------------------------------------
+    // Story 4.2 — detail-page label allowlists (error class, event,
+    // validation reason) and the diagnostic-summary field allowlist.
+    // ---------------------------------------------------------------------
+
+    /**
+     * The full stored error_class domain: the 8 canonical parser classes
+     * (KuickPayResponseParser::ALLOWED_ERRORS) plus the 2 operational tokens
+     * written outside the parser (posting_failed, reconcile_exception). Hard
+     * coded so this test is the drift detector if a new writer adds a token.
+     */
+    private const STORED_ERROR_CLASSES = [
+        'timeout',
+        'transport_error',
+        'credential_error',
+        'malformed_response',
+        'unknown_status',
+        'amount_mismatch',
+        'duplicate_reference',
+        'unmatched_reference',
+        'posting_failed',
+        'reconcile_exception',
+    ];
+
+    /** The 14 emitted audit event names (grep-verified across the plugin lib). */
+    private const KNOWN_EVENTS = [
+        'voucher.issued',
+        'voucher.replaced',
+        'voucher.expired',
+        'evidence.received',
+        'evidence.matched',
+        'evidence.retry_decision',
+        'evidence.rejected',
+        'evidence.duplicate',
+        'evidence.unmatched',
+        'reconciliation.run.started',
+        'reconciliation.run.completed',
+        'posting.started',
+        'posting.succeeded',
+        'posting.failed',
+    ];
+
+    /** Plugin evidence-validator reasons merged into validation_errors. */
+    private const VALIDATOR_REASONS = [
+        'currency_mismatch',
+        'amount_mismatch',
+        'unmatched_reference',
+        'invoice_mismatch',
+        'stale_voucher',
+        'duplicate_reference',
+        'late_payment',
+    ];
+
+    /** Posting-service reasons merged into validation_errors on manual review. */
+    private const POSTING_REASONS = [
+        'missing_paid_date',
+        'existing_transaction_mismatch',
+        'existing_transaction_partial_application',
+        'existing_transaction_apply_failed',
+        'existing_transaction_unverified',
+    ];
+
+    /** Gateway-parser reasons (open-ended tail; generic fallback covers more). */
+    private const PARSER_REASONS = [
+        'missing_expected_context',
+        'underpayment',
+        'overpayment',
+        'unknown_status',
+    ];
+
+    public function testErrorClassLabelKeyForEveryStoredToken()
+    {
+        $presenter = $this->presenter();
+
+        foreach (self::STORED_ERROR_CLASSES as $class) {
+            $this->assertSame(
+                'AdminVouchers.error_class.' . $class,
+                $presenter->errorClassLabelKey($class)
+            );
+        }
+    }
+
+    public function testErrorClassLabelKeyNullAndUnknownFallBackToUnknown()
+    {
+        $presenter = $this->presenter();
+
+        $this->assertSame(
+            KuickPayVoucherListPresenter::DEFAULT_ERROR_CLASS_LABEL_KEY,
+            $presenter->errorClassLabelKey(null)
+        );
+
+        // Unknown tokens and the audit-only posting reasons fall back safely.
+        foreach (['', 'bogus', 'TIMEOUT', 'transaction_add_failed', 'posting_failed '] as $class) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_ERROR_CLASS_LABEL_KEY,
+                $presenter->errorClassLabelKey($class)
+            );
+        }
+    }
+
+    public function testErrorClassMapKeysEqualTheStoredDomain()
+    {
+        $keys = array_keys(KuickPayVoucherListPresenter::ERROR_CLASS_LABEL_KEYS);
+        sort($keys);
+        $expected = self::STORED_ERROR_CLASSES;
+        sort($expected);
+
+        $this->assertSame(
+            $expected,
+            $keys,
+            'Error-class map drifted from the stored domain (8 parser + 2 operational tokens)'
+        );
+    }
+
+    public function testErrorClassMapValuesAreCanonicalKeys()
+    {
+        foreach (KuickPayVoucherListPresenter::ERROR_CLASS_LABEL_KEYS as $token => $key) {
+            $this->assertSame('AdminVouchers.error_class.' . $token, $key);
+        }
+    }
+
+    public function testEventLabelKeyForEveryKnownEvent()
+    {
+        $presenter = $this->presenter();
+
+        foreach (self::KNOWN_EVENTS as $event) {
+            $this->assertSame(
+                'AdminVouchers.event.' . $event,
+                $presenter->eventLabelKey($event)
+            );
+        }
+    }
+
+    public function testEventLabelKeyUnknownFallsBackToGeneric()
+    {
+        $presenter = $this->presenter();
+
+        foreach (['', 'bogus.event', 'voucher.deleted', 'VOUCHER.ISSUED'] as $event) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_EVENT_LABEL_KEY,
+                $presenter->eventLabelKey($event)
+            );
+        }
+    }
+
+    public function testEventMapKeysEqualTheKnownEvents()
+    {
+        $keys = array_keys(KuickPayVoucherListPresenter::EVENT_LABEL_KEYS);
+        sort($keys);
+        $expected = self::KNOWN_EVENTS;
+        sort($expected);
+
+        $this->assertSame($expected, $keys, 'Event map drifted from the 14 emitted event names');
+    }
+
+    public function testEventMapValuesAreCanonicalKeys()
+    {
+        foreach (KuickPayVoucherListPresenter::EVENT_LABEL_KEYS as $token => $key) {
+            $this->assertSame('AdminVouchers.event.' . $token, $key);
+        }
+    }
+
+    public function testValidationReasonLabelKeyForKnownTokensFromEachSource()
+    {
+        $presenter = $this->presenter();
+
+        $all = array_merge(self::VALIDATOR_REASONS, self::POSTING_REASONS, self::PARSER_REASONS);
+        foreach ($all as $reason) {
+            $this->assertSame(
+                'AdminVouchers.validation_reason.' . $reason,
+                $presenter->validationReasonLabelKey($reason)
+            );
+        }
+    }
+
+    public function testValidationReasonLabelKeyUnknownAndAuditOnlyFallBack()
+    {
+        $presenter = $this->presenter();
+
+        // transaction_add_failed / transaction_apply_failed are audit-payload
+        // reasons only — they are NEVER merged into validation_errors.
+        foreach (['transaction_add_failed', 'transaction_apply_failed', '', 'bogus', 'Amount_Mismatch'] as $reason) {
+            $this->assertSame(
+                KuickPayVoucherListPresenter::DEFAULT_VALIDATION_REASON_LABEL_KEY,
+                $presenter->validationReasonLabelKey($reason)
+            );
+        }
+    }
+
+    public function testValidationReasonMapCoversPluginLocalReasons()
+    {
+        $keys = KuickPayVoucherListPresenter::VALIDATION_REASON_LABEL_KEYS;
+
+        foreach (array_merge(self::VALIDATOR_REASONS, self::POSTING_REASONS) as $reason) {
+            $this->assertArrayHasKey($reason, $keys, $reason . ' (plugin-local) must be mapped');
+        }
+    }
+
+    public function testValidationReasonMapValuesAreCanonicalKeysNoDeadEntries()
+    {
+        foreach (KuickPayVoucherListPresenter::VALIDATION_REASON_LABEL_KEYS as $token => $key) {
+            $this->assertSame('AdminVouchers.validation_reason.' . $token, $key);
+        }
+    }
+
+    public function testValidationReasonMapExcludesAuditOnlyTokens()
+    {
+        $keys = KuickPayVoucherListPresenter::VALIDATION_REASON_LABEL_KEYS;
+
+        $this->assertArrayNotHasKey('transaction_add_failed', $keys);
+        $this->assertArrayNotHasKey('transaction_apply_failed', $keys);
+    }
+
+    public function testAllowedDiagnosticFieldsKeepsAllowlistedKeysInFixedOrder()
+    {
+        $presenter = $this->presenter();
+
+        // Keys supplied out of order + an unknown key that must be dropped.
+        $decoded = [
+            'currency' => 'PKR',
+            'unknown_key' => 'leak',
+            'status' => 'confirmed_unposted',
+            'error_class' => 'amount_mismatch',
+            'raw_status' => '1',
+            'evidence_hash' => 'abc123',
+            'redacted_trace_id' => 'trace-xyz',
+            'validation_errors' => ['amount_mismatch'],
+            'reference' => 'KP-1',
+            'consumer_number' => '0001',
+            'registration_number' => 'REG-1',
+            'amount' => '100.00',
+            'paid_at' => '2026-06-01 10:00:00',
+        ];
+
+        $result = $presenter->allowedDiagnosticFields($decoded);
+
+        $this->assertArrayNotHasKey('unknown_key', $result, 'unknown keys must be dropped');
+        $this->assertSame(
+            [
+                'status',
+                'raw_status',
+                'error_class',
+                'evidence_hash',
+                'redacted_trace_id',
+                'validation_errors',
+                'reference',
+                'consumer_number',
+                'registration_number',
+                'amount',
+                'currency',
+                'paid_at',
+            ],
+            array_keys($result),
+            'fields must be returned in the fixed display order'
+        );
+    }
+
+    public function testAllowedDiagnosticFieldsKeepsZeroRawStatusButDropsEmpty()
+    {
+        $presenter = $this->presenter();
+
+        $result = $presenter->allowedDiagnosticFields([
+            'raw_status' => '0',        // legitimate provider value — kept
+            'evidence_hash' => '0',     // also a valid '0' — kept
+            'status' => '',             // empty string — dropped
+            'error_class' => null,      // null — dropped
+            'validation_errors' => [],  // empty array — dropped
+        ]);
+
+        $this->assertArrayHasKey('raw_status', $result);
+        $this->assertSame('0', $result['raw_status']);
+        $this->assertArrayHasKey('evidence_hash', $result);
+        $this->assertArrayNotHasKey('status', $result);
+        $this->assertArrayNotHasKey('error_class', $result);
+        $this->assertArrayNotHasKey('validation_errors', $result);
+    }
+
+    public function testAllowedDiagnosticFieldsPreservesValidationErrorsAsArray()
+    {
+        $presenter = $this->presenter();
+
+        $result = $presenter->allowedDiagnosticFields([
+            'validation_errors' => ['amount_mismatch', 'late_payment'],
+        ]);
+
+        $this->assertArrayHasKey('validation_errors', $result);
+        $this->assertIsArray($result['validation_errors']);
+        $this->assertSame(['amount_mismatch', 'late_payment'], $result['validation_errors']);
+    }
+
+    public function testAllowedDiagnosticFieldsEmptyInputYieldsEmpty()
+    {
+        $presenter = $this->presenter();
+
+        $this->assertSame([], $presenter->allowedDiagnosticFields([]));
+    }
 }
