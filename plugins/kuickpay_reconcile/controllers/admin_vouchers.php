@@ -114,7 +114,13 @@ class AdminVouchers extends KuickpayReconcileController
                 'merge_get' => false,
             ]
         );
-        $this->setPagination($this->get, $settings);
+
+        // Hand pagination a GET set without the nested filters array: filters are
+        // already re-encoded as flat params above, and the pagination URL builder
+        // concatenates values naively (it cannot stringify a nested array).
+        $pagination_get = $this->get;
+        unset($pagination_get['filters']);
+        $this->setPagination($pagination_get, $settings);
 
         return $this->renderAjaxWidgetIfAsync(isset($this->get[0]) || isset($this->get['sort']));
     }
