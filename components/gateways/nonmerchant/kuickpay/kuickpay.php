@@ -585,6 +585,13 @@ class Kuickpay extends NonmerchantGateway
         Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPaySoapClient.php');
 
         $meta = is_array($this->meta) ? $this->meta : [];
+        $logger = null;
+        if (($meta['logging_enabled'] ?? 'true') === 'true') {
+            $logger = function (array $fields, bool $ok): void {
+                $operation = (string) ($fields['operation'] ?? 'soap');
+                $this->log('kuickpay:' . $operation, json_encode($fields), 'output', $ok);
+            };
+        }
 
         return new KuickPaySoapClient([
             'wsdl_url' => $meta['wsdl_url'] ?? '',
@@ -596,7 +603,7 @@ class Kuickpay extends NonmerchantGateway
             'inquiry_password' => $meta['inquiry_password'] ?? '',
             'inquiry_same_as_voucher' => $meta['inquiry_same_as_voucher'] ?? 'false',
             'logging_enabled' => $meta['logging_enabled'] ?? 'false',
-        ]);
+        ], null, $logger);
     }
 
     /**
@@ -1188,7 +1195,7 @@ class Kuickpay extends NonmerchantGateway
 
             $this->getIssuanceService()->recordIssueOutcome($voucher_id, $company_id, $evidence);
             $persisted = true;
-            $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta);
+            $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta, $voucher_id);
 
             if ($evidence->status() !== 'pending' || !$evidence->reference()) {
                 return null;
@@ -1228,16 +1235,25 @@ class Kuickpay extends NonmerchantGateway
                     ['issue_exception']
                 );
                 $this->getIssuanceService()->recordIssueOutcome($voucher_id, $company_id, $evidence);
-                $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta);
+                $this->recordIssuanceDiagnostic($evidence, $invoice_id, $meta, $voucher_id);
             } catch (Throwable $persistError) {
                 if (($meta['logging_enabled'] ?? 'true') === 'true') {
                     $this->log(
                         'kuickpay:voucher_issue',
-                        json_encode([
-                            'event' => 'voucher_issue_exception',
-                            'reason' => 'issue_exception',
-                            'invoice' => $invoice_id,
-                        ]),
+                        json_encode(KuickPayRedactor::operationLogFields(
+                            'InsertVoucher',
+                            isset($evidence) ? $evidence->redactedTraceId() : '',
+                            $voucher_id > 0 ? $voucher_id : null,
+                            ['invoice' => $invoice_id],
+                            [
+                                'response_present' => false,
+                                'result_present' => false,
+                                'result_code' => null,
+                                'fault' => 'transport_error',
+                            ],
+                            'transport_error',
+                            null
+                        )),
                         'output',
                         false
                     );
@@ -1281,21 +1297,32 @@ class Kuickpay extends NonmerchantGateway
      * @param int $invoice_id Invoice ID
      * @param array $meta Gateway settings
      */
-    protected function recordIssuanceDiagnostic(KuickPayEvidence $evidence, int $invoice_id, array $meta): void
-    {
+    protected function recordIssuanceDiagnostic(
+        KuickPayEvidence $evidence,
+        int $invoice_id,
+        array $meta,
+        ?int $voucher_id = null
+    ): void {
         if (($meta['logging_enabled'] ?? 'true') !== 'true') {
             return;
         }
 
         $this->log(
             'kuickpay:voucher_issue',
-            json_encode([
-                'event' => 'voucher_issue_outcome',
-                'status' => $evidence->status(),
-                'error_class' => $evidence->errorClass(),
-                'redacted_trace_id' => $evidence->redactedTraceId(),
-                'invoice' => $invoice_id,
-            ]),
+            json_encode(KuickPayRedactor::operationLogFields(
+                'InsertVoucher',
+                $evidence->redactedTraceId(),
+                $voucher_id,
+                ['invoice' => $invoice_id],
+                [
+                    'response_present' => $evidence->rawStatus() !== null || $evidence->reference() !== null,
+                    'result_present' => $evidence->rawStatus() !== null || $evidence->reference() !== null,
+                    'result_code' => $evidence->rawStatus(),
+                    'fault' => $evidence->errorClass(),
+                ],
+                $evidence->errorClass(),
+                null
+            )),
             'output',
             $evidence->status() === 'pending'
         );

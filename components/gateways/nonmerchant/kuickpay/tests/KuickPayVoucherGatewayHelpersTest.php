@@ -1107,10 +1107,20 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
 
         $this->assertNull($result);
         $payload = json_decode($gateway->logs[0]['data'], true);
-        $this->assertSame('voucher_issue_outcome', $payload['event']);
+        $this->assertSame('InsertVoucher', $payload['operation']);
+        $this->assertSame('trace-timeout', $payload['redacted_trace_id']);
+        $this->assertSame(25, $payload['voucher_id']);
+        $this->assertSame(['invoice' => 55], $payload['request_summary']);
+        $this->assertSame([
+            'response_present' => false,
+            'result_present' => false,
+            'result_code' => null,
+            'fault' => 'timeout',
+        ], $payload['response_summary']);
         $this->assertSame('timeout', $payload['error_class']);
-        $this->assertSame(55, $payload['invoice']);
+        $this->assertNull($payload['duration_ms']);
         $this->assertArrayNotHasKey('raw_result', $payload);
+        $this->assertArrayNotHasKey('event', $payload);
         $this->assertArrayNotHasKey('email', $payload);
         $this->assertArrayNotHasKey('mobile', $payload);
     }
