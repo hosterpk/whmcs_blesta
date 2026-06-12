@@ -8,7 +8,7 @@ resync_note: "Re-synced to HEAD bc986e92 after Story 4.4 landed; anchors that 4.
 
 # Story 4.5: Record Structured Logs and Audit Events
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -938,3 +938,14 @@ Codex GPT-5
 ### Change Log
 
 - 2026-06-12 — Implemented Story 4.5 structured logs, audit-event coverage, leakage hardening, and verification updates.
+
+## Review Findings
+
+_BMAD adversarial code review on 2026-06-12 — baseline `bc986e92..HEAD` (the 9-commit 4.5 implementation), three parallel layers: Blind Hunter (diff-only), Edge Case Hunter (diff + repo), Acceptance Auditor (diff + spec + repo). **Result: 0 decision-needed, 0 patch, 2 deferred (LOW), 13 dismissed.** AC1–AC8 audited MET; the 4-site drift guard is consistently **19**; no spec boundary crossed._
+
+_Independent verification (reviewer re-ran both suites, PHP 8.3.31 via the external PHPUnit 8.5 runner): plugin tree **158 tests / 1127 assertions green**; gateway tree **233 tests / 1256 assertions, 1 failure = the disclosed pre-existing `KuickPayFailClosedContractTest` empty-currency baseline only** (confirmed not attributable to 4.5 — `KuickPayResponseParser.php` and the fail-closed test/fixtures are untouched by this diff). `php -l` clean. The dev record's test claims reproduce exactly._
+
+- [x] [Review][Defer] Bulk per-voucher exception emits no `evidence.error` [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:350] — deferred, out of 4.5 scope: Task 6 deliberately scopes `evidence.error` to `processVoucher()` (the catch that "today writes only a kuickpay_reconciliation_items row"); the bulk loop's own `catch` at `:350-353` is structurally different and pre-dates 4.5. A genuine per-voucher exception during a bulk run therefore produces no durable audit trace. Follow-up: emit a best-effort `evidence.error` (+ item row) in the bulk catch for symmetric lifecycle coverage. (Edge Case Hunter, LOW.)
+- [x] [Review][Defer] `voucher.generation_failed` may mislabel `invoice_id` on `duplicate_invoice_id` [plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:290] — deferred, diagnostic-only: the call-site emit (`:67-72`) uses `firstContextInvoiceId()`, which returns the FIRST context row's id (or `0`), not the invoice whose duplicate-with-differing-amount actually tripped `normalizeContextInvoiceAmounts()` (`:443`). For a multi-invoice context where the conflicting pair isn't first, the payload names the wrong invoice. The `reason` token stays correct, and Task 5 forbids changing the pure validator's signature; the path needs `multi_invoice_policy === 'allow'` + an internal id collision (rare). Follow-up: expose the conflicting id via a private member if precise attribution is wanted. (Blind Hunter + Edge Case Hunter, LOW.)
+
+_Dismissed (13, all verified non-actionable): operational-log `request_summary` PII (redactArray masks values; the log payloads ARE scanned by the extended leak suite — false positive on the count-only read); `result_code` double-derivation (both converge to a safe 2-char-or-null token, by design per Task 1); issuance `response_present == result_present` (best obtainable approximation from `KuickPayEvidence`; safe-token-only); posting trace-id has no format guard (sourced from own `diagnostic_summary`, falls through to `''`, per Task 4); divergent log sinks gateway `$this->log()` vs container `Logger` (spec design); `captureOperationalLogPayloads` "count-only" (aggregate loop `:40-41` scans every capture — false positive); lazy `KuickPayAuditService` + swallowed Throwable (best-effort write is a required spec invariant); `evidence.error` empty trace-id on pre-parse throw (Task 6 explicitly accepts `''` and says do NOT add a non-empty guarantee — AC4(c) is posting-only); `needsRuntimeDependencies` predicate change (verified correct/intended, Task 2); `logSafeFaultToken` (fails closed — Blind Hunter's own non-finding); `company_id => 0` audit row (spec: `?? 0` is defensive-only, not expected in production); `logging_enabled` unset default divergence issuance `'true'` vs reconcile `'false'` (spec-documented intentional asymmetry); issuance `fault` carries `errorClass` token not the strict SOAP ENUM (bounded safe token, re-collapsed by the final guard, redundant with `error_class`)._
