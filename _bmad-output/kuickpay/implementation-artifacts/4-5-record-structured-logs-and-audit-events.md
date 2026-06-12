@@ -1,12 +1,14 @@
 ---
-baseline_commit: bfc9f0ff0ad8e0cbfc7790de19cb9f131ee9277d
+baseline_commit: bc986e92
+prior_baseline_commit: bfc9f0ff0ad8e0cbfc7790de19cb9f131ee9277d
+resync_note: "Re-synced to HEAD bc986e92 after Story 4.4 landed; anchors that 4.4 shifted (audit-table schema, item/audit trace columns, cron instantiations, presenter sync-guard test) re-derived, and the AC7 baseline-failure root cause corrected (see round-1 validation reports for 4.5)."
 ---
 
 <!-- Powered by BMAD-CORE™ -->
 
 # Story 4.5: Record Structured Logs and Audit Events
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -25,7 +27,7 @@ anchors in Dev Notes → "What already exists"):
 - **Audit write path:** `KuickPayAuditService::record(string $eventName, array $context): void`
   (`plugins/kuickpay_reconcile/lib/KuickPayAuditService.php:30-44`) → `KuickPayAuditRepository::add()` →
   `KuickpayAuditEvents::add()` (`models/kuickpay_audit_events.php:21-28`) → table `kuickpay_audit_events`
-  (schema at `kuickpay_reconcile_plugin.php:382-396`).
+  (schema at `kuickpay_reconcile_plugin.php:419-433` — shifted +37 by Story 4.4; was `:382-396` at the prior baseline).
 - **17 audit events already emitted and registered** through a **4-site drift guard** (presenter map + language
   file + test `KNOWN_EVENTS` + a hard-coded "17" count message). Adding/renaming an event without updating all
   four **fails the build** (`KuickPayVoucherListPresenterTest`).
@@ -60,12 +62,21 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
    **sanitized request summary**, a **sanitized response summary**, the **`error_class`** (null on success), and
    **`duration_ms` or a timestamp where available** — the full FR27 field set, all in **one canonical shape** (no two
    ad-hoc log schemas). A log line is written for **each** SOAP operation outcome (success and failure) on the path
-   that runs it: the **gateway** path logs every `InsertVoucher` outcome (issuance seam, `kuickpay.php:1181`), and the
-   **cron** reconcile path logs every `BillPaymentInquiry` (`KuickPayReconcileService.php:390`) and
-   `BillPaymentBulkInquiry` (`:283`) outcome through the **verified Blesta `Logger`** sink (Open Question #2 — now
-   resolved; see Task 2). The cron path may fall back to a **no-op** logger only if the container yields no logger,
-   disclosed in the Dev Agent Record. The pre-existing non-SOAP `kuickpay:reference_generation` diagnostic is scoped
-   out of the canonical shape per Task 3.
+   that runs it. **There are FOUR SOAP-log wiring sites (verified at HEAD), not two — and `KuickPayReconcileService`
+   alone is constructed from THREE of them, not just cron.** Every one must wire the logger or AC1 is only half-met:
+   - the **gateway** issuance path logs every `InsertVoucher` outcome (issuance seam, `kuickpay.php:1181`);
+   - the **cron** reconcile path (`kuickpay_reconcile_plugin.php::cron()` → `runCron`) logs every `BillPaymentInquiry`
+     (`KuickPayReconcileService.php:390`);
+   - the **admin "Check Now"** path (`controllers/admin_vouchers.php:241`, `AdminVouchers::recheck()` →
+     `reconcileVoucher()` → `processVoucher()`) also runs `BillPaymentInquiry` (`KuickPayReconcileService.php:390`);
+   - the **admin bulk run** path (`controllers/admin_main.php:62`, `AdminMain::run()` → `runBulk()`) runs
+     `BillPaymentBulkInquiry` (`KuickPayReconcileService.php:283`).
+
+   The inquiry/bulk-inquiry logs are written through the **verified Blesta `Logger`** sink (Open Question #2 — now
+   resolved; see Task 2); both admin controllers extend `KuickpayReconcileController → AppController`, so
+   `getFromContainer('logger')` is available at each site exactly as in cron. The reconcile path may fall back to a
+   **no-op** logger only if the container yields no logger, disclosed in the Dev Agent Record. The pre-existing
+   non-SOAP `kuickpay:reference_generation` diagnostic is scoped out of the canonical shape per Task 3.
 
 2. **(AC2 — logs are sanitized; passwords always masked; gated)** Every operational log value passes through the
    **single redaction boundary** (`KuickPayRedactor`) before it is written. **No** password, username,
@@ -113,9 +124,12 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
    payload shape, and asserts they contain no forbidden secret/PII/raw-envelope values. The **documented
    pre-existing baseline failure** in this suite (`testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes`
    — the `confirmed_unposted` vacuous-guard assertion at `KuickPaySecretLeakageTest.php:87`, **not** a leak) is
-   **resolved** so this story can claim a genuinely green leakage suite for AC's "without leaking secrets". The
-   resolution **must not weaken any `fixtureForbiddenPatterns()` / `persistedForbiddenPatterns()` regex** (see
-   Dev Notes → "Resolving the secret-leakage baseline" for the root cause and the allowed fix shapes).
+   **resolved** so this story can claim a genuinely green leakage suite for AC's "without leaking secrets". The true
+   root cause is the **single-inquiry single-identity contract** (the confirmed-capture voucher carries a
+   `consumer_number` that mismatches the single echoed registration field → `unmatched_reference` → `manual_review`),
+   **not** a null/missing paid date — so the fix is a **one-line test-fixture identity alignment with no production or
+   paid-date change** (see Dev Notes → "Resolving the secret-leakage baseline" for the verified root cause and the fix).
+   The resolution **must not weaken any `fixtureForbiddenPatterns()` / `persistedForbiddenPatterns()` regex**.
 
 8. **(AC8 — verification honesty)** Every changed PHP file passes `php -l`. The component PHPUnit 8.5 suite runs via
    the project-context command; new pure/unit-testable logic (the log-shape builder, the event-name invariant, the
@@ -129,8 +143,8 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Canonical sanitized operational-log shape + SOAP-client operation logging (AC1, AC2)**
-  - [ ] Define **one** structured log payload shape, reused by every KuickPay operational log write:
+- [x] **Task 1 — Canonical sanitized operational-log shape + SOAP-client operation logging (AC1, AC2)**
+  - [x] Define **one** structured log payload shape, reused by every KuickPay operational log write:
         `['operation' => <op>, 'redacted_trace_id' => <kp_…>, 'voucher_id' => <int|null>, 'request_summary' =>
         <redacted array>, 'response_summary' => <non-XML safe-token array>, 'error_class' => <?string>,
         'duration_ms' => <int|null>]`. **`response_summary` is a token set, NOT any envelope string.** Use the
@@ -165,11 +179,13 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         `KuickPaySoapClient`, `KuickPayEvidence`, `KuickPayResponseParser`) **and** add a gateway-side unit test
         asserting the builder carries the field set, drops `raw_result`, collapses a tag-bearing/PII-bearing fault to a
         safe token, and never emits an envelope string.
-  - [ ] In `components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php::call()` (`:134-224`), **measure
+  - [x] In `components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php::call()` (`:134-224`), **measure
         duration** — `duration_ms` is **net-new** (it does not exist anywhere in the file today). Put
-        `$start = microtime(true)` at the **very top** of `call()` (before the WSDL preflight and the retry loop so it
-        captures the full operation incl. retries) and compute `duration_ms = (int) round((microtime(true)-$start)*1000)`
-        at each return. Add `duration_ms` as a new field on the **`outcome()` builder method — its body is at
+        `$start = microtime(true)` at the **very top** of `call()` (covering that attempt's WSDL preflight + SOAP time)
+        and compute `duration_ms = (int) round((microtime(true)-$start)*1000)` at each return. **`duration_ms` is
+        per-transport-attempt, NOT full-operation-across-retries** — the retry loop lives in `callWithRetry()`
+        (`:252-267`), **not** in `call()`, so each `call()` measures exactly one attempt. With per-attempt logging
+        (OQ#5) that is the correct granularity: each log line carries its own attempt's duration. Add `duration_ms` as a new field on the **`outcome()` builder method — its body is at
         `:521-542`** (the block at `:116-128` is only the `call()` outcome-shape **docblock**; update both). Preserve
         the `finally` block (`:219-223`) that restores `default_socket_timeout`. The outcome **already** carries
         `operation`, `redacted_request`, the redacted `raw_envelope`, `error_class`, raw `fault`, and
@@ -177,14 +193,34 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         **log-safe `fault` token**), **never** from `raw_result` **or** the (still-tag-bearing) redacted envelope. The
         invalid-WSDL early return becomes `['response_present'=>false, 'result_present'=>false, 'result_code'=>null,
         'fault'=>'invalid_wsdl']` with `error_class='transport_error'`.
-  - [ ] **Route the log seam through the single `outcome()` choke point, not the call sites.** `call()` has **five**
-        `return $this->outcome(...)` exit paths — the invalid/unsafe-WSDL **early return** (`:139-150`), the success
-        path (`:159`), and a fault-with-response / fault-without-response branch in **each** of the `SoapFault`
-        (`:169-193`) and `Throwable` (`:194-218`) catches. Logging only "after success and both catch branches" would
-        **miss the WSDL early return**. Invoke the logger from `outcome()` (or a single private helper every return
-        funnels through) so **every** outcome — success and failure — produces exactly one log line, satisfying AC1's
-        "each SOAP operation outcome".
-  - [ ] Add an **injected, optional log seam** to the SOAP client. The current constructor is
+  - [x] **Route the log seam through the single `outcome()` choke point, not the call sites.** `call()` has **six**
+        `return $this->outcome(...)` exit paths (grep-verified at HEAD: lines `:140, :159, :172, :184, :197, :209`) —
+        the invalid/unsafe-WSDL **early return** (`:140`), the success path (`:159`), and a fault-with-response /
+        fault-without-response branch in **each** of the `SoapFault` (`:172` / `:184`) and `Throwable` (`:197` /
+        `:209`) catches. Logging only "after success and both catch branches" would **miss the WSDL early return**.
+        Invoke the logger from `outcome()` (or a single private helper every return funnels through) so **every**
+        outcome — success and failure — produces a log line, satisfying AC1's "each SOAP operation outcome". (The
+        choke-point design is correct regardless of the exact count; the scalar is fixed only so an "assert N log
+        lines" test enumerates the real six.)
+  - [x] **Retry semantics + the `attempt` seam (decision — Open Question #5):** because the logger fires inside
+        `outcome()` (inside `call()`), and `callWithRetry()` (`:252-267`) invokes `call()` up to **three** times for
+        inquiry/bulk-inquiry operations, a retried operation emits **one log line per transport attempt**. **Default:
+        keep per-attempt logging** (it is the diagnostic value of an operational log — you see each retry); do **not**
+        move logging out of the choke point into `callWithRetry()`.
+        - **The attempt index is NOT available at the choke point as the code stands** — `callWithRetry()` stamps
+          `$outcome['attempts'] = $attempt` only **after** `call()` returns (`:259`), and `outcome()` defaults
+          `attempts` to `1` (`:540`); an `outcome()`-time logger would therefore log `attempt=1` for every retry. To
+          make the per-attempt `attempt` field real, **thread the index into the choke point** (a small, required seam
+          change): give `call()` a new last param `int $attempt = 1`, have `callWithRetry()` call
+          `$this->call($operation, $params, $attempt)` inside its loop, and pass `$attempt` into `outcome(...)` so the
+          log fields carry it. `insertVoucher()` calls `call()` directly (no retry) and stays `attempt = 1`.
+        - **Name it `attempt` (singular, this line's 1-based index), distinct from the outcome's existing `attempts`
+          (plural, the total retry count set at `:259`)** — do not reuse `attempts` for the log field or C1 reappears.
+        - The new gateway-side test should assert the expected number of lines (and ascending `attempt` values) for a
+          retried timeout. Flag OQ#5 if the team instead wants exactly one line per public operation after retry
+          resolution (that would require logging after the loop in `callWithRetry()`, abandoning the single choke point
+          and re-opening the WSDL-early-return coverage gap for `insertVoucher()`).
+  - [x] Add an **injected, optional log seam** to the SOAP client. The current constructor is
         `__construct(array $config, callable $soapClientFactory = null)` (`:46`); add `?callable $logger = null` as the
         **last** parameter (existing callers use positional args and are unaffected; the `KuickPaySecretLeakageClient`
         fake has its own constructor and needs no change — verify it still constructs). When a logger is set, invoke it
@@ -192,46 +228,67 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         This keeps the SOAP client free of any framework `$this->log()` dependency (it is a pure lib used by both
         gateway and cron) and makes the log content unit-testable by injecting a capturing closure. **Do not** log
         inside `call()` via `error_log`/`echo`/`print` — only through the injected seam.
-  - [ ] Honor enablement at the **caller**, not inside the SOAP client: the caller passes a logger closure only when
+        - **Boundary note:** `echoTest()` and `getInstitutionsList()` (`:94-114`) also route through `call()`, but they
+          are **setup-test helpers with no production caller** (only `KuickPaySoapClientTest` uses them) and are **not**
+          in AC1's operation set (`InsertVoucher`/`BillPaymentInquiry`/`BillPaymentBulkInquiry`). Placing the logger in
+          `outcome()` means a future caller that injects a logger would log these too — acceptable, but out of scope
+          for AC1 today; no wiring for them is required.
+  - [x] Honor enablement at the **caller**, not inside the SOAP client: the caller passes a logger closure only when
         `logging_enabled === 'true'` (so a disabled gateway produces a true no-op and AC2's "gated" holds without
         the lib knowing about gateway meta).
 
-- [ ] **Task 2 — Wire the log seam from both callers (AC1, AC2)**
-  - [ ] **Gateway/checkout path** — where the gateway constructs/uses `KuickPaySoapClient` for `InsertVoucher`
+- [x] **Task 2 — Wire the log seam from EVERY SOAP-running caller (AC1, AC2)**
+  - [x] **Wiring checklist — all four sites must be wired (a dev who wires only the first two leaves manual Check Now
+        and admin bulk runs silent even with `logging_enabled === 'true'`):**
+        1. Gateway `getSoapClient()` / `InsertVoucher` **issuance** path — `kuickpay.php`.
+        2. Plugin **cron** `reconcile_pending` — `kuickpay_reconcile_plugin.php::cron()` instantiation at **`:197`**
+           (the `:205` instantiation runs `expirePending()` → **no SOAP**, so it needs no logger).
+        3. Admin **Check Now** single inquiry — `AdminVouchers::recheck()`, `controllers/admin_vouchers.php:241`.
+        4. Admin **bulk run** — `AdminMain::run()`, `controllers/admin_main.php:62`.
+  - [x] **Gateway/checkout path (site 1)** — where the gateway constructs/uses `KuickPaySoapClient` for `InsertVoucher`
         (issuance), pass a logger closure that calls the **verified** gateway log API
         `$this->log('kuickpay:' . $operation, json_encode($fields), 'output', $ok)` (same API already used at
         `kuickpay.php:1234, 1290`), **only when** `($meta['logging_enabled'] ?? 'true') === 'true'`. `$fields` is
         the canonical redacted shape from Task 1; **`$ok` is the transport-success boolean** sourced from the outcome's
         `ok` field (the logger seam passes it to the closure) — it is the **4th `$this->log()` arg, not** a member of
         the json-encoded `$fields` set. Define the seam signature precisely, e.g. `callable(array $fields, bool $ok): void`.
-  - [ ] **Plugin/cron path** — `KuickPayReconcileService` builds the client via its `client_factory`
-        (`KuickPaySecretLeakageTest.php:205-207` shows the injection seam). Resolve `logging_enabled` from the
-        already-loaded gateway config: `gatewayConfigForCompany()` (`:702-728`) already returns
-        `'logging_enabled' => $meta['logging_enabled'] ?? 'false'` (`:728`), so the cron path is **off-by-default**
-        (the gate checks `=== 'true'`), **unlike** the gateway runtime default of `'true'` — an intentional asymmetry
-        (cron may run before any gateway settings are saved). When it resolves to `'true'`, pass a logger closure to
-        the client. **Sink decision (Open Question #2 — now RESOLVED):** a verified Blesta `Logger` sink **exists in
-        this checkout**. The container service (registered at `config/services.php` / `core/ServiceProviders/Logger.php`,
-        Monolog-backed) is fetched via `$this->getFromContainer('logger')` at real in-repo call sites
-        (`components/email/email.php:90`, `plugins/support_manager/support_manager_plugin.php:33`). `KuickpayReconcilePlugin`
-        extends `Plugin`, so in `kuickpay_reconcile_plugin.php::cron()` — which instantiates the service at `:188` and
-        `:196` — fetch `$logger = $this->getFromContainer('logger')` and pass it into `KuickPayReconcileService` via its
-        `dependencies` array (constructor `:30-46`, e.g. a new `logger` key). The service then builds a logger closure
-        that calls `$logger->info()` (success) / `$logger->error()` (failure) with the canonical redacted shape, **only
-        when** `logging_enabled === 'true'`. The **no-op fallback is now only a defensive last resort** (container yields
-        no logger), disclosed in the Dev Agent Record if used. **Never** invent an unverified logging API — but the
-        `Logger` container key above **is** verified, so use it.
-  - [ ] Confirm both wirings pass **only redacted** fields (Task 1 builder enforces this) and that `raw_result` is
+  - [x] **Plugin reconcile-service paths (sites 2–4) — one shared logger-dependency pattern for EVERY
+        `new KuickPayReconcileService(...)` that can run SOAP.** `KuickPayReconcileService` builds the client via its
+        `client_factory` (`KuickPaySecretLeakageTest.php:205-207` shows the injection seam) and resolves
+        `logging_enabled` from the already-loaded gateway config: `gatewayConfigForCompany()` (`:702-728`) returns
+        `'logging_enabled' => $meta['logging_enabled'] ?? 'false'` (`:728`), so the reconcile paths are
+        **off-by-default** (the gate checks `=== 'true'`), **unlike** the gateway runtime default of `'true'` — an
+        intentional asymmetry (cron/admin may run before any gateway settings are saved). When it resolves to `'true'`,
+        the service builds a logger closure that calls `$logger->info()` (success) / `$logger->error()` (failure) with
+        the canonical redacted shape. **The service owns the enablement decision; each construction site owns supplying
+        the `logger` dependency.** Pass the `Logger` into the service via its `dependencies` array (constructor
+        `:30-46`, e.g. a new `logger` key); the service still decides whether to hand a SOAP-client logger closure to
+        the client.
+        - **Sink decision (Open Question #2 — RESOLVED):** a verified Blesta `Logger` sink **exists in this checkout**
+          (Monolog-backed container service registered at `config/services.php` / `core/ServiceProviders/Logger.php`),
+          fetched via `$this->getFromContainer('logger')` at real in-repo call sites (`components/email/email.php:90`,
+          `plugins/support_manager/support_manager_plugin.php:33`).
+        - **Site 2 (cron):** `KuickpayReconcilePlugin extends Plugin`, so in `kuickpay_reconcile_plugin.php::cron()`
+          (method `:188`) fetch `$logger = $this->getFromContainer('logger')` and pass it into the **`:197`**
+          `KuickPayReconcileService` instantiation (`runCron`). Skip the `:205` instantiation (`expirePending`, no SOAP).
+        - **Sites 3–4 (admin):** both `AdminVouchers` and `AdminMain` extend `KuickpayReconcileController → AppController`,
+          so `$this->getFromContainer('logger')` is available in the controller exactly as in cron (verified). Fetch the
+          logger in `AdminVouchers::recheck()` (`:206`, instantiates at `:241`) and `AdminMain::run()` (`:39`,
+          instantiates at `:62`) and pass it into the service the same way. Do **not** leave these two paths unwired.
+        - The **no-op fallback** is only a defensive last resort (container yields no logger), disclosed in the Dev
+          Agent Record if used. **Never** invent an unverified logging API — the `Logger` container key above **is**
+          verified, so use it.
+  - [x] Confirm all wirings pass **only redacted** fields (Task 1 builder enforces this) and that `raw_result` is
         never handed to the logger.
 
-- [ ] **Task 3 — Normalize the gateway issuance-outcome log to the canonical shape (AC1, AC2)**
-  - [ ] Bring `recordIssuanceDiagnostic()` (`kuickpay.php:1284-1302`) and the issuance-exception log
+- [x] **Task 3 — Normalize the gateway issuance-outcome log to the canonical shape (AC1, AC2)**
+  - [x] Bring `recordIssuanceDiagnostic()` (`kuickpay.php:1284-1302`) and the issuance-exception log
         (`:1233-1244`) into the **same** canonical shape (Task 1): add `operation => 'InsertVoucher'`, keep
         `redacted_trace_id`, add `voucher_id` where known, and a redacted `request_summary`/`response_summary`
         (use the evidence's redacted fields — **not** raw envelope). Preserve the existing `logging_enabled` gate
         and the success flag (`$evidence->status() === 'pending'`). Do not change the log group string
         `kuickpay:voucher_issue` (existing tests reference the gateway log behavior).
-  - [ ] **Pre-existing second gateway log schema — disclose and scope (do not silently leave AC1 half-met).** A third
+  - [x] **Pre-existing second gateway log schema — disclose and scope (do not silently leave AC1 half-met).** A third
         `$this->log(...)` already exists at `kuickpay.php:1360-1361` (group `kuickpay:reference_generation`, payload
         `{event:'reference_generation_failed', reason, invoice}`) inside `recordReferenceGenerationFailure()`
         (`:1349-1370`), gated by `logging_enabled`. It is **already redacted-safe** (event token + reason code + integer
@@ -240,16 +297,17 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         **explicitly scoped out** of the canonical-shape normalization. Leave it as-is — it is the gateway operational
         counterpart to the new plugin-owned `voucher.generation_failed` **audit** event (Task 5). Record this decision
         in the Dev Agent Record so AC1's "no two ad-hoc schemas" claim is honestly bounded to the SOAP-operation logs.
-  - [ ] Note (not a required change): the `logging_enabled` **SOAP-config default** is `'false'` (read in
+  - [x] Note (not a required change): the `logging_enabled` **SOAP-config default** is `'false'` (read in
         `getSoapClient()` `:598`) while the runtime gate default is `'true'` (`:1233, 1286`). Leave behavior as-is
         unless trivially harmonizable without risk; if you touch it, record the decision. It is **not** an AC.
 
-- [ ] **Task 4 — Fix posting-event correlation id propagation (AC1, AC4)**
-  - [ ] In `KuickPayPostingService::recordAudit()` (`lib/KuickPayPostingService.php:382-395`), replace
+- [x] **Task 4 — Fix posting-event correlation id propagation (AC1, AC4)**
+  - [x] In `KuickPayPostingService::recordAudit()` (`lib/KuickPayPostingService.php:382-395`), replace
         `'redacted_trace_id' => ''` with the voucher's stored trace id. Source it by decoding the voucher's
         `diagnostic_summary` JSON — **this is the only source; there is NO `redacted_trace_id` column on
-        `kuickpay_vouchers`** (the `redacted_trace_id` columns at `kuickpay_reconcile_plugin.php:363/:388` belong to
-        the items / audit tables, and the vouchers model allowlist carries `diagnostic_summary`, not a trace id). The
+        `kuickpay_vouchers`** (the `redacted_trace_id` columns at `kuickpay_reconcile_plugin.php:400/:425` — shifted
+        +37 by Story 4.4, were `:363/:388` at the prior baseline — belong to the items / audit tables, and the vouchers
+        model allowlist carries `diagnostic_summary`, not a trace id). The
         production write reliably embeds it: `KuickPayReconcileService::diagnosticSummary()` emits
         `'redacted_trace_id' => $evidence->redactedTraceId()` at `:547`, and issuance writes it via
         `KuickPayEvidence::toArray()` (`KuickPayEvidence.php:154`) — so any confirmed voucher carries a non-empty `kp_…`
@@ -259,11 +317,11 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         decode already ships at `controllers/admin_vouchers.php:176`. Guard: default to `''` if absent/malformed, never
         throw. Keep the surrounding `try/catch (Throwable)` so an audit write still never aborts posting. (AC4(c)'s
         non-empty mandate is realistically met here — the confirming inquiry always wrote a real trace id.)
-  - [ ] Verify the three posting events (`posting.started/succeeded/failed`) now carry the propagated id in a unit
+  - [x] Verify the three posting events (`posting.started/succeeded/failed`) now carry the propagated id in a unit
         test (`KuickPayPostingServiceTest`) using the existing fake audit service.
 
-- [ ] **Task 5 — New audit event `voucher.generation_failed` (AC3, AC4, AC5)**
-  - [ ] Emit `voucher.generation_failed` from the plugin service
+- [x] **Task 5 — New audit event `voucher.generation_failed` (AC3, AC4, AC5)**
+  - [x] Emit `voucher.generation_failed` from the plugin service
         `plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php`. **Anchor correction:** there is **no**
         `recordReferenceGenerationFailure()` method in this file — that name is a **gateway** helper
         (`kuickpay.php:1349-1370`, the operational-log counterpart; do **not** touch it for this audit event, and do
@@ -274,7 +332,7 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         tokens only**: the `lastError` **reason code** and `invoice_id` — **never** the raw exception, SOAP, or PII.
         Pass `company_id` (required int) and `voucher_id` where one exists (null for a pre-insert failure). Wrap in
         best-effort `try/catch (Throwable)` exactly as the other services do.
-  - [ ] **`company_id` is NOT uniformly in scope — emit at the right place per site (verified):**
+  - [x] **`company_id` is NOT uniformly in scope — emit at the right place per site (verified):**
         - `uniqueness_exhausted` (`:129`) lives in `getOrCreateForInvoiceContext()`, where `$company_id` is a local
           extracted at `:77` — emit inline with `$company_id`.
         - `invalid_registration_pattern` (`:301`) / `invalid_consumer_pattern` (`:312`) live in
@@ -282,14 +340,16 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
           is available; use that.
         - `duplicate_invoice_id` (`:397`) lives in `normalizeContextInvoiceAmounts(array $invoiceAmounts)`, which
           receives **only** the invoice subset — **no `company_id` in scope, so it is unimplementable there.** Do **not**
-          emit at `:397`. Instead emit at the **call site** in `getOrCreateForInvoiceContext()` (the `:66-68` null
-          return): after `normalizeContextInvoiceAmounts()` returns null, check `$this->lastError === 'duplicate_invoice_id'`
-          and emit using `$context['company_id'] ?? 0`. (Do not pollute the pure validation method's signature, and do
-          not push the emit into the gateway — keep it plugin-owned.)
+          emit at `:397`. Instead emit at the **call site** in `getOrCreateForInvoiceContext()` (the
+          `KuickPayVoucherReferenceService.php:66-68` null return): after `normalizeContextInvoiceAmounts()` returns
+          null, check `$this->lastError === 'duplicate_invoice_id'` and emit using `$context['company_id'] ?? 0`. (Do
+          not pollute the pure validation method's signature, and do not push the emit into the gateway — keep it
+          plugin-owned.) The `?? 0` is **defensive only** — every real gateway path into `getOrCreateForInvoiceContext()`
+          supplies `company_id` in `$context`, so a `company_id = 0` audit row is not expected in production.
         - `invalid_registration_pattern` / `invalid_consumer_pattern` are **deterministic config errors** that recur on
           every payment attempt until the admin fixes the pattern/setting — keep `invoice_id` in the payload so the 4.2
           audit timeline can group/deduplicate consecutive identical failures.
-  - [ ] **Respect the boundary precisely (per `deferred-work.md:75`):** emit **only** on those four terminal
+  - [x] **Respect the boundary precisely (per `deferred-work.md:75`):** emit **only** on those four terminal
         `lastError` paths. Do **NOT** emit on: the `Throwable` catch at `:170` (returns null, sets no `lastError`), the
         `amount_changed` gate at `:100/:109` (a Story-2.4 amount-mismatch, not a generation failure), or any transient
         `not_ready` early `return null` (empty invoice id, race-recovery null). `create_failed` is **not implemented**
@@ -300,17 +360,18 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         create-failure produces no audit row. **No double-emit risk:** `getOrCreateForInvoiceContext()` is called only
         from the gateway (`kuickpay.php:1069/:1099`, mutually exclusive branches) — no cron path invokes the reference
         service — and the four `lastError` sites are mutually exclusive within one call.
-  - [ ] Register the event through **all four** drift-guard sites (Task 7).
+  - [x] Register the event through **all four** drift-guard sites (Task 7).
 
-- [ ] **Task 6 — New audit event `evidence.error` (AC3, AC4, AC5)**
-  - [ ] Emit `evidence.error` in `KuickPayReconcileService::processVoucher()` at the **per-voucher `Throwable` catch**
+- [x] **Task 6 — New audit event `evidence.error` (AC3, AC4, AC5)**
+  - [x] Emit `evidence.error` in `KuickPayReconcileService::processVoucher()` at the **per-voucher `Throwable` catch**
         (**`:408-424`** — today it records a `kuickpay_reconciliation_items` row with `error_class='reconcile_exception'`
         but **no** audit event; the `deferred-work.md:83` citation's old `:138-149` line range is **stale** — `:138-149`
         is the `run()` loop body, not the handler). Add the audit write **beside** the existing item-row write, with
         audit context `['company_id'=>…, 'voucher_id'=>…, 'run_id'=>…]` and payload
         `['error_class' => 'reconcile_exception']`. **Trace-id sourcing (verified trap — do NOT copy Task 4's
-        approach here):** `$evidence` is assigned only at `:391`, so it is **NOT in scope** in the `:408` catch (the
-        throw at `:390` precedes it); and the voucher's **stored `diagnostic_summary` is STALE here** — it holds the
+        approach here):** `$evidence` is assigned only at `:391`, so it is **not guaranteed to be assigned** in the
+        `:408` catch — the transport call at `:390` can throw **before** `:391`, so the catch must not unconditionally
+        read `$evidence`; and the voucher's **stored `diagnostic_summary` is STALE here** — it holds the
         *prior* issuance/inquiry trace id, not the failed operation's, so decoding it would log a wrong correlation.
         Instead **hoist** a `$redactedTraceId = ''` before the `try` (`:389`), set
         `$redactedTraceId = $evidence->redactedTraceId();` immediately after parse (`:391`), and read **that variable**
@@ -320,34 +381,48 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         is **posting-only**; do not over-engineer a non-empty guarantee here. **Never** source from the unredacted SOAP
         outcome or the exception message/trace. Keep it inside the existing catch (which already wraps the item-row
         write in an inner `try/catch (Throwable)` at `:421`) so a failed audit cannot escalate the error.
-  - [ ] Do **not** change the existing transport-timeout behavior, which already audits via `evidence.retry_decision`
+  - [x] Do **not** change the existing transport-timeout behavior, which already audits via `evidence.retry_decision`
         — `evidence.error` is **only** for the genuine-exception path (the residual gap named in the deferred item).
-  - [ ] Register the event through **all four** drift-guard sites (Task 7).
+  - [x] Register the event through **all four** drift-guard sites (Task 7).
 
-- [ ] **Task 7 — Update the 4-site audit-event drift guard to 19 + lower-dot-notation invariant (AC3)**
-  - [ ] Add `voucher.generation_failed` and `evidence.error` to
+- [x] **Task 7 — Update the 4-site audit-event drift guard to 19 + lower-dot-notation invariant (AC3)**
+  - [x] Add `voucher.generation_failed` and `evidence.error` to
         `lib/KuickPayVoucherListPresenter.php::EVENT_LABEL_KEYS` (`:145-163`) →
         `'AdminVouchers.event.voucher.generation_failed'` and `'AdminVouchers.event.evidence.error'`.
-  - [ ] Add the matching keys to `language/en_us/admin_vouchers.php` (the `AdminVouchers.event.*` block the
+        **Edit ONLY the audit `EVENT_LABEL_KEYS` map (17→19).** Story 4.4 added two **sibling** label maps to this same
+        presenter — `RUN_TRIGGER_LABEL_KEYS` (`:214-218`) and `RUN_STATUS_LABEL_KEYS` (`:230-235`), each with its own
+        drift tests — that have **nothing** to do with audit events; do **not** touch them or their counts.
+  - [x] Add the matching keys to `language/en_us/admin_vouchers.php` (the `AdminVouchers.event.*` block the
         4.2/4.3 events live in) — safe, generic human labels (e.g. "Reference generation failed", "Processing
         error"); no raw tokens. Also fix the **stale section comment at `:143`** (it still reads "14 events +
         generic"; with both new keys it should read "19 events + generic").
-  - [ ] Add both to `tests/KuickPayVoucherListPresenterTest.php::KNOWN_EVENTS` (`:334`) **and** bump the count
+  - [x] Add both to `tests/KuickPayVoucherListPresenterTest.php::KNOWN_EVENTS` (`:334`) **and** bump the count
         comment/`assertSame` message from **"17 emitted event names"** to **"19"** (`:333, :505`). Confirm
         `testEventMapKeysEqualTheKnownEvents`, `testEventLabelKeyForEveryKnownEvent`, and the language↔presenter
-        sync guard (`:674-707`) stay green.
-  - [ ] Add a new test asserting the **lower-dot-notation invariant** over `KNOWN_EVENTS`: every name matches
+        sync guard (now `testLanguageFileDefinesEveryAllowlistedLabelKey()`, **`:801-841`** — shifted +127 by 4.4's
+        run-trigger/run-status drift tests inserted above it; was `:674-707` at the prior baseline) stay green.
+  - [x] Add a new test asserting the **lower-dot-notation invariant** over `KNOWN_EVENTS`: every name matches
         `/^[a-z][a-z_]*(\.[a-z][a-z_]*)+$/`. This guards AC3 for all current and future events.
 
-- [ ] **Task 8 — Customer-surface safety verification (AC6)**
-  - [ ] Confirm (read + `php -l`/review — no live render here) that **no** customer-facing template renders any
+- [x] **Task 8 — Customer-surface safety verification (AC6)**
+  - [x] Confirm (read + `php -l`/review — no live render here) that **no** customer-facing template renders any
         audit record, log line, or raw diagnostic: gateway `views/default/process.pdt` and any client invoice/
-        payment view. The audit timeline + diagnostics box live **only** in `admin_vouchers_detail.pdt` (Story 4.2)
-        and are ACL-gated. This story introduces **no** customer-visible field. Record the verification in the Dev
-        Agent Record (the audit display surface is admin-only and already shipped; 4.5 adds none).
+        payment view. This story introduces **no** customer-visible field.
+  - [x] **Admin audit-render surfaces (now TWO — Story 4.4 added a second; verify both stay admin-only/ACL-gated):**
+        - **Story 4.2 voucher-detail timeline** — `admin_vouchers_detail.pdt` via `getByVoucher()`; ACL-gated on the
+          `diagnostics` action.
+        - **Story 4.4 run-detail drill-down** — `views/default/admin_reconciliation_detail.pdt` via
+          `controllers/admin_reconciliation.php` and `models/kuickpay_audit_events.php::getByRun()` (`:74-85`).
+          **Verified fact that resolves "where do the two new events surface":** `getByRun()` (and `getCountByRun()`,
+          `:94-103`) filter `event_name IN ('evidence.unmatched', 'evidence.duplicate')` — an explicit **allowlist**.
+          Neither new event (`evidence.error`, `voucher.generation_failed`) is in it, so **neither renders on the 4.4
+          run-detail view** (intentionally not shown there; `evidence.error` is still reachable via the voucher-detail
+          timeline through its `voucher_id`). No change to `getByRun()` is in scope for 4.5.
+  - [x] Both admin surfaces are permission-gated; AC6 is about the **customer** surface and is unaffected. Record the
+        verification in the Dev Agent Record (audit display surfaces are admin-only and already shipped; 4.5 adds none).
 
-- [ ] **Task 9 — Extend the secret-leakage suite + resolve the documented baseline failure (AC5, AC7)**
-  - [ ] Extend `tests/KuickPaySecretLeakageTest.php` to **capture the two new audit-event payloads** (drive the
+- [x] **Task 9 — Extend the secret-leakage suite + resolve the documented baseline failure (AC5, AC7)**
+  - [x] Extend `tests/KuickPaySecretLeakageTest.php` to **capture the two new audit-event payloads** (drive the
         `voucher.generation_failed` and `evidence.error` emission paths through the existing fake-repo/fake-audit
         pattern and add their captured events to the scanned set) and the **operational-log payload** (inject a
         capturing logger into the SOAP client and assert the captured fields contain no forbidden value and that
@@ -359,32 +434,66 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
         scan passes **only because** Task 1 makes `response_summary` a token set with a log-safe `fault` enum, not the
         redacted envelope or raw `redactedDiagnosticText()` output — both retain `<…Envelope|Header|Body…>`/`*Result`
         tags that would otherwise trip the raw-envelope regex at `:240`.)
-  - [ ] **Resolve the documented baseline failure** (`testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes`,
+  - [x] **Resolve the documented baseline failure** (`testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes`,
         the `assertSame('confirmed_unposted', $repo->edits[0]['status'])` at `:87`). See Dev Notes → "Resolving the
-        secret-leakage baseline": the leak scan itself passes; only the **vacuous-guard status assertion** is red,
-        because the confirmed fixture (`valid/bill-payment-inquiry-paid-exact.xml`) now routes to `manual_review`
-        (the single-inquiry **null-paid-date** guard, `deferred-work.md:12`). Fix by making the confirmed-capture
-        fixture/voucher carry a **valid paid date** so the confirmed branch genuinely reaches `confirmed_unposted`
-        (preferred — restores the non-vacuous guard the assertion intends), **or**, only if the root cause proves
-        to be a real behavior the test should accept, re-baseline the expectation to the correct status **and keep
-        a separate non-vacuous capture** that still proves the confirmed sink ran. **Either way the forbidden-pattern
-        scan must remain unweakened and the whole suite must end green.** If the root cause turns out to require a
-        production parser/validator change, **stop and raise Open Question #3** rather than editing payment-truth
-        code under a logging story.
-  - [ ] If you add a new test class file, add its `require_once` to `tests/bootstrap.php`.
+        secret-leakage baseline" for the **verified root cause**: this is the **status guard, not a forbidden-pattern
+        check** — in the red state the test aborts at `:87` before the persisted scan loop even runs (so it is not a
+        leak). The assertion is red because the confirmed-capture voucher **violates the single-inquiry single-identity
+        contract** — its
+        `consumer_number` (`'INSTITUTION_IDREG-0000001'`, test `:304-305`) mismatches the single registration field the
+        inquiry echoes (`'REG-0000001'`), so `KuickPayResponseParser` (`:534-539`) records `unmatched_reference` →
+        `manual_review`. The paid date is **present and valid** (`20260609`), and there is **no** single-inquiry
+        null-paid-date guard, so the paid-date framing does not apply.
+  - [x] **Fix at the test-fixture layer only — no production/parser/paid-date change.** Make the confirmed-capture
+        voucher honor the single-identity contract so the single paid row matches. **Override `consumer_number` at the
+        confirmed-capture CALL SITE (`captureConfirmedReconcilePersistence()`, `:70`), NOT by editing the shared
+        `voucher()` default at `:304-305`** — that default is also consumed by `captureSingleReconcilePersistence()`
+        (`:44`, bare `$this->voucher()`), so mutating it would perturb the single/pending capture too. The proven
+        one-line change (empirically validated in round-2 — flips the suite green and reverts clean):
+        ```php
+        // in captureConfirmedReconcilePersistence(), :70
+        $voucher = $this->voucher(['consumer_number' => 'REG-0000001']);
+        ```
+        Then the confirmed branch reaches `confirmed_unposted`, the `:87` guard is non-vacuous again, and **every
+        `persistedForbiddenPatterns()`/`fixtureForbiddenPatterns()` regex stays unweakened.** Do **not** give the
+        fixture "a valid paid date" (it already has one) and do **not** edit the production parser/validator — neither
+        is the cause. (Open Question #3 is now resolved — see below: no payment-truth code is touched, so its
+        escalation hedge no longer applies.) **Landing the fix is positive evidence the guard is non-vacuous:** the leak
+        file's assertion count jumps ~**154 → 304** (full plugin suite ~**890 → 1040**) because the confirmed branch now
+        persists `KP-REF-PAID`/`raw_status` and those sinks get scanned — note that in the Dev Agent Record.
+  - [x] If you add a new test class file, add its `require_once` to `tests/bootstrap.php`.
 
-- [ ] **Task 10 — Verification + honesty (AC8)**
-  - [ ] `php -l` every changed PHP file (gateway lib + gateway `kuickpay.php` + plugin services/presenter/tests).
-  - [ ] Run the component suite per project-context:
+- [x] **Task 10 — Verification + honesty (AC8)**
+  - [x] `php -l` every changed PHP file (gateway lib + gateway `kuickpay.php` + plugin services/presenter/tests +
+        the two admin controllers `admin_vouchers.php` / `admin_main.php` if touched for logger wiring).
+  - [x] **Per-site wiring audit (AC1) — confirm in the report that ALL four SOAP-running sites supply the logger:**
+        gateway `InsertVoucher` issuance, cron `reconcile_pending` (`kuickpay_reconcile_plugin.php:197`),
+        `AdminVouchers::recheck()` (`:241`), `AdminMain::run()` (`:62`). Where the harness supports it, add a narrow
+        unit/reflective or controller-seam test asserting the service receives a `logger` dependency at each site; at
+        minimum, code-review-verify each construction site and state which were test-covered vs review-only.
+  - [x] Run the component suite per project-context:
         `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`
         and, for the gateway-side SOAP-client/redactor changes,
         `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`
-        (never `-c build/phpunit.xml` — project-context:74). Confirm: presenter sync guard green at **19**;
-        the secret-leakage suite **fully green** (the previously-documented baseline failure now resolved — no
-        remaining "documented baseline failure" disclosure for this suite); **no new failures**.
-  - [ ] State the exact commands, the PHP runtime actually used, and what could not be exercised (live
-        `$this->log()` write, the verified Blesta `Logger` cron-sink write — wiring is `php -l` + review only since no
-        live Monolog/DB sink runs here — the `.pdt` render, and any live admin/DB path). PHP 8.2-compatible syntax only.
+        (never `-c build/phpunit.xml` — project-context:74). Confirm: presenter sync guard green at **19**; the
+        **plugin** secret-leakage suite **fully green** (the previously-documented `KuickPaySecretLeakageTest:87`
+        baseline now resolved by the Task 9 identity fix — no remaining "documented baseline failure" disclosure for
+        **that** suite); and **no NEW failures beyond the disclosed pre-existing gateway baseline below**.
+  - [x] **⚠️ Pre-existing GATEWAY-suite baseline — disclose, do NOT attribute to 4.5, do NOT fix here.** At HEAD
+        `bc986e92` (with no 4.5 code changes) the **gateway** suite already has **one unrelated red**:
+        `KuickPayFailClosedContractTest::testUnsafeXmlFixturesNeverProducePaidOrPostedEvidence` on the
+        `ambiguous/bill-payment-inquiry-empty-currency.xml` data set (the empty-currency inquiry returns
+        `confirmed_unposted` instead of a fail-closed status — a parser/contract disagreement, **not** a logging or
+        leakage issue). It is **deterministic** and reproduces in isolation (15 tests, 1 failure). Because 4.5 edits
+        gateway code (`KuickPaySoapClient.php`, `KuickPayRedactor.php`, `kuickpay.php`), the dev **will** see this when
+        running the gateway tree — **do not blame the logging changes and do not fix it under this story.** Verify only
+        that 4.5 introduces **no new** gateway failures on top of this one; record the baseline (test name + data set +
+        starting `tests/assertions/failures` counts) in the Dev Agent Record exactly as prior stories disclosed the
+        leak-suite baseline. (Triage of the empty-currency fail-closed gap is a separate parser/contract story.)
+  - [x] State the exact commands, the PHP runtime actually used, and what could not be exercised (live
+        `$this->log()` write, the verified Blesta `Logger` sink writes on the cron **and** admin Check Now / bulk paths
+        — wiring is `php -l` + review only since no live Monolog/DB sink runs here — the `.pdt` render, and any live
+        admin/DB path). PHP 8.2-compatible syntax only.
 
 ## Dev Notes
 
@@ -398,7 +507,7 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
   (`add()` `:21-28`, allowlisted `FIELDS` `:10-19`; `getByVoucher()` `:44-54` is the **admin-only**, company-scoped,
   display-column-only read the 4.2 detail timeline renders). The model already drops `company_id/run_id/id` from
   the view read and renders `payload` as one escaped blob — **do not** change this read contract.
-- **Audit table** `kuickpay_audit_events` (`kuickpay_reconcile_plugin.php:382-396`): `id`, `company_id`,
+- **Audit table** `kuickpay_audit_events` (`kuickpay_reconcile_plugin.php:419-433` — shifted +37 by Story 4.4): `id`, `company_id`,
   `voucher_id?`, `run_id?`, `event_name` varchar(64), `redacted_trace_id` varchar(32)?, `evidence_hash`
   varchar(24)?, `payload` text?, `date_created` datetime. Indexed on company / voucher / event_name.
   **No schema change is needed for this story** — both new events fit the existing columns. (If you somehow think
@@ -417,8 +526,10 @@ and every customer surface stays safe (AC5/AC6); (4) make the secret-leakage sui
   `tests/KuickPayVoucherListPresenterTest.php::KNOWN_EVENTS` (`:334`); ④ the hard-coded **count** in the comment
   (`:333`) and the `assertSame(..., 'Event map drifted from the 17 emitted event names')` message (`:505`). The
   guard asserts that `array_keys(EVENT_LABEL_KEYS)` and `KNOWN_EVENTS` hold the **same set** (both `sort()`ed before
-  the `assertSame`, so order is free) and that every event has a matching language key (sync guard `:674-707`
-  `include`s the language file). Update **all four** sites to 19 atomically.
+  the `assertSame`, so order is free) and that every event has a matching language key (sync guard
+  `testLanguageFileDefinesEveryAllowlistedLabelKey()`, now `:801-841` — was `:674-707` before 4.4 — which `include`s
+  the language file). Update **all four** sites to 19 atomically. (4.4 also added `RUN_TRIGGER_LABEL_KEYS` /
+  `RUN_STATUS_LABEL_KEYS` sibling maps with their own drift tests to this presenter — leave them untouched.)
 - **Redaction boundary** `components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php`: `redactArray()`
   (`:66`), `redactEnvelope()` (`:95-145`, blanks every `*Result`, rejects DOCTYPE, bounds 1 MiB, returns
   `[UNPARSEABLE_ENVELOPE]` on unsafe XML), `sensitiveValues()` (`:81`), `traceId()` (`:152-158`, `kp_`+16 hex).
@@ -478,6 +589,8 @@ response_summary // safe-token array {response_present: bool, result_present: bo
                  //   — NEVER raw_result / envelope (redacted or not: it keeps Envelope|Header|Body + *Result tags)
 error_class      // null on success | timeout | transport_error | …
 duration_ms      // int (added in Task 1) | null where unavailable
+attempt          // int 1-based index of THIS transport attempt — threaded into call()/outcome() (Task 1); per-attempt
+                 //   logging (OQ#5). Distinct from the outcome's existing `attempts` (plural, total retry count set in callWithRetry)
 ```
 
 - The SOAP client `call()` already holds every value except `duration_ms` (add it) and `voucher_id` (the caller
@@ -490,31 +603,53 @@ duration_ms      // int (added in Task 1) | null where unavailable
 - **Gating lives at the caller** (pass a logger only when `logging_enabled==='true'`) so the lib stays
   framework/meta-agnostic and a disabled gateway is a true no-op.
 
-### Resolving the secret-leakage baseline (AC7 — root cause + allowed fixes)
+### Resolving the secret-leakage baseline (AC7 — VERIFIED root cause + the fix)
 
 The suite's `testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes` has been carried as a
 "documented pre-existing baseline failure" since Story 4.1. **It is not a leak.** The failing line is the
-**vacuous-guard** assertion at `:87`: `assertSame('confirmed_unposted', $repo->edits[0]['status'])`. The confirmed
-capture (`:68-97`) drives the **real** `KuickPayResponseParser` over `valid/bill-payment-inquiry-paid-exact.xml`;
-that fixture's confirmed branch reaches a **null paid date**, and the since-added single-inquiry
-**`missing_paid_date` fail-closed guard** (the follow-up flagged in `deferred-work.md:12` / `:94`) now routes it to
-`manual_review` instead of `confirmed_unposted` — so the assertion that proves "the confirmed branch actually ran"
-is stale.
+**vacuous-guard** assertion at `:87`: `assertSame('confirmed_unposted', $repo->edits[0]['status'])`, which goes
+red because the confirmed capture (`:68-97`) now persists `manual_review`.
 
-Allowed resolutions (pick the **least invasive** that ends the suite green without weakening any scan):
+**Root cause (verified empirically by running the suite + statically against live code — NOT the paid-date theory the
+prior draft of this note carried):** the symptom is a **single-inquiry single-identity-contract violation**, not a
+null paid date.
 
-1. **Preferred — give the confirmed capture a valid paid date** so the confirmed branch genuinely produces
-   `confirmed_unposted` (e.g. use a `valid/*` inquiry fixture whose `Transaction_Date` parses, or adjust the
-   capture's fixture/voucher so `paidAt()` is non-null). This restores the **non-vacuous** guard the assertion
-   intends (it exists to prove the provider-echoed reference/raw status reached the persisted columns — the exact
-   sinks a smuggled secret would hit) **and** keeps the leak scan meaningful.
-2. **Only if (1) is impossible** — re-baseline the `:87-89` assertions to the **actually-correct** status while
-   **keeping a separate capture that still exercises a true `confirmed_unposted` persist** (do not let the scan go
-   vacuous; the `assertNotEmpty($repo->edits)` + a real confirmed sink must remain).
+- The fixture `valid/bill-payment-inquiry-paid-exact.xml` carries the row
+  `00,REG-0000001,20260609,1000.00,KP-TXN-0001,KP-REF-PAID,PKR,INSTITUTION_ID`. Field[2] = `20260609` is a **valid,
+  present** `Transaction_Date` that `normalizeDate()` parses to `2026-06-09` — **there is no missing/null paid date
+  here**, and the single-inquiry path has **no** `missing_paid_date` guard at all (that guard lives only in the bulk
+  path). The `deferred-work.md:12` null-paid-date item is real but **unrelated** — its symptom never fires for this
+  fixture.
+- The confirmed-capture voucher (`voucher()` helper, test `:304-305`) carries **both** identities:
+  `registration_number = 'REG-0000001'` **and** `consumer_number = 'INSTITUTION_IDREG-0000001'`.
+- A single inquiry echoes **one** identity — field[1] = `REG-0000001`. `KuickPayResponseParser` single-inquiry
+  validation (`KuickPayResponseParser.php:534-539`) loops over **both** `expected_registration_number` and
+  `expected_consumer_number`, comparing each to that single echoed `$registrationNumber`. The consumer check
+  `'INSTITUTION_IDREG-0000001' !== 'REG-0000001'` fails → `errors[] = unmatched_reference` → `STATUS_MANUAL_REVIEW`.
 
-**Do not** weaken `fixtureForbiddenPatterns()`/`persistedForbiddenPatterns()`. **Do not** edit the production parser
-or validator to make the test pass — if your investigation concludes the only fix is a payment-truth code change,
-that is **out of this logging story's scope**: stop and raise Open Question #3. The point of AC7 is that a story
+This is the documented **single-inquiry single-identity contract** (a single inquiry validates ONE field; passing
+both expected identities forces a paid row to `manual_review`). It is a **test-fixture identity artifact**, not a
+payment-truth defect.
+
+**The fix (test layer only; no production / parser / paid-date change) — empirically proven in round-2:** align the
+confirmed-capture voucher to the single matching identity the inquiry echoes by **overriding `consumer_number` at the
+confirmed-capture CALL SITE** (`captureConfirmedReconcilePersistence()`, `:70`):
+```php
+$voucher = $this->voucher(['consumer_number' => 'REG-0000001']);   // was: $this->voucher();
+```
+**Do NOT edit the shared `voucher()` default at `:304-305`** — it is also used by `captureSingleReconcilePersistence()`
+(`:44`), so mutating the default would perturb the single/pending capture. The confirmed branch then reaches
+`confirmed_unposted`, and the `:87` guard becomes non-vacuous again. **Precise effect on the scan:** in the red state
+the test aborts at the `:87` `assertSame` (inside `captureConfirmedReconcilePersistence()`), so the persisted
+forbidden-pattern loop over the later captures **never runs** — it isn't that "the scan passes," it's that the failure
+is the status guard, not a leak. Once fixed, the full persisted scan executes and passes (leak-file assertions jump
+~**154 → 304**), proving the confirmed sink ran and carries no forbidden value — the exact sinks a smuggled secret
+would hit.
+
+**Constraints:** **Do not** weaken `fixtureForbiddenPatterns()`/`persistedForbiddenPatterns()`. **Do not** "give the
+fixture a valid paid date" (it already has one — that change is a no-op and leaves the test red). **Do not** edit the
+production parser/validator — it is behaving correctly; the test fixture was wrong. Because the fix touches no
+payment-truth code, **Open Question #3's escalation hedge no longer applies**. The point of AC7 stands: a story
 literally about "investigate safely without leaking secrets" must not ship with a perpetually-red leakage suite.
 
 ### Deferred-work items this story OWNS (close them; cite them in Dev Agent Record)
@@ -594,10 +729,12 @@ alias is **Open Question #4**.
     `lib/KuickPayRedactor.php` **or** a new `lib/KuickPayOperationLog.php` (log-shape builder),
     `kuickpay.php` (wire issuance + InsertVoucher log to the canonical shape), `tests/*` (builder + log-shape tests).
   - Plugin: `lib/KuickPayPostingService.php` (trace-id propagation), `lib/KuickPayReconcileService.php`
-    (+`evidence.error`, +cron log seam wiring), `lib/KuickPayVoucherReferenceService.php`
+    (+`evidence.error`, +log seam wiring + `logger` dependency), `lib/KuickPayVoucherReferenceService.php`
     (+`voucher.generation_failed`), `lib/KuickPayVoucherListPresenter.php` (+2 events),
+    `kuickpay_reconcile_plugin.php` (cron logger fetch+inject), `controllers/admin_vouchers.php` /
+    `controllers/admin_main.php` (Check Now / bulk logger fetch+inject — the two non-cron SOAP entry points),
     `language/en_us/admin_vouchers.php` (+2 event keys), `tests/KuickPayVoucherListPresenterTest.php`
-    (KNOWN_EVENTS→19 + invariant test), `tests/KuickPaySecretLeakageTest.php` (+captures, baseline fix),
+    (KNOWN_EVENTS→19 + invariant test), `tests/KuickPaySecretLeakageTest.php` (+captures, baseline identity fix),
     `tests/KuickPayPostingServiceTest.php` / `tests/KuickPayReconcileServiceTest.php` (+coverage),
     possibly `tests/bootstrap.php` (new test class require).
 - **Possible variance to record:** if you add `lib/KuickPayOperationLog.php` (new file, not in the architecture's
@@ -636,15 +773,18 @@ alias is **Open Question #4**.
   tags), `kuickpay.php:160,598,1234,1290,1349-1370` (logging_enabled + the **two** operational-log groups today:
   `kuickpay:voucher_issue` and `kuickpay:reference_generation`).
 - Code (plugin): `lib/KuickPayAuditService.php:30-44`, `lib/KuickPayAuditRepository.php`,
-  `models/kuickpay_audit_events.php:21-54`, `kuickpay_reconcile_plugin.php:382-396` (audit table),
+  `models/kuickpay_audit_events.php:21-54` (add/getByVoucher) + `:74-85`/`:94-103` (4.4 `getByRun()`/`getCountByRun()`,
+  `event_name IN ('evidence.unmatched','evidence.duplicate')`), `kuickpay_reconcile_plugin.php:419-433` (audit table; was `:382-396` pre-4.4),
   `lib/KuickPayPostingService.php:382-395` (trace-id gap; `''` at `:388`),
   `lib/KuickPayReconcileService.php::processVoucher()` `:408-424` (per-voucher catch / `evidence.error` site) +
   `gatewayConfigForCompany()` `:702-728` (cron `logging_enabled` resolution, default `'false'`),
   `lib/KuickPayVoucherReferenceService.php` (`voucher.generation_failed` site — the inline terminal `lastError`
   assignments at `:129/:301/:312/:397`, **not** the gateway's `recordReferenceGenerationFailure()`),
   `lib/KuickPayVoucherListPresenter.php:145-168` (EVENT_LABEL_KEYS + default).
-- Tests: `tests/KuickPayVoucherListPresenterTest.php:333-334,478-505,674-707` (drift guard),
-  `tests/KuickPaySecretLeakageTest.php:25-40,68-97,128-157,237-244` (scan + baseline assertion).
+- Tests: `tests/KuickPayVoucherListPresenterTest.php:333-334,478-505` (drift guard) + `:801-841` (language↔presenter
+  sync guard `testLanguageFileDefinesEveryAllowlistedLabelKey()`; was `:674-707` pre-4.4),
+  `tests/KuickPaySecretLeakageTest.php:25-40,68-97,128-157,237-244` (scan + baseline assertion; voucher identity
+  `:304-305`), `KuickPayResponseParser.php:534-539` (single-identity validation → `unmatched_reference`).
 - `deferred-work.md:12,75,83,94` (null-paid-date guard; the two 4.5-assigned audit gaps; the 3.5 paid-date item).
 - `_bmad-output/project-context.md` (PHP 8.2; Blesta Loader/Record/Language/Logger; no root `../tests`; external
   PHPUnit 8.5 runner; no raw secrets in logs/docs; commit style).
@@ -668,20 +808,29 @@ alias is **Open Question #4**.
   8.2) and exactly which suites ran. **This story's twist:** the `KuickPaySecretLeakageTest` baseline failure that
   every prior story disclosed is **this story's to resolve** (AC7) — do not just re-disclose it.
 - **No over-scoping** (4-3 Previous Story Intelligence): the Manual Review **queue** and reconciliation **run-summary
-  view** are **Story 4.4** (not yet built — see Open Question #1). 4.5 is logs + audit-event coverage + leakage
-  verification only. Do not build queue/run-summary UI here.
+  view** are **Story 4.4 — now `done` & committed** (`AdminManualReview`, `AdminReconciliation`, run list/detail views,
+  read-only ACL/nav, run-trigger/run-status presenter maps, and `KuickpayAuditEvents->getByRun()/getCountByRun()`).
+  4.5 is logs + audit-event coverage + leakage verification only. Do **not** build or modify queue/run-summary UI here
+  — it already exists; 4.5 only adds two audit events and operational logs.
 
 ### Git Intelligence Summary
 
-Epics 0–3 and Stories 4.1–4.3 are `done`. The most recent commits (`bfc9f0ff`, `d6e0cc73`, `0629e136`, `b9518861`,
-`ecfa46c1`) are Story 4.3 (manual voucher actions) and its review follow-ups — which **added** the
-`admin.rechecked/reviewed/cancelled` events through the exact 4-site drift guard this story extends again, and
-which left the `KuickPaySecretLeakageTest` baseline failure documented (4.3 Completion Notes / Review Findings).
-The audit service/repo/model/table, the redactor, the SOAP outcome contract, and the presenter drift guard are all
-stable and were built to be extended exactly the way this story does. Story **4.4** (`admin_reconciliation.php`,
-`admin_manual_review.php`, run-summary/queue views) is **not yet created** — those controllers/views do not exist
-in the tree — so 4.5 must not assume any 4.4 surface; the audit display surface 4.5 relies on is the **already-shipped
-4.2 detail timeline** in `admin_vouchers_detail.pdt`.
+Epics 0–3 and Stories 4.1–4.4 are `done`. Story 4.3 (manual voucher actions) **added** the
+`admin.rechecked/reviewed/cancelled` events through the exact 4-site drift guard this story extends again, and left
+the `KuickPaySecretLeakageTest` baseline failure documented (4.3 Completion Notes / Review Findings). **Story 4.4 has
+since landed (HEAD `bc986e92`, e.g. `bc986e92 docs(kuickpay): record 4.4 review fixes`)** and shipped
+`controllers/admin_reconciliation.php`, `controllers/admin_manual_review.php`, run list/detail views including
+`views/default/admin_reconciliation_detail.pdt`, read-only ACL/nav entries, the `RUN_TRIGGER_LABEL_KEYS` /
+`RUN_STATUS_LABEL_KEYS` presenter maps, and `KuickpayAuditEvents->getByRun()/getCountByRun()` (audit-only,
+run-scoped, `event_name IN ('evidence.unmatched','evidence.duplicate')`). **4.4 did NOT add any audit events or
+change the 17-event drift guard** — 4.5 still owns adding `voucher.generation_failed` + `evidence.error` (→ 19).
+**Consequence for the dev:** 4.4's edits shifted several line anchors 4.5 navigates by (audit-table schema
+`:382-396`→`:419-433`, item/audit trace cols `:363/:388`→`:400/:425`, cron instantiations `:188/:196`→`:197/:205`,
+presenter sync-guard test `:674-707`→`:801-841`); these have been re-derived throughout this story (all other ~60
+anchors verified still exact at HEAD). The audit service/repo/model/table, the redactor, the SOAP outcome contract,
+and the presenter drift guard are stable and were built to be extended exactly the way this story does. 4.5 relies on
+the already-shipped **4.2 detail timeline** (`admin_vouchers_detail.pdt`) **and** is aware of the **4.4 run-detail
+drill-down** as a second admin-only surface (Task 8) — but renders nothing new on either.
 
 ### Project Context Reference
 
@@ -698,38 +847,94 @@ PHPUnit 8.5 runner (never claim root `../tests`); commit style `<type>(<scope>):
 These are deliberate decisions recorded for sign-off. Each has a chosen default the dev should implement unless the
 reviewer overrides it here. None block dev-start.
 
-1. **Out-of-order creation: 4.5 before 4.4.** The sprint BUILD ORDER (`sprint-status.yaml:63`) sequences
-   `4-4 → 4-5`, and Story 4.4 (Manual Review **queue** + reconciliation **run summaries**) is still `backlog` /
-   uncreated. 4.5 has **no hard dependency** on 4.4: audit events are emitted by services regardless of UI, and the
-   audit-**viewing** surface 4.5 needs is the already-shipped **4.2** detail timeline, not a 4.4 screen. **Default:
-   proceed with 4.5 now**; 4.4 can follow and will render the same events it already supports. Flag here if the team
-   wants 4.4 built first for sequencing reasons.
-2. **Plugin/cron operational-log sink — RESOLVED.** AC1 wants SOAP operations logged with the full field set. The
-   gateway checkout path has a **verified** sink (`$this->log(...)`); the cron path now also has one. A verified Blesta
-   `Logger` container service (`config/services.php` / `core/ServiceProviders/Logger.php`, Monolog-backed) is fetched
-   via `$this->getFromContainer('logger')` at real in-repo call sites (`components/email/email.php:90`,
-   `plugins/support_manager/support_manager_plugin.php:33`). **Decision:** the cron path **uses this `Logger`** — fetch
-   it in `kuickpay_reconcile_plugin.php::cron()` (`:188/:196`) and inject it into `KuickPayReconcileService` via the
-   `dependencies` array (Task 2). The no-op fallback remains only as a defensive last resort (container yields no
-   logger), disclosed in the Dev Agent Record. Override if the team has a preferred logging sink for cron.
-3. **Secret-leakage baseline resolution may touch payment-truth code.** AC7 requires the leakage suite to end green
-   by fixing the stale `confirmed_unposted` assertion (`KuickPaySecretLeakageTest.php:87`), whose root cause is the
-   single-inquiry **null-paid-date → manual_review** guard (`deferred-work.md:12`). **Default:** fix it at the
-   **test/fixture** layer (give the confirmed capture a valid paid date) — no production change. If the investigation
-   concludes only a parser/validator change makes it correct, **stop and bring it here** rather than editing
-   payment-truth code under a logging story.
+1. **Build order — RESOLVED.** This question previously flagged that 4.5 might run before 4.4 was built. **Story 4.4
+   is now `done` & committed** (`sprint-status.yaml:118`), built in sprint order. 4.5 has **no hard dependency** on
+   4.4 and that still holds — audit events are emitted by services regardless of UI, and 4.5 reads no 4.4 data. **No
+   action; proceed with 4.5.** 4.4's surfaces (manual-review queue, run list/detail) already render the existing event
+   set; the two events 4.5 adds are intentionally outside 4.4's `getByRun()` allowlist (Task 8), so 4.5 changes
+   nothing on 4.4's screens.
+2. **Plugin reconcile-path operational-log sink — RESOLVED.** AC1 wants SOAP operations logged with the full field
+   set. The gateway checkout path has a **verified** sink (`$this->log(...)`); the reconcile-service paths now also
+   have one. A verified Blesta `Logger` container service (`config/services.php` / `core/ServiceProviders/Logger.php`,
+   Monolog-backed) is fetched via `$this->getFromContainer('logger')` at real in-repo call sites
+   (`components/email/email.php:90`, `plugins/support_manager/support_manager_plugin.php:33`). **Decision:** every
+   `KuickPayReconcileService` SOAP-running construction site **uses this `Logger`** — fetch it via
+   `$this->getFromContainer('logger')` and inject it through the service's `dependencies` array (Task 2): in
+   `kuickpay_reconcile_plugin.php::cron()` (method `:188`, instantiation **`:197`** for `runCron`), in
+   `AdminVouchers::recheck()` (`:241`), and in `AdminMain::run()` (`:62`). The no-op fallback remains only as a
+   defensive last resort (container yields no logger), disclosed in the Dev Agent Record. Override if the team has a
+   preferred logging sink.
+3. **Secret-leakage baseline resolution — RESOLVED; no payment-truth code touched.** The earlier draft of this
+   question worried the AC7 baseline fix might require a parser/validator change. **It does not.** The verified root
+   cause of the `confirmed_unposted` assertion failure (`KuickPaySecretLeakageTest.php:87`) is a **test-fixture
+   single-identity-contract violation** — the confirmed-capture voucher carries a `consumer_number` that mismatches
+   the single registration field the inquiry echoes, so `KuickPayResponseParser:534-539` records `unmatched_reference`
+   → `manual_review` (the paid date is present and valid; there is no single-inquiry null-paid-date guard). **Fix is
+   test-layer only:** align the capture voucher's `consumer_number` to the echoed `'REG-0000001'` (Task 9 / Dev Notes →
+   "Resolving the secret-leakage baseline"). The parser is behaving correctly and **must not** be edited. The
+   escalation hedge no longer applies.
 4. **`voucher.created` alias.** The epic/architecture name the example `voucher.created`; the code emits
    `voucher.issued`. **Default: keep `voucher.issued`, add no alias** (the AC says "such as"; a rename/alias churns
    the drift guard + historical rows for no behavior gain). Flag if Product wants the literal `voucher.created` name.
+5. **Retry logging granularity (AC1).** Logging fires at the `outcome()` choke point inside `call()`, and
+   `callWithRetry()` (`KuickPaySoapClient.php:252-267`) invokes `call()` up to **three** times for inquiry/bulk-inquiry
+   operations. **Default: one operational log line per transport attempt** (carry an `attempt` index in the canonical
+   shape) — this preserves the choke-point design and gives operators visibility into each retry. **Implementation
+   note:** the attempt index is not visible at the choke point as the code stands (`callWithRetry()` stamps `attempts`
+   only after `call()` returns, `:259`), so Task 1 spells out the required small seam change — thread `int $attempt = 1`
+   through `call()`→`outcome()`. The alternative (one line per public operation after retry resolution) would require
+   logging outside the choke point, in `callWithRetry()`, which the design deliberately avoids. Flag if the team wants
+   single-line-per-operation instead.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Codex GPT-5
 
 ### Debug Log References
 
+- 2026-06-12 22:07:27 PKT — PHP runtime used for syntax/tests: `PHP 8.3.31 (cli)`.
+- `php -l` passed for every changed PHP file in the File List.
+- `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` — passed: 158 tests, 1127 assertions.
+- `cd components/gateways/nonmerchant/kuickpay && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` — ran 233 tests, 1256 assertions, with the documented pre-existing gateway baseline failure only: `KuickPayFailClosedContractTest::testUnsafeXmlFixturesNeverProducePaidOrPostedEvidence` for data set `ambiguous/bill-payment-inquiry-empty-currency.xml`.
+- Focused red/green checks run during implementation: gateway redactor/SOAP tests, gateway issuance helper test, reconcile logger test, posting trace test, reference-generation audit test, reconcile evidence-error test, presenter drift guard, and `KuickPaySecretLeakageTest` (green: 2 tests, 345 assertions).
+
 ### Completion Notes List
 
+- Implemented canonical SOAP operational log fields via `KuickPayRedactor::operationLogFields()` and `KuickPaySoapClient` logger injection, with per-attempt `duration_ms` and `attempt`.
+- Wired operational logging for all four SOAP-running paths: gateway issuance, cron reconcile, admin Check Now, and admin bulk run. Missing container logger falls back to no SOAP operational log.
+- Normalized gateway voucher-issue diagnostics to the canonical shape and intentionally left pre-SOAP `kuickpay:reference_generation` scoped out.
+- Propagated posting audit `redacted_trace_id` from voucher `diagnostic_summary`.
+- Added durable `voucher.generation_failed` and `evidence.error` audit events with safe payloads only.
+- Updated the four-site audit drift guard to 19 events and added the lower-dot-notation invariant.
+- Verified customer surface safety: `process.pdt` renders no log/audit diagnostics; admin voucher diagnostics remain permission-gated; run-detail audit exceptions still allowlist only `evidence.unmatched` and `evidence.duplicate`.
+- Extended the secret-leakage suite to cover the new audit paths and operational-log payloads; resolved the prior confirmed-capture baseline by aligning the test voucher `consumer_number` to the single-inquiry identity contract.
+- Live Blesta `$this->log()` writes, Monolog/container sink writes, live admin/DB paths, and `.pdt` rendering were not exercised in a live app; they were covered by unit seams, syntax checks, and code review.
+
 ### File List
+
+- components/gateways/nonmerchant/kuickpay/kuickpay.php
+- components/gateways/nonmerchant/kuickpay/lib/KuickPayRedactor.php
+- components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPayRedactorTest.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPaySoapClientTest.php
+- components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php
+- plugins/kuickpay_reconcile/controllers/admin_main.php
+- plugins/kuickpay_reconcile/controllers/admin_vouchers.php
+- plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/language/en_us/admin_vouchers.php
+- plugins/kuickpay_reconcile/lib/KuickPayPostingService.php
+- plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php
+- plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php
+- plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayVoucherListPresenterTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayVoucherReferenceServiceTest.php
+- plugins/kuickpay_reconcile/tests/bootstrap.php
+
+### Change Log
+
+- 2026-06-12 — Implemented Story 4.5 structured logs, audit-event coverage, leakage hardening, and verification updates.
