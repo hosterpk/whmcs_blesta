@@ -31,6 +31,9 @@ class KuickPaySecretLeakageTest extends TestCase
         $captured = array_merge($captured, $this->captureBulkReconcilePersistence());
         $captured = array_merge($captured, $this->capturePostingPersistence());
         $captured = array_merge($captured, $this->captureIssuancePersistence());
+        $captured = array_merge($captured, $this->captureReferenceGenerationFailureAudit());
+        $captured = array_merge($captured, $this->captureEvidenceErrorAudit());
+        $captured = array_merge($captured, $this->captureOperationalLogPayloads());
 
         $this->assertNotEmpty($captured);
 
@@ -67,7 +70,7 @@ class KuickPaySecretLeakageTest extends TestCase
 
     private function captureConfirmedReconcilePersistence(): array
     {
-        $voucher = $this->voucher();
+        $voucher = $this->voucher(['consumer_number' => 'REG-0000001']);
         $repo = new KuickPaySecretLeakageVoucherRepository([$voucher], [$this->invoiceLink()]);
         $run = new KuickPaySecretLeakageRunRepository();
         $items = new KuickPaySecretLeakageItemRepository();
@@ -186,6 +189,85 @@ class KuickPaySecretLeakageTest extends TestCase
         ];
     }
 
+    private function captureReferenceGenerationFailureAudit(): array
+    {
+        $audit = new KuickPaySecretLeakageAuditService();
+        $service = new KuickPayVoucherReferenceService(new KuickPaySecretLeakageReferenceRepository(), $audit);
+
+        $service->getOrCreateForInvoiceContext([
+            'company_id' => 1,
+            'gateway_id' => 20,
+            'client_id' => 10,
+            'currency' => 'PKR',
+            'amount' => '1000.00',
+            'institution_id' => 'KP01',
+            'invoice_amounts' => [
+                ['id' => 55, 'amount' => '1000.00'],
+                ['id' => 55, 'amount' => '999.00'],
+            ],
+        ]);
+
+        $this->assertSame('duplicate_invoice_id', $service->getLastError());
+        $this->assertNotEmpty($audit->events);
+
+        return ['reference generation audit events' => $audit->events];
+    }
+
+    private function captureEvidenceErrorAudit(): array
+    {
+        $repo = new KuickPaySecretLeakageVoucherRepository([$this->voucher()]);
+        $run = new KuickPaySecretLeakageRunRepository();
+        $items = new KuickPaySecretLeakageItemRepository();
+        $audit = new KuickPaySecretLeakageAuditService();
+        $client = new KuickPaySecretLeakageClient([new RuntimeException('provider userName password InstitutionID')]);
+        $service = $this->reconcileService($repo, $run, $items, $audit, $client);
+
+        $service->runCron(1);
+
+        $this->assertNotEmpty($items->items);
+        $this->assertContains('evidence.error', array_column($audit->events, 0));
+
+        return [
+            'evidence error item rows' => $items->items,
+            'evidence error audit events' => $audit->events,
+        ];
+    }
+
+    private function captureOperationalLogPayloads(): array
+    {
+        $logs = [];
+        $faults = [
+            '<Envelope><Body><InsertVoucherResult>03001234567</InsertVoucherResult></Body></Envelope>',
+            'mixed prose <Envelope><Body><InsertVoucherResult>john@example.com</InsertVoucherResult>',
+            'CNIC 12345-1234567-1 Mobile 03001234567 Email john@example.com',
+            'userName password InstitutionID',
+        ];
+
+        foreach ($faults as $fault) {
+            $fake = new KuickPaySecretLeakageSoapClientFake(new SoapFault('Server', $fault));
+            $client = new KuickPaySoapClient(
+                $this->soapConfig(),
+                function () use ($fake) {
+                    return $fake;
+                },
+                function (array $fields, bool $ok) use (&$logs) {
+                    $logs[] = ['fields' => $fields, 'ok' => $ok];
+                }
+            );
+
+            $client->insertVoucher([
+                'RegistrationNumber' => 'REG-0000001',
+                'Name' => 'Customer Name',
+                'Mobile' => '03001234567',
+                'Email' => 'john@example.com',
+            ]);
+        }
+
+        $this->assertCount(4, $logs);
+
+        return ['operational log payloads' => $logs];
+    }
+
     private function reconcileService(
         KuickPaySecretLeakageVoucherRepository $repo,
         KuickPaySecretLeakageRunRepository $run,
@@ -288,6 +370,21 @@ class KuickPaySecretLeakageTest extends TestCase
             'raw_result' => $rawResult,
             'error_class' => null,
             'redacted_trace_id' => 'kp_trace_safe',
+        ];
+    }
+
+    private function soapConfig(): array
+    {
+        return [
+            'wsdl_url' => 'https://example.com/api.asmx?WSDL',
+            'soap_timeout' => '30',
+            'institution_id' => 'KP01',
+            'voucher_username' => 'voucher-user',
+            'voucher_password' => 'voucher-secret',
+            'inquiry_username' => 'inquiry-user',
+            'inquiry_password' => 'inquiry-secret',
+            'inquiry_same_as_voucher' => 'false',
+            'logging_enabled' => 'true',
         ];
     }
 
@@ -459,6 +556,34 @@ class KuickPaySecretLeakageAuditService
     }
 }
 
+class KuickPaySecretLeakageReferenceRepository
+{
+    public function getPendingByInvoiceSet(array $invoiceIds, int $companyId)
+    {
+        return null;
+    }
+
+    public function getPendingByInvoiceId(int $invoiceId, int $companyId)
+    {
+        return null;
+    }
+
+    public function getByRegistrationNumber(string $registrationNumber, int $companyId)
+    {
+        return null;
+    }
+
+    public function getByConsumerNumber(string $consumerNumber, int $companyId)
+    {
+        return null;
+    }
+
+    public function create(array $voucherData, array $invoiceLinks)
+    {
+        return null;
+    }
+}
+
 class KuickPaySecretLeakageClient
 {
     private array $outcomes;
@@ -476,6 +601,26 @@ class KuickPaySecretLeakageClient
     public function billPaymentBulkInquiry(array $request): array
     {
         return array_shift($this->outcomes);
+    }
+}
+
+class KuickPaySecretLeakageSoapClientFake
+{
+    private Throwable $throwable;
+
+    public function __construct(Throwable $throwable)
+    {
+        $this->throwable = $throwable;
+    }
+
+    public function __soapCall($operation, $arguments)
+    {
+        throw $this->throwable;
+    }
+
+    public function __getLastResponse()
+    {
+        return '';
     }
 }
 

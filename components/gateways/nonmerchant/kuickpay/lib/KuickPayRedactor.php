@@ -182,6 +182,7 @@ class KuickPayRedactor
     ): array {
         unset($request_summary['raw_result'], $request_summary['raw_envelope']);
         unset($response_summary['raw_result'], $response_summary['raw_envelope']);
+        $request_summary = self::dropOperationalLogCredentialKeys($request_summary);
 
         return [
             'operation' => $operation,
@@ -264,6 +265,28 @@ class KuickPayRedactor
         $code = (string) $code;
 
         return preg_match('/^[A-Za-z0-9]{2}$/', $code) === 1 ? $code : null;
+    }
+
+    /**
+     * Remove credential key names that should not appear in persisted logs.
+     *
+     * @param array $data Redacted request data
+     * @return array Request data without credential-key fields
+     */
+    private static function dropOperationalLogCredentialKeys(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (preg_match('/^(?:userName|username|password|InstitutionID|institution_id)$/i', (string) $key) === 1) {
+                unset($data[$key]);
+                continue;
+            }
+
+            if (is_array($value)) {
+                $data[$key] = self::dropOperationalLogCredentialKeys($value);
+            }
+        }
+
+        return $data;
     }
 
     /**
