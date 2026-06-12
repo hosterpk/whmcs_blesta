@@ -11,9 +11,10 @@ require_once __DIR__ . '/../lib/KuickPayEvidenceValidator.php';
 require_once __DIR__ . '/../lib/KuickPayReconcileService.php';
 require_once __DIR__ . '/../lib/KuickPayPostingService.php';
 
-if (!class_exists('KuickpayReconcileModel')) {
-    class KuickpayReconcileModel
+if (!class_exists('AppModel')) {
+    class AppModel
     {
     }
 }
+require_once __DIR__ . '/../kuickpay_reconcile_model.php';
 require_once __DIR__ . '/../models/kuickpay_vouchers.php';
