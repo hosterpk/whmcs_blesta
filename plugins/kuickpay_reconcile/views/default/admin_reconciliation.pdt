@@ -1,0 +1,100 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo ($message ?? null);
+
+$empty = $this->_('AdminVouchers.text.empty', true);
+
+$dateOr = function ($value) use ($empty) {
+    return $value ? $this->Html->safe($this->Date->cast($value)) : $empty;
+};
+
+// Resolved bulk count model (decided in the story; labels only, identical in
+// the run-detail view). Manual Review is the inclusive figure; Unmatched is an
+// indented subset, never added on top. Failed and Errors are two separate
+// figures, never summed (a wholesale bulk failure increments both for one
+// incident). No arithmetic is done in the view.
+$num = function ($value) {
+    return $this->Html->safe((string) (int) $value);
+};
+
+$this->Widget->clear();
+$this->Widget->create($this->_('AdminReconciliation.index.boxtitle', true), ['id' => 'admin_reconciliation']);
+
+if (($runs ?? false) && ($num_runs = count($runs)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="reconciliation_runs_table">
+        <thead>
+            <tr>
+                <th><?php echo $this->_('AdminReconciliation.heading.run_number', true);?></th>
+                <th><?php echo $this->_('AdminReconciliation.heading.type', true);?></th>
+                <th><?php echo $this->_('AdminReconciliation.heading.status', true);?></th>
+                <th><?php echo $this->_('AdminReconciliation.heading.started', true);?></th>
+                <th><?php echo $this->_('AdminReconciliation.heading.completed', true);?></th>
+                <th><?php echo $this->_('AdminReconciliation.heading.run_date', true);?></th>
+                <th class="text-end"><?php echo $this->_('AdminReconciliation.count.checked', true);?></th>
+                <th class="text-end"><?php echo $this->_('AdminReconciliation.count.confirmed', true);?></th>
+                <th class="text-end"><?php echo $this->_('AdminReconciliation.count.manual_review', true);?></th>
+                <th class="text-end"><?php echo $this->_('AdminReconciliation.count.unmatched', true);?></th>
+                <th class="text-end"><?php echo $this->_('AdminReconciliation.count.failed', true);?></th>
+                <th class="text-end"><?php echo $this->_('AdminReconciliation.count.errors', true);?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            for ($i = 0; $i < $num_runs; $i++) {
+                $run = $runs[$i];
+                $detail_url = $this->Html->safe(
+                    $this->base_uri . 'plugin/kuickpay_reconcile/admin_reconciliation/detail/' . $run->id . '/'
+                );
+            ?>
+            <tr>
+                <td>
+                    <a href="<?php echo $detail_url;?>" class="font-monospace">
+                        #<?php echo $this->Html->safe($run->id);?>
+                    </a>
+                </td>
+                <td><?php echo $this->Html->safe($this->_($presenter->triggerTypeLabelKey($run->trigger_type), true));?></td>
+                <td>
+                    <span class="badge <?php echo $presenter->runStatusBadgeClassFor($run->status);?>">
+                        <?php echo $this->Html->safe($this->_($presenter->runStatusLabelKey($run->status), true));?>
+                    </span>
+                </td>
+                <td><?php echo $dateOr($run->date_started);?></td>
+                <td><?php echo $dateOr($run->date_completed);?></td>
+                <td><?php echo ($run->trigger_type === 'bulk' ? $dateOr($run->run_date) : $empty);?></td>
+                <td class="text-end font-monospace"><?php echo $num($run->total_checked);?></td>
+                <td class="text-end font-monospace"><?php echo $num($run->total_confirmed);?></td>
+                <td class="text-end font-monospace"><?php echo $num($run->total_manual_review);?></td>
+                <td class="text-end font-monospace"><?php echo $num($run->total_unmatched);?></td>
+                <td class="text-end font-monospace"><?php echo $num($run->total_failed);?></td>
+                <td class="text-end font-monospace"><?php echo $num($run->total_errors);?></td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+<div class="p-3 small text-muted">
+    <p class="mb-1"><?php echo $this->_('AdminReconciliation.footnote.posting', true);?></p>
+    <p class="mb-1"><?php echo $this->_('AdminReconciliation.footnote.unmatched_subset', true);?></p>
+    <p class="mb-1"><?php echo $this->_('AdminReconciliation.footnote.eligible', true);?></p>
+    <p class="mb-0"><?php echo $this->_('AdminReconciliation.footnote.failed_errors', true);?></p>
+</div>
+<?php
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-clock-history" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php echo $this->_('AdminReconciliation.no_results', true);?></p>
+</div>
+<?php
+}
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+?>

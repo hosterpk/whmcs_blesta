@@ -69,4 +69,89 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
 
         return $run ? (int) $run->cursor : 0;
     }
+
+    /**
+     * Fetches a page of company-scoped reconciliation runs.
+     *
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @param array $filters Allowlisted optional filters (trigger_type, status)
+     * @param int $page The page number
+     * @param array $order_by The order fields
+     * @return array Run rows
+     */
+    public function getListForCompany(
+        int $company_id,
+        array $filters = [],
+        int $page = 1,
+        array $order_by = ['date_started' => 'DESC']
+    ): array {
+        $this->Record->select()->from('kuickpay_reconciliation_runs');
+        $this->applyRunFilters($company_id, $filters);
+
+        return $this->Record->order($order_by)
+            ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
+            ->fetchAll();
+    }
+
+    /**
+     * Counts company-scoped reconciliation runs matching the filters.
+     *
+     * Shares applyRunFilters() with getListForCompany() so the count can never
+     * drift from the page it paginates.
+     *
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @param array $filters Allowlisted optional filters (trigger_type, status)
+     * @return int The total matching rows
+     */
+    public function getListCountForCompany(int $company_id, array $filters = []): int
+    {
+        $this->Record->select()->from('kuickpay_reconciliation_runs');
+        $this->applyRunFilters($company_id, $filters);
+
+        return $this->Record->numResults();
+    }
+
+    /**
+     * Fetches a single run scoped to a company.
+     *
+     * This is the company-scope gate reused by the run-detail item/audit queries
+     * (the items table has no company_id of its own): a run id outside the staff
+     * company resolves to false, never another company's run.
+     *
+     * @param int $run_id The run ID
+     * @param int $company_id The company ID scope
+     * @return mixed The run row, or false when absent or out of company scope
+     */
+    public function getForCompany(int $run_id, int $company_id)
+    {
+        return $this->Record->select()
+            ->from('kuickpay_reconciliation_runs')
+            ->where('id', '=', $run_id)
+            ->where('company_id', '=', $company_id)
+            ->fetch();
+    }
+
+    /**
+     * Applies the mandatory company scope and the allowlisted run filters.
+     *
+     * Company scope is applied UNCONDITIONALLY and never sourced from $filters.
+     * Each optional filter is matched exactly against its source-of-truth const,
+     * so a request value can never reach the query unvalidated.
+     *
+     * @param int $company_id The authenticated staff company (mandatory scope)
+     * @param array $filters Allowlisted optional filters: trigger_type, status
+     */
+    private function applyRunFilters(int $company_id, array $filters): void
+    {
+        // Mandatory tenant scope — never from request input.
+        $this->Record->where('company_id', '=', $company_id);
+
+        if (isset($filters['trigger_type']) && in_array($filters['trigger_type'], self::TRIGGER_TYPES, true)) {
+            $this->Record->where('trigger_type', '=', $filters['trigger_type']);
+        }
+
+        if (isset($filters['status']) && in_array($filters['status'], self::STATUSES, true)) {
+            $this->Record->where('status', '=', $filters['status']);
+        }
+    }
 }
