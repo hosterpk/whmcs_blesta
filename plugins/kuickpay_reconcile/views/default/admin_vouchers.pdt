@@ -88,7 +88,11 @@ if (($vouchers ?? false) && ($num_vouchers = count($vouchers)) > 0) {
                     ?>
                 </td>
                 <td><?php echo $this->Html->safe($voucher->amount) . ' ' . $this->Html->safe($voucher->currency);?></td>
-                <td><span class="font-monospace"><?php echo $this->Html->safe($voucher->consumer_number);?></span></td>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/detail/' . $voucher->id . '/');?>" class="font-monospace">
+                        <?php echo $this->Html->safe($voucher->consumer_number);?>
+                    </a>
+                </td>
                 <td>
                     <span class="badge <?php echo $presenter->badgeClassFor($voucher->status);?>">
                         <?php echo $this->Html->safe($this->_($presenter->labelKeyFor($voucher->status), true));?>
