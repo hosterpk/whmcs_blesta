@@ -57,9 +57,13 @@ class AdminReconciliation extends KuickpayReconcileController
      */
     public function index()
     {
+        if (!$this->requireGetOnly($this->base_uri . 'plugin/kuickpay_reconcile/admin_reconciliation/index/')) {
+            return;
+        }
+
         $company_id = (int) $this->company_id;
 
-        $page = (isset($this->get[0]) && is_numeric($this->get[0])) ? (int) $this->get[0] : 1;
+        $page = $this->positiveRouteInt($this->get[0] ?? null, 1);
 
         $runs = $this->KuickpayReconciliationRuns->getListForCompany(
             $company_id,
@@ -96,12 +100,14 @@ class AdminReconciliation extends KuickpayReconcileController
      */
     public function detail()
     {
+        if (!$this->requireGetOnly($this->base_uri . 'plugin/kuickpay_reconcile/admin_reconciliation/index/')) {
+            return;
+        }
+
         $company_id = (int) $this->company_id;
 
-        // Stricter than the list's numeric guard — rejects "1e3", floats, signs.
-        $run_id = (isset($this->get[0]) && ctype_digit((string) $this->get[0]))
-            ? (int) $this->get[0]
-            : 0;
+        // Rejects "1e3", floats, signs, zero, and oversized integers.
+        $run_id = $this->positiveRouteInt($this->get[0] ?? null);
 
         $run = ($run_id > 0)
             ? $this->KuickpayReconciliationRuns->getForCompany($run_id, $company_id)

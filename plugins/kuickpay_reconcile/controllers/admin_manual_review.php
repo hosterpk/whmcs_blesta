@@ -54,6 +54,10 @@ class AdminManualReview extends KuickpayReconcileController
      */
     public function index()
     {
+        if (!$this->requireGetOnly($this->base_uri . 'plugin/kuickpay_reconcile/admin_manual_review/index/')) {
+            return;
+        }
+
         $company_id = (int) $this->company_id;
 
         // Default sort: most-recently-checked first. date_last_checked is
@@ -65,7 +69,7 @@ class AdminManualReview extends KuickpayReconcileController
         $sort = $this->presenter->allowedSort($sort_in, 'date_last_checked');
         $order = $this->presenter->allowedOrder($order_in, 'desc');
 
-        $page = (isset($this->get[0]) && is_numeric($this->get[0])) ? (int) $this->get[0] : 1;
+        $page = $this->positiveRouteInt($this->get[0] ?? null, 1);
 
         // The queue is pre-scoped to manual_review; the status filter is already
         // allowlisted in applyListFilters(), so this is not a new query path.

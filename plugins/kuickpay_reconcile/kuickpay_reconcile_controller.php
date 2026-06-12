@@ -77,4 +77,55 @@ class KuickpayReconcileController extends AppController
 
         return false;
     }
+
+    /**
+     * Enforces a read-only route surface.
+     *
+     * @param string $redirect_url URL to return to when a non-GET request arrives
+     * @return bool True when the current request may render the page
+     */
+    protected function requireGetOnly(string $redirect_url): bool
+    {
+        $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+        if ($method === 'GET') {
+            return true;
+        }
+
+        $this->redirect($redirect_url);
+        return false;
+    }
+
+    /**
+     * Parses a positive integer route segment without accepting floats/scientific notation.
+     *
+     * @param mixed $value Route value
+     * @param int $default Fallback value
+     * @return int Positive integer route value, or the fallback
+     */
+    protected function positiveRouteInt($value, int $default = 0): int
+    {
+        $raw = (string) $value;
+        if (!ctype_digit($raw) || $raw === '') {
+            return $default;
+        }
+
+        $trimmed = ltrim($raw, '0');
+        if ($trimmed === '') {
+            return $default;
+        }
+
+        if (
+            strlen($trimmed) > strlen((string) PHP_INT_MAX)
+            || (
+                strlen($trimmed) === strlen((string) PHP_INT_MAX)
+                && strcmp($trimmed, (string) PHP_INT_MAX) > 0
+            )
+        ) {
+            return $default;
+        }
+
+        $int = (int) $trimmed;
+
+        return $int > 0 ? $int : $default;
+    }
 }
