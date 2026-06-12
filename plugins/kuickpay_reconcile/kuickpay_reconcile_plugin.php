@@ -121,6 +121,14 @@ class KuickpayReconcilePlugin extends Plugin
             if (version_compare($current_version, '1.4.0', '<')) {
                 $this->addBulkReconciliationColumns();
             }
+
+            // 1.5.0 adds the admin voucher list (Story 4.1). No schema change:
+            // the bump exists only so PluginManager::upgrade() re-syncs the nav
+            // and ACL set from getActions()/getPermissions().
+            if (version_compare($current_version, '1.5.0', '<')) {
+                // Intentionally empty — nav/permission re-registration is driven
+                // by the version change, not by SQL here.
+            }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
             return;
@@ -189,6 +197,12 @@ class KuickpayReconcilePlugin extends Plugin
         return [
             [
                 'action' => 'nav_secondary_staff',
+                'uri' => 'plugin/kuickpay_reconcile/admin_vouchers/index/',
+                'name' => 'KuickpayReconcilePlugin.nav_secondary_staff.vouchers',
+                'options' => ['parent' => 'billing/']
+            ],
+            [
+                'action' => 'nav_secondary_staff',
                 'uri' => 'plugin/kuickpay_reconcile/admin_main/index/',
                 'name' => 'KuickpayReconcilePlugin.nav_secondary_staff.bulk_reconcile',
                 'options' => ['parent' => 'billing/']
@@ -204,6 +218,12 @@ class KuickpayReconcilePlugin extends Plugin
     public function getPermissions()
     {
         return [
+            [
+                'group_alias' => 'admin_billing',
+                'name' => Language::_('KuickpayReconcilePlugin.permission.vouchers', true),
+                'alias' => 'kuickpay_reconcile.admin_vouchers',
+                'action' => '*'
+            ],
             [
                 'group_alias' => 'admin_billing',
                 'name' => Language::_('KuickpayReconcilePlugin.permission.bulk_reconcile', true),
