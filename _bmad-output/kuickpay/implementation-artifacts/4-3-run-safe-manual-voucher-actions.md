@@ -6,7 +6,7 @@ baseline_commit: 9a68e138db16275c33c01166e54fb05599244058
 
 # Story 4.3: Run Safe Manual Voucher Actions
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -101,15 +101,15 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Single-voucher reconcile entry on the shared service (AC1, AC2)**
-  - [ ] Add a public method `reconcileVoucher(int $company_id, int $voucher_id): array` to
+- [x] **Task 1 — Single-voucher reconcile entry on the shared service (AC1, AC2)**
+  - [x] Add a public method `reconcileVoucher(int $company_id, int $voucher_id): array` to
         `plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php` that drives **one** voucher through the **same**
         inquiry → parse → validate → `persistEvidence` path the cron uses, by reusing the existing `processVoucher()`
         internals. Do **not** route through `run()` / `getResumeCursor()` (that is the cron batch-cursor path and would
         inherit a foreign cursor — see deferred-work line 80; processing one known voucher sidesteps it entirely).
-  - [ ] Resolve gateway config (`gatewayConfigForCompany`); if unavailable/reconciliation disabled → return
+  - [x] Resolve gateway config (`gatewayConfigForCompany`); if unavailable/reconciliation disabled → return
         `['status'=>'skipped','reason'=>'kuickpay_unavailable']` (controller surfaces a safe message).
-  - [ ] **Fetch + fresh-status short-circuit (race guard — do this BEFORE the inquiry).** Fetch the voucher
+  - [x] **Fetch + fresh-status short-circuit (race guard — do this BEFORE the inquiry).** Fetch the voucher
         company-scoped; if not found / wrong company → return `['status'=>'failed','reason'=>'voucher_not_found',
         'voucher_id'=>$voucher_id]` (open no run). Then, **immediately before calling the provider, the status is the
         live row's status** — if it is **no longer `pending`/`retry`** (e.g. the 5-minute cron just confirmed it while
@@ -118,7 +118,7 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         Check Now would otherwise re-inquire a row the cron already moved and **demote a just-confirmed voucher to
         `manual_review`** (see Dev Notes "Manual reconcile vs cron race"). For `confirmed_unposted` the controller then
         proceeds straight to `postVoucher()`; for any other non-`pending`/`retry` status it surfaces `invalid_state`.
-  - [ ] Open a lightweight **`manual`**-trigger run record and close it with **the same ceremony the cron `run()`
+  - [x] Open a lightweight **`manual`**-trigger run record and close it with **the same ceremony the cron `run()`
         uses** (`KuickPayReconcileService.php:111-166`) so the manual run row is consistent with cron rows (4.4 will
         surface manual runs). Concretely: `$counts = $this->initialCounts()` (`:666`); `$run_id =
         $this->runRepository->open($company_id, 'manual', 0)` (verified signature `open(int $company_id, string
@@ -132,20 +132,20 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         requires `status, counts, cursor, summary`) and record `reconciliation.run.completed`; wrap close/audit in
         best-effort `try/catch (Throwable)`. If `open()` / client-build throws **before** `$run_id` exists →
         `status='failed'`, skip close, return `['status'=>'failed','reason'=>'run_open_failed','voucher_id'=>$voucher_id]`.
-  - [ ] **Caught-inquiry-exception path (provider timeout — the most common real failure).** `processVoucher`
+  - [x] **Caught-inquiry-exception path (provider timeout — the most common real failure).** `processVoucher`
         **catches** `Throwable` from `billPaymentInquiry`/`parse` and returns `['new_status'=>$prior_status,
         'error'=>true]` — it does **not** rethrow (`:325-343`), so the row stays `pending`/`retry` with no evidence
         write. When `$outcome['error'] === true`, return `['status'=>'unavailable','reason'=>'provider_unreachable',
         'run_id'=>$run_id,'voucher_id'=>$voucher_id]` (a safe token — **never** the raw exception) so `recheck()` can
         say "couldn't reach KuickPay, try again" rather than a misleading "still pending" (AC1 = the *real* outcome).
-  - [ ] **Return shape** (controller `recheck()` branches on `status`): success →
+  - [x] **Return shape** (controller `recheck()` branches on `status`): success →
         `['status' => <new voucher status: 'confirmed_unposted'|'retry'|'manual_review'|'failed'>, 'run_id' => int,
         'voucher_id' => int]`; provider unreachable → `['status'=>'unavailable','reason'=>'provider_unreachable', …]`;
         config disabled → `['status'=>'skipped','reason'=>'kuickpay_unavailable']`; setup/not-found → `failed` with the
         reason tokens above. `reconcileVoucher()` **never returns `posted`** — posting is the controller's separate
         `postVoucher()` step (this method runs only the inquiry→parse→validate→persist reconcile leg, mirroring the
         `reconcile_pending` cron, not `post_confirmed`).
-  - [ ] **No batch lock — with the residual named.** Do **not** acquire the company-wide `reconcile_pending` batch lock
+  - [x] **No batch lock — with the residual named.** Do **not** acquire the company-wide `reconcile_pending` batch lock
         for a single manual reconcile (it would make Check Now fail with `lock_held` whenever the 5-minute cron is
         mid-run). The fresh-status short-circuit above closes the *pre-inquiry* race; the **residual** is the
         *during-inquiry* interleave (cron confirms while the manual SOAP call is in flight), where
@@ -154,14 +154,14 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         but is an operational regression this story introduces; it is documented in Dev Notes "Manual reconcile vs
         cron race" and the root cause (status-guarding `:435`) is logged in `deferred-work.md`. Record this choice +
         residual in Dev Agent Record.
-- [ ] **Task 2 — Status-guarded transition methods on the model (AC3, AC4, AC7)**
-  - [ ] Add a generic guarded transition to `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`, e.g.
+- [x] **Task 2 — Status-guarded transition methods on the model (AC3, AC4, AC7)**
+  - [x] Add a generic guarded transition to `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`, e.g.
         `transition(int $voucher_id, int $company_id, string $new_status, array $allowed_from, array $extra = []): bool`
         mirroring `expire()`’s pattern: `UPDATE … SET status=?, date_updated=now, <extra> WHERE id=? AND company_id=?
         AND status IN (allowed_from)`; return `rowCount() === 1`. `$new_status` must be in `self::STATUSES`; **allowlist
         `$extra` keys with `array_intersect_key($extra, array_flip(self::FIELDS))`** (the same defensive pattern
         `edit()` uses at `:83-98`) so an unexpected key can never write a non-`FIELDS` column.
-  - [ ] **Extract the safety map as a pure structure — pin the concrete shape** (no "e.g."): two `public const` maps on
+  - [x] **Extract the safety map as a pure structure — pin the concrete shape** (no "e.g."): two `public const` maps on
         the model, `ALLOWED_ACTIONS_BY_STATE` (state → ordered list of `recheck|review|cancel` that render/are legal)
         and `ALLOWED_FROM_BY_ACTION` (action → its `allowed_from` set). These are the **single source of truth**: the
         view button-gating (Task 5), the controller state-checks (Task 3), and the `$allowed_from` argument passed to
@@ -169,16 +169,16 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         sites (the inline sets shown in Task 3 / the matrix are documentation *of* these constants, not a second
         authority). Pure (no `Record`), so AC10 unit-tests them directly (Task 8). This is the one place the state
         machine is defined.
-  - [ ] For the note write, do the read-modify-write **in `review()`/`cancel()`** (not in `transition()`, which takes
+  - [x] For the note write, do the read-modify-write **in `review()`/`cancel()`** (not in `transition()`, which takes
         no `$note`/`$staff_id`): read the current `admin_notes` via `getForCompany()`, compute the appended value in
         PHP, and pass it as `$extra['admin_notes']` to `transition()` so it lands in the **same** guarded UPDATE as the
         status change. **Append format** (newest first, prior notes preserved — never overwrite history):
         `"[" . date('c') . "] (staff #" . $staff_id . ") " . $note` prepended to the existing column value with a
         `"\n"` separator. The 4.2 detail view already runs `Html->safe()` on `admin_notes`, so storage stays raw text.
-  - [ ] Cancel uses the same `transition()` with `new_status='cancelled'`, the appended **required** note, and **no**
+  - [x] Cancel uses the same `transition()` with `new_status='cancelled'`, the appended **required** note, and **no**
         payment-field writes.
-- [ ] **Task 3 — Manual action controller methods (AC1, AC3, AC4, AC6, AC7, AC8)**
-  - [ ] Add **public** `recheck()`, `review()`, and `cancel()` action methods to the **existing**
+- [x] **Task 3 — Manual action controller methods (AC1, AC3, AC4, AC6, AC7, AC8)**
+  - [x] Add **public** `recheck()`, `review()`, and `cancel()` action methods to the **existing**
         `plugins/kuickpay_reconcile/controllers/admin_vouchers.php` (see Dev Notes "Controller location decision").
         They **must be public** — Blesta/minPHP only routes POSTs to public controller methods; a private method 404s.
         Each: rejects non-POST (`if (empty($this->post)) { redirect(detail); return; }`); resolves `company_id`
@@ -186,18 +186,18 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         company-scoped via `getForCompany`; enforces the per-action ACL guard (Task 4); validates state per the matrix;
         performs the action; records the audit event; sets a localized `flashMessage`; redirects back to
         `…/admin_vouchers/detail/{id}/`.
-  - [ ] **Service loading:** the reconcile/posting services are **lib classes, not models** — load via `Loader::load`
+  - [x] **Service loading:** the reconcile/posting services are **lib classes, not models** — load via `Loader::load`
         + `new`, **not** `Loader::loadModels`. (Both precedents use `Loader::load(...) + new`; the path expr differs —
         `admin_main::run():54` uses `PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . '…'`, the `cron()` hook uses
         `dirname(__FILE__) . DS . 'lib' . DS . '…'`. From a controller, use the `PLUGINDIR` form:)
         `Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayReconcileService.php'); $svc = new
         KuickPayReconcileService();` (and likewise `KuickPayPostingService`). Do this lazily inside `recheck()`, not in
         `preAction()`.
-  - [ ] **Pass per-action permission booleans to the view (Tasks 3 ↔ 5).** `staffGroupAllows()` is a **private**
+  - [x] **Pass per-action permission booleans to the view (Tasks 3 ↔ 5).** `staffGroupAllows()` is a **private**
         controller method — a `.pdt` cannot call it. In `detail()` (the GET that renders the page), after loading,
         `$this->set('can_recheck', $this->staffGroupAllows('recheck'))` and likewise `can_review`/`can_cancel`, so
         Task 5's view gates buttons off these booleans (the controller action guards remain the authority).
-  - [ ] `recheck()`: for `pending`/`retry` → call `reconcileVoucher()`, re-fetch company-scoped, and if now
+  - [x] `recheck()`: for `pending`/`retry` → call `reconcileVoucher()`, re-fetch company-scoped, and if now
         `confirmed_unposted` call `(new KuickPayPostingService())->postVoucher($company_id, $freshVoucher)`; for
         `confirmed_unposted` → call `postVoucher()` only (skip inquiry). Record `admin.rechecked` with **audit context**
         `['company_id'=>…, 'voucher_id'=>…, 'run_id'=>…]` (the manual `run_id` from `reconcileVoucher()`, so 4.4's
@@ -209,20 +209,20 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         reconcile→`retry`; reconcile→`manual_review`; reconcile→`failed`; reconcile→`unavailable`/`provider_unreachable`
         (caught inquiry exception → "couldn't reach KuickPay, try again"); reconcile→`skipped` (`kuickpay_unavailable`);
         post→`already_posted`; post→`skipped`; post→`failed`; **plus a safe default** for any unanticipated token.
-  - [ ] `review()`: require a non-empty note (`$this->post['admin_note']`); on empty → error message, no change.
+  - [x] `review()`: require a non-empty note (`$this->post['admin_note']`); on empty → error message, no change.
         Guarded transition to `manual_review` from `{pending,retry,failed,expired,confirmed_unposted}`; append the
         note; record `admin.reviewed` (payload `staff_id`, `prior_status`).
-  - [ ] `cancel()`: **require a non-empty note** (same contract as `review()`; empty → `!error.note_required`, no
+  - [x] `cancel()`: **require a non-empty note** (same contract as `review()`; empty → `!error.note_required`, no
         change — the UX source requires a note on cancel); guarded transition to `cancelled` from
         `{pending,retry,failed,expired,manual_review}`, appending the note; record `admin.cancelled` (payload
         `staff_id`, `prior_status`). Confirm the forbidden set `{confirmed_unposted,posted,cancelled}` can never
         transition (status guard + hidden button). See Dev Notes "Cancel of confirmed-origin evidence via
         `manual_review`" for the two-route path decision.
-- [ ] **Task 4 — Separate per-action ACL permissions + exact-action gate (AC6)**
-  - [ ] Add three `getPermissions()` rows to `kuickpay_reconcile_plugin.php`, all `alias =>
+- [x] **Task 4 — Separate per-action ACL permissions + exact-action gate (AC6)**
+  - [x] Add three `getPermissions()` rows to `kuickpay_reconcile_plugin.php`, all `alias =>
         'kuickpay_reconcile.admin_vouchers'`, `group_alias => 'admin_billing'`, with distinct actions: `recheck`,
         `review`, `cancel` (keep the existing `*` and `diagnostics` rows — re-sync deletes+re-adds the whole set).
-  - [ ] Generalize Story 4.2's `canViewDiagnostics()` (`:214-240`) into a private exact-action helper
+  - [x] Generalize Story 4.2's `canViewDiagnostics()` (`:214-240`) into a private exact-action helper
         `private function staffGroupAllows(string $action): bool` — keep its **exact** verified body (StaffGroups +
         `Acl->getAccessList('staff_group_'.$id, 'kuickpay_reconcile.admin_vouchers')`, scanning entries for the exact
         `$access->action === $action` with `$access->permission === 'allow'`, ignoring the `*` wildcard), just
@@ -232,12 +232,12 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         the proven 4.2 gate is `Acl->getAccessList`, and that is what `recheck()/review()/cancel()` must call and
         **fail closed** (error + redirect) when denied. **Name each method to equal its ACL action token**
         (`recheck`↔`recheck`, `review`↔`review`, `cancel`↔`cancel`) so any framework-level route gate stays consistent.
-  - [ ] Bump `config.json` `1.6.0 → 1.7.0` and add an **empty** `version_compare(... '1.7.0', '<')` branch in
+  - [x] Bump `config.json` `1.6.0 → 1.7.0` and add an **empty** `version_compare(... '1.7.0', '<')` branch in
         `upgrade()` (no schema change; the bump only re-syncs the permission set — same mechanism as 4.2's 1.6.0).
-  - [ ] Add the three permission-name language keys to `language/en_us/kuickpay_reconcile_plugin.php`
+  - [x] Add the three permission-name language keys to `language/en_us/kuickpay_reconcile_plugin.php`
         (`permission.vouchers_recheck`, `permission.vouchers_review`, `permission.vouchers_cancel`).
-- [ ] **Task 5 — Detail-view action controls (AC5, AC8, AC9)**
-  - [ ] In `views/default/admin_vouchers_detail.pdt`, add an **Actions** region (near the Admin Notes box) that
+- [x] **Task 5 — Detail-view action controls (AC5, AC8, AC9)**
+  - [x] In `views/default/admin_vouchers_detail.pdt`, add an **Actions** region (near the Admin Notes box) that
         renders only the matrix-allowed actions for `$voucher->status` (drive this off the pure map from Task 2; the
         `$mono`/`$dateOr` helpers are inline closures already defined at the top of this `.pdt`). Each action is a
         Blesta `Form->create()` POST form to the matching route with the voucher id in the URL (so the CSRF token is
@@ -251,17 +251,17 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         present** in the admin theme modal JS alongside `-delete`/`-success`; shipped precedent for the class+attribute
         is `plugins/support_manager/views/default/admin_departments.pdt:63`, which uses `modal-confirm-delete`.) **No
         Force Paid / Mark Paid control in any branch.** Keep buttons keyboard-reachable; introduce no success styling.
-  - [ ] Gate each button on the controller-set booleans from Task 3 (`$can_recheck`/`$can_review`/`$can_cancel`) to
+  - [x] Gate each button on the controller-set booleans from Task 3 (`$can_recheck`/`$can_review`/`$can_cancel`) to
         hide a control the admin cannot use — but the controller action guard (Task 4) remains the authority.
-- [ ] **Task 6 — Audit-event registration across the three drift-guarded sites (AC9)**
-  - [ ] Add `admin.rechecked`, `admin.reviewed`, `admin.cancelled` to `KuickPayVoucherListPresenter::EVENT_LABEL_KEYS`.
-  - [ ] Add the matching `AdminVouchers.event.admin.rechecked|reviewed|cancelled` keys to
+- [x] **Task 6 — Audit-event registration across the three drift-guarded sites (AC9)**
+  - [x] Add `admin.rechecked`, `admin.reviewed`, `admin.cancelled` to `KuickPayVoucherListPresenter::EVENT_LABEL_KEYS`.
+  - [x] Add the matching `AdminVouchers.event.admin.rechecked|reviewed|cancelled` keys to
         `language/en_us/admin_vouchers.php`.
-  - [ ] Update the presenter test's `KNOWN_EVENTS` const (and the `'… 14 emitted event names'` assertion message →
+  - [x] Update the presenter test's `KNOWN_EVENTS` const (and the `'… 14 emitted event names'` assertion message →
         17) in `tests/KuickPayVoucherListPresenterTest.php`, or `testEventMapKeysEqualTheKnownEvents`,
         `testEventLabelKeyForEveryKnownEvent`, and the language ↔ presenter sync guard (line ~683) will fail.
-- [ ] **Task 7 — Language: action labels, prompts, validation + result messages (AC8, AC9)**
-  - [ ] Add to `language/en_us/admin_vouchers.php` (enumerate the keys — do not leave them implied):
+- [x] **Task 7 — Language: action labels, prompts, validation + result messages (AC8, AC9)**
+  - [x] Add to `language/en_us/admin_vouchers.php` (enumerate the keys — do not leave them implied):
         button labels `AdminVouchers.action.recheck|review|cancel`; the note-textarea label `AdminVouchers.label.admin_note`;
         the cancel prompt `AdminVouchers.confirm.cancel`; validation errors `AdminVouchers.!error.note_required`
         (**shared by `review()` and `cancel()`**), `AdminVouchers.!error.invalid_state`, and
@@ -279,27 +279,27 @@ so that delayed or ambiguous payments can be checked or routed without unsafe pa
         | reconcile→`skipped` (`kuickpay_unavailable`) | `AdminVouchers.!error.recheck_unavailable` | "KuickPay reconciliation is unavailable." |
         | reconcile→`failed` / post→`failed` / post→`skipped` | `AdminVouchers.!error.recheck_failed` | "Check failed — please try again later." |
         | any unanticipated token (**safe default**) | `AdminVouchers.!error.recheck_failed` | (generic — never interpolate the raw token) |
-- [ ] **Task 8 — Tests + verification (AC10)**
-  - [ ] Add `KuickPayReconcileService::reconcileVoucher()` unit coverage using the existing fake client / fake repos
+- [x] **Task 8 — Tests + verification (AC10)**
+  - [x] Add `KuickPayReconcileService::reconcileVoucher()` unit coverage using the existing fake client / fake repos
         pattern in `tests/KuickPayReconcileServiceTest.php` (single-voucher confirm path; skipped-when-unavailable;
         does **not** post in the reconcile step; a manual run row is opened with `trigger_type='manual'`, `cursor=0`
         and closed with counts/summary; and the **null-`date_paid` confirm** case so the reconcile leg returns
         `confirmed_unposted` and the documented `postVoucher`→`manual_review` guard is exercised separately).
-  - [ ] **Unit-test the pure safety map** (Task 2's `ACTIONS_BY_STATE` / `allowed_from` structure) directly — per the
+  - [x] **Unit-test the pure safety map** (Task 2's `ACTIONS_BY_STATE` / `allowed_from` structure) directly — per the
         matrix, each state maps to exactly the allowed actions, and the `allowed_from` sets forbid cancel from
         `confirmed_unposted`/`posted`/`cancelled` and forbid review from `posted`/`cancelled`. This is the AC10-covered
         home for the state-machine safety logic (the `Record`-backed `transition()` itself stays `php -l` + review only
         — the harness has fake repos, not a fake `Record`; disclose this honestly).
-  - [ ] **`transition()` itself is `php -l` + code-review only** (the harness has fake repos, not a fake `Record`, so a
+  - [x] **`transition()` itself is `php -l` + code-review only** (the harness has fake repos, not a fake `Record`, so a
         guarded-UPDATE test cannot run here — `expire()` has none either; disclose honestly in Dev Agent Record). Its
         *safety inputs* — the `allowed_from` sets — are the part that carries transcription risk, and those are covered
         by the pure-map test above. Do **not** add a `transition()` DB test "where supported" (it is supported nowhere
         here) — that instruction is removed to avoid the round-1 contradiction.
-  - [ ] **CSRF verification (AC6, honesty):** if a live admin/DB stack is unavailable here, disclose in Dev Agent
+  - [x] **CSRF verification (AC6, honesty):** if a live admin/DB stack is unavailable here, disclose in Dev Agent
         Record that framework-level CSRF enforcement could not be exercised (a tokenless/invalid-token POST to
         `recheck/review/cancel` being rejected) — it rests on the `admin_main::run()` precedent + the ionCube/unreadable
         `app_controller`, the same disclosure 4.2 made for the live ACL gate. Keep every action form on `Form->create()`.
-  - [ ] Run `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php
+  - [x] Run `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php
         tests`; confirm the new event keys keep the presenter sync guard green and that the only pre-existing failure
         is the documented `KuickPaySecretLeakageTest` baseline. `php -l` every changed PHP file. State the PHP version
         used.
@@ -644,10 +644,49 @@ implement unless the reviewer overrides it here.
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Codex GPT-5
 
 ### Debug Log References
 
+- 2026-06-12: Added failing tests first for `KuickPayReconcileService::reconcileVoucher()` and the pure manual-action state maps; confirmed failures for missing method/constants before implementation.
+- 2026-06-12: Implemented `reconcileVoucher()` by reusing `processVoucher()` without the cron batch lock/cursor path. Manual run rows open with `trigger_type=manual`, `cursor=0`, close best-effort, and provider exceptions return the safe `unavailable/provider_unreachable` token.
+- 2026-06-12: Added `KuickpayVouchers::ALLOWED_ACTIONS_BY_STATE`, `ALLOWED_FROM_BY_ACTION`, and `transition()` using a company-scoped `status IN (...)` guarded update with allowlisted extra fields.
+- 2026-06-12: Added `recheck()`, `review()`, and `cancel()` on `admin_vouchers` using POST-only guards, company-scoped fetches, exact-action ACL checks, localized messages, safe audit payloads, required notes for review/cancel, and shared reconcile/posting services only.
+- 2026-06-12: Added detail-page action forms using `Form->create()` for CSRF token emission and the existing `modal-confirm-warning` pattern for cancel.
+- 2026-06-12: Registered `admin.rechecked`, `admin.reviewed`, and `admin.cancelled` in presenter, language, and presenter tests; bumped plugin version to `1.7.0` for permission re-sync.
+- 2026-06-12: Manual reconcile deliberately does not take the `reconcile_pending` batch lock. The pre-inquiry fresh-status short-circuit closes the common race; the documented during-inquiry stale-guard demotion residual remains deferred.
+
 ### Completion Notes List
 
+- Implemented Check Now through `KuickPayReconcileService::reconcileVoucher()` plus `KuickPayPostingService::postVoucher()` only; no controller/view SOAP parsing, amount comparison, status-code parsing, transaction creation, or Force Paid path was added.
+- Implemented Mark Manual Review and Cancel/Close as guarded status transitions with required admin notes, newest-first note prepending, staff attribution in audit payloads, and no payment-evidence deletion.
+- Implemented exact per-action ACL permissions (`recheck`, `review`, `cancel`) while preserving the existing `*` view and `diagnostics` permissions.
+- Implemented state-gated detail action controls from the model action map and controller-supplied permission booleans.
+- Verification run on PHP 8.3.31 CLI while keeping PHP 8.2-compatible syntax. `php -l` passed for every changed PHP/PDT file.
+- Targeted PHPUnit passed: `KuickPayReconcileServiceTest` (31 tests, 156 assertions) and `KuickPayVoucherListPresenterTest` (46 tests, 326 assertions).
+- Full component PHPUnit command ran: `cd plugins/kuickpay_reconcile && /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`. Result: 144 tests / 846 assertions with the documented pre-existing `KuickPaySecretLeakageTest::testPersistedEvidenceAndAuditPayloadsContainNoSecretsOrRawEnvelopes` baseline failure (`expected confirmed_unposted`, actual `manual_review`); no new failures observed.
+- Live two-group ACL separation, framework-level CSRF rejection, `.pdt` render behavior, and the `Record`-backed `transition()` UPDATE were not exercised because this checkout has no live Blesta admin/DB stack. They were verified by `php -l`, code review against existing Blesta patterns, `Form->create()` usage, and pure-map tests for the transition safety inputs.
+
 ### File List
+
+- plugins/kuickpay_reconcile/config.json
+- plugins/kuickpay_reconcile/controllers/admin_vouchers.php
+- plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/language/en_us/admin_vouchers.php
+- plugins/kuickpay_reconcile/language/en_us/kuickpay_reconcile_plugin.php
+- plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php
+- plugins/kuickpay_reconcile/lib/KuickPayVoucherListPresenter.php
+- plugins/kuickpay_reconcile/models/kuickpay_vouchers.php
+- plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php
+- plugins/kuickpay_reconcile/tests/KuickPayVoucherListPresenterTest.php
+- plugins/kuickpay_reconcile/tests/bootstrap.php
+- plugins/kuickpay_reconcile/views/default/admin_vouchers_detail.pdt
+- _bmad-output/kuickpay/implementation-artifacts/4-3-run-safe-manual-voucher-actions.md
+- _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
+
+### Change Log
+
+- 2026-06-12: Added manual voucher reconcile service entry and state-transition safety maps.
+- 2026-06-12: Added admin voucher Check Now, Manual Review, and Cancel actions with ACL, notes, audit, and localized result messages.
+- 2026-06-12: Added detail-page action controls and registered new audit events across presenter, language, and tests.
+- 2026-06-12: Completed verification and moved story to review.
