@@ -112,6 +112,28 @@ class KuickpayVouchers extends KuickpayReconcileModel
     }
 
     /**
+     * Fetches a voucher by ID, scoped to a company.
+     *
+     * Company-scoped counterpart to get(): the detail page MUST use this so a
+     * voucher ID outside the authenticated staff company resolves to a safe
+     * "not found" (false), never another company's row. Mirrors the
+     * getByConsumerNumber() shape; the unscoped get() is reserved for the
+     * already-scoped reconcile/posting callers.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @return mixed The voucher row, or false when absent or out of company scope
+     */
+    public function getForCompany(int $voucher_id, int $company_id)
+    {
+        return $this->Record->select()
+            ->from('kuickpay_vouchers')
+            ->where('id', '=', $voucher_id)
+            ->where('company_id', '=', $company_id)
+            ->fetch();
+    }
+
+    /**
      * Fetches a voucher by consumer number.
      *
      * @param string $consumer_number The KuickPay consumer number
