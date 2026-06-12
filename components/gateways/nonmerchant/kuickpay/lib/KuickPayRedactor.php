@@ -158,6 +158,115 @@ class KuickPayRedactor
     }
 
     /**
+     * Build the canonical operational log field set from already-safe inputs.
+     *
+     * @param string $operation SOAP operation name
+     * @param string $redacted_trace_id Redacted correlation id
+     * @param int|null $voucher_id Voucher id when the caller has one
+     * @param array $request_summary Redacted request fields
+     * @param array $response_summary Tokenized response facts
+     * @param string|null $error_class Error class or null on success
+     * @param int|null $duration_ms Transport attempt duration
+     * @param int $attempt One-based transport attempt index
+     * @return array Canonical log fields
+     */
+    public static function operationLogFields(
+        string $operation,
+        string $redacted_trace_id,
+        ?int $voucher_id,
+        array $request_summary,
+        array $response_summary,
+        ?string $error_class,
+        ?int $duration_ms,
+        int $attempt = 1
+    ): array {
+        unset($request_summary['raw_result'], $request_summary['raw_envelope']);
+        unset($response_summary['raw_result'], $response_summary['raw_envelope']);
+
+        return [
+            'operation' => $operation,
+            'redacted_trace_id' => $redacted_trace_id,
+            'voucher_id' => $voucher_id,
+            'request_summary' => $request_summary,
+            'response_summary' => [
+                'response_present' => (bool) ($response_summary['response_present'] ?? false),
+                'result_present' => (bool) ($response_summary['result_present'] ?? false),
+                'result_code' => self::safeResultCode($response_summary['result_code'] ?? null),
+                'fault' => self::logSafeFaultToken($response_summary['fault'] ?? null, $error_class),
+            ],
+            'error_class' => $error_class,
+            'duration_ms' => $duration_ms,
+            'attempt' => max(1, $attempt),
+        ];
+    }
+
+    /**
+     * Collapse provider/transport faults into bounded tokens safe for logs.
+     *
+     * @param string|null $fault Fault text or a pre-tokenized value
+     * @param string|null $error_class Transport error class
+     * @param bool $response_present True when a response envelope/body arrived
+     * @return string|null Log-safe fault token
+     */
+    public static function logSafeFaultToken(?string $fault, ?string $error_class, bool $response_present = false): ?string
+    {
+        if ($fault === null || $fault === '') {
+            return $error_class === 'timeout' ? 'timeout' : null;
+        }
+
+        $fault = (string) $fault;
+        if (in_array($fault, [
+            'timeout',
+            'transport_error',
+            'provider_fault',
+            'provider_fault_with_response',
+            'invalid_wsdl',
+            'xml_fault_redacted',
+        ], true)) {
+            return $fault;
+        }
+
+        if (stripos($fault, 'wsdl') !== false && stripos($fault, 'invalid') !== false) {
+            return 'invalid_wsdl';
+        }
+
+        if ($error_class === 'timeout') {
+            return 'timeout';
+        }
+
+        if (preg_match('/[<>]|Envelope|Header|Body|[A-Za-z]+Result|userName|password|InstitutionID|CNIC|Mobile|Email/i', $fault) === 1
+            || preg_match('/\b\d{5}-?\d{7}-?\d\b|\b03\d{9}\b|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $fault) === 1
+        ) {
+            return strpos($fault, '<') !== false || strpos($fault, '>') !== false
+                ? 'xml_fault_redacted'
+                : 'provider_fault';
+        }
+
+        if ($error_class === 'transport_error') {
+            return 'transport_error';
+        }
+
+        return $response_present ? 'provider_fault_with_response' : 'provider_fault';
+    }
+
+    /**
+     * Keep only a non-secret two-character operation result code.
+     *
+     * @param mixed $code Candidate result code
+     * @return string|null Safe result code
+     */
+    private static function safeResultCode($code): ?string
+    {
+        if (!is_scalar($code)) {
+            return null;
+        }
+
+        $code = (string) $code;
+
+        return preg_match('/^[A-Za-z0-9]{2}$/', $code) === 1 ? $code : null;
+    }
+
+    /**
      * Masks sensitive values recursively.
      *
      * @param array $data Data to redact

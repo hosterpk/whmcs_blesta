@@ -40,16 +40,23 @@ class KuickPaySoapClient
     private $redactor;
 
     /**
+     * @var callable|null Receives canonical operational log fields and success flag
+     */
+    private $logger;
+
+    /**
      * @param array $config Gateway SOAP configuration
      * @param callable|null $soapClientFactory Optional factory for testable SOAP construction
+     * @param callable|null $logger Optional operational logger
      */
-    public function __construct(array $config, callable $soapClientFactory = null)
+    public function __construct(array $config, callable $soapClientFactory = null, callable $logger = null)
     {
         $this->config = $config;
         $this->soap_client_factory = $soapClientFactory ?: function (string $wsdl, array $options): object {
             return new SoapClient($wsdl, $options);
         };
         $this->redactor = new KuickPayRedactor();
+        $this->logger = $logger;
     }
 
     /**
@@ -125,14 +132,18 @@ class KuickPaySoapClient
      * - fault: ?string redacted fault/transport summary
      * - redacted_request: array redacted request params
      * - redacted_trace_id: string non-PII trace id
+     * - duration_ms: int transport attempt duration
+     * - attempt: int one-based transport attempt index
      * - attempts: int attempt count supplied by public wrappers
      *
      * @param string $operation SOAP operation name
      * @param array $params SOAP operation params
+     * @param int $attempt One-based transport attempt index
      * @return array Structured transport outcome
      */
-    private function call(string $operation, array $params): array
+    private function call(string $operation, array $params, int $attempt = 1): array
     {
+        $start = microtime(true);
         $trace_id = $this->redactor->traceId();
         $redacted_request = $this->redactor->redactArray($params);
 
@@ -145,7 +156,9 @@ class KuickPaySoapClient
                 'transport_error',
                 'Invalid or unsafe WSDL URL',
                 $redacted_request,
-                $trace_id
+                $trace_id,
+                $this->durationMs($start),
+                $attempt
             );
         }
 
@@ -164,7 +177,9 @@ class KuickPaySoapClient
                 null,
                 null,
                 $redacted_request,
-                $trace_id
+                $trace_id,
+                $this->durationMs($start),
+                $attempt
             );
         } catch (SoapFault $e) {
             $response = isset($client) ? $this->lastEnvelope($client, 'response') : '';
@@ -177,7 +192,9 @@ class KuickPaySoapClient
                     null,
                     $this->redactedDiagnosticText($e->getMessage(), $params),
                     $redacted_request,
-                    $trace_id
+                    $trace_id,
+                    $this->durationMs($start),
+                    $attempt
                 );
             }
 
@@ -189,7 +206,9 @@ class KuickPaySoapClient
                 $this->isTimeout($e) ? 'timeout' : 'transport_error',
                 $this->redactedDiagnosticText($e->getMessage(), $params),
                 $redacted_request,
-                $trace_id
+                $trace_id,
+                $this->durationMs($start),
+                $attempt
             );
         } catch (Throwable $e) {
             $response = isset($client) ? $this->lastEnvelope($client, 'response') : '';
@@ -202,7 +221,9 @@ class KuickPaySoapClient
                     null,
                     $this->redactedDiagnosticText($e->getMessage(), $params),
                     $redacted_request,
-                    $trace_id
+                    $trace_id,
+                    $this->durationMs($start),
+                    $attempt
                 );
             }
 
@@ -214,7 +235,9 @@ class KuickPaySoapClient
                 $this->isTimeout($e) ? 'timeout' : 'transport_error',
                 $this->redactedDiagnosticText($e->getMessage(), $params),
                 $redacted_request,
-                $trace_id
+                $trace_id,
+                $this->durationMs($start),
+                $attempt
             );
         } finally {
             if ($previous_timeout !== false) {
@@ -255,7 +278,7 @@ class KuickPaySoapClient
         $outcome = null;
 
         for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
-            $outcome = $this->call($operation, $params);
+            $outcome = $this->call($operation, $params, $attempt);
             $outcome['attempts'] = $attempt;
 
             if ($outcome['ok'] || !in_array($outcome['error_class'], ['timeout', 'transport_error'], true)) {
@@ -506,6 +529,17 @@ class KuickPaySoapClient
     }
 
     /**
+     * Calculate elapsed transport attempt duration.
+     *
+     * @param float $start microtime(true) start
+     * @return int Duration in milliseconds
+     */
+    private function durationMs(float $start): int
+    {
+        return max(0, (int) round((microtime(true) - $start) * 1000));
+    }
+
+    /**
      * Build the canonical transport outcome.
      *
      * @param bool $ok True when response body arrived
@@ -516,6 +550,8 @@ class KuickPaySoapClient
      * @param string|null $fault Redacted fault summary
      * @param array $redacted_request Redacted request params
      * @param string $trace_id Redacted trace id
+     * @param int $duration_ms Transport attempt duration
+     * @param int $attempt One-based transport attempt index
      * @return array Structured outcome
      */
     private function outcome(
@@ -526,9 +562,18 @@ class KuickPaySoapClient
         ?string $error_class,
         ?string $fault,
         array $redacted_request,
-        string $trace_id
+        string $trace_id,
+        int $duration_ms,
+        int $attempt = 1
     ): array {
-        return [
+        $response_present = $raw_envelope !== null && $raw_envelope !== '';
+        $result_present = $raw_result !== null && $raw_result !== '';
+        $result_code = $result_present && preg_match('/^[A-Za-z0-9]{2}/', (string) $raw_result) === 1
+            ? substr((string) $raw_result, 0, 2)
+            : null;
+        $fault_token = KuickPayRedactor::logSafeFaultToken($fault, $error_class, $response_present);
+
+        $outcome = [
             'ok' => $ok,
             'operation' => $operation,
             'raw_result' => $raw_result,
@@ -537,7 +582,34 @@ class KuickPaySoapClient
             'fault' => $fault,
             'redacted_request' => $redacted_request,
             'redacted_trace_id' => $trace_id,
+            'duration_ms' => $duration_ms,
+            'attempt' => max(1, $attempt),
             'attempts' => 1,
         ];
+
+        if ($this->logger !== null) {
+            $logger = $this->logger;
+            try {
+                $logger(KuickPayRedactor::operationLogFields(
+                    $operation,
+                    $trace_id,
+                    null,
+                    $redacted_request,
+                    [
+                        'response_present' => $response_present,
+                        'result_present' => $result_present,
+                        'result_code' => $result_code,
+                        'fault' => $fault_token,
+                    ],
+                    $error_class,
+                    $duration_ms,
+                    max(1, $attempt)
+                ), $ok);
+            } catch (Throwable $e) {
+                // Operational logging must never affect the SOAP operation outcome.
+            }
+        }
+
+        return $outcome;
     }
 }

@@ -106,4 +106,53 @@ class KuickPayRedactorTest extends TestCase
         $this->assertStringNotContainsString('user', $traceId);
         $this->assertStringNotContainsString('password', $traceId);
     }
+
+    public function testOperationLogFieldsUseCanonicalSafeShape()
+    {
+        $fields = KuickPayRedactor::operationLogFields(
+            'InsertVoucher',
+            'kp_1234567890abcdef',
+            123,
+            [
+                'userName' => 'xxxxxxxxxxxx',
+                'RegistrationNumber' => 'REG-1',
+                'raw_result' => '00 SECRET',
+            ],
+            [
+                'response_present' => true,
+                'result_present' => true,
+                'result_code' => '00',
+                'fault' => KuickPayRedactor::logSafeFaultToken(
+                    '<Envelope><Body><InsertVoucherResult>03001234567</InsertVoucherResult></Body></Envelope>',
+                    'transport_error',
+                    true
+                ),
+                'raw_envelope' => '<Envelope />',
+            ],
+            null,
+            12,
+            2
+        );
+
+        $this->assertSame([
+            'operation',
+            'redacted_trace_id',
+            'voucher_id',
+            'request_summary',
+            'response_summary',
+            'error_class',
+            'duration_ms',
+            'attempt',
+        ], array_keys($fields));
+        $this->assertSame('InsertVoucher', $fields['operation']);
+        $this->assertSame('kp_1234567890abcdef', $fields['redacted_trace_id']);
+        $this->assertSame(123, $fields['voucher_id']);
+        $this->assertSame(12, $fields['duration_ms']);
+        $this->assertSame(2, $fields['attempt']);
+        $this->assertArrayNotHasKey('raw_result', $fields['request_summary']);
+        $this->assertArrayNotHasKey('raw_envelope', $fields['response_summary']);
+        $this->assertSame('xml_fault_redacted', $fields['response_summary']['fault']);
+        $this->assertStringNotContainsString('Envelope', json_encode($fields));
+        $this->assertStringNotContainsString('03001234567', json_encode($fields));
+    }
 }

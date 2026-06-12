@@ -381,6 +381,49 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertSame('timeout', $outcome['error_class']);
     }
 
+    public function testLoggerCapturesCanonicalShapeForEachRetryAttempt()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->queue = [
+            ['throw' => new SoapFault('HTTP', 'connection timed out')],
+            ['throw' => new SoapFault('HTTP', 'connection timed out')],
+            [
+                'return' => (object) ['BillPaymentInquiryResult' => '00,REG-0000001,20260609,1000.00'],
+                'lastResponse' => $this->fixture('bill-payment-inquiry/paid-exact.xml'),
+            ],
+        ];
+        $logs = [];
+
+        $client = new KuickPaySoapClient(
+            $this->config(),
+            function () use ($fake) {
+                return $fake;
+            },
+            function (array $fields, bool $ok) use (&$logs) {
+                $logs[] = ['fields' => $fields, 'ok' => $ok];
+            }
+        );
+
+        $outcome = $client->billPaymentInquiry(['RegistrationNumber' => 'REG-1']);
+
+        $this->assertTrue($outcome['ok']);
+        $this->assertCount(3, $logs);
+        $this->assertSame([1, 2, 3], [
+            $logs[0]['fields']['attempt'],
+            $logs[1]['fields']['attempt'],
+            $logs[2]['fields']['attempt'],
+        ]);
+        $this->assertFalse($logs[0]['ok']);
+        $this->assertTrue($logs[2]['ok']);
+        $this->assertSame('BillPaymentInquiry', $logs[2]['fields']['operation']);
+        $this->assertSame('00', $logs[2]['fields']['response_summary']['result_code']);
+        $this->assertArrayNotHasKey('raw_result', $logs[2]['fields']);
+        $this->assertArrayNotHasKey('raw_envelope', $logs[2]['fields']);
+        $this->assertArrayNotHasKey('raw_result', $logs[2]['fields']['response_summary']);
+        $this->assertStringNotContainsString('Envelope', json_encode($logs));
+        $this->assertStringNotContainsString('inquiry-secret', json_encode($logs));
+    }
+
     public function testSafeSetupOperationsUseTransportOutcome()
     {
         $fake = new KuickPaySoapClientFake();
