@@ -1,0 +1,136 @@
+<?php /** @var View $this **/ ?>
+
+<?php
+echo ($message ?? null);
+
+// Base list URL and the active-filter query suffix, so sort-header links carry
+// the current filters (URL-driven persistence; AC2).
+$base_list = $this->base_uri . 'plugin/kuickpay_reconcile/admin_vouchers/index/';
+$filter_query = '';
+foreach (($filter_vars ?? []) as $filter_key => $filter_value) {
+    $filter_query .= '&filters[' . $filter_key . ']=' . rawurlencode((string) $filter_value);
+}
+
+$this->Widget->clear();
+$this->Widget->setFilters(($filters ?? null), $this->Html->safe($base_list), !empty($filter_vars));
+$this->Widget->setAjaxFiltering();
+$this->Widget->setBodyWrapper(false);
+$this->Widget->create($this->_('AdminVouchers.index.boxtitle', true), ['id' => 'admin_vouchers'], ($render_section ?? null));
+
+// Column definitions: sort = an allowlisted field, or null for a non-sortable column.
+$columns = [
+    ['label' => 'AdminVouchers.heading.created', 'sort' => 'date_created'],
+    ['label' => 'AdminVouchers.heading.client', 'sort' => 'client_id'],
+    ['label' => 'AdminVouchers.heading.invoice', 'sort' => null],
+    ['label' => 'AdminVouchers.heading.amount', 'sort' => null],
+    ['label' => 'AdminVouchers.heading.consumer_number', 'sort' => 'consumer_number'],
+    ['label' => 'AdminVouchers.heading.status', 'sort' => 'status'],
+    ['label' => 'AdminVouchers.heading.last_inquiry', 'sort' => 'date_last_checked'],
+    ['label' => 'AdminVouchers.heading.transaction', 'sort' => null],
+];
+
+if (($vouchers ?? false) && ($num_vouchers = count($vouchers)) > 0) {
+?>
+<div class="table-responsive">
+    <table class="table table-hover mb-0" id="vouchers_table">
+        <thead>
+            <tr>
+                <?php
+                foreach ($columns as $column) {
+                    if ($column['sort'] === null) {
+                        echo '<th>' . $this->_($column['label'], true) . '</th>';
+                        continue;
+                    }
+
+                    $dir = ($sort == $column['sort'] ? $negate_order : $order);
+                    $href = $this->Html->safe($base_list . '?sort=' . $column['sort'] . '&order=' . $dir . $filter_query);
+                    ?>
+                    <th>
+                        <a href="<?php echo $href;?>" class="ajax text-decoration-none">
+                            <?php echo $this->_($column['label'], true);?>
+                            <?php if ($sort == $column['sort']) { ?><i class="bi bi-chevron-<?php echo $order == 'asc' ? 'up' : 'down';?>"></i><?php } ?>
+                        </a>
+                    </th>
+                    <?php
+                }
+                ?>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            for ($i = 0; $i < $num_vouchers; $i++) {
+                $voucher = $vouchers[$i];
+                $client_code = $clients_by_id[$voucher->client_id] ?? $voucher->client_id;
+                $links = $invoices_by_voucher[$voucher->id] ?? [];
+            ?>
+            <tr>
+                <td><?php echo $this->Date->cast($voucher->date_created);?></td>
+                <td>
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/view/' . $voucher->client_id . '/');?>">
+                        <?php echo $this->Html->safe($client_code);?>
+                    </a>
+                </td>
+                <td>
+                    <?php
+                    if (!empty($links)) {
+                        $invoice_cells = [];
+                        foreach ($links as $link) {
+                            $invoice_cells[] = '<a href="'
+                                . $this->Html->safe($this->base_uri . 'clients/editinvoice/' . $voucher->client_id . '/' . $link['invoice_id'] . '/')
+                                . '">' . $this->Html->safe($link['invoice_id']) . '</a>';
+                        }
+                        echo implode(', ', $invoice_cells);
+                    } else {
+                        echo $this->_('AdminVouchers.text.empty', true);
+                    }
+                    ?>
+                </td>
+                <td><?php echo $this->Html->safe($voucher->amount) . ' ' . $this->Html->safe($voucher->currency);?></td>
+                <td><span class="font-monospace"><?php echo $this->Html->safe($voucher->consumer_number);?></span></td>
+                <td>
+                    <span class="badge <?php echo $this->presenter->badgeClassFor($voucher->status);?>">
+                        <?php echo $this->Html->safe($this->_($this->presenter->labelKeyFor($voucher->status), true));?>
+                    </span>
+                </td>
+                <td>
+                    <?php
+                    echo ($voucher->date_last_checked
+                        ? $this->Date->cast($voucher->date_last_checked)
+                        : $this->_('AdminVouchers.text.empty', true));
+                    ?>
+                </td>
+                <td>
+                    <?php
+                    if ($voucher->status === 'posted' && !empty($voucher->blesta_transaction_id)) {
+                        ?>
+                        <a href="<?php echo $this->Html->safe($this->base_uri . 'clients/edittransaction/' . $voucher->client_id . '/' . $voucher->blesta_transaction_id . '/');?>" title="<?php $this->_('AdminVouchers.text.transaction_view');?>">
+                            <span class="font-monospace"><?php echo $this->Html->safe($voucher->blesta_transaction_id);?></span>
+                        </a>
+                        <?php
+                    } else {
+                        echo $this->_('AdminVouchers.text.empty', true);
+                    }
+                    ?>
+                </td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
+<?php
+} else {
+?>
+<div class="card-body text-center text-muted py-5">
+    <i class="bi bi-receipt" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3 mb-0"><?php $this->_('AdminVouchers.no_results');?></p>
+</div>
+<?php
+}
+
+if (isset($this->Pagination) && $this->Pagination->hasPages()) {
+    $this->Widget->footer();
+    $this->Pagination->build();
+}
+
+$this->Widget->end();
+?>
