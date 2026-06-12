@@ -88,8 +88,8 @@ if (($vouchers ?? false) && ($num_vouchers = count($vouchers)) > 0) {
                 <td><?php echo $this->Html->safe($voucher->amount) . ' ' . $this->Html->safe($voucher->currency);?></td>
                 <td><span class="font-monospace"><?php echo $this->Html->safe($voucher->consumer_number);?></span></td>
                 <td>
-                    <span class="badge <?php echo $this->presenter->badgeClassFor($voucher->status);?>">
-                        <?php echo $this->Html->safe($this->_($this->presenter->labelKeyFor($voucher->status), true));?>
+                    <span class="badge <?php echo $presenter->badgeClassFor($voucher->status);?>">
+                        <?php echo $this->Html->safe($this->_($presenter->labelKeyFor($voucher->status), true));?>
                     </span>
                 </td>
                 <td>
