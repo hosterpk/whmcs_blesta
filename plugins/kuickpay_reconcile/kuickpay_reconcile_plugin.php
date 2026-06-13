@@ -83,6 +83,13 @@ class KuickpayReconcilePlugin extends Plugin
                 ->setKey(['invoice_id'], 'index', 'idx_kuickpay_voucher_invoices_inv')
                 ->create('kuickpay_voucher_invoices', true);
 
+            // Fresh install and versioned upgrade converge on the identical
+            // schema by sharing this one method (Story 5.2). On an empty table
+            // the backfill UPDATE is a harmless no-op; the generated column and
+            // its unique key cannot be expressed through the setField/setKey
+            // builder, so the raw-query ALTER path is the only mechanism.
+            $this->addActiveContextGuard();
+
             $this->createReconcileTables();
             $this->addCronTasks();
         } catch (Exception $e) {
@@ -154,6 +161,15 @@ class KuickpayReconcilePlugin extends Plugin
             if (version_compare($current_version, '1.8.0', '<')) {
                 // Intentionally empty — nav/permission re-registration is driven
                 // by the version change, not by SQL here.
+            }
+
+            // 1.9.0 adds the schema-level active-context concurrency guard
+            // (Story 5.2): a deterministic context_key, a status-derived STORED
+            // generated active_context_key, and a company-scoped unique key so
+            // two concurrent same-invoice-set submissions can never mint two
+            // pending vouchers. FIRST Epic 5 branch that runs real SQL.
+            if (version_compare($current_version, '1.9.0', '<')) {
+                $this->addActiveContextGuard();
             }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
@@ -368,6 +384,136 @@ class KuickpayReconcilePlugin extends Plugin
     }
 
     /**
+     * Adds the schema-level active-context concurrency guard (Story 5.2).
+     *
+     * Idempotent and shared by both install() and upgrade() so the two routes
+     * converge on the identical schema. Adds, each step guarded so a re-run is
+     * a no-op:
+     *  - context_key: a deterministic fingerprint of the company-scoped,
+     *    ascending, de-duplicated integer invoice-id set, written on every
+     *    voucher (sha1 of "1,2,3").
+     *  - active_context_key: a STORED generated column equal to context_key for
+     *    every status EXCEPT the two customer-re-payable terminal states
+     *    (expired, cancelled), which release the slot by computing to NULL.
+     *  - uniq_kuickpay_vouchers_active_context (company_id, active_context_key):
+     *    a unique key. Because a unique index permits multiple NULLs, released
+     *    or terminal vouchers never collide, but at most one active voucher per
+     *    (company, invoice-set) can exist — so two concurrent same-set issuance
+     *    attempts resolve to exactly one pending voucher (the loser's INSERT
+     *    fails on the key and the create-null fall-through returns the winner).
+     */
+    private function addActiveContextGuard()
+    {
+        // 2.2a — nullable context_key so the ADD succeeds on a populated table
+        // (a NOT-NULL-without-default ADD would fail on existing rows).
+        if (!$this->columnExists('kuickpay_vouchers', 'context_key')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_vouchers` '
+                . 'ADD `context_key` VARCHAR(64) NULL DEFAULT NULL AFTER `consumer_number`'
+            );
+        }
+
+        // 2.2b — backfill with the SAME algorithm the application uses
+        // (sha1 of the ascending, de-duplicated integer invoice-id set). Rows
+        // with no links keep context_key = NULL (intentionally not an active
+        // claim); repository->create() rolls back if any link insert fails, so
+        // link-less vouchers should not exist.
+        $this->Record->query(
+            'UPDATE `kuickpay_vouchers` v'
+            . ' JOIN (SELECT voucher_id,'
+            . " SHA1(GROUP_CONCAT(DISTINCT invoice_id ORDER BY invoice_id SEPARATOR ',')) AS ck"
+            . ' FROM `kuickpay_voucher_invoices` GROUP BY voucher_id) m'
+            . ' ON m.voucher_id = v.id'
+            . ' SET v.context_key = m.ck'
+            . ' WHERE v.context_key IS NULL'
+        );
+
+        // 2.2c — resolve any pre-existing active-context collisions BEFORE the
+        // unique key is added (never silently drop the key).
+        $this->resolveActiveContextDuplicates();
+
+        // 2.2d — status-derived STORED generated column. MySQL/MariaDB recompute
+        // it on every INSERT/UPDATE of status or context_key, so the application
+        // never writes it and transition code needs no changes.
+        if (!$this->columnExists('kuickpay_vouchers', 'active_context_key')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_vouchers` ADD `active_context_key` VARCHAR(64)'
+                . " GENERATED ALWAYS AS (CASE WHEN status IN ('expired','cancelled')"
+                . ' THEN NULL ELSE context_key END) STORED AFTER `context_key`'
+            );
+        }
+
+        // 2.2e — company-scoped unique key over the generated column. Multiple
+        // NULL active_context_key values are permitted, so terminal/released
+        // rows never collide.
+        if (!$this->indexExists('kuickpay_vouchers', 'uniq_kuickpay_vouchers_active_context')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_vouchers` '
+                . 'ADD UNIQUE KEY `uniq_kuickpay_vouchers_active_context` '
+                . '(`company_id`, `active_context_key`)'
+            );
+        }
+    }
+
+    /**
+     * Resolves pre-existing active-context collisions before the unique key.
+     *
+     * Detects rows that would violate uniq_kuickpay_vouchers_active_context once
+     * it is live — same (company_id, context_key) among non-terminal statuses —
+     * and resolves each group deterministically and auditably (fail-closed per
+     * NFR9): keep one active row (a paid 'posted' row if present, otherwise the
+     * most recent id) and route the older colliding active rows to
+     * 'manual_review' for an operator. Never touches a 'posted' row. On the
+     * current live data this finds nothing; the method exists so the migration
+     * is correct if it ever fires. If a group cannot be reduced to a single
+     * active row (e.g. two 'posted' rows share an invoice set), the later
+     * ADD UNIQUE KEY fails closed and surfaces the error rather than guessing.
+     */
+    private function resolveActiveContextDuplicates()
+    {
+        $groups = $this->Record->query(
+            'SELECT company_id, context_key, COUNT(*) AS c'
+            . ' FROM `kuickpay_vouchers`'
+            . " WHERE status NOT IN ('expired','cancelled') AND context_key IS NOT NULL"
+            . ' GROUP BY company_id, context_key HAVING c > 1'
+        )->fetchAll();
+
+        foreach ($groups as $group) {
+            $rows = $this->Record->query(
+                'SELECT id, status FROM `kuickpay_vouchers`'
+                . ' WHERE company_id = ? AND context_key = ?'
+                . " AND status NOT IN ('expired','cancelled')"
+                . ' ORDER BY id DESC',
+                $group->company_id,
+                $group->context_key
+            )->fetchAll();
+
+            // Survivor: the most recent id by default, but prefer a paid row —
+            // a 'posted' invoice set must keep its slot forever.
+            $survivor_id = (int) $rows[0]->id;
+            foreach ($rows as $row) {
+                if ((string) $row->status === 'posted') {
+                    $survivor_id = (int) $row->id;
+                    break;
+                }
+            }
+
+            $this->Record->query(
+                'UPDATE `kuickpay_vouchers`'
+                . ' SET status = ?, date_updated = ?'
+                . ' WHERE company_id = ? AND context_key = ?'
+                . " AND status NOT IN ('expired','cancelled','posted')"
+                . ' AND id <> ?',
+                'manual_review',
+                date('Y-m-d H:i:s'),
+                $group->company_id,
+                $group->context_key,
+                $survivor_id
+            );
+        }
+    }
+
+    /**
      * Creates reconciliation run, item, lock, and audit tables.
      */
     private function createReconcileTables()
@@ -468,6 +614,23 @@ class KuickpayReconcilePlugin extends Plugin
         $column = $statement->fetch();
 
         return $column && strpos((string) $column->Type, "'" . $value . "'") !== false;
+    }
+
+    /**
+     * Checks whether a named index exists on a table.
+     *
+     * @param string $table The table name
+     * @param string $index The index (key) name
+     * @return bool True when present
+     */
+    private function indexExists($table, $index)
+    {
+        $statement = $this->Record->query(
+            'SHOW INDEX FROM `' . $table . '` WHERE Key_name = ?',
+            $index
+        );
+
+        return (bool) $statement->fetch();
     }
 
     /**
