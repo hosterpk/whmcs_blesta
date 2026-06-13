@@ -15,7 +15,7 @@
 ?>
 <div class="col-md-12">
     <?php
-    if (isset($message) && $message !== '') {
+    if (isset($message) && is_string($message) && trim($message) !== '') {
         echo $message;
     } else {
         ?>
