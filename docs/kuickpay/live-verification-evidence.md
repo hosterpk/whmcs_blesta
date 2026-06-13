@@ -88,24 +88,53 @@ diff (1 → 8) is direct evidence of the re-sync that prior epics flagged as the
 runtime, and the only one that can boot the ionCube-15-encoded core. 8.2 source-floor compatibility is
 separately evidenced by the green unit suites above.
 
+**Residual:** the captured install/upgrade evidence proves the naturally-behind plugin upgrade and
+permission/action re-sync. It does not contain a fresh gateway install run or full `SHOW CREATE TABLE`
+index captures for all six `kuickpay_*` tables; those are listed in the risk acceptance as residual
+evidence gaps for Story 5.1 review.
+
 ---
 
-## AC2 — Live reconcile against the REAL KuickPay provider (executed 2026-06-13)
+## AC2 — Fixture-backed DB harness (committed for repeatable execution)
 
-This was run against a **real, already-paid voucher** (id=2, client 756 = me.israr@gmail.com, Rs 500 PKR,
-invoice #457099) that the account owner had paid at the bank but which still showed `pending` because the
-confirming inquiry had never run. Driven via the single-voucher "Check Now" path (`reconcileVoucher`) from
-a bootstrap script under PHP 8.3 — **no Blesta cron**, so no invoice delivery/emails.
+A guarded fixture-backed harness is committed at
+`plugins/kuickpay_reconcile/tests/integration/live_fixture_round_trip.php`. It boots Blesta through
+`lib/init.php`, seeds a KuickPay voucher for an operator-provided disposable unpaid invoice, replays a
+sanitized `BillPaymentInquiry` fixture through the real parser/validator/reconcile service, posts through
+`KuickPayPostingService`, and asserts idempotency by checking that the second post returns
+`already_posted`, the KuickPay transaction count increases by exactly one, and one allocation row exists.
+
+Example command (requires a disposable invoice created only for this verification):
+
+```sh
+/usr/local/bin/php plugins/kuickpay_reconcile/tests/integration/live_fixture_round_trip.php \
+  --company-id=1 \
+  --invoice-id=<disposable_invoice_id> \
+  --gateway-id=<kuickpay_gateway_id> \
+  --i-understand-this-posts-real-transaction
+```
+
+The harness intentionally scopes the cron-style selector to the seeded voucher so a data-rich pre-dev DB
+does not reconcile unrelated pending vouchers. Downstream writes still use the real DB-backed repositories,
+locks, audit service, validator, posting service, Blesta `transactions`, and `transaction_applied` tables.
+
+## AC2 supplemental — Live reconcile against the REAL KuickPay provider (executed 2026-06-13)
+
+This was run against a **real, already-paid voucher** for the project owner on a disposable/pre-dev billing
+record (redacted client, invoice, and transaction identifiers; Rs 500 PKR). The owner had paid it at the
+bank but it still showed `pending` because the confirming inquiry had never run. Driven via the
+single-voucher "Check Now" path (`reconcileVoucher`) from a bootstrap script under PHP 8.3 — **no Blesta
+cron**, so no invoice delivery/emails.
 
 **Transport result: SUCCESS.** The real `BillPaymentInquiry` reached the production KuickPay endpoint
 (~6.7s round-trip), credentials valid, and KuickPay returned **`raw_status="00"` (paid)**. The live
 provider integration works end-to-end at the transport/parse level.
 
-**Round-trip result: did NOT post — fail-closed to `manual_review`.** The parser produced
+**Initial live round-trip result: did NOT post — fail-closed to `manual_review`.** The parser produced
 `status=confirmed_unposted` but the evidence validator rejected it with
 `validation_errors: ["currency_mismatch","unmatched_reference"]`, so the voucher routed to `manual_review`
 (no Blesta transaction created). **Payment-safety invariant HELD — NFR9: a paid-but-unmatched response did
-NOT produce a false "paid".** Voucher id=2 state changed `pending → manual_review` as a result.
+NOT produce a false "paid".** The voucher changed `pending → manual_review` as a result.
 
 ### Two real bugs surfaced (both masked by fakes — the core value of live verification)
 
@@ -116,9 +145,8 @@ NOT produce a false "paid".** Voucher id=2 state changed `pending → manual_rev
    only `logger` injected), so a real admin clicking **Check Now** on any `pending`/`retry` voucher gets a
    fatal `Call to undefined method KuickPayVoucherRepository::getForCompany()`. Unit tests passed because
    they inject a *fake* repo that implements `getForCompany` (`KuickPayReconcileServiceTest.php:983`).
-   *Recommended fix:* add a `getForCompany()` wrapper to `KuickPayVoucherRepository` delegating to
+   *Fix:* add a `getForCompany()` wrapper to `KuickPayVoucherRepository` delegating to
    `$this->KuickpayVouchers->getForCompany()`, mirroring the existing `getForUpdate()` wrapper (repo:262).
-   *(For this verification the method was supplied via a harness subclass; production code was not changed.)*
 
 2. **MONEY-PATH GAP — the parser/validator does not match the real single-inquiry response.** On a
    genuinely-paid voucher the validator raised `currency_mismatch` (the real `BillPaymentInquiry` response
@@ -127,8 +155,9 @@ NOT produce a false "paid".** Voucher id=2 state changed `pending → manual_rev
    (`referenceMatches()` line 117 — the real response reference does not match the stored
    consumer/registration/`kuickpay_reference` format). **Consequence: the reconcile→post round-trip does NOT
    complete against the real provider as currently coded** — the fixtures were green but the real response
-   format differs (exactly the fixture-vs-reality risk the retros named). These are deliberate money-path
-   parser/validator changes (Story 5.3/5.4 territory) and were NOT hot-patched.
+   format differs (exactly the fixture-vs-reality risk the retros named). These deliberate money-path
+   validator changes are retained in Story 5.1 by code-review decision: live verification found real
+   defects, but the fixture-backed harness remains required.
 
 ### Resolution — fixes applied, round-trip then completed (2026-06-13)
 
@@ -145,19 +174,19 @@ Three fixes were applied and the unit suites re-run green under PHP 8.2 (plugin 
 
 The real round-trip was then re-run through the **production code path** (no harness patch) and **completed**:
 - reconcile (real `BillPaymentInquiry`) → `confirmed_unposted`, `date_paid` 2026-06-12;
-- post → `posted`, **real Blesta transaction #267082** (PKR 500.00, approved, ref "BAF") applied to invoice
-  #457099 → `paid = 500.0000`;
+- post → `posted`, **one real Blesta transaction** (PKR 500.00, approved, redacted reference) applied to
+  the disposable invoice → `paid = 500.0000`;
 - **idempotency proven**: re-running reconcile short-circuits (`posted`), re-post returns `already_posted`,
   batch posts 0, invoice stays `paid=500.0000` with exactly one `transaction_applied` row.
 
 ### Status
 - Real provider reachability + credentials + paid-status detection: **PROVEN.**
-- `confirmed_unposted → posted` round-trip creates/applies a real Blesta transaction: **ACHIEVED** (txn #267082).
+- `confirmed_unposted → posted` round-trip creates/applies a real Blesta transaction: **ACHIEVED**.
 - Idempotency (no duplicate transaction / no double-allocation): **PROVEN.**
 - Fail-closed safety (no false paid before the fixes): **HELD** throughout.
-- **Note:** findings #2/#3 are money-path validation changes made live to unblock verification; they pass the
-  unit suites but should receive formal review (Story 5.3/5.4 territory). Three files changed, uncommitted:
-  `KuickPayVoucherRepository.php`, `KuickPayEvidenceValidator.php`.
+- **Note:** findings #2/#3 are money-path validation changes made live to unblock verification; they are
+  now covered by targeted validator tests and should still receive careful review because they sit on the
+  payment-validation path.
 
 ## AC3 — Admin surfaces on the real stack (in progress, 2026-06-13)
 
@@ -191,14 +220,19 @@ disposable seeded voucher; all test artifacts cleaned up afterward.
 | Cancel | **PASS** — `manual_review → cancelled` + `admin.cancelled` audit. |
 | Check Now (recheck) | **PASS** — ran the real reconcile (SOAP inquiry) + `admin.rechecked` audit; the money round-trip itself is proven in AC2. |
 | CSRF enforced (NFR14) | **PASS** — a review POST with `verify_csrf_token` on and no token wrote no audit and did not mutate (framework-level CSRF, the same all Blesta admin POSTs get). |
+| GET mutation routes | **NOT CAPTURED** — no durable evidence was recorded for the required GET no-mutation check; treat as an open evidence gap until rerun. |
 | State guards (`ALLOWED_ACTIONS_BY_STATE`) | **PASS** — transitions honored the allowed-from sets. |
 | Audit payloads | redacted (staff_id + prior_status only), lower-dot event names. |
 
 **Prerequisite fix (from the blank-page diagnosis):** the new permissions had to be granted to a staff
-group. Granted Administrators; verified pages render. **Secondary bug still open:** admin
-`unauthorized.pdt` is missing, so a denied staff member sees a blank page instead of a clean "no
-permission" message — worth fixing for operator clarity (does not affect the ACL decision itself).
+group. Granted Administrators; verified pages render. The missing admin `unauthorized.pdt` view was restored
+so denied staff get a clean unauthorized message instead of a blank page.
 
-### AC3 status: **COMPLETE** (one secondary cosmetic bug noted: missing admin `unauthorized.pdt`).
-- **AC4** — final residual risk-acceptance (Israr-signed), to include at minimum: the live KuickPay
-  SOAP leg (no sandbox → Story 5.7) and the ionCube-15-on-PHP-8.2 loader gap if not installed.
+### AC3 status: **PARTIAL until rerun captures GET no-mutation evidence**.
+
+## AC4 — Risk acceptance
+
+Residual risks are recorded and signed in `docs/kuickpay/risk-acceptance-5-1-live-verification.md`. The
+live single-inquiry SOAP leg is no longer a residual because it was exercised as supplemental proof; bulk
+provider inquiry, lifecycle edge cases against the real provider, and repeatable `InsertVoucher` automation
+remain accepted residuals.
