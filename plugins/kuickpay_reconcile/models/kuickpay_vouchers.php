@@ -30,6 +30,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
         'status',
         'registration_number',
         'consumer_number',
+        'context_key',
         'date_due',
         'date_expires',
         'date_created',
@@ -778,6 +779,17 @@ class KuickpayVouchers extends KuickpayReconcileModel
                     'rule' => 'isEmpty',
                     'negate' => true,
                     'message' => $this->_('KuickpayVouchers.!error.consumer_number.empty')
+                ]
+            ],
+            // Every newly created voucher MUST carry a deterministic context_key
+            // (Story 5.2); the DB column stays nullable only to keep the
+            // backfill and the link-less edge safe. active_context_key is a
+            // STORED generated column and is intentionally absent from FIELDS.
+            'context_key' => [
+                'empty' => [
+                    'rule' => 'isEmpty',
+                    'negate' => true,
+                    'message' => $this->_('KuickpayVouchers.!error.context_key.empty')
                 ]
             ],
         ];

@@ -119,6 +119,9 @@ $voucherId = $repository->create([
     'status' => 'pending',
     'registration_number' => $registrationNumber,
     'consumer_number' => $consumerNumber,
+    // context_key is required since Story 5.2; single-invoice set →
+    // sha1 of the lone id (matches the canonical sha1(implode(',', [id]))).
+    'context_key' => sha1((string) $invoiceId),
     'date_due' => date('Y-m-d', strtotime('+7 days')),
     'date_expires' => date('Y-m-d', strtotime('+14 days')),
 ], [[

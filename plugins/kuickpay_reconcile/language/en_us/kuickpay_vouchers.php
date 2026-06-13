@@ -11,3 +11,5 @@ $lang['KuickpayVouchers.!error.amount.format'] = 'Amount must be a valid decimal
 $lang['KuickpayVouchers.!error.status.valid'] = 'Invalid voucher status.';
 $lang['KuickpayVouchers.!error.registration_number.empty'] = 'Registration number is required.';
 $lang['KuickpayVouchers.!error.consumer_number.empty'] = 'Consumer number is required.';
+// Active-context concurrency guard (Story 5.2)
+$lang['KuickpayVouchers.!error.context_key.empty'] = 'Context key is required.';

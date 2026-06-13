@@ -155,6 +155,7 @@ class KuickPayVoucherReferenceService
                 'status' => 'pending',
                 'registration_number' => $references['registration_number'],
                 'consumer_number' => $references['consumer_number'],
+                'context_key' => $this->contextKey($invoiceIds),
                 'date_due' => $this->offsetDate((int) ($context['due_date_offset_days'] ?? 0)),
                 'date_expires' => $this->offsetDate((int) ($context['expiry_date_offset_days'] ?? 0)),
             ];
@@ -454,6 +455,29 @@ class KuickPayVoucherReferenceService
         ksort($canonical, SORT_NATURAL);
 
         return array_values($canonical);
+    }
+
+    /**
+     * Computes the deterministic active-context fingerprint for an invoice set.
+     *
+     * Single source of truth for the context_key written on every voucher
+     * (Story 5.2). MUST stay byte-identical to the SQL migration backfill:
+     * PHP `sha1(implode(',', $sortedDistinctIntIds))` over the ascending,
+     * de-duplicated integer invoice-id set mirrors
+     * `SHA1(GROUP_CONCAT(DISTINCT invoice_id ORDER BY invoice_id SEPARATOR ','))`.
+     * Normalizes here (intval + unique + numeric sort) so the algorithm is
+     * self-contained regardless of caller ordering, matching the same
+     * normalization in KuickpayVouchers::getPendingByInvoiceSet().
+     *
+     * @param array $invoiceIds Invoice IDs (any order, possibly duplicated)
+     * @return string The 40-char sha1 context key
+     */
+    private function contextKey(array $invoiceIds): string
+    {
+        $ids = array_values(array_unique(array_map('intval', $invoiceIds)));
+        sort($ids, SORT_NUMERIC);
+
+        return sha1(implode(',', $ids));
     }
 
     /**
