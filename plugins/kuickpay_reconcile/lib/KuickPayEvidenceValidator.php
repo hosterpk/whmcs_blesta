@@ -127,19 +127,20 @@ class KuickPayEvidenceValidator
         // The single BillPaymentInquiry is keyed on the Consumer Number and KuickPay
         // echoes that identity back in result field [1], which the parser stores as
         // the evidence registration number; InsertVoucher evidence instead carries the
-        // Registration Number. Both are per-voucher-unique, and the parser has already
-        // matched the echoed value against the expected identity, so accept a match on
-        // EITHER identity. A blank echo never matches (fail closed).
+        // Registration Number. Bulk rows carry both identities, so require both to
+        // match when a consumer number is present. A blank echo never matches.
         $echoed = (string) $evidence->registrationNumber();
-        if ($echoed === ''
-            || ($echoed !== (string) ($voucher->registration_number ?? '')
-                && $echoed !== (string) ($voucher->consumer_number ?? ''))
-        ) {
+        if ($echoed === '') {
             return false;
         }
 
-        if ($evidence->consumerNumber() !== null
-            && (string) $evidence->consumerNumber() !== (string) ($voucher->consumer_number ?? '')
+        if ($evidence->consumerNumber() !== null) {
+            return $echoed === (string) ($voucher->registration_number ?? '')
+                && (string) $evidence->consumerNumber() === (string) ($voucher->consumer_number ?? '');
+        }
+
+        if ($echoed !== (string) ($voucher->registration_number ?? '')
+            && $echoed !== (string) ($voucher->consumer_number ?? '')
         ) {
             return false;
         }

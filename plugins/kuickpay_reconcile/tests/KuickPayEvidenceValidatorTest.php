@@ -21,6 +21,55 @@ class KuickPayEvidenceValidatorTest extends TestCase
         $this->assertSame('confirmed_unposted', $result->outcomeStatus());
     }
 
+    public function testValidConfirmedInquiryEvidencePassesWithNullCurrency()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(),
+            [$this->invoiceLink()],
+            $this->evidence(['consumer_number' => null, 'currency' => null])
+        );
+
+        $this->assertTrue($result->isValid());
+        $this->assertSame([], $result->reasons());
+    }
+
+    public function testValidConfirmedInquiryEvidencePassesWhenEchoedIdentityIsConsumerNumber()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(),
+            [$this->invoiceLink()],
+            $this->evidence([
+                'consumer_number' => null,
+                'registration_number' => 'INSTITUTION_IDREG-0000001',
+                'currency' => null,
+            ])
+        );
+
+        $this->assertTrue($result->isValid());
+        $this->assertSame([], $result->reasons());
+    }
+
+    public function testBulkEvidenceFailsWhenRegistrationDoesNotMatchVoucher()
+    {
+        $validator = $this->validator();
+
+        $result = $validator->validate(
+            $this->voucher(),
+            [$this->invoiceLink()],
+            $this->evidence([
+                'consumer_number' => 'INSTITUTION_IDREG-0000001',
+                'registration_number' => 'REG-OTHER',
+            ])
+        );
+
+        $this->assertFalse($result->isValid());
+        $this->assertContains('unmatched_reference', $result->reasons());
+    }
+
     public function testConfirmedUnpostedVoucherPassesWhenAllowedForPosting()
     {
         $validator = $this->validator();
