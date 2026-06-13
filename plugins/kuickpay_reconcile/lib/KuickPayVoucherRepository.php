@@ -36,6 +36,7 @@ class KuickPayVoucherRepository
             $voucher_id = $this->KuickpayVouchers->add($voucherData);
             if (!$voucher_id || $this->KuickpayVouchers->errors()) {
                 $this->KuickpayVouchers->Record->rollBack();
+                $this->KuickpayVouchers->Record->reset();
                 return null;
             }
 
@@ -44,6 +45,7 @@ class KuickPayVoucherRepository
                 $invoice_link_id = $this->KuickpayVoucherInvoices->add($invoiceLink);
                 if (!$invoice_link_id || $this->KuickpayVoucherInvoices->errors()) {
                     $this->KuickpayVouchers->Record->rollBack();
+                    $this->KuickpayVouchers->Record->reset();
                     return null;
                 }
             }
@@ -53,6 +55,12 @@ class KuickPayVoucherRepository
             return (int) $voucher_id;
         } catch (Throwable $e) {
             $this->KuickpayVouchers->Record->rollBack();
+            // A duplicate-key INSERT (e.g. the active-context unique key, Story
+            // 5.2) throws mid-query and leaves stale bound values on the shared
+            // Record builder; without this reset the caller's create-null
+            // fall-through re-lookup fails with "bound variables does not match
+            // tokens" and the loser would get null instead of the winner.
+            $this->KuickpayVouchers->Record->reset();
             return null;
         }
     }
