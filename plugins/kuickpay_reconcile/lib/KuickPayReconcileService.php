@@ -758,7 +758,7 @@ class KuickPayReconcileService
             return null;
         }
 
-        return [
+        $config = [
             'wsdl_url' => $meta['wsdl_url'] ?? '',
             'soap_timeout' => $meta['soap_timeout'] ?? '',
             'institution_id' => $meta['institution_id'] ?? '',
@@ -772,6 +772,51 @@ class KuickPayReconcileService
             'overpayment_policy' => $meta['overpayment_policy'] ?? 'manual_review',
             'late_payment_policy' => $meta['late_payment_policy'] ?? 'manual_review',
         ];
+
+        // Fail closed (-> kuickpay_unavailable skip) when a required inquiry key is
+        // missing or blank instead of building a SOAP client with empty credentials
+        // and burning real Vouchers toward retry/manual_review on a doomed batch.
+        // These keys are validated at save time (Epic 1); this is defence in depth.
+        if (!$this->hasRequiredInquiryConfig($config)) {
+            return null;
+        }
+
+        return $config;
+    }
+
+    /**
+     * Confirms the gateway config carries every key the inquiry SOAP path needs.
+     *
+     * Requires a non-blank wsdl_url and institution_id, plus the inquiry
+     * credential pair — sourced from the voucher credentials when
+     * inquiry_same_as_voucher is truthy, otherwise the inquiry credentials. A
+     * blank required key returns false so the caller fails closed.
+     *
+     * @param array $config The resolved gateway config
+     * @return bool True only when every required inquiry key is present
+     */
+    private function hasRequiredInquiryConfig(array $config): bool
+    {
+        $inquirySameAsVoucher = $this->truthy($config['inquiry_same_as_voucher'] ?? 'false');
+
+        $required = [
+            (string) ($config['wsdl_url'] ?? ''),
+            (string) ($config['institution_id'] ?? ''),
+            $inquirySameAsVoucher
+                ? (string) ($config['voucher_username'] ?? '')
+                : (string) ($config['inquiry_username'] ?? ''),
+            $inquirySameAsVoucher
+                ? (string) ($config['voucher_password'] ?? '')
+                : (string) ($config['inquiry_password'] ?? ''),
+        ];
+
+        foreach ($required as $value) {
+            if (trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function client(array $gateway_config)

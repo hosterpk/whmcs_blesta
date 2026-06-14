@@ -797,6 +797,50 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame('unmatched_reference', $evidence->errorClass());
     }
 
+    public function testRequiredInquiryConfigGuardFailsClosedOnBlankCredentials()
+    {
+        // AC4.3: gatewayConfigForCompany() must fail closed (-> kuickpay_unavailable,
+        // no SOAP client built, no Vouchers burned toward retry/manual_review) when a
+        // required inquiry key is missing/blank, instead of constructing a client with
+        // empty credentials. The framework-dependent resolver delegates the decision to
+        // this pure guard, which is exercised here directly.
+        $method = new ReflectionMethod(KuickPayReconcileService::class, 'hasRequiredInquiryConfig');
+        $method->setAccessible(true);
+        $service = (new ReflectionClass(KuickPayReconcileService::class))->newInstanceWithoutConstructor();
+
+        $base = [
+            'wsdl_url' => 'https://example.com/api.asmx?WSDL',
+            'institution_id' => 'KP01',
+            'inquiry_username' => 'inq-user',
+            'inquiry_password' => 'inq-secret',
+            'voucher_username' => 'vou-user',
+            'voucher_password' => 'vou-secret',
+            'inquiry_same_as_voucher' => 'false',
+        ];
+
+        $this->assertTrue($method->invoke($service, $base));
+
+        foreach (['wsdl_url', 'institution_id', 'inquiry_username', 'inquiry_password'] as $key) {
+            $broken = $base;
+            $broken[$key] = '';
+            $this->assertFalse($method->invoke($service, $broken), $key . ' blank must fail closed');
+
+            $whitespace = $base;
+            $whitespace[$key] = '   ';
+            $this->assertFalse($method->invoke($service, $whitespace), $key . ' whitespace must fail closed');
+        }
+
+        // inquiry_same_as_voucher reuses the voucher credential pair.
+        $sameAsVoucher = array_merge($base, [
+            'inquiry_same_as_voucher' => 'true',
+            'inquiry_username' => '',
+            'inquiry_password' => '',
+        ]);
+        $this->assertTrue($method->invoke($service, $sameAsVoucher));
+        $this->assertFalse($method->invoke($service, array_merge($sameAsVoucher, ['voucher_username' => ''])));
+        $this->assertFalse($method->invoke($service, array_merge($sameAsVoucher, ['voucher_password' => ''])));
+    }
+
     public function testRealSoapClientReceivesOperationalLoggerOnlyWhenEnabled()
     {
         $service = new KuickPayReconcileService([
