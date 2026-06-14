@@ -39,6 +39,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
         'date_paid',
         'date_last_checked',
         'retry_count',
+        'posting_attempts',
         'error_class',
         'raw_status',
         'evidence_hash',
@@ -797,6 +798,52 @@ class KuickpayVouchers extends KuickpayReconcileModel
                     'message' => $this->_('KuickpayVouchers.!error.context_key.empty')
                 ]
             ],
+            // Durable posting-attempt counter (Story 5.3). Like retry_count it is
+            // not supplied at issuance (DB default 0); validate only when present
+            // so it can never be written as a negative/non-integer value.
+            'posting_attempts' => [
+                'format' => [
+                    'if_set' => true,
+                    'rule' => ['matches', '/^\d+$/'],
+                    'message' => $this->_('KuickpayVouchers.!error.posting_attempts.format')
+                ]
+            ],
         ];
+    }
+
+    /**
+     * Atomically increments the durable posting-attempt counter for a still
+     * confirmed_unposted, company-scoped voucher and returns the new count.
+     *
+     * Guarded on status = 'confirmed_unposted' so a voucher already posted or
+     * escalated by a concurrent writer is never re-incremented. Returns the
+     * post-increment value, or 0 when no row matched.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @return int The post-increment attempt count, or 0 when no row matched
+     */
+    public function incrementPostingAttempts(int $voucher_id, int $company_id): int
+    {
+        $statement = $this->Record->query(
+            'UPDATE `kuickpay_vouchers`'
+            . ' SET `posting_attempts` = `posting_attempts` + 1, `date_updated` = ?'
+            . " WHERE `id` = ? AND `company_id` = ? AND `status` = 'confirmed_unposted'",
+            date('Y-m-d H:i:s'),
+            $voucher_id,
+            $company_id
+        );
+
+        if ($statement->rowCount() !== 1) {
+            return 0;
+        }
+
+        $row = $this->Record->query(
+            'SELECT `posting_attempts` FROM `kuickpay_vouchers` WHERE `id` = ? AND `company_id` = ?',
+            $voucher_id,
+            $company_id
+        )->fetch();
+
+        return $row ? (int) $row->posting_attempts : 0;
     }
 }

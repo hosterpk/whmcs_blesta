@@ -350,4 +350,45 @@ class KuickPayVoucherRepository
             $vars
         );
     }
+
+    /**
+     * Atomically increments the durable posting-attempt counter for a still
+     * confirmed_unposted voucher and returns the new count (0 when no row matched).
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @return int The post-increment attempt count
+     */
+    public function incrementPostingAttempts(int $voucher_id, int $company_id): int
+    {
+        return $this->KuickpayVouchers->incrementPostingAttempts($voucher_id, $company_id);
+    }
+
+    /**
+     * Status-guarded transition out of confirmed_unposted.
+     *
+     * Used by the posting retry cap to escalate a repeatedly-failing voucher to
+     * manual_review only while it is still confirmed_unposted, so a concurrent
+     * post that already moved it cannot be overwritten.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @param string $new_status The target status
+     * @param array $extra Additional allowlisted voucher fields to write
+     * @return bool True only when this call transitioned the row
+     */
+    public function transitionFromConfirmedUnposted(
+        int $voucher_id,
+        int $company_id,
+        string $new_status,
+        array $extra = []
+    ): bool {
+        return $this->KuickpayVouchers->transition(
+            $voucher_id,
+            $company_id,
+            $new_status,
+            ['confirmed_unposted'],
+            $extra
+        );
+    }
 }

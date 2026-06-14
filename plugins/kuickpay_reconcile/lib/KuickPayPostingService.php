@@ -10,6 +10,7 @@ class KuickPayPostingService
     public const BATCH_SIZE = 100;
     public const MAX_RUNTIME_SECONDS = 240;
     public const LOCK_TTL_SECONDS = 600;
+    public const POSTING_RETRY_LIMIT = 5;
     private const LOCK_NAME = 'post_confirmed';
     private const TRANSACTION_MESSAGE_KEY = 'KuickpayReconcile.posting.transaction_message';
 
@@ -163,7 +164,7 @@ class KuickPayPostingService
                 $record->rollBack();
                 $this->recordFailureAudit($company_id, $lockedVoucher, ['reason' => 'transaction_add_failed']);
 
-                return $this->result($voucher_id, 'failed');
+                return $this->registerFailedPostingAttempt($voucher_id, $company_id, $lockedVoucher);
             }
 
             $this->transactions->apply((int) $transaction_id, [
@@ -174,7 +175,7 @@ class KuickPayPostingService
                 $record->rollBack();
                 $this->recordFailureAudit($company_id, $lockedVoucher, ['reason' => 'transaction_apply_failed']);
 
-                return $this->result($voucher_id, 'failed');
+                return $this->registerFailedPostingAttempt($voucher_id, $company_id, $lockedVoucher);
             }
 
             $this->markPosted($voucher_id, $company_id, (int) $transaction_id);
@@ -193,8 +194,55 @@ class KuickPayPostingService
 
             $this->recordFailureAudit($company_id, $voucher, ['reason' => 'posting_exception']);
 
-            return $this->result($voucher_id, 'failed');
+            return $this->registerFailedPostingAttempt($voucher_id, $company_id, $voucher);
         }
+    }
+
+    /**
+     * Records a failed posting attempt and escalates at the durable cap.
+     *
+     * Called ONLY from postVoucher()'s true failed paths (transaction_add_failed,
+     * transaction_apply_failed, posting_exception) so non-failed outcomes
+     * (posted/already_posted/skipped, or validation-driven immediate
+     * manual_review) never increment. The increment is status-guarded on
+     * confirmed_unposted; at POSTING_RETRY_LIMIT the voucher is escalated to
+     * manual_review (fail-closed, NFR9) so it leaves confirmed_unposted and stops
+     * re-occupying the head of every ascending-by-id postConfirmed() batch.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @param mixed $voucher The voucher row (for diagnostic/audit context)
+     * @return array The posting result (failed, or manual_review at the cap)
+     */
+    private function registerFailedPostingAttempt(int $voucher_id, int $company_id, $voucher): array
+    {
+        $attempts = $this->voucherRepository->incrementPostingAttempts($voucher_id, $company_id);
+
+        if ($attempts >= self::POSTING_RETRY_LIMIT) {
+            $escalated = $this->voucherRepository->transitionFromConfirmedUnposted(
+                $voucher_id,
+                $company_id,
+                'manual_review',
+                [
+                    'error_class' => 'posting_failed',
+                    'diagnostic_summary' => $this->mergeValidationErrors(
+                        (string) ($voucher->diagnostic_summary ?? ''),
+                        ['posting_retry_exhausted']
+                    ),
+                ]
+            );
+
+            if ($escalated) {
+                $this->recordFailureAudit($company_id, $voucher, [
+                    'reason' => 'posting_retry_exhausted',
+                    'posting_attempts' => $attempts,
+                ]);
+
+                return $this->result($voucher_id, 'manual_review');
+            }
+        }
+
+        return $this->result($voucher_id, 'failed');
     }
 
     private function adoptExistingTransaction($transaction, $voucher, array $links): array

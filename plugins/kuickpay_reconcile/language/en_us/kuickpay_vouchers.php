@@ -13,3 +13,5 @@ $lang['KuickpayVouchers.!error.registration_number.empty'] = 'Registration numbe
 $lang['KuickpayVouchers.!error.consumer_number.empty'] = 'Consumer number is required.';
 // Active-context concurrency guard (Story 5.2)
 $lang['KuickpayVouchers.!error.context_key.empty'] = 'Context key is required.';
+// Durable posting-attempt counter (Story 5.3)
+$lang['KuickpayVouchers.!error.posting_attempts.format'] = 'Posting attempts must be a non-negative integer.';

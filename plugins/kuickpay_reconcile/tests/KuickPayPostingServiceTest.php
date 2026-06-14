@@ -169,6 +169,97 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame(['posting.started', 'posting.failed'], array_column($audit->events, 0));
     }
 
+    public function testFailedPostingIncrementsAttemptsAndEscalatesToManualReviewAtCap()
+    {
+        // AC5.4/5c: a deterministically-failing post increments the durable
+        // posting_attempts counter; at POSTING_RETRY_LIMIT the voucher escalates to
+        // manual_review (fail-closed) so it stops re-occupying the head of every
+        // ascending-by-id postConfirmed() batch. Exercised via direct postVoucher().
+        $voucher = $this->voucher();
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $transactions->addErrors = ['transaction_id' => ['failed']];
+        $service = $this->service($repo, $transactions);
+
+        for ($attempt = 1; $attempt < KuickPayPostingService::POSTING_RETRY_LIMIT; $attempt++) {
+            $result = $service->postVoucher(1, $voucher);
+
+            $this->assertSame('failed', $result['outcome'], 'attempt ' . $attempt);
+            $this->assertSame('confirmed_unposted', $voucher->status, 'attempt ' . $attempt);
+            $this->assertSame($attempt, $voucher->posting_attempts);
+        }
+
+        $capResult = $service->postVoucher(1, $voucher);
+
+        $this->assertSame('manual_review', $capResult['outcome']);
+        $this->assertSame('manual_review', $voucher->status);
+        $this->assertSame(KuickPayPostingService::POSTING_RETRY_LIMIT, $voucher->posting_attempts);
+        $lastEdit = $repo->edits[count($repo->edits) - 1];
+        $this->assertSame('manual_review', $lastEdit['status']);
+        $this->assertSame(
+            ['posting_retry_exhausted'],
+            json_decode($lastEdit['diagnostic_summary'], true)['validation_errors']
+        );
+
+        // The escalated voucher leaves confirmed_unposted; the next pass skips it.
+        $afterCap = $service->postVoucher(1, $voucher);
+        $this->assertSame('skipped', $afterCap['outcome']);
+        $this->assertSame(KuickPayPostingService::POSTING_RETRY_LIMIT, $voucher->posting_attempts);
+    }
+
+    public function testValidationDrivenManualReviewDoesNotIncrementPostingAttempts()
+    {
+        // Non-failed outcomes must NOT increment posting_attempts: a validation
+        // rejection moves the voucher to manual_review immediately, never via the
+        // retry-cap path.
+        $voucher = $this->voucher();
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $validator = new KuickPayPostingFakeEvidenceValidator(false, ['invoice_mismatch']);
+        $service = $this->service($repo, $transactions, null, $validator);
+
+        $result = $service->postVoucher(1, $voucher);
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertFalse(isset($voucher->posting_attempts));
+        $this->assertSame([], $transactions->adds);
+    }
+
+    public function testMissingPaidDateDoesNotIncrementPostingAttempts()
+    {
+        // The pre-transaction missing_paid_date guard is also a non-failed outcome.
+        $voucher = $this->voucher(['date_paid' => null]);
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $service = $this->service($repo, new KuickPayPostingFakeTransactions());
+
+        $result = $service->postVoucher(1, $voucher);
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertFalse(isset($voucher->posting_attempts));
+    }
+
+    public function testPostThenRerunCreatesExactlyOneTransaction()
+    {
+        // deferred-work.md:8 — posting is idempotent across reruns: the first run
+        // creates exactly one transaction; a rerun over the now-posted voucher is a
+        // no-op that creates no second transaction.
+        $voucher = $this->voucher();
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $service = $this->service($repo, $transactions);
+
+        $first = $service->postVoucher(1, $voucher);
+        // Simulate the markPosted persistence the real DB would apply, so the rerun
+        // sees a posted voucher.
+        $voucher->status = 'posted';
+        $voucher->blesta_transaction_id = $first['blesta_transaction_id'];
+        $second = $service->postVoucher(1, $voucher);
+
+        $this->assertSame('posted', $first['outcome']);
+        $this->assertSame('already_posted', $second['outcome']);
+        $this->assertCount(1, $transactions->adds);
+    }
+
     public function testExistingApprovedAppliedTransactionIsAdoptedWithoutAdd()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
@@ -507,6 +598,45 @@ class KuickPayPostingFakeVoucherRepository
     public function edit(int $voucher_id, int $company_id, array $vars): void
     {
         $this->edits[] = $vars;
+    }
+
+    public function incrementPostingAttempts(int $voucher_id, int $company_id): int
+    {
+        foreach ($this->vouchers as $voucher) {
+            // Faithfully model the status-guarded increment: only a still
+            // confirmed_unposted, company-scoped row is incremented.
+            if ((int) $voucher->id === $voucher_id
+                && (int) $voucher->company_id === $company_id
+                && (string) $voucher->status === 'confirmed_unposted'
+            ) {
+                $voucher->posting_attempts = (int) ($voucher->posting_attempts ?? 0) + 1;
+
+                return (int) $voucher->posting_attempts;
+            }
+        }
+
+        return 0;
+    }
+
+    public function transitionFromConfirmedUnposted(
+        int $voucher_id,
+        int $company_id,
+        string $new_status,
+        array $extra = []
+    ): bool {
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id
+                && (int) $voucher->company_id === $company_id
+                && (string) $voucher->status === 'confirmed_unposted'
+            ) {
+                $this->edit($voucher_id, $company_id, array_merge($extra, ['status' => $new_status]));
+                $voucher->status = $new_status;
+
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

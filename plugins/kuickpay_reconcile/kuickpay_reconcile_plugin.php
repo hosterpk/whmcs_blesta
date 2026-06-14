@@ -90,6 +90,11 @@ class KuickpayReconcilePlugin extends Plugin
             // builder, so the raw-query ALTER path is the only mechanism.
             $this->addActiveContextGuard();
 
+            // Durable posting-attempt counter (Story 5.3): shared by install() and
+            // upgrade() so both routes converge on the identical schema. On a fresh
+            // table the column simply defaults to 0.
+            $this->addPostingAttemptsColumn();
+
             $this->createReconcileTables();
             $this->addCronTasks();
         } catch (Exception $e) {
@@ -170,6 +175,14 @@ class KuickpayReconcilePlugin extends Plugin
             // pending vouchers. FIRST Epic 5 branch that runs real SQL.
             if (version_compare($current_version, '1.9.0', '<')) {
                 $this->addActiveContextGuard();
+            }
+
+            // 1.10.0 adds the durable posting-attempt counter (Story 5.3): a
+            // confirmed_unposted Voucher whose post deterministically fails is
+            // bounded by posting_attempts and escalated to manual_review at the
+            // cap, so it stops re-occupying the head of every postConfirmed() batch.
+            if (version_compare($current_version, '1.10.0', '<')) {
+                $this->addPostingAttemptsColumn();
             }
         } catch (Exception $e) {
             $this->Input->setErrors(['db'=> ['upgrade'=>$e->getMessage()]]);
@@ -379,6 +392,26 @@ class KuickpayReconcilePlugin extends Plugin
             $this->Record->query(
                 'ALTER TABLE `kuickpay_reconciliation_runs` '
                 . 'ADD `total_unmatched` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `total_errors`'
+            );
+        }
+    }
+
+    /**
+     * Adds the durable posting-attempt counter column (Story 5.3).
+     *
+     * Idempotent and shared by both install() and upgrade() so the two routes
+     * converge on the identical schema. posting_attempts bounds how many times a
+     * confirmed_unposted Voucher may fail posting before it is escalated to
+     * manual_review (KuickPayPostingService::POSTING_RETRY_LIMIT), clearing the
+     * head-of-line block in getPostable()'s ascending-by-id batch. Existing rows
+     * default to 0; the ADD is guarded so a re-run is a no-op.
+     */
+    private function addPostingAttemptsColumn()
+    {
+        if (!$this->columnExists('kuickpay_vouchers', 'posting_attempts')) {
+            $this->Record->query(
+                'ALTER TABLE `kuickpay_vouchers`'
+                . ' ADD `posting_attempts` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `retry_count`'
             );
         }
     }
