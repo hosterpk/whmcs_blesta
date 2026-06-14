@@ -51,8 +51,11 @@ class KuickPaySecretLeakageTest extends TestCase
             'bare mobile' => '03001234567',
             'dashed mobile' => '0300-1234567',
             'spaced mobile' => '0300 1234567',
+            'split dashed mobile' => '0300-123-4567',
+            'split spaced mobile' => '0300 123 4567',
             'international mobile' => '+923001234567',
             'international spaced mobile' => '0092 300 1234567',
+            'international split mobile' => '+92 300 123 4567',
             'dashed cnic' => '12345-1234567-1',
             'undashed cnic' => '1234512345671',
         ];
@@ -63,6 +66,17 @@ class KuickPaySecretLeakageTest extends TestCase
                 'Expected a forbidden pattern to catch ' . $label . ': ' . $value
             );
         }
+    }
+
+    public function testDiversifiedPositiveControlFixtureWouldFailLeakScan()
+    {
+        // This quarantined fixture intentionally contains fake real-looking PII so the
+        // broadened patterns are proven against fixture content, not only inline strings.
+        $content = (string) file_get_contents(
+            self::FIXTURE_DIR . '/redaction/diversified-real-secrets.leaky-control.xml'
+        );
+
+        $this->assertTrue($this->matchesAnyForbiddenPattern($this->fixtureForbiddenPatterns(), $content));
     }
 
     public function testForbiddenPatternsIgnoreMixedPlaceholderStyles()
@@ -376,9 +390,8 @@ class KuickPaySecretLeakageTest extends TestCase
             'cnic undashed' => '/\b\d{13}\b/',
             // Mobile in bare, dashed/spaced, and international (+92 / 0092) forms. Every
             // pattern is digit-shaped, so X-based placeholders never false-positive.
-            'real mobile' => '/\b03\d{9}\b/',
-            'real mobile dashed or spaced' => '/\b03\d{2}[\s-]\d{7}\b/',
-            'real mobile international' => '/(?:\+92|0092)[\s-]?3\d{2}[\s-]?\d{7}\b/',
+            'real mobile' => '/\b03\d{2}(?:[\s-]?\d){7}\b/',
+            'real mobile international' => '/(?:\+92|0092)[\s-]?3\d{2}(?:[\s-]?\d){7}\b/',
             'real email' => '/[A-Z0-9._%+-]+@(?!example\.invalid\b)[A-Z0-9.-]+\.[A-Z]{2,}/i',
         ];
     }
@@ -399,6 +412,10 @@ class KuickPaySecretLeakageTest extends TestCase
 
         foreach ($iterator as $file) {
             if ($file->isFile()) {
+                if (strpos($file->getFilename(), '.leaky-control.') !== false) {
+                    continue;
+                }
+
                 $files[] = $file->getPathname();
             }
         }
