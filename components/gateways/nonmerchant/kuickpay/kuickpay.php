@@ -21,7 +21,9 @@ class Kuickpay extends NonmerchantGateway
     protected $kuickpay_gateway_id;
 
     /**
-     * @var array Credential-bearing fields that must be redacted from gateway-owned diagnostics
+     * @var array Credential-bearing fields that must be redacted from gateway-owned
+     *  diagnostics. Matched case-insensitively (see maskCredentials()); kept in sync
+     *  with the credential subset of KuickPayRedactor::$sensitive_fields.
      */
     private $credential_mask_fields = [
         'voucher_password',
@@ -32,6 +34,9 @@ class Kuickpay extends NonmerchantGateway
         'userName',
         'Password',
         'UserName',
+        'username',
+        'USERNAME',
+        'PASSWORD',
     ];
 
     /**
@@ -400,12 +405,99 @@ class Kuickpay extends NonmerchantGateway
      * All KuickPay credential-bearing data the gateway itself logs, embeds in an exception/error message,
      * or writes to a diagnostic must pass through this first.
      *
+     * Gateway-owned and input-robust: the shared base Gateway::maskDataRecursive matches keys
+     * case-sensitively and str_repeat()s over strlen($value), which raises a TypeError on
+     * null/array/object leaves. This mirrors the hardened KuickPayRedactor array path instead --
+     * case-insensitive keys, null preserved, array/non-stringable object collapsed to a token --
+     * without editing the shared base class.
+     *
      * @param array $data Credential-bearing data to mask
      * @return array The masked data
      */
     protected function maskCredentials(array $data)
     {
-        return $this->maskDataRecursive($data, $this->credential_mask_fields);
+        return $this->maskCredentialTree($data, $this->credentialMaskLookup());
+    }
+
+    /**
+     * Builds the lowercase credential-key lookup once per call.
+     *
+     * @return array<string, true> Lowercase credential key set
+     */
+    private function credentialMaskLookup(): array
+    {
+        $lookup = [];
+        foreach ($this->credential_mask_fields as $field) {
+            $lookup[strtolower((string) $field)] = true;
+        }
+
+        return $lookup;
+    }
+
+    /**
+     * Masks credential-bearing values recursively. A sensitive key masks its entire
+     * subtree (so a credential list cannot leak non-credential siblings); other arrays recurse.
+     *
+     * @param array $data Credential-bearing data
+     * @param array $lookup Lowercase credential key set
+     * @return array Masked data
+     */
+    private function maskCredentialTree(array $data, array $lookup): array
+    {
+        foreach ($data as $key => $value) {
+            if (isset($lookup[strtolower((string) $key)])) {
+                $data[$key] = is_array($value)
+                    ? $this->maskCredentialSubtree($value)
+                    : $this->maskCredentialLeaf($value);
+                continue;
+            }
+
+            if (is_array($value)) {
+                $data[$key] = $this->maskCredentialTree($value, $lookup);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Masks every leaf beneath a credential subtree.
+     *
+     * @param array $data Subtree stored under a credential key
+     * @return array Fully masked subtree
+     */
+    private function maskCredentialSubtree(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            $data[$key] = is_array($value)
+                ? $this->maskCredentialSubtree($value)
+                : $this->maskCredentialLeaf($value);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Masks a single credential leaf without ever calling strlen() on a non-string.
+     *
+     * @param mixed $value Leaf value
+     * @return mixed Masked value, with null preserved
+     */
+    private function maskCredentialLeaf($value)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // A value that cannot be cast to string (array or non-stringable object) must
+        // not surface raw; collapse it to a fixed token rather than throwing on the cast.
+        if (is_array($value) || (is_object($value) && !method_exists($value, '__toString'))) {
+            return 'xxxx';
+        }
+
+        $value = (string) $value;
+
+        return str_repeat('x', strlen($value));
     }
 
     /**

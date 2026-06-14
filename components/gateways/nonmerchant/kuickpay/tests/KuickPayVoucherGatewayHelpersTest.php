@@ -149,6 +149,11 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->createVoucherForContext($context, $contactInfo, $meta, $service);
     }
 
+    public function exposeMaskCredentials(array $data): array
+    {
+        return $this->maskCredentials($data);
+    }
+
     protected function log($url, $data = null, $direction = 'input', $success = false)
     {
         $this->logs[] = compact('url', 'data', 'direction', 'success');
@@ -1281,6 +1286,44 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
                 $this->assertStringNotContainsStringIgnoringCase($term, $lang[$key]);
             }
         }
+    }
+
+    public function testMaskCredentialsHandlesNonStringInputsSafely()
+    {
+        // AC3 (5.4): the gateway-owned masker must tolerate any input type and match
+        // credential keys case-insensitively, with no TypeError/deprecation. (The shared
+        // base Gateway::maskDataRecursive str_repeat()s over strlen() and matches keys
+        // case-sensitively; this gateway-local implementation replaces it.)
+        $gateway = $this->gateway();
+        $object = new stdClass();
+        $object->secret = 'value';
+
+        $masked = $gateway->exposeMaskCredentials([
+            'password' => null,
+            'voucher_password' => $object,
+            'inquiry_password' => true,
+            'USERNAME' => 'voucher-user',
+            'userName' => ['old' => 'a', 'new' => 'bb'],
+            'amount' => '1000.00',
+            'nested' => [
+                'Password' => 'secret',
+                'note' => 'keep me',
+            ],
+        ]);
+
+        // null preserved; non-stringable object -> fixed token; bool stringified then masked.
+        $this->assertNull($masked['password']);
+        $this->assertSame('xxxx', $masked['voucher_password']);
+        $this->assertSame('x', $masked['inquiry_password']);
+        // Mixed-case credential key still matched (case-insensitive allowlist).
+        $this->assertSame('xxxxxxxxxxxx', $masked['USERNAME']);
+        // A credential key holding an array masks every leaf beneath it.
+        $this->assertSame('x', $masked['userName']['old']);
+        $this->assertSame('xx', $masked['userName']['new']);
+        // Non-credential keys preserved, including nested non-credential siblings.
+        $this->assertSame('1000.00', $masked['amount']);
+        $this->assertSame('xxxxxx', $masked['nested']['Password']);
+        $this->assertSame('keep me', $masked['nested']['note']);
     }
 
     private function gateway()
