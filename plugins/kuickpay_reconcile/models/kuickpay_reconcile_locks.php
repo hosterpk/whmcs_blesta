@@ -36,18 +36,14 @@ class KuickpayReconcileLocks extends KuickpayReconcileModel
     /**
      * Detects a unique/duplicate-key constraint violation.
      *
-     * Recognises PDO's SQLSTATE 23000 and the MySQL driver code 1062 so a genuine
-     * "lock already held" insert is distinguished from any other failure.
+     * Recognises MySQL driver code 1062 so a genuine "lock already held" insert is
+     * distinguished from other SQLSTATE 23000 integrity errors.
      *
      * @param Exception $e The caught exception
      * @return bool True only for a duplicate-key collision
      */
     private function isDuplicateKeyViolation(Exception $e): bool
     {
-        if ((string) $e->getCode() === '23000') {
-            return true;
-        }
-
         return $e instanceof PDOException
             && isset($e->errorInfo[1])
             && (int) $e->errorInfo[1] === 1062;

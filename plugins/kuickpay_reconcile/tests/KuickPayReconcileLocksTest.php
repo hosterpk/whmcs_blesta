@@ -32,6 +32,19 @@ class KuickPayReconcileLocksTest extends TestCase
         $model->insertLock(1, 'reconcile_pending', 'owner-token', '2026-06-14 00:00:00');
     }
 
+    public function testInsertLockSurfacesNonDuplicateIntegrityFailure()
+    {
+        // SQLSTATE 23000 is a broad integrity class; only MySQL 1062 duplicate-key
+        // means "lock held". Other integrity failures must surface.
+        $integrity = new PDOException('SQLSTATE[23000]: Integrity constraint violation: 1048 Column cannot be null');
+        $integrity->errorInfo = ['23000', 1048, "Column 'owner_token' cannot be null"];
+
+        $model = $this->lockModel($integrity);
+
+        $this->expectException(PDOException::class);
+        $model->insertLock(1, 'reconcile_pending', 'owner-token', '2026-06-14 00:00:00');
+    }
+
     public function testInsertLockReturnsTrueOnSuccessfulInsert()
     {
         $model = $this->lockModel(null);
