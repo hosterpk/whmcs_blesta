@@ -50,6 +50,11 @@ class KuickPayRedactor
         'institution_id',
         'INSTITUTIONID',
         'INSTITUTION_ID',
+        // Confirmed aliases (Story 5.4 AC3): the same PII can arrive under aliased
+        // element/attribute names. Matching is case-insensitive (see sensitiveFields()).
+        'CustomerName',
+        'MobileNo',
+        'CNIC',
     ];
 
     /**
@@ -113,16 +118,23 @@ class KuickPayRedactor
         }
 
         $xpath = new DOMXPath($document);
+        $toLower = 'translate(local-name(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")';
         foreach (array_keys($this->sensitiveFields()) as $field) {
-            $nodes = $xpath->query('//*[translate(local-name(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "'
-                . $field . '"]');
-
-            if ($nodes === false) {
-                continue;
+            // Mask sensitive element text by case-insensitive local element name.
+            $nodes = $xpath->query('//*[' . $toLower . ' = "' . $field . '"]');
+            if ($nodes !== false) {
+                foreach ($nodes as $node) {
+                    $node->nodeValue = 'xxxx';
+                }
             }
 
-            foreach ($nodes as $node) {
-                $node->nodeValue = 'xxxx';
+            // Mask sensitive XML attribute values too (e.g. <Customer name="..."/>);
+            // the element-text pass above cannot reach attribute-borne secrets.
+            $attributes = $xpath->query('//@*[' . $toLower . ' = "' . $field . '"]');
+            if ($attributes !== false) {
+                foreach ($attributes as $attribute) {
+                    $attribute->nodeValue = 'xxxx';
+                }
             }
         }
 

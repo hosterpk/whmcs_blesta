@@ -80,6 +80,49 @@ class KuickPayRedactorTest extends TestCase
         $this->assertStringNotContainsString('Consumer_Number', $redacted);
     }
 
+    public function testRedactsSensitiveAttributeValues()
+    {
+        // AC3 (5.4): sensitive values carried in XML attributes (which the element-text
+        // pass cannot reach) must be masked; benign attributes/elements stay intact.
+        $redactor = new KuickPayRedactor();
+        $xml = '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
+            . '<soap:Body><Customer name="Customer Name" Mobile="03001234567" account="A-100">'
+            . '<Note>hello</Note></Customer></soap:Body></soap:Envelope>';
+
+        $redacted = $redactor->redactEnvelope($xml);
+
+        $this->assertStringContainsString('name="xxxx"', $redacted);
+        $this->assertStringContainsString('Mobile="xxxx"', $redacted);
+        $this->assertStringContainsString('account="A-100"', $redacted);
+        $this->assertStringContainsString('<Note>hello</Note>', $redacted);
+        $this->assertStringNotContainsString('Customer Name', $redacted);
+        $this->assertStringNotContainsString('03001234567', $redacted);
+    }
+
+    public function testRedactsAliasedSensitiveElementNames()
+    {
+        // AC3 (5.4): confirmed aliased element names carry the same PII and must be
+        // masked too; a benign element is untouched.
+        $redactor = new KuickPayRedactor();
+        $xml = '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
+            . '<soap:Body><Customer>'
+            . '<CustomerName>Customer Name</CustomerName>'
+            . '<MobileNo>03001234567</MobileNo>'
+            . '<CNIC>12345-1234567-1</CNIC>'
+            . '<Account>A-100</Account>'
+            . '</Customer></soap:Body></soap:Envelope>';
+
+        $redacted = $redactor->redactEnvelope($xml);
+
+        $this->assertStringContainsString('<CustomerName>xxxx</CustomerName>', $redacted);
+        $this->assertStringContainsString('<MobileNo>xxxx</MobileNo>', $redacted);
+        $this->assertStringContainsString('<CNIC>xxxx</CNIC>', $redacted);
+        $this->assertStringContainsString('<Account>A-100</Account>', $redacted);
+        $this->assertStringNotContainsString('Customer Name', $redacted);
+        $this->assertStringNotContainsString('03001234567', $redacted);
+        $this->assertStringNotContainsString('12345-1234567-1', $redacted);
+    }
+
     public function testUnsafeOrUnparseableEnvelopeReturnsPlaceholder()
     {
         $redactor = new KuickPayRedactor();
