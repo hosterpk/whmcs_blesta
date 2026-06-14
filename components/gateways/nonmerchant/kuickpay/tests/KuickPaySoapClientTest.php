@@ -175,6 +175,30 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertStringNotContainsString('voucher-secret', $outcome['fault']);
     }
 
+    public function testFaultDiagnosticRedactsProviderOnlyAliasKeyValues()
+    {
+        $fake = new KuickPaySoapClientFake();
+        $fake->throw = new SoapFault(
+            'Server',
+            'Rejected CustomerName=Provider Customer MobileNo=0300 123 4567 CNIC=12345-1234567-1'
+        );
+
+        $client = new KuickPaySoapClient($this->config(), function () use ($fake) {
+            return $fake;
+        });
+
+        $outcome = $this->callPrivate($client, 'InsertVoucher', []);
+
+        $this->assertFalse($outcome['ok']);
+        $this->assertSame('transport_error', $outcome['error_class']);
+        $this->assertStringContainsString('CustomerName=xxxx', $outcome['fault']);
+        $this->assertStringContainsString('MobileNo=xxxx', $outcome['fault']);
+        $this->assertStringContainsString('CNIC=xxxx', $outcome['fault']);
+        $this->assertStringNotContainsString('Provider Customer', $outcome['fault']);
+        $this->assertStringNotContainsString('0300 123 4567', $outcome['fault']);
+        $this->assertStringNotContainsString('12345-1234567-1', $outcome['fault']);
+    }
+
     public function testResponseEnvelopeWithDoctypeIsNotParsedAndEnvelopeIsPlaceheld()
     {
         $fake = new KuickPaySoapClientFake();

@@ -522,8 +522,10 @@ class KuickPaySoapClient
             }
         }
 
+        $diagnostic_keys = 'userName|username|UserName|password|Password|InstitutionID|Name|CustomerName|Mobile|MobileNo|CNIC|Email|Branch';
         $text = preg_replace(
-            '/(userName|username|UserName|password|Password|InstitutionID|Name|Mobile|Email|Branch)\s*[:=]\s*(\'[^\']*\'|"[^"]*"|[^,\s<]+)/i',
+            '/\b(' . $diagnostic_keys . ')\b\s*[:=]\s*(\'[^\']*\'|"[^"]*"|.*?)(?=\s+\b(?:'
+                . $diagnostic_keys . ')\b\s*[:=]|[,;<]|$)/i',
             '$1=xxxx',
             $text
         );
