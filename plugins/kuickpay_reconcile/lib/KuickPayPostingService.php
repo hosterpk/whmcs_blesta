@@ -134,7 +134,16 @@ class KuickPayPostingService
                 return $this->result($voucher_id, 'manual_review');
             }
 
-            $existing = $this->findAdoptableTransaction($lockedVoucher, $lockedLinks);
+            $adoption = $this->findAdoptableTransaction($lockedVoucher, $lockedLinks);
+            if ($adoption['blocked_reason'] !== null) {
+                $this->moveToManualReview($voucher_id, $company_id, $lockedVoucher, [$adoption['blocked_reason']]);
+                $this->recordFailureAudit($company_id, $lockedVoucher, ['reason' => $adoption['blocked_reason']]);
+                $record->commit();
+
+                return $this->result($voucher_id, 'manual_review');
+            }
+
+            $existing = $adoption['transaction'];
 
             if ($existing) {
                 $this->recordStartedAudit($company_id, $lockedVoucher, 'adopt_existing');
@@ -248,19 +257,17 @@ class KuickPayPostingService
      * approved transactions ever share the reference for one client+gateway it can
      * hand back the wrong row. Instead, enumerate the approved candidates
      * (company-scoped via getList), keep only exact reference/client/gateway
-     * matches, order them most-recent-first (date_added DESC, id DESC) and prefer
-     * one whose applied allocations already match the voucher links, so a
-     * duplicate reference cannot cause adoption of the wrong row. Falls back to the
-     * core exact single-fetch when enumeration yields no exact match, preserving
-     * the existing single-transaction behavior. kuickpay_reference is per-Voucher
-     * unique, so this is low-likelihood hardening (deferred-work.md:110); core is
-     * NOT edited.
+     * matches, order them most-recent-first (date_added DESC, id DESC), and adopt
+     * only a candidate whose existing applied allocations already match the voucher
+     * links. If same-reference candidates exist but none is already applied to the
+     * expected links, fail closed to manual_review rather than creating/adopting an
+     * ambiguous duplicate. Core is NOT edited.
      *
      * @param mixed $voucher The locked voucher row
      * @param array $links The locked invoice links
-     * @return mixed The transaction to adopt, or false when none exists
+     * @return array{transaction:mixed,blocked_reason:?string}
      */
-    private function findAdoptableTransaction($voucher, array $links)
+    private function findAdoptableTransaction($voucher, array $links): array
     {
         $reference = (string) $voucher->kuickpay_reference;
         $client_id = (int) $voucher->client_id;
@@ -286,9 +293,7 @@ class KuickPayPostingService
         }
 
         if (empty($matches)) {
-            // No enumerated exact match: fall back to the core exact single-fetch so
-            // a lone existing transaction is still adopted (behavior preserved).
-            return $this->transactions->getByTransactionId($reference, $client_id, $gateway_id) ?: false;
+            return ['transaction' => false, 'blocked_reason' => null];
         }
 
         usort($matches, function ($a, $b) {
@@ -301,11 +306,11 @@ class KuickPayPostingService
         // links, so a same-reference duplicate cannot cause adoption of a wrong row.
         foreach ($matches as $candidate) {
             if ($this->appliedMatches((int) $candidate->id, $links)) {
-                return $candidate;
+                return ['transaction' => $candidate, 'blocked_reason' => null];
             }
         }
 
-        return $matches[0];
+        return ['transaction' => false, 'blocked_reason' => 'existing_transaction_unverified'];
     }
 
     private function adoptExistingTransaction($transaction, $voucher, array $links): array

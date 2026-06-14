@@ -264,7 +264,7 @@ class KuickPayPostingServiceTest extends TestCase
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
-        $transactions->existing = $this->transaction();
+        $transactions->listResults = [$this->transaction()];
         $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.00']];
         $audit = new KuickPayPostingFakeAuditService();
         $service = $this->service($repo, $transactions, $audit);
@@ -287,7 +287,7 @@ class KuickPayPostingServiceTest extends TestCase
         // manual_review. Regression guard for the minor-unit parser.
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
-        $transactions->existing = $this->transaction(['amount' => '1000.0000']);
+        $transactions->listResults = [$this->transaction(['amount' => '1000.0000'])];
         $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.0000']];
         $service = $this->service($repo, $transactions);
 
@@ -299,20 +299,23 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame('posted', $repo->edits[0]['status']);
     }
 
-    public function testExistingApprovedUnappliedTransactionIsAppliedThenAdopted()
+    public function testExistingApprovedUnappliedTransactionFailsClosed()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
-        $transactions->existing = $this->transaction();
-        $transactions->autoApplyToApplied = true;
+        $transactions->listResults = [$this->transaction()];
         $service = $this->service($repo, $transactions);
 
         $result = $service->postVoucher(1, $this->voucher());
 
-        $this->assertSame('posted', $result['outcome']);
+        $this->assertSame('manual_review', $result['outcome']);
         $this->assertSame([], $transactions->adds);
-        $this->assertSame(1, count($transactions->applies));
-        $this->assertSame('posted', $repo->edits[0]['status']);
+        $this->assertSame([], $transactions->applies);
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertSame(
+            ['existing_transaction_unverified'],
+            json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']
+        );
     }
 
     public function testAdoptionPicksMostRecentApprovedAppliedWhenMultipleShareReference()
@@ -360,11 +363,28 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame(800, $repo->edits[0]['blesta_transaction_id']);
     }
 
+    public function testAdoptionDoesNotFallbackToCoreUnorderedLookup()
+    {
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $transactions->existing = $this->transaction();
+        $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.00']];
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('posted', $result['outcome']);
+        $this->assertSame(9001, $result['blesta_transaction_id']);
+        $this->assertSame(0, $transactions->getByTransactionIdCalls);
+        $this->assertCount(1, $transactions->adds);
+    }
+
     public function testExistingMismatchedTransactionMovesToManualReview()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
-        $transactions->existing = $this->transaction(['amount' => '999.99']);
+        $transactions->listResults = [$this->transaction(['amount' => '999.99'])];
+        $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.00']];
         $service = $this->service($repo, $transactions);
 
         $result = $service->postVoucher(1, $this->voucher());
@@ -385,7 +405,7 @@ class KuickPayPostingServiceTest extends TestCase
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
-        $transactions->existing = $this->transaction($transactionOverrides);
+        $transactions->listResults = [$this->transaction($transactionOverrides)];
         $transactions->applied = $applied;
         $service = $this->service($repo, $transactions);
 
@@ -400,25 +420,20 @@ class KuickPayPostingServiceTest extends TestCase
     public function existingUnsafeTransactionProvider(): array
     {
         return [
-            'non-approved' => [
-                ['status' => 'pending'],
-                [],
-                'existing_transaction_mismatch',
-            ],
             'wrong currency' => [
                 ['currency' => 'USD'],
-                [],
+                [(object) ['invoice_id' => 55, 'applied_amount' => '1000.00']],
                 'existing_transaction_mismatch',
             ],
             'wrong invoice applied' => [
                 [],
                 [(object) ['invoice_id' => 99, 'applied_amount' => '1000.00']],
-                'existing_transaction_partial_application',
+                'existing_transaction_unverified',
             ],
             'partially applied' => [
                 [],
                 [(object) ['invoice_id' => 55, 'applied_amount' => '500.00']],
-                'existing_transaction_partial_application',
+                'existing_transaction_unverified',
             ],
         ];
     }
@@ -588,6 +603,7 @@ class KuickPayPostingServiceTest extends TestCase
     {
         return (object) array_merge([
             'id' => 777,
+            'transaction_id' => 'KP-REF-PAID',
             'client_id' => 10,
             'gateway_id' => 20,
             'amount' => '1000.00',
@@ -742,10 +758,13 @@ class KuickPayPostingFakeTransactions
     public array $addErrors = [];
     public array $applyErrors = [];
     public bool $autoApplyToApplied = false;
+    public int $getByTransactionIdCalls = 0;
     private array $lastErrors = [];
 
     public function getByTransactionId($transaction_id, $client_id = null, $gateway_id = null)
     {
+        $this->getByTransactionIdCalls++;
+
         return $this->existing;
     }
 
