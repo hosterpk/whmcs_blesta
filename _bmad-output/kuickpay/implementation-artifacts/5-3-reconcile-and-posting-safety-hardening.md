@@ -110,6 +110,15 @@ _Closes: `deferred-work.md` 4-3 `:435` guard, single-inquiry paid-date (AI-3), r
   - [x] 7.2 Run both component suites with the documented runner (Dev Notes) under PHP 8.3 and the 8.2 floor; confirm green **modulo the one disclosed pre-existing gateway baseline red** (`ambiguous/bill-payment-inquiry-empty-currency.xml`, `[[kuickpay-failclosed-empty-currency-red]]`) — disclose it as baseline, not a regression.
   - [x] 7.3 In the Dev Agent Record, mark these `deferred-work.md` items **closed** with the commit/line evidence: 4-3 `:435` guard (line 128), single-inquiry paid-date / AI-3 (line 12), `getResumeCursor` trigger scope (line 80), per-Voucher txn (line 81), `insertLock` (line 84), posting head-of-line blocking (line 109), `getByTransactionId` adoption (line 110), and (if done) the empty-keys guard (line 85) + post-then-rerun assertion (line 8). State precisely what ran on the real DB vs fakes (NFR12); a single-process deterministic proof is legitimate — say so, do not claim multi-process concurrency you did not run.
 
+### Review Findings
+
+- [ ] [Review][Patch] Fresh install adds `posting_attempts` before the voucher table exists [plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php:96]
+- [ ] [Review][Patch] AC1 no-op path records stale prior status instead of a true no-op [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:410]
+- [ ] [Review][Patch] Bulk reconcile rollback path drops the required failure item and audit [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:332]
+- [ ] [Review][Patch] Lock duplicate detection treats all SQLSTATE 23000 errors as held locks [plugins/kuickpay_reconcile/models/kuickpay_reconcile_locks.php:47]
+- [ ] [Review][Patch] Transaction adoption can still choose a duplicate with no matching application [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:308]
+- [ ] [Review][Patch] Transaction adoption fallback reintroduces the unordered core lookup risk [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:291]
+
 ## Dev Notes
 
 ### What this story is
