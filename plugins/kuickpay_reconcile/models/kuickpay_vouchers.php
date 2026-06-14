@@ -546,7 +546,12 @@ class KuickpayVouchers extends KuickpayReconcileModel
             ->where('status', 'in', ['pending', 'retry'])
             ->where('id', '>', max(0, $after_id))
             ->open()
-                ->where('date_expires', '>=', date('Y-m-d'))
+                // Derive "today" from the DB clock (CURDATE()), matching
+                // getExpirable()'s `< CURDATE()` gate, so the expiry/confirm limbo
+                // window under app/DB clock skew is eliminated at the boundary, not
+                // merely guarded: date_expires = CURDATE() => reconcilable (>=) and
+                // NOT expirable (<); date_expires < CURDATE() => the exact reverse.
+                ->where('date_expires', '>=', 'CURDATE()', false, false)
                 ->orWhere('date_expires', '=', null)
             ->close()
             ->open()
