@@ -42,6 +42,67 @@ class KuickPaySecretLeakageTest extends TestCase
         }
     }
 
+    public function testForbiddenPatternsCatchDiversePiiAndCredentialFormats()
+    {
+        // AC4 (5.4) positive control: the broadened forbidden patterns must actually
+        // catch real secrets in alternate formats, so the diversified scan is not vacuous.
+        $patterns = $this->fixtureForbiddenPatterns();
+        $realSecrets = [
+            'bare mobile' => '03001234567',
+            'dashed mobile' => '0300-1234567',
+            'spaced mobile' => '0300 1234567',
+            'international mobile' => '+923001234567',
+            'international spaced mobile' => '0092 300 1234567',
+            'dashed cnic' => '12345-1234567-1',
+            'undashed cnic' => '1234512345671',
+        ];
+
+        foreach ($realSecrets as $label => $value) {
+            $this->assertTrue(
+                $this->matchesAnyForbiddenPattern($patterns, $value),
+                'Expected a forbidden pattern to catch ' . $label . ': ' . $value
+            );
+        }
+    }
+
+    public function testForbiddenPatternsIgnoreMixedPlaceholderStyles()
+    {
+        // AC4 (5.4) negative control: clean placeholder styles (mixed) must NOT trip any
+        // pattern, so broadening the scan never false-positives on redacted fixtures.
+        $patterns = $this->fixtureForbiddenPatterns();
+        $placeholders = [
+            '0300XXXXXXX',
+            '0300-XXXXXXX',
+            '0300 XXXXXXX',
+            '+92-3XX-XXXXXXX',
+            'XXXXX-XXXXXXX-X',
+            'XXXXXXXXXXXXX',
+            'REDACTED_MOBILE',
+            'REDACTED_CNIC',
+            'redacted_username',
+            'customer@example.invalid',
+            'xxxx',
+        ];
+
+        foreach ($placeholders as $value) {
+            $this->assertFalse(
+                $this->matchesAnyForbiddenPattern($patterns, $value),
+                'Clean placeholder unexpectedly matched a forbidden pattern: ' . $value
+            );
+        }
+    }
+
+    private function matchesAnyForbiddenPattern(array $patterns, string $value): bool
+    {
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $value) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function captureSingleReconcilePersistence(): array
     {
         $voucher = $this->voucher();
@@ -310,8 +371,14 @@ class KuickPaySecretLeakageTest extends TestCase
             'real username value' => '/<userName>(?!REDACTED_USERNAME<)[^<]+<\/userName>/i',
             'real password value' => '/<password>(?!REDACTED_PASSWORD<)[^<]+<\/password>/i',
             'real institution element' => '/<InstitutionID>(?!INSTITUTION_ID<)[^<]+<\/InstitutionID>/i',
-            'cnic' => '/\b\d{5}-\d{7}-\d\b/',
+            // CNIC in both the dashed and undashed 13-digit forms.
+            'cnic dashed' => '/\b\d{5}-\d{7}-\d\b/',
+            'cnic undashed' => '/\b\d{13}\b/',
+            // Mobile in bare, dashed/spaced, and international (+92 / 0092) forms. Every
+            // pattern is digit-shaped, so X-based placeholders never false-positive.
             'real mobile' => '/\b03\d{9}\b/',
+            'real mobile dashed or spaced' => '/\b03\d{2}[\s-]\d{7}\b/',
+            'real mobile international' => '/(?:\+92|0092)[\s-]?3\d{2}[\s-]?\d{7}\b/',
             'real email' => '/[A-Z0-9._%+-]+@(?!example\.invalid\b)[A-Z0-9.-]+\.[A-Z]{2,}/i',
         ];
     }
