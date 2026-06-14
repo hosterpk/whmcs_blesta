@@ -394,6 +394,34 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertNotContains('evidence.rejected', array_column($audit->events, 0));
     }
 
+    public function testProcessVoucherThreadsGatewayConfigExplicitlyIntoPersistence()
+    {
+        // AC4: gateway_config is threaded structurally through the public
+        // processVoucher() signature rather than read back from a mutable member,
+        // so persistEvidence()'s exception-policy resolution can never deref a null
+        // member (the 3-6 footgun). The config passed here reaches the point of use.
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $outcome = $service->processVoucher(1, 10, $voucher, $client, ['underpayment_policy' => 'manual_review']);
+
+        $this->assertFalse($outcome['error']);
+        $this->assertSame('confirmed_unposted', $outcome['new_status']);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+    }
+
     public function testManualActionSafetyMapsMatchDisplayStateMatrix()
     {
         $this->assertSame(

@@ -101,13 +101,10 @@ class KuickPayReconcileService
 
     public function run(int $company_id, string $trigger_type = 'cron'): array
     {
-        $gateway_config = $this->hasGatewayConfigOverride
-            ? $this->gatewayConfig
-            : ($this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id));
+        $gateway_config = $this->resolveGatewayConfig($company_id);
         if ($gateway_config === null) {
             return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable'];
         }
-        $this->gatewayConfig = $gateway_config;
 
         $owner_token = $this->lockRepository->acquire($company_id, self::LOCK_NAME, self::LOCK_TTL_SECONDS);
         if ($owner_token === null) {
@@ -147,7 +144,7 @@ class KuickPayReconcileService
 
                 $cursor = (int) $voucher->id;
                 $this->runRepository->updateCursor($run_id, $cursor);
-                $outcome = $this->processVoucher($company_id, $run_id, $voucher, $client);
+                $outcome = $this->processVoucher($company_id, $run_id, $voucher, $client, $gateway_config);
                 $counts = $this->countOutcome($counts, $outcome['new_status'], $outcome['error']);
             }
         } catch (Throwable $e) {
@@ -176,13 +173,10 @@ class KuickPayReconcileService
 
     public function reconcileVoucher(int $company_id, int $voucher_id): array
     {
-        $gateway_config = $this->hasGatewayConfigOverride
-            ? $this->gatewayConfig
-            : ($this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id));
+        $gateway_config = $this->resolveGatewayConfig($company_id);
         if ($gateway_config === null) {
             return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable', 'voucher_id' => $voucher_id];
         }
-        $this->gatewayConfig = $gateway_config;
 
         $voucher = $this->voucherRepository->getForCompany($voucher_id, $company_id);
         if (!$voucher) {
@@ -208,7 +202,7 @@ class KuickPayReconcileService
 
             $client = $this->client($gateway_config);
             $counts['total_eligible'] = 1;
-            $outcome = $this->processVoucher($company_id, $run_id, $voucher, $client);
+            $outcome = $this->processVoucher($company_id, $run_id, $voucher, $client, $gateway_config);
             $counts = $this->countOutcome($counts, $outcome['new_status'], $outcome['error']);
 
             if ($outcome['error']) {
@@ -254,13 +248,10 @@ class KuickPayReconcileService
     public function runBulk(int $company_id, string $run_date, string $trigger_type = 'bulk'): array
     {
         $request = $this->buildBulkRequest($run_date);
-        $gateway_config = $this->hasGatewayConfigOverride
-            ? $this->gatewayConfig
-            : ($this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id));
+        $gateway_config = $this->resolveGatewayConfig($company_id);
         if ($gateway_config === null) {
             return ['status' => 'skipped', 'reason' => 'kuickpay_unavailable'];
         }
-        $this->gatewayConfig = $gateway_config;
 
         $owner_token = $this->lockRepository->acquire($company_id, self::LOCK_NAME, self::LOCK_TTL_SECONDS);
         if ($owner_token === null) {
@@ -333,7 +324,7 @@ class KuickPayReconcileService
                 $error = false;
 
                 try {
-                    $new_status = $this->persistEvidence($company_id, $voucher, $evidence);
+                    $new_status = $this->persistEvidence($company_id, $voucher, $evidence, $gateway_config);
 
                     $this->itemRepository->record([
                         'run_id' => $run_id,
@@ -383,7 +374,7 @@ class KuickPayReconcileService
         return ['status' => $status, 'run_id' => $run_id, 'counts' => $counts, 'run_date' => $run_date];
     }
 
-    public function processVoucher(int $company_id, int $run_id, $voucher, $client): array
+    public function processVoucher(int $company_id, int $run_id, $voucher, $client, array $gateway_config): array
     {
         $prior_status = (string) $voucher->status;
         $error = false;
@@ -393,7 +384,7 @@ class KuickPayReconcileService
             $transport = $client->billPaymentInquiry($this->buildInquiryRequest($voucher));
             $evidence = $this->parser->parse($transport, $this->buildParserContext($voucher));
             $redactedTraceId = $evidence->redactedTraceId();
-            $new_status = $this->persistEvidence($company_id, $voucher, $evidence);
+            $new_status = $this->persistEvidence($company_id, $voucher, $evidence, $gateway_config);
 
             $this->itemRepository->record([
                 'run_id' => $run_id,
@@ -472,7 +463,7 @@ class KuickPayReconcileService
         ];
     }
 
-    private function persistEvidence(int $company_id, $voucher, KuickPayEvidence $evidence): string
+    private function persistEvidence(int $company_id, $voucher, KuickPayEvidence $evidence, array $gateway_config): string
     {
         $retry_count = (int) ($voucher->retry_count ?? 0);
         $new_status = $this->mappedStatus((string) $voucher->status, $evidence, $retry_count);
@@ -525,7 +516,7 @@ class KuickPayReconcileService
         }
 
         $reasons = $this->validationErrorsFromSummary($vars['diagnostic_summary']);
-        $resolved_status = $this->resolveExceptionStatus($new_status, $reasons, $this->gatewayConfig);
+        $resolved_status = $this->resolveExceptionStatus($new_status, $reasons, $gateway_config);
         if ($resolved_status !== $new_status) {
             $new_status = $resolved_status;
             $vars['status'] = $resolved_status;
@@ -727,6 +718,27 @@ class KuickPayReconcileService
                 'error_class' => $evidence->errorClass(),
             ],
         ]);
+    }
+
+    /**
+     * Resolves the gateway config for a run entry point.
+     *
+     * The resolved config is then threaded EXPLICITLY down the call chain
+     * (processVoucher -> persistEvidence -> resolveExceptionStatus) rather than
+     * read back from the mutable $this->gatewayConfig member, so correctness no
+     * longer depends on the member being set first (the null-in-production footgun
+     * that bit 3-6). The member remains only a constructor/test override input.
+     *
+     * @param int $company_id The company ID
+     * @return array|null The resolved gateway config, or null when unavailable
+     */
+    private function resolveGatewayConfig(int $company_id): ?array
+    {
+        if ($this->hasGatewayConfigOverride) {
+            return $this->gatewayConfig;
+        }
+
+        return $this->gatewayConfig ?? $this->gatewayConfigForCompany($company_id);
     }
 
     private function gatewayConfigForCompany(int $company_id): ?array
