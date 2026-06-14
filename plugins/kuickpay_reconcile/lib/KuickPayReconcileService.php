@@ -332,6 +332,17 @@ class KuickPayReconcileService
                 } catch (Throwable $e) {
                     $error = true;
                     $new_status = $prior_status;
+
+                    // persistVoucherOutcome() has already rolled back; mirror the
+                    // single-inquiry failure path by recording the failed bulk row on
+                    // a fresh statement after rollback.
+                    $this->recordProcessVoucherFailure(
+                        $company_id,
+                        $run_id,
+                        (int) $voucher->id,
+                        $prior_status,
+                        $evidence->redactedTraceId()
+                    );
                 }
 
                 $counts = $this->countOutcome($counts, $new_status, $error);

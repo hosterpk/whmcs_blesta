@@ -521,6 +521,50 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
     }
 
+    public function testRunBulkRollsBackThenWritesFailureItemAfterRollback()
+    {
+        // AC5.2: the bulk loop must also write the failure item + evidence.error
+        // audit after persistVoucherOutcome() rolls back a failed per-row transaction.
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+        ]);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-matched-paid.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $repo->throwOnEditIfActive = true;
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertTrue($repo->record->begun);
+        $this->assertTrue($repo->record->rolledBack);
+        $this->assertFalse($repo->record->committed);
+        $this->assertSame([], $repo->edits);
+        $this->assertCount(1, $items->items);
+        $this->assertSame('reconcile_exception', $items->items[0]['error_class']);
+        $this->assertSame('kp_trace', $items->items[0]['redacted_trace_id']);
+        $this->assertContains('evidence.error', array_column($audit->events, 0));
+        $this->assertSame(1, $result['counts']['total_errors']);
+    }
+
     public function testManualActionSafetyMapsMatchDisplayStateMatrix()
     {
         $this->assertSame(
