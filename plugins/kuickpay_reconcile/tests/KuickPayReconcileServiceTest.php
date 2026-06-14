@@ -390,7 +390,11 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame('2026-06-09 00:00:00', $voucher->date_paid);
         $this->assertSame([], $repo->edits, 'a racing manual reconcile must not write a demotion');
         // The recorded item/audit reflect the benign actual state, never a false manual_review.
+        $this->assertSame('confirmed_unposted', $items->items[0]['prior_status']);
         $this->assertSame('confirmed_unposted', $items->items[0]['new_status']);
+        $received = $this->firstAuditEvent($audit, 'evidence.received');
+        $this->assertSame('confirmed_unposted', $received['payload']['prior_status']);
+        $this->assertSame('confirmed_unposted', $received['payload']['new_status']);
         $this->assertNotContains('evidence.rejected', array_column($audit->events, 0));
     }
 
@@ -1004,6 +1008,17 @@ class KuickPayReconcileServiceTest extends TestCase
         $property->setAccessible(true);
 
         return $property->getValue($object);
+    }
+
+    private function firstAuditEvent(KuickPayReconcileFakeAuditService $audit, string $eventName): array
+    {
+        foreach ($audit->events as $event) {
+            if ($event[0] === $eventName) {
+                return $event[1];
+            }
+        }
+
+        $this->fail('Missing audit event: ' . $eventName);
     }
 
     private function voucher(array $overrides = [])

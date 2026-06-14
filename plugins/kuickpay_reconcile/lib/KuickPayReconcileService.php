@@ -412,7 +412,9 @@ class KuickPayReconcileService
         $record->begin();
 
         try {
-            $new_status = $this->persistEvidence($company_id, $voucher, $evidence, $gateway_config);
+            $outcome = $this->persistEvidence($company_id, $voucher, $evidence, $gateway_config);
+            $prior_status = $outcome['prior_status'];
+            $new_status = $outcome['new_status'];
 
             $this->itemRepository->record([
                 'run_id' => $run_id,
@@ -425,7 +427,7 @@ class KuickPayReconcileService
                 'date_created' => date('Y-m-d H:i:s'),
             ]);
 
-            $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $new_status);
+            $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $prior_status, $new_status);
 
             $record->commit();
 
@@ -500,7 +502,10 @@ class KuickPayReconcileService
         ];
     }
 
-    private function persistEvidence(int $company_id, $voucher, KuickPayEvidence $evidence, array $gateway_config): string
+    /**
+     * @return array{prior_status:string,new_status:string}
+     */
+    private function persistEvidence(int $company_id, $voucher, KuickPayEvidence $evidence, array $gateway_config): array
     {
         $retry_count = (int) ($voucher->retry_count ?? 0);
         $new_status = $this->mappedStatus((string) $voucher->status, $evidence, $retry_count);
@@ -568,14 +573,15 @@ class KuickPayReconcileService
         if (!$transitioned) {
             // The row already left pending/retry: nothing was written, so this is a
             // benign no-op (never a demotion). Return the voucher's ACTUAL current
-            // status so the item row and audit reflect the real state, never a false
-            // manual_review with a dangling date_paid.
+            // status so the item row and audit reflect the real no-op state, never
+            // a false stale-status -> manual_review demotion.
             $current = $this->voucherRepository->getForCompany((int) $voucher->id, $company_id);
+            $current_status = $current ? (string) ($current->status ?? $new_status) : (string) $voucher->status;
 
-            return $current ? (string) ($current->status ?? $new_status) : $new_status;
+            return ['prior_status' => $current_status, 'new_status' => $current_status];
         }
 
-        return $new_status;
+        return ['prior_status' => (string) $voucher->status, 'new_status' => $new_status];
     }
 
     private function mappedStatus(string $current_status, KuickPayEvidence $evidence, int $retry_count): string
@@ -659,6 +665,7 @@ class KuickPayReconcileService
         int $run_id,
         $voucher,
         KuickPayEvidence $evidence,
+        string $prior_status,
         string $new_status
     ): void {
         $context = [
@@ -668,7 +675,7 @@ class KuickPayReconcileService
             'redacted_trace_id' => $evidence->redactedTraceId(),
             'evidence_hash' => $evidence->evidenceHash(),
             'payload' => [
-                'prior_status' => (string) $voucher->status,
+                'prior_status' => $prior_status,
                 'new_status' => $new_status,
                 'error_class' => $evidence->errorClass(),
             ],
