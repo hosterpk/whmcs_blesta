@@ -6,7 +6,7 @@ baseline_commit: b20b2a9f14cfa806588363654e8fe4364430d4a8
 
 # Story 5.3: Reconcile and Posting Safety Hardening
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -112,12 +112,12 @@ _Closes: `deferred-work.md` 4-3 `:435` guard, single-inquiry paid-date (AI-3), r
 
 ### Review Findings
 
-- [ ] [Review][Patch] Fresh install adds `posting_attempts` before the voucher table exists [plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php:96]
-- [ ] [Review][Patch] AC1 no-op path records stale prior status instead of a true no-op [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:410]
-- [ ] [Review][Patch] Bulk reconcile rollback path drops the required failure item and audit [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:332]
-- [ ] [Review][Patch] Lock duplicate detection treats all SQLSTATE 23000 errors as held locks [plugins/kuickpay_reconcile/models/kuickpay_reconcile_locks.php:47]
-- [ ] [Review][Patch] Transaction adoption can still choose a duplicate with no matching application [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:308]
-- [ ] [Review][Patch] Transaction adoption fallback reintroduces the unordered core lookup risk [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:291]
+- [x] [Review][Patch] Fresh install adds `posting_attempts` before the voucher table exists [plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php:96] — dismissed on re-check: `install()` creates `kuickpay_vouchers` before `addPostingAttemptsColumn()`.
+- [x] [Review][Patch] AC1 no-op path records stale prior status instead of a true no-op [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:410] — fixed in `47e2ddce`.
+- [x] [Review][Patch] Bulk reconcile rollback path drops the required failure item and audit [plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php:332] — fixed in `01682753`.
+- [x] [Review][Patch] Lock duplicate detection treats all SQLSTATE 23000 errors as held locks [plugins/kuickpay_reconcile/models/kuickpay_reconcile_locks.php:47] — fixed in `94197e23`.
+- [x] [Review][Patch] Transaction adoption can still choose a duplicate with no matching application [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:308] — fixed in `e84bbcde`.
+- [x] [Review][Patch] Transaction adoption fallback reintroduces the unordered core lookup risk [plugins/kuickpay_reconcile/lib/KuickPayPostingService.php:291] — fixed in `e84bbcde`.
 
 ## Dev Notes
 

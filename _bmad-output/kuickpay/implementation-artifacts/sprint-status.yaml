@@ -136,7 +136,7 @@ development_status:
   epic-5: in-progress
   5-1-stand-up-the-live-verification-stack-and-prove-a-real-reconcile-post-round-trip: done
   5-2-schema-level-active-context-concurrency-guard: done
-  5-3-reconcile-and-posting-safety-hardening: review
+  5-3-reconcile-and-posting-safety-hardening: done
   5-4-audit-logging-and-redaction-completeness: backlog
   5-5-structural-company-scoping-and-test-fidelity-guarantees: backlog
   5-6-gateway-settings-and-endpoint-hardening: backlog
