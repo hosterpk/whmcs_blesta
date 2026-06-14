@@ -139,6 +139,42 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame([$winnerId], $repository->activeVoucherIds());
     }
 
+    public function testCreateFallThroughSetsCreateFailedDiagnosticAndDurableAudit()
+    {
+        // AC2 (5.4): the genuine create fall-through — create() returns falsy AND the
+        // race-recovery re-lookup finds no winner — must set a 'create_failed'
+        // diagnostic (so the gateway emits a non-null reason) and leave a durable
+        // audit breadcrumb. A posted voucher holds the active-context slot forever, so
+        // the create collides (returns null) and no PENDING winner exists on re-lookup.
+        $repository = new KuickPayVoucherReferenceFakeRepository();
+        $winnerId = $repository->seedActiveVoucher([
+            'company_id' => 1,
+            'status' => 'posted',
+            'context_key' => sha1('55'),
+            'registration_number' => 'PAID55',
+            'consumer_number' => 'KPPAID55',
+            'invoices' => [['invoice_id' => 55, 'amount' => '1000.00']],
+        ]);
+        $repository->hidePendingUntilCreateAttempted = true;
+        $audit = new KuickPayVoucherReferenceFakeAuditService();
+
+        $service = new KuickPayVoucherReferenceService($repository, $audit);
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'invoice_amounts' => [['id' => 55, 'amount' => '1000.00']],
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame(1, $repository->createCalls);
+        $this->assertSame([$winnerId], $repository->activeVoucherIds());
+        $this->assertSame('create_failed', $service->getLastError());
+        $this->assertSame('voucher.generation_failed', $audit->events[0][0]);
+        $this->assertNull($audit->events[0][1]['voucher_id']);
+        $this->assertSame([
+            'reason' => 'create_failed',
+            'invoice_id' => 55,
+        ], $audit->events[0][1]['payload']);
+    }
+
     public function testReleasedContextSlotAllowsAFreshActiveVoucher()
     {
         // A cancelled winner releases the slot (active_context_key → NULL), so a

@@ -189,6 +189,15 @@ class KuickPayVoucherReferenceService
             if ($pending) {
                 return $this->flatten($this->repository->getWithInvoices((int) $pending->id));
             }
+
+            // Genuine create fall-through: create() returned falsy AND the
+            // race-recovery re-lookup found no concurrent winner. Leave a sanitized
+            // diagnostic so the gateway's recordReferenceGenerationFailure() emits a
+            // non-null reason, plus a durable audit breadcrumb (symmetric with the
+            // uniqueness_exhausted emit above) — no failure is traceless. This is NOT
+            // reached on the race-recovery return above or the outer catch below.
+            $this->lastError = 'create_failed';
+            $this->recordGenerationFailed($company_id, $invoice_id, $this->lastError);
         } catch (Throwable $e) {
             return null;
         }
