@@ -16,6 +16,8 @@ require_once __DIR__ . '/../lib/KuickPayVoucherReferenceService.php';
 if (!class_exists('AppModel')) {
     class AppModel
     {
+        /** @var mixed The Blesta Record query builder (Loader-injected at runtime). */
+        public $Record;
     }
 }
 require_once __DIR__ . '/../kuickpay_reconcile_model.php';
