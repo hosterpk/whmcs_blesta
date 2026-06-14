@@ -565,6 +565,106 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(1, $result['counts']['total_errors']);
     }
 
+    public function testRunBulkPerVoucherExceptionAuditsEvidenceErrorSymmetricWithSinglePath()
+    {
+        // AC1 (5.4): lock the bulk/single symmetry 5.3 established (commit 01682753).
+        // A per-Voucher exception inside the bulk loop must leave the SAME durable
+        // trace the single processVoucher() path leaves: an evidence.error audit
+        // keyed to the voucher_id/run_id AND a kuickpay_reconciliation_items row
+        // tagged error_class='reconcile_exception'. A future refactor that drops
+        // either side, or audits only the single path, must fail here.
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+        ]);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-matched-paid.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $repo->throwOnEditIfActive = true;
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('completed', $result['status']);
+
+        // (a) evidence.error audit event, run-scoped to THIS voucher.
+        $event = $this->firstAuditEvent($audit, 'evidence.error');
+        $this->assertSame((int) $voucher->id, $event['voucher_id']);
+        $this->assertSame(10, $event['run_id']);
+        $this->assertSame('reconcile_exception', $event['payload']['error_class']);
+
+        // (b) reconciliation item row tagged reconcile_exception for THIS voucher.
+        $this->assertCount(1, $items->items);
+        $this->assertSame('reconcile_exception', $items->items[0]['error_class']);
+        $this->assertSame((int) $voucher->id, $items->items[0]['voucher_id']);
+        $this->assertSame(10, $items->items[0]['run_id']);
+    }
+
+    public function testRunBulkFailureItemCollisionWithPriorRowIsSwallowedAndRunCompletes()
+    {
+        // AC1 (5.4): the failure-path item write is best-effort. When it collides
+        // with a prior (run_id, voucher_id) row on uniq_kuickpay_items_run_voucher,
+        // recordProcessVoucherFailure()'s inner try/catch must swallow it so one
+        // voucher's bookkeeping collision never demotes the run to 'failed'.
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+        ]);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-matched-paid.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        // The per-row transaction writes the success item, then the commit fails:
+        // persistVoucherOutcome() rolls back and rethrows, so the bulk catch runs the
+        // failure path for a (run_id, voucher_id) the item store has already seen.
+        $repo->record->throwOnCommit = true;
+        $items = new KuickPayReconcileFakeUniqueItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        // The unique-key collision on the 2nd insert was swallowed; the run still
+        // completed rather than aborting.
+        $this->assertSame('completed', $result['status']);
+        $this->assertTrue($repo->record->rolledBack);
+        // Two insert attempts (in-transaction success item + failure-path item), but
+        // only the first persisted; the second tripped the unique key and was caught.
+        $this->assertSame(2, $items->recordCalls);
+        $this->assertCount(1, $items->items);
+        // The best-effort evidence.error audit still fired after the swallowed collision.
+        $this->assertContains('evidence.error', array_column($audit->events, 0));
+    }
+
     public function testManualActionSafetyMapsMatchDisplayStateMatrix()
     {
         $this->assertSame(
@@ -1324,6 +1424,7 @@ class KuickPayReconcileFakeRecord
     public bool $begun = false;
     public bool $committed = false;
     public bool $rolledBack = false;
+    public bool $throwOnCommit = false;
 
     public function begin(): void
     {
@@ -1332,6 +1433,13 @@ class KuickPayReconcileFakeRecord
 
     public function commit(): void
     {
+        if ($this->throwOnCommit) {
+            // Model a DB-level commit failure AFTER the in-transaction item + audit
+            // writes already executed, so the failure path runs for a
+            // (run_id, voucher_id) the item store has already recorded.
+            throw new RuntimeException('simulated commit failure');
+        }
+
         $this->committed = true;
     }
 
@@ -1439,6 +1547,31 @@ class KuickPayReconcileFakeItemRepository
 
     public function record(array $vars): void
     {
+        $this->items[] = $vars;
+    }
+}
+
+/**
+ * Item-repository fake that models the (run_id, voucher_id) unique key
+ * (uniq_kuickpay_items_run_voucher): a second insert for the same pair throws,
+ * exactly as the real schema would, so a test can prove the failure-path write
+ * swallows the collision instead of aborting the run.
+ */
+class KuickPayReconcileFakeUniqueItemRepository
+{
+    public array $items = [];
+    public int $recordCalls = 0;
+    private array $seen = [];
+
+    public function record(array $vars): void
+    {
+        $this->recordCalls++;
+        $key = (int) ($vars['run_id'] ?? 0) . ':' . (int) ($vars['voucher_id'] ?? 0);
+        if (isset($this->seen[$key])) {
+            throw new RuntimeException('Duplicate entry for key uniq_kuickpay_items_run_voucher');
+        }
+
+        $this->seen[$key] = true;
         $this->items[] = $vars;
     }
 }
