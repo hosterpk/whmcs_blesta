@@ -50,8 +50,8 @@ class KuickPayReconciliationRunRepository
         $this->KuickpayReconciliationRuns->edit($run_id, ['cursor' => $cursor]);
     }
 
-    public function getResumeCursor(int $company_id): int
+    public function getResumeCursor(int $company_id, string $trigger_type = 'cron'): int
     {
-        return $this->KuickpayReconciliationRuns->getResumeCursor($company_id);
+        return $this->KuickpayReconciliationRuns->getResumeCursor($company_id, $trigger_type);
     }
 }

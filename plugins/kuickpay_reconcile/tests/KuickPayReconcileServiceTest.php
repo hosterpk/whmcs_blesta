@@ -551,6 +551,10 @@ class KuickPayReconcileServiceTest extends TestCase
 
         $this->assertSame(5, $repo->lastAfterId);
         $this->assertSame(0, $run->closedCursor);
+        // AC4.4: the cron run resolves its resume cursor scoped to its own
+        // trigger_type, never a hard-coded 'cron' regardless of the caller.
+        $this->assertSame(1, $run->resumeCalls);
+        $this->assertSame('cron', $run->resumeTriggerType);
     }
 
     public function testRunBulkHappyPathMatchesByConsumerNumberAndQueuesConfirmed()
@@ -1193,6 +1197,7 @@ class KuickPayReconcileFakeRunRepository
     public int $opened = 0;
     public int $closedCursor = -1;
     public int $resumeCalls = 0;
+    public ?string $resumeTriggerType = null;
     public ?string $openedBulkDate = null;
     public ?string $openedTriggerType = null;
     public ?int $openedCursor = null;
@@ -1204,9 +1209,10 @@ class KuickPayReconcileFakeRunRepository
         $this->resumeCursor = $resumeCursor;
     }
 
-    public function getResumeCursor(int $company_id): int
+    public function getResumeCursor(int $company_id, string $trigger_type = 'cron'): int
     {
         $this->resumeCalls++;
+        $this->resumeTriggerType = $trigger_type;
 
         return $this->resumeCursor;
     }

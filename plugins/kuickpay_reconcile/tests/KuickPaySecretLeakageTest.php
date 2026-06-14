@@ -539,7 +539,7 @@ class KuickPaySecretLeakageRunRepository
 {
     public array $summaries = [];
 
-    public function getResumeCursor(int $company_id): int
+    public function getResumeCursor(int $company_id, string $trigger_type = 'cron'): int
     {
         return 0;
     }

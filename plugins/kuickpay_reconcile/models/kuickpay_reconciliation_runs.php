@@ -68,12 +68,24 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
         $this->Record->where('id', '=', $run_id)->update('kuickpay_reconciliation_runs', $vars, self::FIELDS);
     }
 
-    public function getResumeCursor(int $company_id): int
+    /**
+     * Returns the resume cursor for the most recent aborted run of a given
+     * trigger type.
+     *
+     * Scoped by $trigger_type (not hard-coded 'cron') so a non-cron caller of the
+     * shared run() entry can never inherit a prior aborted cron run's cursor and
+     * silently skip low-id eligible vouchers.
+     *
+     * @param int $company_id The company ID
+     * @param string $trigger_type The run trigger type to resume within
+     * @return int The resume cursor, or 0 when none applies
+     */
+    public function getResumeCursor(int $company_id, string $trigger_type = 'cron'): int
     {
         $run = $this->Record->select()
             ->from('kuickpay_reconciliation_runs')
             ->where('company_id', '=', $company_id)
-            ->where('trigger_type', '=', 'cron')
+            ->where('trigger_type', '=', $trigger_type)
             ->where('status', '=', 'aborted')
             ->where('cursor', '!=', null)
             ->order(['id' => 'DESC'])

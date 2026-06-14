@@ -118,8 +118,10 @@ class KuickPayReconcileService
         $start = time();
 
         try {
-            // Resolve the resume cursor inside the try so any failure still releases the lock below.
-            $cursor = $this->runRepository->getResumeCursor($company_id);
+            // Resolve the resume cursor inside the try so any failure still releases
+            // the lock below. Scope it to THIS run's trigger_type so a non-cron caller
+            // of the shared run() entry can never inherit a prior aborted cron cursor.
+            $cursor = $this->runRepository->getResumeCursor($company_id, $trigger_type);
             $run_id = $this->runRepository->open($company_id, $trigger_type, $cursor);
             $this->auditService->record('reconciliation.run.started', [
                 'company_id' => $company_id,
