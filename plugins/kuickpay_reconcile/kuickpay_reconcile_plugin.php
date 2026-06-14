@@ -409,11 +409,30 @@ class KuickpayReconcilePlugin extends Plugin
     private function addPostingAttemptsColumn()
     {
         if (!$this->columnExists('kuickpay_vouchers', 'posting_attempts')) {
-            $this->Record->query(
-                'ALTER TABLE `kuickpay_vouchers`'
-                . ' ADD `posting_attempts` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `retry_count`'
-            );
+            $this->Record->query(self::postingAttemptsColumnSql('kuickpay_vouchers'));
         }
+    }
+
+    /**
+     * Returns the table-parameterized ALTER for the Story 5.3 posting_attempts
+     * column.
+     *
+     * Shared by addPostingAttemptsColumn() and the integration harness so the
+     * fresh-install/upgrade DDL comparison is checked against the SAME SQL the
+     * production guard runs — drift between test evidence and the real migration
+     * fails by construction.
+     *
+     * @param string $table Table name to alter
+     * @return string The ALTER statement
+     */
+    public static function postingAttemptsColumnSql($table = 'kuickpay_vouchers'): string
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', (string) $table)) {
+            throw new InvalidArgumentException('Invalid KuickPay voucher table name.');
+        }
+
+        return 'ALTER TABLE `' . $table . '`'
+            . ' ADD `posting_attempts` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `retry_count`';
     }
 
     /**
