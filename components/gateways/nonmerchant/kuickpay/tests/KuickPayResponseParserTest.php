@@ -235,6 +235,27 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame('KP-REF-PAID', $evidence->reference());
     }
 
+    public function testBillPaymentInquiryConfirmWithMissingPaidDateFailsClosed()
+    {
+        // Amount, currency and identity all match, but the Transaction_Date
+        // (field 2) is present-but-empty, so the row cannot be confirmed (it would
+        // sit confirmed_unposted forever, never posting). Mirror the bulk guard and
+        // fail closed to manual review at parse time. Field order:
+        // status,registration,date,amount,txnRef,reference,currency.
+        $evidence = $this->parser()->parse(
+            $this->outcome('BillPaymentInquiry', '00,REG-0000001,,1000.00,1234567890,KP-REF-PAID,PKR'),
+            [
+                'expected_amount' => '1000.00',
+                'expected_currency' => 'PKR',
+                'expected_consumer_number' => 'REG-0000001',
+            ]
+        );
+
+        $this->assertEvidence('manual_review', null, $evidence);
+        $this->assertSame(['missing_paid_date'], $evidence->validationErrors());
+        $this->assertNull($evidence->paidAt());
+    }
+
     public function testBulkTransportFailureReturnsSingleRetryEvidence()
     {
         $evidence = $this->parser()->parseBulk([

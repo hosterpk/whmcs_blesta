@@ -549,6 +549,23 @@ class KuickPayResponseParser
             );
         }
 
+        // A confirmed single-inquiry row needs a usable paid date. persistEvidence
+        // stores it as date_paid, and the posting cron (getPostable) only posts
+        // vouchers whose date_paid is non-null. A matched, amount-correct row
+        // carrying an empty or unparseable Transaction_Date (field 2) would
+        // otherwise sit in confirmed_unposted forever -- never posting and never
+        // surfaced for review. Fail closed to manual review, mirroring parseBulk().
+        if ($this->normalizeDate($fields[2] ?? '') === null) {
+            return $this->inquiryEvidence(
+                self::STATUS_MANUAL_REVIEW,
+                null,
+                $fields,
+                $rawStatus,
+                $transportOutcome,
+                ['missing_paid_date']
+            );
+        }
+
         return $this->inquiryEvidence(
             self::STATUS_CONFIRMED_UNPOSTED,
             null,
