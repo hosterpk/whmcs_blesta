@@ -760,6 +760,16 @@ class KuickPaySecretLeakageTransactions
         return false;
     }
 
+    public function getList(
+        $client_id = null,
+        $status = 'approved',
+        $page = 1,
+        $order_by = ['date_added' => 'DESC'],
+        array $filters = []
+    ): array {
+        return [];
+    }
+
     public function add(array $vars)
     {
         return null;

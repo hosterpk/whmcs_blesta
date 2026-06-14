@@ -134,11 +134,7 @@ class KuickPayPostingService
                 return $this->result($voucher_id, 'manual_review');
             }
 
-            $existing = $this->transactions->getByTransactionId(
-                (string) $lockedVoucher->kuickpay_reference,
-                (int) $lockedVoucher->client_id,
-                (int) $lockedVoucher->gateway_id
-            );
+            $existing = $this->findAdoptableTransaction($lockedVoucher, $lockedLinks);
 
             if ($existing) {
                 $this->recordStartedAudit($company_id, $lockedVoucher, 'adopt_existing');
@@ -243,6 +239,73 @@ class KuickPayPostingService
         }
 
         return $this->result($voucher_id, 'failed');
+    }
+
+    /**
+     * Selects the transaction to adopt for a confirmed voucher's reference.
+     *
+     * Core's getByTransactionId() does a single un-ordered fetch, so if two
+     * approved transactions ever share the reference for one client+gateway it can
+     * hand back the wrong row. Instead, enumerate the approved candidates
+     * (company-scoped via getList), keep only exact reference/client/gateway
+     * matches, order them most-recent-first (date_added DESC, id DESC) and prefer
+     * one whose applied allocations already match the voucher links, so a
+     * duplicate reference cannot cause adoption of the wrong row. Falls back to the
+     * core exact single-fetch when enumeration yields no exact match, preserving
+     * the existing single-transaction behavior. kuickpay_reference is per-Voucher
+     * unique, so this is low-likelihood hardening (deferred-work.md:110); core is
+     * NOT edited.
+     *
+     * @param mixed $voucher The locked voucher row
+     * @param array $links The locked invoice links
+     * @return mixed The transaction to adopt, or false when none exists
+     */
+    private function findAdoptableTransaction($voucher, array $links)
+    {
+        $reference = (string) $voucher->kuickpay_reference;
+        $client_id = (int) $voucher->client_id;
+        $gateway_id = (int) $voucher->gateway_id;
+
+        $candidates = $this->transactions->getList(
+            $client_id,
+            'approved',
+            1,
+            ['date_added' => 'DESC'],
+            ['transaction_id' => $reference]
+        );
+
+        $matches = [];
+        foreach ((is_array($candidates) ? $candidates : []) as $candidate) {
+            if ((string) ($candidate->transaction_id ?? '') === $reference
+                && (int) ($candidate->client_id ?? 0) === $client_id
+                && (int) ($candidate->gateway_id ?? 0) === $gateway_id
+                && (string) ($candidate->status ?? '') === 'approved'
+            ) {
+                $matches[] = $candidate;
+            }
+        }
+
+        if (empty($matches)) {
+            // No enumerated exact match: fall back to the core exact single-fetch so
+            // a lone existing transaction is still adopted (behavior preserved).
+            return $this->transactions->getByTransactionId($reference, $client_id, $gateway_id) ?: false;
+        }
+
+        usort($matches, function ($a, $b) {
+            $byDate = strcmp((string) ($b->date_added ?? ''), (string) ($a->date_added ?? ''));
+
+            return $byDate !== 0 ? $byDate : ((int) ($b->id ?? 0) <=> (int) ($a->id ?? 0));
+        });
+
+        // Prefer a candidate whose applied allocations already match the voucher
+        // links, so a same-reference duplicate cannot cause adoption of a wrong row.
+        foreach ($matches as $candidate) {
+            if ($this->appliedMatches((int) $candidate->id, $links)) {
+                return $candidate;
+            }
+        }
+
+        return $matches[0];
     }
 
     private function adoptExistingTransaction($transaction, $voucher, array $links): array

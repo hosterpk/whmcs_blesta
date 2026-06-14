@@ -315,6 +315,51 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame('posted', $repo->edits[0]['status']);
     }
 
+    public function testAdoptionPicksMostRecentApprovedAppliedWhenMultipleShareReference()
+    {
+        // AC5.5: when more than one approved transaction shares the reference for
+        // one client+gateway, adoption must select the already-applied candidate
+        // (whose allocations match the voucher links) -- never an arbitrary single
+        // fetch. Here the NEWER candidate is mis-applied (would fail adoption) and
+        // the older one is correctly applied; the helper must pick the older one.
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $transactions->listResults = [
+            (object) [
+                'id' => 900,
+                'transaction_id' => 'KP-REF-PAID',
+                'client_id' => 10,
+                'gateway_id' => 20,
+                'amount' => '1000.00',
+                'currency' => 'PKR',
+                'status' => 'approved',
+                'date_added' => '2026-06-09 10:00:00',
+            ],
+            (object) [
+                'id' => 800,
+                'transaction_id' => 'KP-REF-PAID',
+                'client_id' => 10,
+                'gateway_id' => 20,
+                'amount' => '1000.00',
+                'currency' => 'PKR',
+                'status' => 'approved',
+                'date_added' => '2026-06-09 09:00:00',
+            ],
+        ];
+        $transactions->appliedByTransaction = [
+            900 => [(object) ['invoice_id' => 99, 'applied_amount' => '1000.00']],
+            800 => [(object) ['invoice_id' => 55, 'applied_amount' => '1000.00']],
+        ];
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('posted', $result['outcome']);
+        $this->assertSame(800, $result['blesta_transaction_id']);
+        $this->assertSame([], $transactions->adds, 'an existing transaction is adopted, never re-created');
+        $this->assertSame(800, $repo->edits[0]['blesta_transaction_id']);
+    }
+
     public function testExistingMismatchedTransactionMovesToManualReview()
     {
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
@@ -692,6 +737,8 @@ class KuickPayPostingFakeTransactions
     public array $applies = [];
     public array $applied = [];
     public $existing = false;
+    public array $listResults = [];
+    public array $appliedByTransaction = [];
     public array $addErrors = [];
     public array $applyErrors = [];
     public bool $autoApplyToApplied = false;
@@ -700,6 +747,18 @@ class KuickPayPostingFakeTransactions
     public function getByTransactionId($transaction_id, $client_id = null, $gateway_id = null)
     {
         return $this->existing;
+    }
+
+    public function getList(
+        $client_id = null,
+        $status = 'approved',
+        $page = 1,
+        $order_by = ['date_added' => 'DESC'],
+        array $filters = []
+    ): array {
+        // The service narrows by exact reference/gateway/status itself; return the
+        // configured candidate set unfiltered (mirrors getList's broad partial match).
+        return $this->listResults;
     }
 
     public function add(array $vars)
@@ -727,7 +786,9 @@ class KuickPayPostingFakeTransactions
 
     public function getApplied($transaction_id = null, $invoice_id = null): array
     {
-        return $this->applied;
+        // Per-transaction applied sets let a multi-candidate adoption test model
+        // different allocations per candidate; fall back to the shared set.
+        return $this->appliedByTransaction[(int) $transaction_id] ?? $this->applied;
     }
 
     public function errors(): array
