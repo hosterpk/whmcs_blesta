@@ -326,20 +326,9 @@ class KuickPayReconcileService
                 $error = false;
 
                 try {
-                    $new_status = $this->persistEvidence($company_id, $voucher, $evidence, $gateway_config);
-
-                    $this->itemRepository->record([
-                        'run_id' => $run_id,
-                        'voucher_id' => (int) $voucher->id,
-                        'prior_status' => $prior_status,
-                        'new_status' => $new_status,
-                        'error_class' => $evidence->errorClass(),
-                        'evidence_hash' => $evidence->evidenceHash(),
-                        'redacted_trace_id' => $evidence->redactedTraceId(),
-                        'date_created' => date('Y-m-d H:i:s'),
-                    ]);
-
-                    $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $new_status);
+                    // Per-Voucher transaction (AC5.1): Voucher edit + item + audit
+                    // commit or roll back together, same as the scheduled single path.
+                    $new_status = $this->persistVoucherOutcome($company_id, $run_id, $voucher, $evidence, $gateway_config);
                 } catch (Throwable $e) {
                     $error = true;
                     $new_status = $prior_status;
@@ -386,6 +375,43 @@ class KuickPayReconcileService
             $transport = $client->billPaymentInquiry($this->buildInquiryRequest($voucher));
             $evidence = $this->parser->parse($transport, $this->buildParserContext($voucher));
             $redactedTraceId = $evidence->redactedTraceId();
+
+            $new_status = $this->persistVoucherOutcome($company_id, $run_id, $voucher, $evidence, $gateway_config);
+
+            return ['new_status' => $new_status, 'error' => false];
+        } catch (Throwable $e) {
+            $error = true;
+            $new_status = $prior_status;
+
+            // The transaction (if any) has already rolled back inside
+            // persistVoucherOutcome(); write the failure-path item + audit on a
+            // fresh statement so a partial reconcile never leaves a mutated Voucher
+            // with a missing item/audit. One voucher's failure must not abort the batch.
+            $this->recordProcessVoucherFailure($company_id, $run_id, (int) $voucher->id, $prior_status, $redactedTraceId);
+        }
+
+        return ['new_status' => $new_status, 'error' => $error];
+    }
+
+    /**
+     * Persists a Voucher's reconcile outcome (Voucher edit + item + audit) inside
+     * a single DB transaction.
+     *
+     * The three writes commit together or roll back together, so a crash between
+     * them can never leave a mutated Voucher with a missing item/audit (AC5.1).
+     * Every call inside the block is non-transacting (edit/transition, read,
+     * item record, audit record) -- no nested transaction, no self-transacting
+     * create() that would commit early and drop the lock (Blesta footgun).
+     *
+     * @return string The persisted new status
+     */
+    private function persistVoucherOutcome(int $company_id, int $run_id, $voucher, KuickPayEvidence $evidence, array $gateway_config): string
+    {
+        $prior_status = (string) $voucher->status;
+        $record = $this->voucherRepository->record();
+        $record->begin();
+
+        try {
             $new_status = $this->persistEvidence($company_id, $voucher, $evidence, $gateway_config);
 
             $this->itemRepository->record([
@@ -401,39 +427,48 @@ class KuickPayReconcileService
 
             $this->recordEvidenceAudit($company_id, $run_id, $voucher, $evidence, $new_status);
 
-            return ['new_status' => $new_status, 'error' => false];
+            $record->commit();
+
+            return $new_status;
         } catch (Throwable $e) {
-            $error = true;
-            $new_status = $prior_status;
+            $record->rollBack();
 
-            try {
-                $this->itemRepository->record([
-                    'run_id' => $run_id,
-                    'voucher_id' => (int) $voucher->id,
-                    'prior_status' => $prior_status,
-                    'new_status' => $new_status,
-                    'error_class' => 'reconcile_exception',
-                    'redacted_trace_id' => $redactedTraceId,
-                    'date_created' => date('Y-m-d H:i:s'),
-                ]);
-            } catch (Throwable $recordError) {
-                // One voucher's failed item write must not abort the rest of the batch.
-            }
+            throw $e;
+        }
+    }
 
-            try {
-                $this->auditService->record('evidence.error', [
-                    'company_id' => $company_id,
-                    'voucher_id' => (int) $voucher->id,
-                    'run_id' => $run_id,
-                    'redacted_trace_id' => $redactedTraceId,
-                    'payload' => ['error_class' => 'reconcile_exception'],
-                ]);
-            } catch (Throwable $auditError) {
-                // Audit writes must not abort the rest of the batch.
-            }
+    private function recordProcessVoucherFailure(
+        int $company_id,
+        int $run_id,
+        int $voucher_id,
+        string $prior_status,
+        string $redactedTraceId
+    ): void {
+        try {
+            $this->itemRepository->record([
+                'run_id' => $run_id,
+                'voucher_id' => $voucher_id,
+                'prior_status' => $prior_status,
+                'new_status' => $prior_status,
+                'error_class' => 'reconcile_exception',
+                'redacted_trace_id' => $redactedTraceId,
+                'date_created' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (Throwable $recordError) {
+            // One voucher's failed item write must not abort the rest of the batch.
         }
 
-        return ['new_status' => $new_status, 'error' => $error];
+        try {
+            $this->auditService->record('evidence.error', [
+                'company_id' => $company_id,
+                'voucher_id' => $voucher_id,
+                'run_id' => $run_id,
+                'redacted_trace_id' => $redactedTraceId,
+                'payload' => ['error_class' => 'reconcile_exception'],
+            ]);
+        } catch (Throwable $auditError) {
+            // Audit writes must not abort the rest of the batch.
+        }
     }
 
     public function buildInquiryRequest($voucher): array

@@ -438,6 +438,7 @@ class KuickPaySecretLeakageTest extends TestCase
 class KuickPaySecretLeakageVoucherRepository
 {
     public array $edits = [];
+    public KuickPaySecretLeakageRecord $record;
     private array $vouchers;
     private array $invoiceLinks;
 
@@ -445,6 +446,12 @@ class KuickPaySecretLeakageVoucherRepository
     {
         $this->vouchers = $vouchers;
         $this->invoiceLinks = $invoiceLinks;
+        $this->record = new KuickPaySecretLeakageRecord();
+    }
+
+    public function record(): KuickPaySecretLeakageRecord
+    {
+        return $this->record;
     }
 
     public function getReconcilable(int $company_id, int $limit, int $afterId = 0, string $minRecheckBefore = null): array

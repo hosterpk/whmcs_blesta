@@ -422,6 +422,101 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
     }
 
+    public function testProcessVoucherWrapsPerVoucherWritesInACommittedTransaction()
+    {
+        // AC5.1: the three per-Voucher writes (edit + item + audit) execute inside
+        // one DB transaction; the happy path commits and never rolls back.
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $items = new KuickPayReconcileFakeItemRepository();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $service->runCron(1);
+
+        $this->assertTrue($repo->record->begun);
+        $this->assertTrue($repo->record->committed);
+        $this->assertFalse($repo->record->rolledBack);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+        $this->assertSame('confirmed_unposted', $items->items[0]['new_status']);
+    }
+
+    public function testProcessVoucherRollsBackThenWritesFailureItemAfterRollback()
+    {
+        // AC5.1/5.2: a write failure inside the wrapped block rolls the transaction
+        // back, and the failure-path item + evidence.error audit are written on a
+        // FRESH statement after the rollBack() (mirroring the posting service).
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-pending.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $repo->throwOnEditIfActive = true;
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+        ]);
+
+        $service->runCron(1);
+
+        $this->assertTrue($repo->record->begun);
+        $this->assertTrue($repo->record->rolledBack);
+        $this->assertFalse($repo->record->committed);
+        // No success-path edit landed; only the failure-path item + audit remain.
+        $this->assertSame([], $repo->edits);
+        $this->assertCount(1, $items->items);
+        $this->assertSame('reconcile_exception', $items->items[0]['error_class']);
+        $this->assertContains('evidence.error', array_column($audit->events, 0));
+    }
+
+    public function testRunBulkWrapsEachRowWriteInACommittedTransaction()
+    {
+        // AC5.1: the bulk loop's per-Voucher writes are wrapped in a transaction too.
+        $voucher = $this->voucher([
+            'registration_number' => '1234INVOICE_ID',
+            'consumer_number' => 'INSTITUTION_ID1234INVOICE_ID',
+        ]);
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome(
+                $this->bulkFixtureResult('valid/bill-payment-bulk-matched-paid.xml'),
+                'BillPaymentBulkInquiry'
+            ),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->runBulk(1, '2026-06-09');
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertTrue($repo->record->begun);
+        $this->assertTrue($repo->record->committed);
+        $this->assertFalse($repo->record->rolledBack);
+        $this->assertSame('confirmed_unposted', $repo->edits[0]['status']);
+    }
+
     public function testManualActionSafetyMapsMatchDisplayStateMatrix()
     {
         $this->assertSame(
@@ -987,6 +1082,8 @@ class KuickPayReconcileFakeVoucherRepository
     public ?stdClass $activeSibling = null;
     public ?bool $forcedExpireResult = null;
     public ?array $raceFlipOnGetWithInvoices = null;
+    public bool $throwOnEditIfActive = false;
+    public KuickPayReconcileFakeRecord $record;
     private array $vouchers;
     private array $invoiceLinks;
 
@@ -994,6 +1091,12 @@ class KuickPayReconcileFakeVoucherRepository
     {
         $this->vouchers = $vouchers;
         $this->invoiceLinks = $invoiceLinks;
+        $this->record = new KuickPayReconcileFakeRecord();
+    }
+
+    public function record(): KuickPayReconcileFakeRecord
+    {
+        return $this->record;
     }
 
     public function getReconcilable(int $company_id, int $limit, int $afterId = 0, string $minRecheckBefore = null): array
@@ -1075,6 +1178,10 @@ class KuickPayReconcileFakeVoucherRepository
 
     public function editIfActive(int $voucher_id, int $company_id, array $vars): bool
     {
+        if ($this->throwOnEditIfActive) {
+            throw new RuntimeException('simulated voucher write failure');
+        }
+
         foreach ($this->vouchers as $voucher) {
             if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
                 // Faithfully model the status-guarded UPDATE: a row that already
@@ -1150,6 +1257,28 @@ class KuickPayReconcileFakeVoucherRepository
     public function findActiveByInvoiceId(int $invoice_id, int $company_id, int $excludeVoucherId = 0): ?stdClass
     {
         return $this->activeSibling;
+    }
+}
+
+class KuickPayReconcileFakeRecord
+{
+    public bool $begun = false;
+    public bool $committed = false;
+    public bool $rolledBack = false;
+
+    public function begin(): void
+    {
+        $this->begun = true;
+    }
+
+    public function commit(): void
+    {
+        $this->committed = true;
+    }
+
+    public function rollBack(): void
+    {
+        $this->rolledBack = true;
     }
 }
 
