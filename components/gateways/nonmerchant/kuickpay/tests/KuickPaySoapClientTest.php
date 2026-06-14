@@ -443,6 +443,39 @@ class KuickPaySoapClientTest extends TestCase
         $this->assertSame('GetInstitutionsList', $institutions['operation']);
     }
 
+    public function testIsTimeoutClassifiesLocaleIndependentlyByDuration()
+    {
+        // AC4 (5.4): classification must not depend solely on substring-matching
+        // localized exception text. A transport that ran to ~the configured ceiling is
+        // a timeout regardless of how the OS localized the message; a fast-failing
+        // transport error is not; PHP-internal English markers remain a fallback.
+        $client = new KuickPaySoapClient($this->config(['soap_timeout' => '30']), function () {
+            return new KuickPaySoapClientFake();
+        });
+
+        // German "connection timed out" defeats the English substring match, but the
+        // ~ceiling duration (>= 90% of 30s) still classifies it as a timeout.
+        $localized = new SoapFault('HTTP', 'Verbindung wegen Zeitueberschreitung fehlgeschlagen');
+        $this->assertTrue($this->invokeIsTimeout($client, $localized, 30000));
+
+        // A genuine non-timeout transport error that failed fast stays transport_error.
+        $refused = new SoapFault('HTTP', 'Verbindung abgelehnt');
+        $this->assertFalse($this->invokeIsTimeout($client, $refused, 50));
+
+        // Backward-compatible secondary signal: English markers still classify a
+        // timeout when the duration is inconclusive (none threaded).
+        $english = new SoapFault('HTTP', 'connection timed out');
+        $this->assertTrue($this->invokeIsTimeout($client, $english, null));
+    }
+
+    private function invokeIsTimeout(KuickPaySoapClient $client, Throwable $e, ?int $elapsedMs): bool
+    {
+        $method = new ReflectionMethod($client, 'isTimeout');
+        $method->setAccessible(true);
+
+        return $method->invoke($client, $e, $elapsedMs);
+    }
+
     private function callPrivate(KuickPaySoapClient $client, $operation, array $params)
     {
         $method = new ReflectionMethod($client, 'call');

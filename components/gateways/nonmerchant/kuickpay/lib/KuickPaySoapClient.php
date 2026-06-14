@@ -203,7 +203,7 @@ class KuickPaySoapClient
                 $operation,
                 null,
                 null,
-                $this->isTimeout($e) ? 'timeout' : 'transport_error',
+                $this->isTimeout($e, $this->durationMs($start)) ? 'timeout' : 'transport_error',
                 $this->redactedDiagnosticText($e->getMessage(), $params),
                 $redacted_request,
                 $trace_id,
@@ -232,7 +232,7 @@ class KuickPaySoapClient
                 $operation,
                 null,
                 null,
-                $this->isTimeout($e) ? 'timeout' : 'transport_error',
+                $this->isTimeout($e, $this->durationMs($start)) ? 'timeout' : 'transport_error',
                 $this->redactedDiagnosticText($e->getMessage(), $params),
                 $redacted_request,
                 $trace_id,
@@ -454,13 +454,28 @@ class KuickPaySoapClient
     }
 
     /**
-     * Classify timeout-like transport exceptions.
+     * Classify timeout-like transport exceptions, locale-independently.
+     *
+     * Substring-matching the exception message alone is unsafe: an OS-localized socket
+     * strerror()/LC_MESSAGES timeout string would not match the English patterns. The
+     * primary signal is therefore the attempt duration -- a transport that ran to ~the
+     * configured timeout() ceiling almost certainly timed out, under any locale. The
+     * English markers remain a secondary fallback (they are emitted by PHP/ext-soap
+     * itself and are not OS-localized). Label-only impact: both classes retry identically.
      *
      * @param Throwable $e Transport exception
-     * @return bool True when exception text indicates timeout
+     * @param int|null $elapsed_ms Attempt duration when known
+     * @return bool True when the failure is classified as a timeout
      */
-    private function isTimeout(Throwable $e): bool
+    private function isTimeout(Throwable $e, ?int $elapsed_ms = null): bool
     {
+        if ($elapsed_ms !== null) {
+            $ceiling_ms = $this->timeout() * 1000;
+            if ($ceiling_ms > 0 && $elapsed_ms >= (int) ($ceiling_ms * 9 / 10)) {
+                return true;
+            }
+        }
+
         return preg_match('/timeout|timed out|temporarily unavailable/i', $e->getMessage()) === 1;
     }
 
