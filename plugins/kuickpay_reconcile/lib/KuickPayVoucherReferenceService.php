@@ -30,6 +30,12 @@ class KuickPayVoucherReferenceService
     private $lastError = null;
 
     /**
+     * @var int|null Invoice id that actually triggered a duplicate-with-differing-amount
+     *  conflict, surfaced from the pure validator without changing its signature
+     */
+    private $conflictInvoiceId = null;
+
+    /**
      * Constructs the reference service.
      *
      * @param mixed $repository Optional repository, primarily for tests
@@ -60,14 +66,18 @@ class KuickPayVoucherReferenceService
     public function getOrCreateForInvoiceContext(array $context): ?array
     {
         $this->lastError = null;
+        $this->conflictInvoiceId = null;
 
         try {
             $invoiceAmounts = $this->normalizeContextInvoiceAmounts((array) ($context['invoice_amounts'] ?? []));
             if ($invoiceAmounts === null) {
                 if ($this->lastError === 'duplicate_invoice_id') {
+                    // Name the invoice whose duplicate-with-differing-amount actually
+                    // triggered the conflict, not merely the first context row.
                     $this->recordGenerationFailed(
                         (int) ($context['company_id'] ?? 0),
-                        $this->firstContextInvoiceId((array) ($context['invoice_amounts'] ?? [])),
+                        $this->conflictInvoiceId
+                            ?? $this->firstContextInvoiceId((array) ($context['invoice_amounts'] ?? [])),
                         $this->lastError
                     );
                 }
@@ -443,6 +453,9 @@ class KuickPayVoucherReferenceService
             $amount = $this->normalizeAmount((string) ($row['amount'] ?? ''));
             if (isset($canonical[$invoice_id]) && $canonical[$invoice_id]['amount'] !== $amount) {
                 $this->lastError = 'duplicate_invoice_id';
+                // Surface the conflicting id to the caller via a private member so the
+                // audit can name it; the pure validator's signature/return stays intact.
+                $this->conflictInvoiceId = (int) $invoice_id;
                 return null;
             }
 

@@ -27,6 +27,32 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         ], $audit->events[0][1]['payload']);
     }
 
+    public function testDuplicateInvoiceIdAuditNamesTheActuallyConflictingInvoice()
+    {
+        // AC2 (5.4): when the conflicting duplicate pair is NOT the first context row,
+        // the voucher.generation_failed payload must name the invoice that actually
+        // triggered the conflict (56), not firstContextInvoiceId() (55).
+        $audit = new KuickPayVoucherReferenceFakeAuditService();
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceFakeRepository(), $audit);
+
+        $result = $service->getOrCreateForInvoiceContext($this->context([
+            'multi_invoice_policy' => 'allow',
+            'invoice_amounts' => [
+                ['id' => 55, 'amount' => '600.00'],
+                ['id' => 56, 'amount' => '400.00'],
+                ['id' => 56, 'amount' => '399.00'],
+            ],
+        ]));
+
+        $this->assertNull($result);
+        $this->assertSame('duplicate_invoice_id', $service->getLastError());
+        $this->assertSame('voucher.generation_failed', $audit->events[0][0]);
+        $this->assertSame([
+            'reason' => 'duplicate_invoice_id',
+            'invoice_id' => 56,
+        ], $audit->events[0][1]['payload']);
+    }
+
     public function testInvalidPatternRecordsGenerationFailedAudit()
     {
         $audit = new KuickPayVoucherReferenceFakeAuditService();
