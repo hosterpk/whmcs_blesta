@@ -411,11 +411,15 @@ class Kuickpay extends NonmerchantGateway
      * case-insensitive keys, null preserved, array/non-stringable object collapsed to a token --
      * without editing the shared base class.
      *
-     * @param array $data Credential-bearing data to mask
-     * @return array The masked data
+     * @param mixed $data Credential-bearing data to mask
+     * @return mixed The masked data
      */
-    protected function maskCredentials(array $data)
+    protected function maskCredentials($data)
     {
+        if (!is_array($data)) {
+            return $this->maskCredentialLeaf($data);
+        }
+
         return $this->maskCredentialTree($data, $this->credentialMaskLookup());
     }
 
@@ -446,32 +450,18 @@ class Kuickpay extends NonmerchantGateway
     {
         foreach ($data as $key => $value) {
             if (isset($lookup[strtolower((string) $key)])) {
-                $data[$key] = is_array($value)
-                    ? $this->maskCredentialSubtree($value)
-                    : $this->maskCredentialLeaf($value);
+                $data[$key] = $this->maskCredentialLeaf($value);
                 continue;
             }
 
             if (is_array($value)) {
                 $data[$key] = $this->maskCredentialTree($value, $lookup);
+                continue;
             }
-        }
 
-        return $data;
-    }
-
-    /**
-     * Masks every leaf beneath a credential subtree.
-     *
-     * @param array $data Subtree stored under a credential key
-     * @return array Fully masked subtree
-     */
-    private function maskCredentialSubtree(array $data): array
-    {
-        foreach ($data as $key => $value) {
-            $data[$key] = is_array($value)
-                ? $this->maskCredentialSubtree($value)
-                : $this->maskCredentialLeaf($value);
+            if (is_object($value)) {
+                $data[$key] = $this->maskCredentialTree(get_object_vars($value), $lookup);
+            }
         }
 
         return $data;

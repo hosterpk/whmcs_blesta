@@ -149,7 +149,7 @@ class KuickPayVoucherGatewayHelpers extends Kuickpay
         return $this->createVoucherForContext($context, $contactInfo, $meta, $service);
     }
 
-    public function exposeMaskCredentials(array $data): array
+    public function exposeMaskCredentials($data)
     {
         return $this->maskCredentials($data);
     }
@@ -1297,6 +1297,9 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $gateway = $this->gateway();
         $object = new stdClass();
         $object->secret = 'value';
+        $nested = new stdClass();
+        $nested->password = 'nested-secret';
+        $nested->note = 'keep me';
 
         $masked = $gateway->exposeMaskCredentials([
             'password' => null,
@@ -1305,6 +1308,7 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
             'USERNAME' => 'voucher-user',
             'userName' => ['old' => 'a', 'new' => 'bb'],
             'amount' => '1000.00',
+            'object_graph' => $nested,
             'nested' => [
                 'Password' => 'secret',
                 'note' => 'keep me',
@@ -1317,13 +1321,15 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame('x', $masked['inquiry_password']);
         // Mixed-case credential key still matched (case-insensitive allowlist).
         $this->assertSame('xxxxxxxxxxxx', $masked['USERNAME']);
-        // A credential key holding an array masks every leaf beneath it.
-        $this->assertSame('x', $masked['userName']['old']);
-        $this->assertSame('xx', $masked['userName']['new']);
-        // Non-credential keys preserved, including nested non-credential siblings.
+        // A credential key holding an array collapses to a fixed token.
+        $this->assertSame('xxxx', $masked['userName']);
+        // Non-credential keys preserved, while object graphs are scanned recursively.
         $this->assertSame('1000.00', $masked['amount']);
+        $this->assertSame('xxxxxxxxxxxxx', $masked['object_graph']['password']);
+        $this->assertSame('keep me', $masked['object_graph']['note']);
         $this->assertSame('xxxxxx', $masked['nested']['Password']);
         $this->assertSame('keep me', $masked['nested']['note']);
+        $this->assertSame('xxxx', $gateway->exposeMaskCredentials($object));
     }
 
     private function gateway()
