@@ -321,4 +321,33 @@ class KuickPayVoucherRepository
     {
         $this->KuickpayVouchers->edit($voucher_id, $company_id, $vars);
     }
+
+    /**
+     * Status-guarded voucher update: writes only when the row is still active
+     * (status IN 'pending','retry').
+     *
+     * Delegates to the model's transition() (WHERE status IN (...) + rowCount
+     * gate) so a racing reconcile that overlaps a concurrent confirm/transition
+     * matches zero rows instead of demoting it. Mirrors the existing expire()
+     * delegation; reuses the one status-guarded UPDATE mechanism rather than
+     * hand-rolling a second.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @param array $vars Voucher fields; the 'status' key is the target state
+     * @return bool True only when this call transitioned the row
+     */
+    public function editIfActive(int $voucher_id, int $company_id, array $vars): bool
+    {
+        $new_status = (string) ($vars['status'] ?? '');
+        unset($vars['status']);
+
+        return $this->KuickpayVouchers->transition(
+            $voucher_id,
+            $company_id,
+            $new_status,
+            ['pending', 'retry'],
+            $vars
+        );
+    }
 }

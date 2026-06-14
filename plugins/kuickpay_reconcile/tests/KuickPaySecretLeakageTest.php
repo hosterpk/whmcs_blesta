@@ -474,6 +474,34 @@ class KuickPaySecretLeakageVoucherRepository
         }
     }
 
+    public function editIfActive(int $voucher_id, int $company_id, array $vars): bool
+    {
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                if (!in_array((string) $voucher->status, ['pending', 'retry'], true)) {
+                    return false;
+                }
+
+                $this->edit($voucher_id, $company_id, $vars);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getForCompany(int $voucher_id, int $company_id)
+    {
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                return $voucher;
+            }
+        }
+
+        return false;
+    }
+
     public function getWithInvoices(int $voucher_id): ?array
     {
         foreach ($this->vouchers as $voucher) {

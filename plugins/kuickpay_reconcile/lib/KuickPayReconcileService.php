@@ -531,8 +531,21 @@ class KuickPayReconcileService
             $vars['status'] = $resolved_status;
         }
 
-        // Story 3.4 validates confirmed evidence only. Posting and invoice mutation belong to Story 3.5.
-        $this->voucherRepository->edit((int) $voucher->id, $company_id, $vars);
+        // Status-guarded terminal write (AC1): only transition a row still in
+        // pending/retry. A racing manual reconcile that overlaps a concurrent cron
+        // confirm matches ZERO rows here instead of overwriting confirmed_unposted
+        // (with its date_paid) to a stuck manual_review. Story 3.4 validates
+        // confirmed evidence only; posting/invoice mutation belong to Story 3.5.
+        $transitioned = $this->voucherRepository->editIfActive((int) $voucher->id, $company_id, $vars);
+        if (!$transitioned) {
+            // The row already left pending/retry: nothing was written, so this is a
+            // benign no-op (never a demotion). Return the voucher's ACTUAL current
+            // status so the item row and audit reflect the real state, never a false
+            // manual_review with a dangling date_paid.
+            $current = $this->voucherRepository->getForCompany((int) $voucher->id, $company_id);
+
+            return $current ? (string) ($current->status ?? $new_status) : $new_status;
+        }
 
         return $new_status;
     }

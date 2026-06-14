@@ -352,6 +352,48 @@ class KuickPayReconcileServiceTest extends TestCase
         $this->assertSame(['error_class' => 'reconcile_exception'], $errorEvent[1]['payload']);
     }
 
+    public function testManualReconcileDoesNotDemoteAVoucherConfirmedByaConcurrentCron()
+    {
+        // AC1: Manual Check Now selects a still-pending voucher, but while its SOAP
+        // inquiry is in flight the cron flips pending -> confirmed_unposted (writing a
+        // date_paid). The manual call's confirmed-branch stale guard would compute
+        // manual_review; the status-guarded terminal write must then match ZERO rows
+        // (the row already left pending/retry) so the confirmed-paid voucher is never
+        // demoted to a stuck manual_review with a dangling date_paid.
+        $voucher = $this->voucher();
+        $client = new KuickPayReconcileFakeClient([
+            $this->outcome($this->fixtureResult('valid/bill-payment-inquiry-paid-exact.xml')),
+        ]);
+        $repo = new KuickPayReconcileFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        // The concurrent cron wins exactly when the manual path re-reads the row
+        // inside the confirmed branch: flip it to confirmed_unposted + date_paid.
+        $repo->raceFlipOnGetWithInvoices = ['status' => 'confirmed_unposted', 'date_paid' => '2026-06-09 00:00:00'];
+        $items = new KuickPayReconcileFakeItemRepository();
+        $audit = new KuickPayReconcileFakeAuditService();
+        $validator = new KuickPayEvidenceValidator([
+            'voucher_repository' => $repo,
+            'invoice_reader' => new KuickPayReconcileFakeInvoiceReader($this->invoice()),
+        ]);
+        $service = $this->service([
+            'voucher_repository' => $repo,
+            'item_repository' => $items,
+            'audit_service' => $audit,
+            'client' => $client,
+            'evidence_validator' => $validator,
+        ]);
+
+        $result = $service->reconcileVoucher(1, 1);
+
+        // The guarded write matched zero rows: no demotion, no edit, no date_paid clobber.
+        $this->assertSame('confirmed_unposted', $result['status']);
+        $this->assertSame('confirmed_unposted', $voucher->status);
+        $this->assertSame('2026-06-09 00:00:00', $voucher->date_paid);
+        $this->assertSame([], $repo->edits, 'a racing manual reconcile must not write a demotion');
+        // The recorded item/audit reflect the benign actual state, never a false manual_review.
+        $this->assertSame('confirmed_unposted', $items->items[0]['new_status']);
+        $this->assertNotContains('evidence.rejected', array_column($audit->events, 0));
+    }
+
     public function testManualActionSafetyMapsMatchDisplayStateMatrix()
     {
         $this->assertSame(
@@ -868,6 +910,7 @@ class KuickPayReconcileFakeVoucherRepository
     public ?stdClass $duplicateReference = null;
     public ?stdClass $activeSibling = null;
     public ?bool $forcedExpireResult = null;
+    public ?array $raceFlipOnGetWithInvoices = null;
     private array $vouchers;
     private array $invoiceLinks;
 
@@ -954,8 +997,40 @@ class KuickPayReconcileFakeVoucherRepository
         }
     }
 
+    public function editIfActive(int $voucher_id, int $company_id, array $vars): bool
+    {
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                // Faithfully model the status-guarded UPDATE: a row that already
+                // left pending/retry matches zero rows, so nothing is written.
+                if (!in_array((string) $voucher->status, ['pending', 'retry'], true)) {
+                    return false;
+                }
+
+                $this->edit($voucher_id, $company_id, $vars);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function getWithInvoices(int $voucher_id): ?array
     {
+        // Simulate a concurrent writer winning the race between the manual entry
+        // read and the confirmed-branch re-read: flip the row on this re-read.
+        if ($this->raceFlipOnGetWithInvoices !== null) {
+            foreach ($this->vouchers as $voucher) {
+                if ((int) $voucher->id === $voucher_id) {
+                    foreach ($this->raceFlipOnGetWithInvoices as $key => $value) {
+                        $voucher->{$key} = $value;
+                    }
+                }
+            }
+            $this->raceFlipOnGetWithInvoices = null;
+        }
+
         if ($this->freshDataOverride !== []) {
             return $this->freshDataOverride;
         }
