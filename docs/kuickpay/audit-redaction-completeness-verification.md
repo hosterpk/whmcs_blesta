@@ -1,7 +1,7 @@
 # KuickPay Audit, Logging & Redaction Completeness — Verification Evidence (Story 5.4)
 
 Date: 2026-06-14
-Environment: local dev on `beta.hosterpk.com` (pre-dev, NOT live).
+Environment: local development checkout (pre-dev, NOT live).
 Scope: records exactly what was executed. Story 5.4 is **test + small-fix** work with **no schema
 change, no migration, and no live-stack/DB legs** — verification is unit-suite + lint based.
 Sanitization (NFR8): no DB/KuickPay credentials, Institution ID, host/user, raw SOAP, or customer PII
@@ -25,7 +25,7 @@ appear here. All values below are synthetic test placeholders.
 |---|---|---|
 | AC1 | Bulk per-Voucher exception is audited symmetrically with the single path (already at HEAD via 5.3 `01682753`) — **no production change** | unit: bulk `evidence.error` (voucher_id/run_id) + `reconcile_exception` item row; idempotent collision on `(run_id, voucher_id)` is swallowed, run completes |
 | AC2 | `voucher.generation_failed` names the actual conflicting invoice; benign `create()` fall-through sets `create_failed` + durable audit | unit: conflicting-id-not-first → audit `invoice_id` = conflicting id; forced fall-through → `getLastError()==='create_failed'` + audit |
-| AC3 | Redactor masks XML **attributes** + confirmed **aliases**; `maskCredentials()` is input-robust + case-insensitive (base class untouched) | unit: attribute/alias envelopes masked, benign untouched; masker handles null/object/bool/mixed-case with no `TypeError`/deprecation |
+| AC3 | Redactor masks XML **attributes** + confirmed **aliases**; `maskCredentials()` is input-robust + case-insensitive (base class untouched) | unit: attribute/alias envelopes masked, benign untouched; SOAP alias diagnostics masked; masker handles top-level non-array, null/array/object/bool, nested object graphs, and mixed-case keys with no `TypeError`/deprecation |
 | AC4 | Leak-scan covers diverse PII/placeholder formats; `isTimeout()` is locale-independent | unit: positive/negative pattern controls + diversified clean fixture; `isTimeout()` duration-primary classification under a localized message |
 
 Honest reporting (NFR12): **no live legs.** Nothing in this story touches the database, the framework, or
@@ -52,10 +52,10 @@ cd components/gateways/nonmerchant/kuickpay && \
 
 ## Results
 
-- **Plugin suite: 188 tests, OK** on PHP 8.3 and on the 8.2 floor (baseline was 182; +6 new tests:
-  2 AC1, 2 AC2, 2 AC4 leak controls).
-- **Gateway suite: 238 tests** on PHP 8.3 and on the 8.2 floor (baseline was 234; +4: 2 redactor,
-  1 masker, 1 isTimeout) — green **modulo the one disclosed pre-existing baseline red**,
+- **Plugin suite: 189 tests, OK** on PHP 8.3 and on the 8.2 floor (baseline was 182; +7 new tests:
+  2 AC1, 2 AC2, 3 AC4 leak controls).
+- **Gateway suite: 239 tests** on PHP 8.3 and on the 8.2 floor (baseline was 234; +5: 2 redactor,
+  1 SOAP diagnostic alias redaction, 1 masker, 1 isTimeout) — green **modulo the one disclosed pre-existing baseline red**,
   `KuickPayFailClosedContractTest` with `ambiguous/bill-payment-inquiry-empty-currency.xml`. That fixture
   is a Story-pre-existing fail-closed contract red, unrelated to this story; none of the 5.4 changes touch
   the empty-currency path.

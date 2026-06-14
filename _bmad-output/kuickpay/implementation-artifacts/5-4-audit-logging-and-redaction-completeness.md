@@ -184,7 +184,7 @@ claude-opus-4-8[1m] (Opus 4.8, 1M context)
 - Baseline (before any change): plugin **182/182** green; gateway **234** with **1** pre-existing red
   (`KuickPayFailClosedContractTest` / `ambiguous/bill-payment-inquiry-empty-currency.xml` —
   `[[kuickpay-failclosed-empty-currency-red]]`, disclosed, not introduced by this story).
-- Final: plugin **188/188** (+6 tests); gateway **238** (+4 tests) with the **same** single baseline red.
+- Final after review fixes: plugin **189/189** (+7 tests); gateway **239** (+5 tests) with the **same** single baseline red.
   Both suites verified on PHP **8.3** (production runtime) and the **8.2** source-floor; `php -l` clean on
   both engines for all 10 changed files.
 
@@ -204,11 +204,12 @@ claude-opus-4-8[1m] (Opus 4.8, 1M context)
   registry is untouched.
 - **AC3:** `KuickPayRedactor::redactEnvelope()` now masks sensitive XML **attribute** values and the
   confirmed aliases (`CustomerName`, `MobileNo`, `CNIC`); element-text + `*Result` blanking preserved.
-  `maskCredentials()` reimplemented gateway-local (base `gateway.php` untouched), input-robust
-  (null/array/object/bool) and case-insensitive, mirroring the redactor's hardened array path.
-- **AC4:** leak-scan forbidden patterns broadened (international/dashed/spaced mobile, undashed 13-digit
-  CNIC) with paired positive/negative control tests + a diversified clean fixture (mixed placeholder
-  styles), suite stays green. `KuickPaySoapClient::isTimeout()` reclassified to be locale-independent —
+  Free-text SOAP diagnostics also mask those alias key/value pairs. `maskCredentials()` reimplemented
+  gateway-local (base `gateway.php` untouched), input-robust (top-level non-array, null/array/object/bool,
+  nested object graphs) and case-insensitive, mirroring the redactor's hardened array path.
+- **AC4:** leak-scan forbidden patterns broadened (international/dashed/spaced/split mobile, undashed
+  13-digit CNIC) with paired positive/negative control tests + diversified clean and quarantined
+  positive-control fixtures, suite stays green. `KuickPaySoapClient::isTimeout()` reclassified to be locale-independent —
   attempt duration (≈ `timeout()` ceiling) is the primary signal, English markers the fallback; both call
   sites thread the elapsed duration. Label-only impact (both classes retry identically per AC6).
 - **No schema/version bump** (no new columns; plugin stays 1.10.0). **No new audit event name.**
@@ -230,6 +231,7 @@ Tests:
 - `components/gateways/nonmerchant/kuickpay/tests/KuickPaySoapClientTest.php` (AC4)
 - `plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php` (AC4)
 - `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/redaction/diversified-placeholders.xml` (AC4, new)
+- `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/redaction/diversified-real-secrets.leaky-control.xml` (AC4, new positive control)
 
 Docs:
 - `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md` (closures)
@@ -240,5 +242,7 @@ Docs:
 - 2026-06-14: Implemented Story 5.4 (Audit, Logging & Redaction Completeness). AC1 regression-only
   (bulk/single `evidence.error` symmetry + idempotency); AC2 precise conflicting `invoice_id` +
   `create_failed` traceability; AC3 redactor attribute/alias masking + hardened gateway credential
-  masker; AC4 broadened leak-scan + locale-independent `isTimeout()`. Plugin 188/188, gateway 238
+  masker; AC4 broadened leak-scan + locale-independent `isTimeout()`. Review fixes added alias
+  free-text diagnostic redaction, nested object-graph credential masking, split mobile leak-scan coverage,
+  and a quarantined positive-control fixture. Plugin 189/189, gateway 239
   (modulo the disclosed pre-existing `empty-currency` baseline red), on PHP 8.3 and 8.2. Status → review.
