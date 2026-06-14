@@ -138,6 +138,31 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame(1, $repository->createCalls);
     }
 
+    public function testPostedContextSlotBlocksAFreshActiveVoucher()
+    {
+        // A posted voucher holds the slot forever, so a new pending voucher for
+        // the same invoice set is rejected by the fake unique active-context key.
+        $repository = new KuickPayVoucherReferenceFakeRepository();
+        $winnerId = $repository->seedActiveVoucher([
+            'company_id' => 1,
+            'status' => 'posted',
+            'context_key' => sha1('55'),
+            'registration_number' => 'PAID55',
+            'consumer_number' => 'KPPAID55',
+            'invoices' => [['invoice_id' => 55, 'amount' => '1000.00']],
+        ]);
+        $repository->hidePendingUntilCreateAttempted = true;
+
+        $service = new KuickPayVoucherReferenceService($repository);
+        $voucher = $service->getOrCreateForInvoiceContext($this->context([
+            'invoice_amounts' => [['id' => 55, 'amount' => '1000.00']],
+        ]));
+
+        $this->assertNull($voucher);
+        $this->assertSame(1, $repository->createCalls);
+        $this->assertSame([$winnerId], $repository->activeVoucherIds());
+    }
+
     public function testEmptyContextKeyIsRejectedLikeTheNotNullModelRule()
     {
         // Fake fidelity to the NOT-NULL model rule: a missing context_key makes

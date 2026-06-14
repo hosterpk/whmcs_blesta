@@ -80,10 +80,14 @@ UNIQUE KEY `uniq_kuickpay_vouchers_active_context` (`company_id`,`active_context
 - **Backfill:** 0 linked voucher rows left with a NULL `context_key` (the 2 pre-existing production rows —
   one `posted`, one `manual_review` — backfilled to distinct keys; they do not share an invoice set, so the
   unique key added without a pre-flight collision, exactly as predicted).
+- **Large invoice-set parity:** the guard raises `group_concat_max_len` to `@@max_allowed_packet` before
+  backfill so SQL `GROUP_CONCAT(DISTINCT ... ORDER BY ... SEPARATOR ',')` does not silently truncate under
+  the default 1024-byte session limit.
 - **Idempotency:** re-running the guard branch (`upgrade('1.8.0', 11)`) reported no errors and the unique
   index still spans exactly its 2 key columns — every ALTER is `columnExists`/`indexExists`-guarded.
 - **Fresh-install ≡ upgrade:** a scratch table taken to the 1.8.0 base shape and run through the same guard
-  ALTERs produced a **byte-identical** `context_key` / generated `active_context_key` / unique-key
+  ALTERs from `KuickpayReconcilePlugin::activeContextGuardSql()` produced a **byte-identical** `context_key`
+  / generated `active_context_key` / unique-key
   definition to the upgraded production table. Both `install()` and `upgrade()` funnel through the one
   shared `addActiveContextGuard()`.
 
@@ -136,8 +140,10 @@ This confirms the status-derived STORED generated column is recomputed by the en
 Rationale: per the architecture UI Display-State Matrix, `expired`/`cancelled` are the only two states whose
 customer action is "generate/pay again", so they must free the invoice set; `posted` is paid (hold
 forever); `failed`/`manual_review` are admin-resolution states with no customer re-pay path (hold until an
-admin resolves to `cancelled`). Implemented as specified for Winston's AI-5 sign-off; narrowing the set is a
-one-line change to the `CASE … IN (…)` list.
+admin resolves to `cancelled`). If the pre-flight duplicate-resolution branch ever finds duplicate active
+non-posted rows, it cancels the older colliding rows before the unique key is added, which releases those
+slots without weakening the runtime `manual_review` active-slot semantics. Implemented as specified for
+Winston's AI-5 sign-off; narrowing the set is a one-line change to the `CASE … IN (…)` list.
 
 ---
 
@@ -145,7 +151,7 @@ one-line change to the `CASE … IN (…)` list.
 
 Gateway suite: **233 tests, 1 failure** — `KuickPayFailClosedContractTest::…` with
 `ambiguous/bill-payment-inquiry-empty-currency.xml` (`confirmed_unposted`). This is the carried Epic-4-exit
-baseline red, unrelated to this story. Plugin suite: **165 tests, 0 failures** (8.3 and 8.2).
+baseline red, unrelated to this story. Plugin suite: **166 tests, 0 failures** (8.3 and 8.2).
 
 ---
 
@@ -153,7 +159,7 @@ baseline red, unrelated to this story. Plugin suite: **165 tests, 0 failures** (
 
 | Suite | PHP 8.3 | PHP 8.2 |
 |---|---|---|
-| Plugin (`plugins/kuickpay_reconcile`) | 165 tests, 0 failures | 165 tests, 0 failures |
+| Plugin (`plugins/kuickpay_reconcile`) | 166 tests, 0 failures | 166 tests, 0 failures |
 | Gateway (`components/gateways/nonmerchant/kuickpay`) | 233 tests, 1 baseline failure | 233 tests, 1 baseline failure |
 
 ---

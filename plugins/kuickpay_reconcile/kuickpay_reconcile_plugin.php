@@ -404,13 +404,12 @@ class KuickpayReconcilePlugin extends Plugin
      */
     private function addActiveContextGuard()
     {
+        $sql = self::activeContextGuardSql('kuickpay_vouchers');
+
         // 2.2a — nullable context_key so the ADD succeeds on a populated table
         // (a NOT-NULL-without-default ADD would fail on existing rows).
         if (!$this->columnExists('kuickpay_vouchers', 'context_key')) {
-            $this->Record->query(
-                'ALTER TABLE `kuickpay_vouchers` '
-                . 'ADD `context_key` VARCHAR(64) NULL DEFAULT NULL AFTER `consumer_number`'
-            );
+            $this->Record->query($sql['add_context_key']);
         }
 
         // 2.2b — backfill with the SAME algorithm the application uses
@@ -418,15 +417,8 @@ class KuickpayReconcilePlugin extends Plugin
         // with no links keep context_key = NULL (intentionally not an active
         // claim); repository->create() rolls back if any link insert fails, so
         // link-less vouchers should not exist.
-        $this->Record->query(
-            'UPDATE `kuickpay_vouchers` v'
-            . ' JOIN (SELECT voucher_id,'
-            . " SHA1(GROUP_CONCAT(DISTINCT invoice_id ORDER BY invoice_id SEPARATOR ',')) AS ck"
-            . ' FROM `kuickpay_voucher_invoices` GROUP BY voucher_id) m'
-            . ' ON m.voucher_id = v.id'
-            . ' SET v.context_key = m.ck'
-            . ' WHERE v.context_key IS NULL'
-        );
+        $this->Record->query($sql['set_group_concat_max_len']);
+        $this->Record->query($sql['backfill_context_key']);
 
         // 2.2c — resolve any pre-existing active-context collisions BEFORE the
         // unique key is added (never silently drop the key).
@@ -436,23 +428,52 @@ class KuickpayReconcilePlugin extends Plugin
         // it on every INSERT/UPDATE of status or context_key, so the application
         // never writes it and transition code needs no changes.
         if (!$this->columnExists('kuickpay_vouchers', 'active_context_key')) {
-            $this->Record->query(
-                'ALTER TABLE `kuickpay_vouchers` ADD `active_context_key` VARCHAR(64)'
-                . " GENERATED ALWAYS AS (CASE WHEN status IN ('expired','cancelled')"
-                . ' THEN NULL ELSE context_key END) STORED AFTER `context_key`'
-            );
+            $this->Record->query($sql['add_active_context_key']);
         }
 
         // 2.2e — company-scoped unique key over the generated column. Multiple
         // NULL active_context_key values are permitted, so terminal/released
         // rows never collide.
         if (!$this->indexExists('kuickpay_vouchers', 'uniq_kuickpay_vouchers_active_context')) {
-            $this->Record->query(
-                'ALTER TABLE `kuickpay_vouchers` '
-                . 'ADD UNIQUE KEY `uniq_kuickpay_vouchers_active_context` '
-                . '(`company_id`, `active_context_key`)'
-            );
+            $this->Record->query($sql['add_unique_key']);
         }
+    }
+
+    /**
+     * Returns the table-parameterized SQL for the Story 5.2 active-context guard.
+     *
+     * The integration harness uses the same SQL against a scratch table for
+     * fresh-install/upgrade schema parity, so drift between test evidence and the
+     * production guard is caught by construction.
+     *
+     * @param string $table Table name to alter
+     * @return array SQL statements keyed by migration step
+     */
+    public static function activeContextGuardSql($table = 'kuickpay_vouchers'): array
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', (string) $table)) {
+            throw new InvalidArgumentException('Invalid KuickPay voucher table name.');
+        }
+
+        $quotedTable = '`' . $table . '`';
+
+        return [
+            'add_context_key' => 'ALTER TABLE ' . $quotedTable
+                . ' ADD `context_key` VARCHAR(64) NULL DEFAULT NULL AFTER `consumer_number`',
+            'set_group_concat_max_len' => 'SET SESSION group_concat_max_len = @@max_allowed_packet',
+            'backfill_context_key' => 'UPDATE ' . $quotedTable . ' v'
+                . ' JOIN (SELECT voucher_id,'
+                . " SHA1(GROUP_CONCAT(DISTINCT invoice_id ORDER BY invoice_id SEPARATOR ',')) AS ck"
+                . ' FROM `kuickpay_voucher_invoices` GROUP BY voucher_id) m'
+                . ' ON m.voucher_id = v.id'
+                . ' SET v.context_key = m.ck'
+                . ' WHERE v.context_key IS NULL',
+            'add_active_context_key' => 'ALTER TABLE ' . $quotedTable . ' ADD `active_context_key` VARCHAR(64)'
+                . " GENERATED ALWAYS AS (CASE WHEN status IN ('expired','cancelled')"
+                . ' THEN NULL ELSE context_key END) STORED AFTER `context_key`',
+            'add_unique_key' => 'ALTER TABLE ' . $quotedTable
+                . ' ADD UNIQUE KEY `uniq_kuickpay_vouchers_active_context` (`company_id`, `active_context_key`)',
+        ];
     }
 
     /**
@@ -460,10 +481,10 @@ class KuickpayReconcilePlugin extends Plugin
      *
      * Detects rows that would violate uniq_kuickpay_vouchers_active_context once
      * it is live — same (company_id, context_key) among non-terminal statuses —
-     * and resolves each group deterministically and auditably (fail-closed per
-     * NFR9): keep one active row (a paid 'posted' row if present, otherwise the
-     * most recent id) and route the older colliding active rows to
-     * 'manual_review' for an operator. Never touches a 'posted' row. On the
+     * and resolves each group deterministically (fail-closed per NFR9): keep one
+     * active row (a paid 'posted' row if present, otherwise the most recent id)
+     * and cancel the older colliding non-posted rows so their generated
+     * active_context_key releases to NULL. Never touches a 'posted' row. On the
      * current live data this finds nothing; the method exists so the migration
      * is correct if it ever fires. If a group cannot be reduced to a single
      * active row (e.g. two 'posted' rows share an invoice set), the later
@@ -504,7 +525,7 @@ class KuickpayReconcilePlugin extends Plugin
                 . ' WHERE company_id = ? AND context_key = ?'
                 . " AND status NOT IN ('expired','cancelled','posted')"
                 . ' AND id <> ?',
-                'manual_review',
+                'cancelled',
                 date('Y-m-d H:i:s'),
                 $group->company_id,
                 $group->context_key,

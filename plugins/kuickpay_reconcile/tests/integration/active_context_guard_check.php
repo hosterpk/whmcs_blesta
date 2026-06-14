@@ -57,6 +57,7 @@ $pluginLib = $root . '/plugins/kuickpay_reconcile/lib';
 Loader::load($pluginLib . '/KuickPayVoucherRepository.php');
 Loader::load($pluginLib . '/KuickPayAuditService.php');
 Loader::load($pluginLib . '/KuickPayVoucherReferenceService.php');
+Loader::load($root . '/plugins/kuickpay_reconcile/kuickpay_reconcile_plugin.php');
 
 $bootstrap = new stdClass();
 Loader::loadComponents($bootstrap, ['Record']);
@@ -222,6 +223,7 @@ try {
         $createdVoucherIds[] = (int) $record->lastInsertId();
     } catch (Throwable $e) {
         $rawRejectedByActiveContext = kp52_is_active_context_violation($e);
+        $record->reset();
     }
     $evidence['ac1_raw_duplicate_rejected_by_unique_key'] = $rawRejectedByActiveContext;
     if (!$rawRejectedByActiveContext) {
@@ -315,6 +317,7 @@ try {
             $createdVoucherIds[] = (int) $record->lastInsertId();
         } catch (Throwable $e) {
             $postedBlocksNew = kp52_is_active_context_violation($e);
+            $record->reset();
         }
     }
     $evidence['release_posted_blocks_new_active'] = $postedBlocksNew;
@@ -429,25 +432,18 @@ function kp52_strip_guard($record, string $table): void
 }
 
 /**
- * Applies the structural ALTERs of addActiveContextGuard() to a scratch table.
- * Mirror of the plugin method; the fresh-install/upgrade DDL comparison fails
- * loudly if this ever drifts from the production guard.
+ * Applies the structural ALTERs of addActiveContextGuard() to a scratch table
+ * using the same SQL provider as the production guard. The fresh-install/upgrade
+ * DDL comparison fails loudly if this ever drifts from the plugin method.
  */
 function kp52_apply_guard_sql($record, string $table): void
 {
-    $record->query(
-        'ALTER TABLE `' . $table . '` '
-        . 'ADD `context_key` VARCHAR(64) NULL DEFAULT NULL AFTER `consumer_number`'
-    );
-    $record->query(
-        'ALTER TABLE `' . $table . '` ADD `active_context_key` VARCHAR(64)'
-        . " GENERATED ALWAYS AS (CASE WHEN status IN ('expired','cancelled')"
-        . ' THEN NULL ELSE context_key END) STORED AFTER `context_key`'
-    );
-    $record->query(
-        'ALTER TABLE `' . $table . '` '
-        . 'ADD UNIQUE KEY `uniq_kuickpay_vouchers_active_context` (`company_id`, `active_context_key`)'
-    );
+    $sql = KuickpayReconcilePlugin::activeContextGuardSql($table);
+    $record->query($sql['add_context_key']);
+    $record->query($sql['set_group_concat_max_len']);
+    $record->query($sql['backfill_context_key']);
+    $record->query($sql['add_active_context_key']);
+    $record->query($sql['add_unique_key']);
 }
 
 /**
