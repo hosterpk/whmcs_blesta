@@ -6,7 +6,7 @@ baseline_commit: f44bd841166ea7f0fd01211796f5fd28c2d610a9
 
 # Story 5.4: Audit, Logging, and Redaction Completeness
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -100,6 +100,16 @@ so that investigations are complete and no sink can leak secrets.
   - [x] 6.3 Gateway suite green (modulo the disclosed pre-existing `empty-currency` baseline red — `[[kuickpay-failclosed-empty-currency-red]]`): `cd components/gateways/nonmerchant/kuickpay && <php> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`. Do NOT use `-c build/phpunit.xml` (project-context.md:74).
   - [x] 6.4 Update `deferred-work.md`: mark the closed items (bulk `evidence.error` line 132, `invoice_id` mislabel line 133, `create_failed` line 103, `redactEnvelope` attributes/aliases line 29, `maskCredentials` hardening line 51, leak-scan breadth line 7, `isTimeout` locale line 28) as CLOSED-by-5.4 with one-line notes. (Separate `docs(kuickpay)` commit from runtime commits — project-context.md:104.)
   - [x] 6.5 Optional sanitized verification record under `docs/kuickpay/` per the 5.3 cadence — placeholders only, NO `config/blesta.php`/DB creds/host/KuickPay creds/raw SOAP/customer PII (NFR8).
+
+### Review Findings
+
+- [x] [Review][Patch] Nested object graphs can bypass `maskCredentials()` redaction [components/gateways/nonmerchant/kuickpay/kuickpay.php:455] — fixed in `d5e3a5fb`.
+- [x] [Review][Patch] Sensitive array credential values did not collapse to fixed token [components/gateways/nonmerchant/kuickpay/kuickpay.php:448] — fixed in `d5e3a5fb`.
+- [x] [Review][Patch] SOAP free-text diagnostics missed confirmed alias keys [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php:526] — fixed in `15f980cb`.
+- [x] [Review][Patch] Leak-scan mobile patterns missed split subscriber formats [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php:379] — fixed in `9f3a860a`.
+- [x] [Review][Patch] Leak-scan positive coverage was not fixture-backed [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php:45] — fixed in `9f3a860a`.
+- [x] [Review][Patch] Sanitized verification record included a host while saying no host appears [docs/kuickpay/audit-redaction-completeness-verification.md:4] — fixed in `ba8ce18b`.
+- [x] [Review][Dismiss] Timeout classifier can mislabel slow non-timeout failures [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php:470] — accepted as label-only residual risk because Story 5.4 explicitly recommended duration near the configured `timeout()` ceiling as the stable locale-independent signal; both timeout and transport error retry identically.
 
 ## Dev Notes
 
