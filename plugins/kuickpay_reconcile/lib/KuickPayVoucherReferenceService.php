@@ -247,17 +247,37 @@ class KuickPayVoucherReferenceService
     /**
      * Retires a stale voucher and records replacement audit history.
      *
+     * Branches on the affected-row count surfaced by edit(): a 0-row write is a
+     * genuine no-op (the id is out of company scope, or no matching row exists),
+     * so it skips the replacement audit and reports failure rather than claiming
+     * a retire that never happened. This is the documented precondition that
+     * makes un-gating `replace` safe later (deferred-work line 20): the replace
+     * flow must not create a fresh voucher when the stale one was not actually
+     * retired. A thrown audit write is best-effort (NFR9) — it is swallowed and
+     * never masquerades as a retire failure, since the retire itself succeeded.
+     *
      * @param int $voucherId Voucher ID
      * @param int $companyId Company ID scope
      * @param string $reason Replacement reason
      * @param array $auditPayload Additional audit payload fields
-     * @return bool True when the retire write was attempted successfully
+     * @return bool True only when this call actually retired an in-scope row
      */
     public function retireVoucher(int $voucherId, int $companyId, string $reason, array $auditPayload = []): bool
     {
         try {
-            $this->repository->edit($voucherId, $companyId, ['status' => 'cancelled']);
+            $affected = $this->repository->edit($voucherId, $companyId, ['status' => 'cancelled']);
+        } catch (Throwable $e) {
+            // The retire write itself failed (e.g. a DB error): report failure.
+            return false;
+        }
 
+        if ($affected < 1) {
+            // No in-scope row matched (wrong/zero company_id, or already gone):
+            // nothing was retired, so skip the audit and report failure.
+            return false;
+        }
+
+        try {
             if ($this->auditService === null) {
                 Loader::load(PLUGINDIR . 'kuickpay_reconcile' . DS . 'lib' . DS . 'KuickPayAuditService.php');
                 $this->auditService = new KuickPayAuditService();
@@ -271,11 +291,12 @@ class KuickPayVoucherReferenceService
                 'redacted_trace_id' => $redactedTraceId,
                 'payload' => array_merge(['reason' => $reason], $auditPayload),
             ]);
-
-            return true;
         } catch (Throwable $e) {
-            return false;
+            // Best-effort audit: a failed replacement-audit write must never turn
+            // a successful retire into a reported failure.
         }
+
+        return true;
     }
 
     /**

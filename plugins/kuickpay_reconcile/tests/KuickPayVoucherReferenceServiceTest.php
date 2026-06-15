@@ -38,6 +38,35 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         ];
     }
 
+    public function testRetireVoucherSurfacesAffectedRowCount()
+    {
+        // AC3e (5.5): retireVoucher branches on the affected-row count surfaced
+        // by edit(). A wrong-company or missing voucher is a 0-row no-op (false,
+        // no audit); an in-scope match retires (true) and records the
+        // voucher.replaced audit exactly once.
+        $repository = new KuickPayVoucherReferenceFakeRepository();
+        $voucherId = $repository->seedActiveVoucher([
+            'company_id' => 1,
+            'status' => 'pending',
+            'registration_number' => 'REG-1',
+            'consumer_number' => 'CON-1',
+            'context_key' => 'ctx-1',
+            'invoices' => [['invoice_id' => 55, 'amount' => '1500.00']],
+        ]);
+        $audit = new KuickPayVoucherReferenceFakeAuditService();
+        $service = new KuickPayVoucherReferenceService($repository, $audit);
+
+        $this->assertFalse($service->retireVoucher($voucherId, 2, 'amount_changed'));
+        $this->assertFalse($service->retireVoucher(99999, 1, 'amount_changed'));
+        $this->assertSame([], $audit->events);
+
+        $this->assertTrue($service->retireVoucher($voucherId, 1, 'amount_changed'));
+        $this->assertCount(1, $audit->events);
+        $this->assertSame('voucher.replaced', $audit->events[0][0]);
+        $this->assertSame(1, $audit->events[0][1]['company_id']);
+        $this->assertSame($voucherId, $audit->events[0][1]['voucher_id']);
+    }
+
     public function testDuplicateInvoiceIdRecordsGenerationFailedAudit()
     {
         $audit = new KuickPayVoucherReferenceFakeAuditService();
@@ -424,9 +453,49 @@ class KuickPayVoucherReferenceFakeRepository
         return $id;
     }
 
-    public function getWithInvoices(int $voucherId)
+    public function getWithInvoices(int $voucherId, int $companyId = 0)
     {
-        return $this->rows[$voucherId] ?? null;
+        $row = $this->rows[$voucherId] ?? null;
+        if ($row === null) {
+            return null;
+        }
+
+        // Company-scoped read fidelity: a voucher id outside the company resolves
+        // to null, never another tenant's row.
+        if ($companyId !== 0 && (int) $row['voucher']->company_id !== $companyId) {
+            return null;
+        }
+
+        return $row;
+    }
+
+    /**
+     * Models the scoped, count-returning UPDATE (Story 5.5 AC1/AC3e): returns the
+     * affected-row count — 1 for an in-scope match, 0 for a no-op (wrong/zero
+     * company_id, or no such row). A terminal status (cancelled/expired) releases
+     * the active-context slot, exactly as the STORED active_context_key goes NULL.
+     */
+    public function edit(int $voucherId, int $companyId, array $vars): int
+    {
+        if (!isset($this->rows[$voucherId])) {
+            return 0;
+        }
+
+        $voucher = $this->rows[$voucherId]['voucher'];
+        if ((int) $voucher->company_id !== $companyId) {
+            return 0;
+        }
+
+        $oldActive = $this->activeContextKey((string) $voucher->status, (string) ($voucher->context_key ?? ''));
+        foreach ($vars as $key => $value) {
+            $voucher->{$key} = $value;
+        }
+        $newActive = $this->activeContextKey((string) $voucher->status, (string) ($voucher->context_key ?? ''));
+        if ($oldActive !== null && $newActive === null) {
+            unset($this->activeIndex[$this->indexKey($companyId, $oldActive)]);
+        }
+
+        return 1;
     }
 
     /**

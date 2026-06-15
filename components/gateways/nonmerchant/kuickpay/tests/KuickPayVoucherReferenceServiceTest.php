@@ -22,6 +22,13 @@ class KuickPayVoucherReferenceServiceFakeRepository
     public array $invoiceSetLookups = [];
     public $pendingByInvoiceSet;
 
+    /**
+     * @var int Affected-row count edit() reports — models the scoped UPDATE's
+     *  rowCount(): 1 when an in-scope row matched, 0 for a no-op (wrong/zero
+     *  company_id, or no matching row).
+     */
+    public int $editAffectedRows = 1;
+
     public function getPendingByInvoiceId(int $invoice_id, int $company_id)
     {
         if ($this->createCalls > 0 && $this->pendingAfterCreateFailure) {
@@ -66,9 +73,11 @@ class KuickPayVoucherReferenceServiceFakeRepository
         return $this->nextLookupReturn($this->consumerLookupReturns, $consumer_number, $company_id);
     }
 
-    public function edit(int $voucher_id, int $company_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): int
     {
         $this->edits[] = compact('voucher_id', 'company_id', 'vars');
+
+        return $this->editAffectedRows;
     }
 
     private function nextLookupReturn(array &$returns, string $reference, int $company_id)
@@ -93,6 +102,14 @@ class KuickPayVoucherReferenceServiceFakeAuditService
     public function record(string $eventName, array $context): void
     {
         $this->events[] = ['event' => $eventName, 'context' => $context];
+    }
+}
+
+class KuickPayVoucherReferenceThrowingAuditService
+{
+    public function record(string $eventName, array $context): void
+    {
+        throw new RuntimeException('simulated audit write failure');
     }
 }
 
@@ -453,6 +470,47 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
             'new_amount' => '1200.00',
         ], $audit->events[0]['context']['payload']);
         $this->assertArrayNotHasKey('run_id', $audit->events[0]['context']);
+    }
+
+    public function testRetireVoucherReportsFailureAndSkipsAuditOnZeroRowNoOp()
+    {
+        // AC3e (5.5): a 0-row edit (wrong/zero company_id, or no matching row)
+        // is a genuine no-op — retireVoucher must report false and write NO
+        // replacement audit, so the replace flow does not proceed as if the
+        // stale voucher had been retired.
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $repository->editAffectedRows = 0;
+        $audit = new KuickPayVoucherReferenceServiceFakeAuditService();
+        $service = new KuickPayVoucherReferenceService($repository, $audit);
+
+        $this->assertFalse($service->retireVoucher(25, 99, 'amount_changed', [
+            'old_amount' => '1500.00',
+            'new_amount' => '1200.00',
+        ]));
+
+        $this->assertSame([
+            [
+                'voucher_id' => 25,
+                'company_id' => 99,
+                'vars' => ['status' => 'cancelled'],
+            ],
+        ], $repository->edits);
+        $this->assertSame([], $audit->events);
+    }
+
+    public function testRetireVoucherStillSucceedsWhenReplacementAuditWriteThrows()
+    {
+        // AC3e (5.5): a thrown replacement-audit write is best-effort (NFR9) and
+        // must never turn a successful retire (1 row affected) into a failure.
+        $repository = new KuickPayVoucherReferenceServiceFakeRepository();
+        $audit = new KuickPayVoucherReferenceThrowingAuditService();
+        $service = new KuickPayVoucherReferenceService($repository, $audit);
+
+        $this->assertTrue($service->retireVoucher(25, 1, 'amount_changed', [
+            'old_amount' => '1500.00',
+            'new_amount' => '1200.00',
+        ]));
+        $this->assertCount(1, $repository->edits);
     }
 
     public function testFlatVoucherExposesIssuanceStateForIdempotency()
