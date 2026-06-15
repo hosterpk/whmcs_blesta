@@ -83,19 +83,44 @@ posting or database effects.
 ## Sanitized Capture
 
 If `KUICKPAY_SMOKE_CAPTURE` is set, the script writes only the redacted response
-envelope exposed by `KuickPaySoapClient`. It never writes `raw_result`.
+envelope exposed by `KuickPaySoapClient` (the output of
+`KuickPayRedactor::redactEnvelope()`). It never writes `raw_result`.
+
+What the captured artifact actually looks like, and what it is NOT:
+
+- It is a **full SOAP envelope** with every sensitive value masked to the literal
+  `xxxx` (tag names are preserved; the entire `*Result` payload is masked). The
+  value masking — not the structure — is what makes it safe to retain.
+- The script will **not overwrite an existing file**: if the capture path already
+  exists the run reports `capture.reason = target-exists` and writes nothing.
+- It is **not** a plugin-style persisted fixture. The persisted fixtures under
+  `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/` store parsed `*Result`
+  content, and `KuickPaySecretLeakageTest` scans only that directory with
+  structural patterns (`raw soap envelope`, `raw kuickpay result element`,
+  `credential key`) that reject any full envelope by design. A captured full
+  envelope therefore must not be dropped into that directory.
+
+What the gateway guard test does and does not prove:
+
+- `tests/KuickPayLiveSmokeGuardTest.php` proves that `redactEnvelope()` strips
+  real credential/PII values and that its `xxxx` output passes the value-level
+  forbidden-pattern scan. It runs over an in-test sample — it does **not** scan
+  an operator's specific captured file.
 
 Before committing or documenting any operator-captured fixture:
 
-1. Store it under `docs/kuickpay/fixtures/bill-payment-inquiry/`.
-2. Confirm it contains no password, username, Institution ID, WSDL host,
-   customer PII, raw result payload, or unredacted SOAP value.
-3. Run the gateway guard test:
+1. Store it under `docs/kuickpay/fixtures/bill-payment-inquiry/`. Note: no
+   automated scan covers this directory, so step 2 is a mandatory manual gate.
+2. Manually confirm it contains no password, username, Institution ID, WSDL host,
+   customer PII, consumer number, raw result payload, or unredacted SOAP value —
+   every sensitive element value must read `xxxx`.
+3. Optionally re-run the gateway guard test to confirm the redactor itself is
+   still leak-clean (this validates the mechanism, not your file):
 
 ```sh
 cd components/gateways/nonmerchant/kuickpay
 /usr/local/bin/php /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayLiveSmokeGuardTest.php
 ```
 
-Do not commit a real captured live response unless the forbidden-pattern scan is
-clean and the fixture has been manually reviewed.
+Do not commit a real captured live response unless it has been manually reviewed
+and every sensitive value reads `xxxx`.

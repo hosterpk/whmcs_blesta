@@ -60,5 +60,11 @@ payloads, raw results, customer PII, amounts, paid dates, or Blesta DB values.
   only.
 - Live provider path: not run in this environment because production credentials
   are not present here.
+- Capture redaction: verified by the guard test running the real
+  `KuickPayRedactor::redactEnvelope()` over an envelope of real credentials/PII
+  and asserting no real value survives and the `xxxx` output passes the value
+  scan. The captured artifact is a full redacted envelope, not a plugin persisted
+  fixture; committing one to `docs/kuickpay/fixtures/` is gated by manual review
+  (no automated scan covers that directory). See the runbook "Sanitized Capture".
 - Payment safety: structurally guaranteed by the smoke being DB-free and
   read-only.
