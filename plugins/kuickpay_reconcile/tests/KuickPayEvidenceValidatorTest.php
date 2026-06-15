@@ -460,11 +460,26 @@ class KuickPayEvidenceValidatorFakeVoucherRepository
 
     public function findActiveByKuickpayReference(string $reference, int $company_id, int $excludeVoucherId = 0): ?stdClass
     {
-        return $this->duplicateReference;
+        return $this->inScope($this->duplicateReference, $company_id, $excludeVoucherId);
     }
 
     public function findActiveByInvoiceId(int $invoice_id, int $company_id, int $excludeVoucherId = 0): ?stdClass
     {
-        return $this->activeSibling;
+        return $this->inScope($this->activeSibling, $company_id, $excludeVoucherId);
+    }
+
+    private function inScope(?stdClass $voucher, int $company_id, int $excludeVoucherId): ?stdClass
+    {
+        if ($voucher === null) {
+            return null;
+        }
+        if (isset($voucher->company_id) && (int) $voucher->company_id !== $company_id) {
+            return null;
+        }
+        if (isset($voucher->id) && (int) $voucher->id === $excludeVoucherId) {
+            return null;
+        }
+
+        return $voucher;
     }
 }

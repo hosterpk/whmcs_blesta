@@ -71,13 +71,15 @@ class KuickPayIssuanceServiceTest extends TestCase
 class KuickPayIssuanceFakeVoucherRepository
 {
     public array $edits = [];
+    public int $existingVoucherId = 25;
+    public int $existingCompanyId = 1;
 
     public function edit(int $voucher_id, int $company_id, array $vars): int
     {
         $this->edits[] = compact('voucher_id', 'company_id', 'vars');
 
         // Models the scoped UPDATE's affected-row count contract.
-        return 1;
+        return $voucher_id === $this->existingVoucherId && $company_id === $this->existingCompanyId ? 1 : 0;
     }
 }
 
