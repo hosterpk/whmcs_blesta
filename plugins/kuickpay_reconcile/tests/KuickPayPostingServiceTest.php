@@ -265,7 +265,8 @@ class KuickPayPostingServiceTest extends TestCase
         $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
         $transactions = new KuickPayPostingFakeTransactions();
         $transactions->listResults = [$this->transaction()];
-        $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.00']];
+        // transaction_applied.amount is decimal(12,4) too.
+        $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.0000']];
         $audit = new KuickPayPostingFakeAuditService();
         $service = $this->service($repo, $transactions, $audit);
 
@@ -297,6 +298,31 @@ class KuickPayPostingServiceTest extends TestCase
         $this->assertSame(777, $result['blesta_transaction_id']);
         $this->assertSame([], $transactions->adds);
         $this->assertSame('posted', $repo->edits[0]['status']);
+    }
+
+    public function testRejectsExistingTransactionWithSubPaisaAmount()
+    {
+        // A decimal(12,4) amount with non-zero digits beyond paisa (here half a
+        // paisa) is NOT representable in PKR minor units. Adoption must fail
+        // closed (amount mismatch -> manual_review) rather than truncate it to a
+        // false match. Applied allocations are representable so the candidate is
+        // selected and the amount path itself is exercised.
+        $repo = new KuickPayPostingFakeVoucherRepository([$this->voucher()], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $transactions->listResults = [$this->transaction(['amount' => '1000.0050'])];
+        $transactions->applied = [(object) ['invoice_id' => 55, 'applied_amount' => '1000.0000']];
+        $service = $this->service($repo, $transactions);
+
+        $result = $service->postVoucher(1, $this->voucher());
+
+        $this->assertSame('manual_review', $result['outcome']);
+        $this->assertSame([], $transactions->adds);
+        $this->assertSame([], $transactions->applies);
+        $this->assertSame('manual_review', $repo->edits[0]['status']);
+        $this->assertSame(
+            ['existing_transaction_mismatch'],
+            json_decode($repo->edits[0]['diagnostic_summary'], true)['validation_errors']
+        );
     }
 
     public function testExistingApprovedUnappliedTransactionFailsClosed()
@@ -606,7 +632,10 @@ class KuickPayPostingServiceTest extends TestCase
             'transaction_id' => 'KP-REF-PAID',
             'client_id' => 10,
             'gateway_id' => 20,
-            'amount' => '1000.00',
+            // Blesta stores transactions.amount as decimal(12,4): the DB returns
+            // a 4-decimal string. Modeling it here (not a 2dp placeholder) keeps
+            // the adoption minor-unit compare honest about the 3-5 trap.
+            'amount' => '1000.0000',
             'currency' => 'PKR',
             'status' => 'approved',
         ], $overrides);
@@ -651,14 +680,30 @@ class KuickPayPostingFakeVoucherRepository
         return null;
     }
 
-    public function getInvoiceLinksForUpdate(int $voucher_id): array
+    public function getInvoiceLinksForUpdate(int $voucher_id, int $company_id): array
     {
-        return $this->links;
+        // Parent-scoped child read: links surface only when the owning voucher is
+        // in company scope, never across tenants.
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                return $this->links;
+            }
+        }
+
+        return [];
     }
 
-    public function edit(int $voucher_id, int $company_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): int
     {
         $this->edits[] = $vars;
+
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                return 1;
+            }
+        }
+
+        return 0;
     }
 
     public function incrementPostingAttempts(int $voucher_id, int $company_id): int

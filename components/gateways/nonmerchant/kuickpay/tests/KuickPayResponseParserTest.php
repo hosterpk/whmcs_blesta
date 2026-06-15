@@ -235,6 +235,29 @@ class KuickPayResponseParserTest extends TestCase
         $this->assertSame('KP-REF-PAID', $evidence->reference());
     }
 
+    public function testBillPaymentInquiryNormalizesPaidFieldsWithNonNumericTxnRef()
+    {
+        // Companion to the numeric-txn-ref guard above: a NON-numeric txn ref
+        // (field 4) must also leave amount/currency/reference mapping intact.
+        // Together the numeric and non-numeric cases pin the 3-2 bug shut from
+        // both sides (a numeric ref must not look like a split amount, and a
+        // non-numeric ref must not perturb field positions).
+        $evidence = $this->parser()->parse(
+            $this->outcome('BillPaymentInquiry', '00,REG-0000001,20260609,1000.0,TXN-ABC-0001,KP-REF-PAID,pkr,INSTITUTION_ID'),
+            [
+                'expected_amount' => '1000',
+                'expected_currency' => 'pkr',
+                'expected_registration_number' => 'REG-0000001',
+            ]
+        );
+
+        $this->assertEvidence('confirmed_unposted', null, $evidence);
+        $this->assertSame('1000.00', $evidence->amount());
+        $this->assertSame('PKR', $evidence->currency());
+        $this->assertSame('2026-06-09', $evidence->paidAt());
+        $this->assertSame('KP-REF-PAID', $evidence->reference());
+    }
+
     public function testBillPaymentInquiryConfirmWithMissingPaidDateFailsClosed()
     {
         // Amount, currency and identity all match, but the Transaction_Date

@@ -289,7 +289,7 @@ class KuickPayEvidenceValidatorTest extends TestCase
             'paid invoice' => [
                 [],
                 [],
-                ['due' => 0.0],
+                ['due' => '0.0000'],
                 [],
                 null,
                 null,
@@ -394,9 +394,11 @@ class KuickPayEvidenceValidatorTest extends TestCase
             'client_id' => 10,
             'status' => 'active',
             'currency' => 'PKR',
-            'total' => 1000.0,
-            'paid' => 0.0,
-            'due' => 1000.0,
+            // Blesta invoice money columns are decimal(12,4): PDO returns 4-decimal
+            // strings, which invoiceDueMinorUnits() must tolerate.
+            'total' => '1000.0000',
+            'paid' => '0.0000',
+            'due' => '1000.0000',
         ], $overrides);
     }
 

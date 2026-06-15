@@ -67,6 +67,53 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame($voucherId, $audit->events[0][1]['voucher_id']);
     }
 
+    public function testFakeModelsEmptyStringIdentityCollisionButNullDistinctness()
+    {
+        // Story 5.5 AC2 identity diversification: the company-scoped unique keys
+        // treat a NULL consumer_number/registration_number as DISTINCT (many
+        // NULLs allowed) but an empty string '' as a value (two '' in one
+        // company collide), exactly as MySQL does. NULL is already covered
+        // elsewhere; this pins the empty-string variant.
+        $repo = new KuickPayVoucherReferenceFakeRepository();
+        $base = [
+            'company_id' => 1,
+            'status' => 'pending',
+            'gateway_id' => 2,
+            'client_id' => 3,
+            'currency' => 'PKR',
+            'amount' => '10.00',
+            'date_due' => '2026-06-13',
+            'date_expires' => '2026-06-20',
+        ];
+
+        // Empty-string consumer is a value: a second '' in the same company
+        // collides on uniq_kuickpay_vouchers_consumer (create returns null).
+        $this->assertNotNull($repo->create(
+            $base + ['consumer_number' => '', 'registration_number' => 'REG-1', 'context_key' => 'ctx-1'],
+            []
+        ));
+        $this->assertNull($repo->create(
+            $base + ['consumer_number' => '', 'registration_number' => 'REG-2', 'context_key' => 'ctx-2'],
+            []
+        ));
+
+        // The same empty-string consumer in a DIFFERENT company is fine.
+        $this->assertNotNull($repo->create(
+            ['company_id' => 2] + $base + ['consumer_number' => '', 'registration_number' => 'REG-3', 'context_key' => 'ctx-3'],
+            []
+        ));
+
+        // NULL consumer numbers are distinct: many are allowed in one company.
+        $this->assertNotNull($repo->create(
+            $base + ['consumer_number' => null, 'registration_number' => 'REG-4', 'context_key' => 'ctx-4'],
+            []
+        ));
+        $this->assertNotNull($repo->create(
+            $base + ['consumer_number' => null, 'registration_number' => 'REG-5', 'context_key' => 'ctx-5'],
+            []
+        ));
+    }
+
     public function testDuplicateInvoiceIdRecordsGenerationFailedAudit()
     {
         $audit = new KuickPayVoucherReferenceFakeAuditService();
@@ -354,6 +401,8 @@ class KuickPayVoucherReferenceFakeAuditService
  */
 class KuickPayVoucherReferenceFakeRepository
 {
+    use KuickPayFakeVoucherConstraints;
+
     /** @var array<int, array> id => ['voucher' => stdClass, 'invoices' => stdClass[]] */
     public array $rows = [];
 
@@ -368,9 +417,6 @@ class KuickPayVoucherReferenceFakeRepository
 
     /** @var bool When true, pending lookups miss until a create is attempted */
     public bool $hidePendingUntilCreateAttempted = false;
-
-    /** @var array<string, int> "company|active_context_key" => id */
-    private array $activeIndex = [];
 
     /** @var int Next auto-increment id */
     private int $nextId = 1;
@@ -425,30 +471,22 @@ class KuickPayVoucherReferenceFakeRepository
         $this->createdVoucherData = $voucherData;
         $this->createdInvoiceLinks = $invoiceLinks;
 
-        // NOT-NULL context_key fidelity: the model rejects an empty value.
-        if (empty($voucherData['context_key'])) {
+        // Model the real repository create(): the DB enforces the NOT-NULL +
+        // company-scoped UNIQUE keys (shared constraint trait throws like MySQL),
+        // and the repository swallows that violation and returns null.
+        $id = $this->nextId;
+        try {
+            $this->enforceVoucherInsert($id, $voucherData);
+        } catch (RuntimeException $e) {
             return null;
         }
+        $this->nextId++;
 
-        // UNIQUE (company_id, active_context_key) fidelity.
-        $activeContextKey = $this->activeContextKey(
-            (string) ($voucherData['status'] ?? ''),
-            (string) $voucherData['context_key']
-        );
-        $indexKey = $this->indexKey((int) $voucherData['company_id'], $activeContextKey);
-        if ($activeContextKey !== null && isset($this->activeIndex[$indexKey])) {
-            return null;
-        }
-
-        $id = $this->nextId++;
         $voucher = (object) array_merge($voucherData, ['id' => $id]);
         $invoices = array_map(static function (array $link) {
             return (object) $link;
         }, $invoiceLinks);
         $this->rows[$id] = ['voucher' => $voucher, 'invoices' => $invoices];
-        if ($activeContextKey !== null) {
-            $this->activeIndex[$indexKey] = $id;
-        }
 
         return $id;
     }
@@ -486,14 +524,16 @@ class KuickPayVoucherReferenceFakeRepository
             return 0;
         }
 
-        $oldActive = $this->activeContextKey((string) $voucher->status, (string) ($voucher->context_key ?? ''));
+        $oldStatus = (string) $voucher->status;
         foreach ($vars as $key => $value) {
             $voucher->{$key} = $value;
         }
-        $newActive = $this->activeContextKey((string) $voucher->status, (string) ($voucher->context_key ?? ''));
-        if ($oldActive !== null && $newActive === null) {
-            unset($this->activeIndex[$this->indexKey($companyId, $oldActive)]);
-        }
+        $this->releaseActiveContextOnTerminal(
+            $companyId,
+            (string) ($voucher->context_key ?? ''),
+            $oldStatus,
+            (string) $voucher->status
+        );
 
         return 1;
     }
@@ -532,7 +572,7 @@ class KuickPayVoucherReferenceFakeRepository
     {
         $ids = [];
         foreach ($this->rows as $id => $row) {
-            if ($this->activeContextKey((string) $row['voucher']->status, 'x') !== null) {
+            if ($this->fakeActiveContextKey((string) $row['voucher']->status, 'x') !== null) {
                 $ids[] = $id;
             }
         }
@@ -552,16 +592,6 @@ class KuickPayVoucherReferenceFakeRepository
         }
 
         return null;
-    }
-
-    private function activeContextKey(string $status, string $contextKey): ?string
-    {
-        return in_array($status, ['expired', 'cancelled'], true) ? null : $contextKey;
-    }
-
-    private function indexKey(int $companyId, ?string $activeContextKey): string
-    {
-        return $companyId . '|' . ($activeContextKey ?? "\0null");
     }
 
     private function normalizeIds(array $ids): array

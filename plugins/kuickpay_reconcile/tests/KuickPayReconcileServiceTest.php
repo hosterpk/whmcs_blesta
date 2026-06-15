@@ -1316,12 +1316,15 @@ class KuickPayReconcileFakeVoucherRepository
         return false;
     }
 
-    public function edit(int $voucher_id, int $company_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): int
     {
         $vars['company_id_scope'] = $company_id;
         $vars['voucher_id'] = $voucher_id;
         $this->edits[] = $vars;
 
+        // Model the scoped, count-returning UPDATE: only an in-scope row is
+        // mutated, and the affected-row count surfaces 1 (match) or 0 (no-op).
+        $affected = 0;
         foreach ($this->vouchers as $voucher) {
             if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
                 foreach ($vars as $key => $value) {
@@ -1331,8 +1334,11 @@ class KuickPayReconcileFakeVoucherRepository
 
                     $voucher->{$key} = $value;
                 }
+                $affected = 1;
             }
         }
+
+        return $affected;
     }
 
     public function editIfActive(int $voucher_id, int $company_id, array $vars): bool
@@ -1358,7 +1364,7 @@ class KuickPayReconcileFakeVoucherRepository
         return false;
     }
 
-    public function getWithInvoices(int $voucher_id): ?array
+    public function getWithInvoices(int $voucher_id, int $company_id = 0): ?array
     {
         // Simulate a concurrent writer winning the race between the manual entry
         // read and the confirmed-branch re-read: flip the row on this re-read.
@@ -1378,7 +1384,11 @@ class KuickPayReconcileFakeVoucherRepository
         }
 
         foreach ($this->vouchers as $voucher) {
-            if ((int) $voucher->id === $voucher_id) {
+            if ((int) $voucher->id === $voucher_id
+                // Company-scoped read fidelity: a voucher id outside the company
+                // resolves to null, never another tenant's row.
+                && ($company_id === 0 || (int) $voucher->company_id === $company_id)
+            ) {
                 return ['voucher' => $voucher, 'invoices' => $this->invoiceLinks];
             }
         }
@@ -1546,9 +1556,18 @@ class KuickPayReconcileFakeRunRepository
 class KuickPayReconcileFakeItemRepository
 {
     public array $items = [];
+    private array $seen = [];
 
     public function record(array $vars): void
     {
+        // Enforce uniq_kuickpay_items_run_voucher (run_id, voucher_id) exactly as
+        // the schema does, so this fake is never looser than the DB (AI-2).
+        $key = (int) ($vars['run_id'] ?? 0) . ':' . (int) ($vars['voucher_id'] ?? 0);
+        if (isset($this->seen[$key])) {
+            throw new RuntimeException('Duplicate entry for key uniq_kuickpay_items_run_voucher');
+        }
+
+        $this->seen[$key] = true;
         $this->items[] = $vars;
     }
 }

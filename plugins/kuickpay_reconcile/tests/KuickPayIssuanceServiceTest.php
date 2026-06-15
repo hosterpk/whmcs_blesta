@@ -72,9 +72,12 @@ class KuickPayIssuanceFakeVoucherRepository
 {
     public array $edits = [];
 
-    public function edit(int $voucher_id, int $company_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): int
     {
         $this->edits[] = compact('voucher_id', 'company_id', 'vars');
+
+        // Models the scoped UPDATE's affected-row count contract.
+        return 1;
     }
 }
 

@@ -3,9 +3,12 @@
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../../../../../plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php';
+require_once __DIR__ . '/../../../../../plugins/kuickpay_reconcile/tests/fakes/KuickPayFakeVoucherConstraints.php';
 
 class KuickPayVoucherReferenceServiceFakeRepository
 {
+    use KuickPayFakeVoucherConstraints;
+
     public $pendingVoucher;
     public $createdVoucherId = 101;
     public $createCalls = 0;
@@ -51,7 +54,19 @@ class KuickPayVoucherReferenceServiceFakeRepository
         $this->createdVoucherData = $voucherData;
         $this->createdInvoiceLinks = $invoiceLinks;
 
-        return $this->createReturnsNull ? null : $this->createdVoucherId;
+        if ($this->createReturnsNull) {
+            return null;
+        }
+
+        // Model the DB's NOT-NULL + company-scoped UNIQUE keys (shared trait):
+        // a constraint violation makes the repository create() return null.
+        try {
+            $this->enforceVoucherInsert((int) $this->createdVoucherId, $voucherData);
+        } catch (RuntimeException $e) {
+            return null;
+        }
+
+        return $this->createdVoucherId;
     }
 
     public function getWithInvoices(int $voucher_id)

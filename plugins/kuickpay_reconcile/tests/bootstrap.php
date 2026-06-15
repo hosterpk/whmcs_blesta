@@ -23,3 +23,6 @@ if (!class_exists('AppModel')) {
 require_once __DIR__ . '/../kuickpay_reconcile_model.php';
 require_once __DIR__ . '/../models/kuickpay_vouchers.php';
 require_once __DIR__ . '/../models/kuickpay_reconciliation_runs.php';
+
+// Shared fake-fidelity constraint model reused by the repository fakes (AI-2).
+require_once __DIR__ . '/fakes/KuickPayFakeVoucherConstraints.php';
