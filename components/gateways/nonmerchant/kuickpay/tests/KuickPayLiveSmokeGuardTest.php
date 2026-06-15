@@ -90,6 +90,48 @@ class KuickPayLiveSmokeGuardTest extends TestCase
         $this->assertForbiddenFixtureLeak('03001234567');
         $this->assertForbiddenFixtureLeak('12345-1234567-1');
         $this->assertForbiddenFixtureLeak('customer@example.com');
+        $this->assertForbiddenFixtureLeak('https://prod-host.example.com/PaymentService.svc?wsdl');
+        $this->assertForbiddenFixtureLeak('<Consumer_Number>900000000000</Consumer_Number>');
+    }
+
+    /**
+     * AC3 proof: the actual capture artifact is the output of the real
+     * KuickPayRedactor::redactEnvelope(). Prove that running it over an envelope
+     * carrying real credentials/PII strips every real value and that the result
+     * passes the value-level forbidden-pattern scan -- the property AC3 requires
+     * "before any commit". (The redactor preserves tag names and emits `xxxx`,
+     * so this is a full-envelope artifact, not a plugin-style persisted fixture.)
+     */
+    public function testRealRedactedEnvelopeStripsSecretsAndPassesValueScan()
+    {
+        $secrets = [
+            'kp-live-user-9z',
+            'kp-live-pass-9z',
+            '987654',
+            'real.person@gmail.com',
+            '03001234567',
+            '12345-1234567-1',
+            '900000000099',
+        ];
+
+        $raw = '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
+            . '<soap:Body><BillPaymentInquiryResponse>'
+            . '<BillPaymentInquiryResult>00|900000000099|2026-06-16|1500.00|TXN1|MCB</BillPaymentInquiryResult>'
+            . '<userName>kp-live-user-9z</userName>'
+            . '<password>kp-live-pass-9z</password>'
+            . '<InstitutionID>987654</InstitutionID>'
+            . '<Email>real.person@gmail.com</Email>'
+            . '<Mobile>03001234567</Mobile>'
+            . '<CNIC>12345-1234567-1</CNIC>'
+            . '</BillPaymentInquiryResponse></soap:Body></soap:Envelope>';
+
+        $redacted = (new KuickPayRedactor())->redactEnvelope($raw);
+
+        foreach ($secrets as $secret) {
+            $this->assertStringNotContainsString($secret, $redacted, 'Real secret survived redaction: ' . $secret);
+        }
+
+        $this->assertNoForbiddenFixtureLeak($redacted);
     }
 
     private function fullEnv(array $overrides = []): array
@@ -123,10 +165,14 @@ class KuickPayLiveSmokeGuardTest extends TestCase
 
     private function fixtureForbiddenPatterns(): array
     {
+        // The gateway redactor (KuickPayRedactor::redactEnvelope) masks sensitive
+        // values to the literal `xxxx`, so the placeholder allow-list must accept
+        // `xxxx<` alongside the plugin's `REDACTED_*`/`INSTITUTION_ID` convention --
+        // otherwise the real capture artifact would be wrongly flagged as a leak.
         return [
-            'real username value' => '/<userName>(?!REDACTED_USERNAME<)[^<]+<\/userName>/i',
-            'real password value' => '/<password>(?!REDACTED_PASSWORD<)[^<]+<\/password>/i',
-            'real institution element' => '/<InstitutionID>(?!INSTITUTION_ID<)[^<]+<\/InstitutionID>/i',
+            'real username value' => '/<userName>(?!REDACTED_USERNAME<|xxxx<)[^<]+<\/userName>/i',
+            'real password value' => '/<password>(?!REDACTED_PASSWORD<|xxxx<)[^<]+<\/password>/i',
+            'real institution element' => '/<InstitutionID>(?!INSTITUTION_ID<|xxxx<)[^<]+<\/InstitutionID>/i',
             'raw username element' => '/<userName>\s*(?!REDACTED_USERNAME<|xxxx<)[^<]+<\/userName>/i',
             'raw password element' => '/<password>\s*(?!REDACTED_PASSWORD<|xxxx<)[^<]+<\/password>/i',
             'cnic dashed' => '/\b\d{5}-\d{7}-\d\b/',
@@ -134,6 +180,14 @@ class KuickPayLiveSmokeGuardTest extends TestCase
             'real mobile' => '/\b03\d{2}(?:[\s-]?\d){7}\b/',
             'real mobile international' => '/(?:\+92|0092)[\s-]?3\d{2}(?:[\s-]?\d){7}\b/',
             'real email' => '/[A-Z0-9._%+-]+@(?!example\.invalid\b)[A-Z0-9.-]+\.[A-Z]{2,}/i',
+            // A WSDL endpoint must never reach a committed capture (the runbook
+            // forbids the WSDL host). Targeted at a `?wsdl` URL so the legitimate
+            // SOAP namespace URI in every envelope is not flagged.
+            'wsdl endpoint url' => '/https?:\/\/[^\s<"\']*\?wsdl/i',
+            // Consumer numbers / bare numeric references (>=12 digits) must not
+            // survive into a capture. The redactor masks them inside *Result; this
+            // is the defence-in-depth scan for a hand-edited fixture.
+            'bare long numeric reference' => '/\b\d{12,}\b/',
         ];
     }
 }
