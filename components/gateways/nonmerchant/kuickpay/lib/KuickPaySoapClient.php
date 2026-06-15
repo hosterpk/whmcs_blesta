@@ -11,8 +11,8 @@
 class KuickPaySoapClient
 {
     private const DEFAULT_TIMEOUT = 30;
-    private const MIN_TIMEOUT = 5;
-    private const MAX_TIMEOUT = 120;
+    private const MIN_TIMEOUT = 1;
+    private const MAX_TIMEOUT = 300;
 
     /**
      * @var array Gateway SOAP configuration

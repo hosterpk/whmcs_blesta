@@ -739,11 +739,8 @@ class Kuickpay extends NonmerchantGateway
         }
 
         $url = (string) ($meta['wsdl_url'] ?? '');
-        if (
-            strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https'
-            || parse_url($url, PHP_URL_USER) !== null
-            || parse_url($url, PHP_URL_PASS) !== null
-        ) {
+        $safety = self::wsdlUrlSafety($url, self::parseAllowedHosts($meta['wsdl_allowed_hosts'] ?? ''));
+        if (in_array($safety['reason'], ['format', 'userinfo'], true)) {
             $this->Input->setErrors([
                 'connection' => [
                     'url_userinfo' => Language::_('Kuickpay.!error.connection.url_userinfo', true),
@@ -760,10 +757,9 @@ class Kuickpay extends NonmerchantGateway
         // IPv4 and IPv6 address must be public. A host that resolves to nothing is
         // treated as blocked rather than handed to an unvalidated cURL re-resolution.
         // The same check gates the save rule (validatedProbeAddresses()).
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        $host = trim($host, '[]');
+        $host = $safety['host'];
         $addresses = $this->validatedProbeAddresses($host);
-        if ($addresses === []) {
+        if (!$safety['safe'] || $addresses === []) {
             $this->Input->setErrors([
                 'connection' => [
                     'url_blocked' => Language::_('Kuickpay.!error.connection.url_blocked', true),
@@ -780,6 +776,7 @@ class Kuickpay extends NonmerchantGateway
         $resolveHost = (strpos($host, ':') !== false) ? '[' . $host . ']' : $host;
         $resolve = [];
         foreach ($addresses as $address) {
+            $address = (strpos($address, ':') !== false) ? '[' . $address . ']' : $address;
             $resolve[] = $resolveHost . ':' . (is_int($port) ? $port : 443) . ':' . $address;
         }
 
@@ -787,7 +784,7 @@ class Kuickpay extends NonmerchantGateway
         if ($timeout < 1) {
             $timeout = 30;
         }
-        $timeout = min(120, $timeout);
+        $timeout = min(self::MAX_SOAP_TIMEOUT, $timeout);
 
         $result = $this->executeConnectionProbe($url, [
             CURLOPT_CONNECTTIMEOUT => $timeout,

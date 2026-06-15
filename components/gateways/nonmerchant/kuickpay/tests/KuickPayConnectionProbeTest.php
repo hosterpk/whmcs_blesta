@@ -123,7 +123,7 @@ class KuickPayConnectionProbeTest extends TestCase
         $gateway->probeResult = ['errno' => 0, 'response_code' => 404];
 
         $gateway->editSettings($this->meta([
-            'soap_timeout' => '99999',
+            'soap_timeout' => '300',
             'run_connection_test' => 'true',
         ]));
 
@@ -132,8 +132,8 @@ class KuickPayConnectionProbeTest extends TestCase
         $call = $gateway->probeCalls[0];
 
         $this->assertSame('https://example.test/api.asmx?WSDL', $call['url']);
-        $this->assertSame(120, $call['options'][CURLOPT_CONNECTTIMEOUT]);
-        $this->assertSame(120, $call['options'][CURLOPT_TIMEOUT]);
+        $this->assertSame(300, $call['options'][CURLOPT_CONNECTTIMEOUT]);
+        $this->assertSame(300, $call['options'][CURLOPT_TIMEOUT]);
         $this->assertTrue($call['options'][CURLOPT_SSL_VERIFYPEER]);
         $this->assertSame(2, $call['options'][CURLOPT_SSL_VERIFYHOST]);
         $this->assertSame(CURLPROTO_HTTPS, $call['options'][CURLOPT_PROTOCOLS]);
@@ -250,9 +250,9 @@ class KuickPayConnectionProbeTest extends TestCase
 
         $this->assertSame([], $input->errors);
         $this->assertCount(1, $gateway->probeCalls);
-        // host:port:ipv6 -- the named host has no colons, so the IPv6 tail parses.
+        // libcurl requires IPv6 addresses in CURLOPT_RESOLVE to be bracketed.
         $this->assertSame(
-            ['ipv6.example:443:2606:4700:4700::1111'],
+            ['ipv6.example:443:[2606:4700:4700::1111]'],
             $gateway->probeCalls[0]['options'][CURLOPT_RESOLVE]
         );
     }

@@ -42,6 +42,14 @@ class KuickPaySettingsValidationGateway extends Kuickpay
     /** @var array Addresses resolveProbeAddresses() returns for a named host. */
     public $resolved = ['93.184.216.34'];
 
+    public $probeCalls = [];
+
+    protected function executeConnectionProbe($url, array $options)
+    {
+        $this->probeCalls[] = ['url' => $url, 'options' => $options];
+        return ['errno' => 0, 'response_code' => 200];
+    }
+
     protected function resolveProbeAddresses($host)
     {
         return $this->resolved;
@@ -317,7 +325,7 @@ class KuickPaySettingsValidationTest extends TestCase
         return [
             'zero rejected' => ['0', true],
             'leading zero rejected' => ['007', true],
-            'over max rejected' => ['99999', true],
+            'over max rejected' => ['301', true],
             'valid passes' => ['30', false],
         ];
     }
@@ -368,6 +376,22 @@ class KuickPaySettingsValidationTest extends TestCase
         $gateway->editSettings($this->meta());
 
         $this->assertFalse($gateway->Input->errors());
+    }
+
+    public function testInvalidSettingsDoNotRunConnectionProbe()
+    {
+        $input = new Input();
+        $reflection = new ReflectionClass(KuickPaySettingsValidationGateway::class);
+        $gateway = $reflection->newInstanceWithoutConstructor();
+        $gateway->Input = $input;
+
+        $gateway->editSettings($this->meta([
+            'soap_timeout' => '301',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertArrayHasKey('range', $gateway->Input->errors()['soap_timeout']);
     }
 
     // --- helpers ------------------------------------------------------------

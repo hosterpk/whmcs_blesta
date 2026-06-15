@@ -93,9 +93,9 @@ class KuickPaySoapClientTest extends TestCase
 
         $this->callPrivate($client, 'InsertVoucher', []);
 
-        $this->assertSame(120, $capturedOptions['connection_timeout']);
+        $this->assertSame(300, $capturedOptions['connection_timeout']);
         $contextOptions = stream_context_get_options($capturedOptions['stream_context']);
-        $this->assertSame(120, $contextOptions['http']['timeout']);
+        $this->assertSame(300, $contextOptions['http']['timeout']);
     }
 
     public function testSuccessfulCallReturnsRawResultAndNoBusinessDecision()
