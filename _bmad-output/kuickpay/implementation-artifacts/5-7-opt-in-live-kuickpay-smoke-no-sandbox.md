@@ -6,7 +6,7 @@ baseline_commit: 7c3835d88aea366b4297d66b8d549c7d1ed83bdb
 
 # Story 5.7: Opt-In Live KuickPay Smoke (No Sandbox)
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -515,12 +515,13 @@ GPT-5 Codex
 - 2026-06-16: Added operator runbook, sanitized verification template, and deferred-work note for the 5.1 live SOAP residual mechanism.
 - 2026-06-16: Completed validation and moved story to review.
 - 2026-06-16: Code review (3 adversarial layers + reviewer verification) applied 5 fixes; moved story to in-progress for dev re-validation. See Review Findings.
+- 2026-06-16: Israr accepted the AC3 value-clean+manual-review interpretation; story moved to done.
 
 ## Review Findings
 
 _Code review 2026-06-16 (Blind Hunter + Edge Case Hunter + Acceptance Auditor, Opus 4.8). Verified against real code + empirical runs. Baseline disclosed: gateway suite 320 tests / 1 pre-existing `empty-currency` red. Outcome: 5 patches applied (green), 2 deferred, 5 dismissed, 0 decision-needed._
 
-**AC verdicts:** AC1 SATISFIED · AC2 SATISFIED (after WSDL-host scrub fix) · AC3 SATISFIED-with-caveat (value-clean + manual-review gate; see Patch findings + ⚠ below).
+**AC verdicts:** AC1 SATISFIED · AC2 SATISFIED (after WSDL-host scrub fix) · AC3 SATISFIED (value-clean redaction + manual-review gate; interpretation confirmed by Israr 2026-06-16).
 
 ### Patches (applied this review)
 
@@ -546,3 +547,5 @@ _Code review 2026-06-16 (Blind Hunter + Edge Case Hunter + Acceptance Auditor, O
 ### ⚠ One item for PM/dev confirmation
 
 AC3 literal text says the captured envelope "passes the `KuickPaySecretLeakageTest` forbidden-pattern scan before any commit." The capture is a full redacted (`xxxx`) envelope, which by design fails that suite's **structural** patterns (`raw soap envelope`/`result element`/`credential key`) — those exist to keep full envelopes out of the persisted-fixture dir, and that suite does not even scan `docs/kuickpay/fixtures/`. This review resolved AC3 as **value-clean redaction + a mandatory manual-review gate** (proven by the new guard test + corrected runbook), rather than forcing the capture into the persisted-fixture shape. Confirm this interpretation, or request the capture emit persisted-fixture-shaped output instead.
+
+**Resolved 2026-06-16:** Israr accepted this interpretation. AC3 closed as SATISFIED; story moved to `done`.
