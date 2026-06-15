@@ -40,7 +40,7 @@ $evidence = $plan['operation'] === 'BillPaymentInquiry'
 $capture = kuickpay_live_smoke_capture($outcome, $plan['capture_path']);
 $report = [
     'result' => ($outcome['ok'] ?? false) ? 'COMPLETED' : 'FAILED',
-    'transport' => kuickpay_live_smoke_transport_report($outcome),
+    'transport' => kuickpay_live_smoke_transport_report($outcome, $plan['config']['wsdl_url'] ?? ''),
     'evidence' => $evidence === null
         ? ['applicable' => false, 'reason' => 'transport-only operation; no inquiry evidence to parse']
         : kuickpay_live_smoke_evidence_report($evidence),
@@ -90,18 +90,42 @@ function kuickpay_live_smoke_call(KuickPaySoapClient $client, string $operation,
     return $client->billPaymentInquiry(['Consumer_Number' => $consumerNumber]);
 }
 
-function kuickpay_live_smoke_transport_report(array $outcome): array
+function kuickpay_live_smoke_transport_report(array $outcome, string $wsdlUrl = ''): array
 {
+    // The SOAP client redacts credential/PII values from the fault, but a WSDL
+    // parse/transport error echoes the operator's WSDL URL/host -- which AC2 and
+    // the runbook require kept out of the smoke output. Scrub the known endpoint.
+    $fault = isset($outcome['fault']) ? $outcome['fault'] : null;
+    if (is_string($fault) && $fault !== '') {
+        $fault = kuickpay_live_smoke_scrub_endpoint($fault, $wsdlUrl);
+    }
+
     return [
         'ok' => (bool) ($outcome['ok'] ?? false),
         'operation' => isset($outcome['operation']) ? (string) $outcome['operation'] : null,
         'error_class' => isset($outcome['error_class']) ? $outcome['error_class'] : null,
-        'fault' => isset($outcome['fault']) ? $outcome['fault'] : null,
+        'fault' => $fault,
         'redacted_trace_id' => isset($outcome['redacted_trace_id']) ? (string) $outcome['redacted_trace_id'] : null,
         'duration_ms' => isset($outcome['duration_ms']) ? (int) $outcome['duration_ms'] : null,
         'attempt' => isset($outcome['attempt']) ? (int) $outcome['attempt'] : null,
         'attempts' => isset($outcome['attempts']) ? (int) $outcome['attempts'] : null,
     ];
+}
+
+function kuickpay_live_smoke_scrub_endpoint(string $text, string $wsdlUrl): string
+{
+    $wsdlUrl = trim($wsdlUrl);
+    if ($wsdlUrl === '') {
+        return $text;
+    }
+
+    $needles = [$wsdlUrl];
+    $host = parse_url($wsdlUrl, PHP_URL_HOST);
+    if (is_string($host) && $host !== '') {
+        $needles[] = $host;
+    }
+
+    return str_replace($needles, '[redacted-wsdl]', $text);
 }
 
 function kuickpay_live_smoke_evidence_report(KuickPayEvidence $evidence): array
