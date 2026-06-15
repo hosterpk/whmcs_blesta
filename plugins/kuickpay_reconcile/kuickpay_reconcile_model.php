@@ -60,11 +60,14 @@ class KuickpayReconcileModel extends AppModel
      *
      * @param string $table The directly-scoped table name
      * @param int $companyId The mandatory company scope
+     * @param array|null $fields Optional selected fields
      * @return \Record The Record builder, scoped and ready to chain
      */
-    protected function scopedSelect(string $table, int $companyId)
+    protected function scopedSelect(string $table, int $companyId, array $fields = null)
     {
-        return $this->Record->select()
+        $record = $fields === null ? $this->Record->select() : $this->Record->select($fields);
+
+        return $record
             ->from($table)
             ->where($table . '.company_id', '=', $companyId);
     }
@@ -82,11 +85,19 @@ class KuickpayReconcileModel extends AppModel
      * @param string $parentTable The owning parent table (carries company_id)
      * @param string $fkColumn The child column referencing $parentTable.id
      * @param int $companyId The mandatory company scope
+     * @param array|null $fields Optional selected fields
      * @return \Record The Record builder, scoped and ready to chain
      */
-    protected function scopedChildSelect(string $childTable, string $parentTable, string $fkColumn, int $companyId)
-    {
-        return $this->Record->select([$childTable . '.*'])
+    protected function scopedChildSelect(
+        string $childTable,
+        string $parentTable,
+        string $fkColumn,
+        int $companyId,
+        array $fields = null
+    ) {
+        $record = $fields === null ? $this->Record->select([$childTable . '.*']) : $this->Record->select($fields);
+
+        return $record
             ->from($childTable)
             ->innerJoin(
                 $parentTable,

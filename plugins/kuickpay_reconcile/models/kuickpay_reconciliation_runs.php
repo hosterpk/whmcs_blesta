@@ -130,8 +130,8 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
         int $page = 1,
         array $order_by = ['date_started' => 'DESC']
     ): array {
-        $this->Record->select()->from('kuickpay_reconciliation_runs');
-        $this->applyRunFilters($company_id, $filters);
+        $this->scopedSelect('kuickpay_reconciliation_runs', $company_id);
+        $this->applyRunFilters($filters);
 
         return $this->Record->order($this->sanitizeOrderBy($order_by))
             ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
@@ -150,8 +150,8 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
      */
     public function getListCountForCompany(int $company_id, array $filters = []): int
     {
-        $this->Record->select()->from('kuickpay_reconciliation_runs');
-        $this->applyRunFilters($company_id, $filters);
+        $this->scopedSelect('kuickpay_reconciliation_runs', $company_id);
+        $this->applyRunFilters($filters);
 
         return $this->Record->numResults();
     }
@@ -181,14 +181,10 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
      * Each optional filter is matched exactly against its source-of-truth const,
      * so a request value can never reach the query unvalidated.
      *
-     * @param int $company_id The authenticated staff company (mandatory scope)
      * @param array $filters Allowlisted optional filters: trigger_type, status
      */
-    private function applyRunFilters(int $company_id, array $filters): void
+    private function applyRunFilters(array $filters): void
     {
-        // Mandatory tenant scope — never from request input.
-        $this->Record->where('company_id', '=', $company_id);
-
         if (isset($filters['trigger_type']) && in_array($filters['trigger_type'], self::TRIGGER_TYPES, true)) {
             $this->Record->where('trigger_type', '=', $filters['trigger_type']);
         }

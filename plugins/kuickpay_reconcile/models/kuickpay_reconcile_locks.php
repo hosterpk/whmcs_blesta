@@ -55,16 +55,21 @@ class KuickpayReconcileLocks extends KuickpayReconcileModel
 
     public function reclaimStale(int $company_id, string $lock_name, string $owner_token, string $expires): bool
     {
-        $statement = $this->Record->query(
-            "UPDATE `kuickpay_reconcile_locks`
-                SET `owner_token` = ?, `date_acquired` = ?, `date_expires` = ?, `date_heartbeat` = ?
-              WHERE `company_id` = ? AND `lock_name` = ? AND `date_expires` < NOW()",
-            $owner_token,
-            date('Y-m-d H:i:s'),
-            $expires,
-            date('Y-m-d H:i:s'),
+        $now = date('Y-m-d H:i:s');
+        $statement = $this->scopedUpdate(
+            'kuickpay_reconcile_locks',
             $company_id,
-            $lock_name
+            [
+                'owner_token' => $owner_token,
+                'date_acquired' => $now,
+                'date_expires' => $expires,
+                'date_heartbeat' => $now,
+            ],
+            ['owner_token', 'date_acquired', 'date_expires', 'date_heartbeat'],
+            [
+                ['lock_name', '=', $lock_name],
+                ['date_expires', '<', 'NOW()', false, false],
+            ]
         );
 
         return $statement->rowCount() === 1;

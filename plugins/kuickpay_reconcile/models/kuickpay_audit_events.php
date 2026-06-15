@@ -44,11 +44,12 @@ class KuickpayAuditEvents extends KuickpayReconcileModel
      */
     public function getByVoucher(int $voucher_id, int $company_id, int $limit = 100): array
     {
-        return $this->Record
-            ->select(['event_name', 'redacted_trace_id', 'evidence_hash', 'payload', 'date_created'])
-            ->from('kuickpay_audit_events')
+        return $this->scopedSelect(
+                'kuickpay_audit_events',
+                $company_id,
+                ['event_name', 'redacted_trace_id', 'evidence_hash', 'payload', 'date_created']
+            )
             ->where('voucher_id', '=', $voucher_id)
-            ->where('company_id', '=', $company_id)
             ->order(['date_created' => 'DESC', 'id' => 'DESC'])
             ->limit(max(1, $limit))
             ->fetchAll();
@@ -74,10 +75,11 @@ class KuickpayAuditEvents extends KuickpayReconcileModel
      */
     public function getByRun(int $run_id, int $company_id, int $limit = 500): array
     {
-        return $this->Record
-            ->select(['voucher_id', 'event_name', 'redacted_trace_id', 'evidence_hash', 'payload', 'date_created'])
-            ->from('kuickpay_audit_events')
-            ->where('company_id', '=', $company_id)
+        return $this->scopedSelect(
+                'kuickpay_audit_events',
+                $company_id,
+                ['voucher_id', 'event_name', 'redacted_trace_id', 'evidence_hash', 'payload', 'date_created']
+            )
             ->where('run_id', '=', $run_id)
             ->where('event_name', 'in', ['evidence.unmatched', 'evidence.duplicate'])
             ->order(['id' => 'ASC'])
@@ -94,10 +96,7 @@ class KuickpayAuditEvents extends KuickpayReconcileModel
      */
     public function getCountByRun(int $run_id, int $company_id): int
     {
-        return $this->Record
-            ->select(['id'])
-            ->from('kuickpay_audit_events')
-            ->where('company_id', '=', $company_id)
+        return $this->scopedSelect('kuickpay_audit_events', $company_id, ['id'])
             ->where('run_id', '=', $run_id)
             ->where('event_name', 'in', ['evidence.unmatched', 'evidence.duplicate'])
             ->numResults();

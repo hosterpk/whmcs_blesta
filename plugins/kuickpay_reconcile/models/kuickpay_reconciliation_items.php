@@ -43,18 +43,14 @@ class KuickpayReconciliationItems extends KuickpayReconcileModel
      */
     public function getByRun(int $run_id, int $company_id, int $limit = 500): array
     {
-        return $this->Record
-            ->select(['kuickpay_reconciliation_items.*'])
-            ->from('kuickpay_reconciliation_items')
-            ->innerJoin(
+        return $this->scopedChildSelect(
+                'kuickpay_reconciliation_items',
                 'kuickpay_reconciliation_runs',
-                'kuickpay_reconciliation_runs.id',
-                '=',
-                'kuickpay_reconciliation_items.run_id',
-                false
+                'run_id',
+                $company_id,
+                ['kuickpay_reconciliation_items.*']
             )
             ->where('kuickpay_reconciliation_items.run_id', '=', $run_id)
-            ->where('kuickpay_reconciliation_runs.company_id', '=', $company_id)
             ->order(['kuickpay_reconciliation_items.id' => 'ASC'])
             ->limit(max(1, $limit))
             ->fetchAll();
@@ -69,18 +65,14 @@ class KuickpayReconciliationItems extends KuickpayReconcileModel
      */
     public function getCountByRun(int $run_id, int $company_id): int
     {
-        return $this->Record
-            ->select(['kuickpay_reconciliation_items.id'])
-            ->from('kuickpay_reconciliation_items')
-            ->innerJoin(
+        return $this->scopedChildSelect(
+                'kuickpay_reconciliation_items',
                 'kuickpay_reconciliation_runs',
-                'kuickpay_reconciliation_runs.id',
-                '=',
-                'kuickpay_reconciliation_items.run_id',
-                false
+                'run_id',
+                $company_id,
+                ['kuickpay_reconciliation_items.id']
             )
             ->where('kuickpay_reconciliation_items.run_id', '=', $run_id)
-            ->where('kuickpay_reconciliation_runs.company_id', '=', $company_id)
             ->numResults();
     }
 }

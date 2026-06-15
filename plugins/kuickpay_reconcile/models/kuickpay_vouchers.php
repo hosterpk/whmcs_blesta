@@ -184,8 +184,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getPendingByInvoiceId(int $invoice_id, int $company_id)
     {
-        return $this->Record->select(['kuickpay_vouchers.*'])
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->innerJoin(
                 'kuickpay_voucher_invoices',
                 'kuickpay_voucher_invoices.voucher_id',
@@ -194,7 +193,6 @@ class KuickpayVouchers extends KuickpayReconcileModel
                 false
             )
             ->where('kuickpay_voucher_invoices.invoice_id', '=', $invoice_id)
-            ->where('kuickpay_vouchers.company_id', '=', $company_id)
             ->where('kuickpay_vouchers.status', '=', 'pending')
             ->fetch();
     }
@@ -222,8 +220,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
             . ' AND SUM(CASE WHEN invoice_id IN (' . $placeholders . ') THEN 1 ELSE 0 END) = ?';
         $values = array_merge([$count], $invoice_ids, [$count]);
 
-        return $this->Record->select(['kuickpay_vouchers.*'])
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->appendValues($values)
             ->innerJoin(
                 [$sub_query => 'matched_invoice_set'],
@@ -232,7 +229,6 @@ class KuickpayVouchers extends KuickpayReconcileModel
                 'kuickpay_vouchers.id',
                 false
             )
-            ->where('kuickpay_vouchers.company_id', '=', $company_id)
             ->where('kuickpay_vouchers.status', '=', 'pending')
             ->fetch();
     }
@@ -246,8 +242,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getLatestByInvoiceId(int $invoice_id, int $company_id)
     {
-        return $this->Record->select(['kuickpay_vouchers.*'])
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->innerJoin(
                 'kuickpay_voucher_invoices',
                 'kuickpay_voucher_invoices.voucher_id',
@@ -256,7 +251,6 @@ class KuickpayVouchers extends KuickpayReconcileModel
                 false
             )
             ->where('kuickpay_voucher_invoices.invoice_id', '=', $invoice_id)
-            ->where('kuickpay_vouchers.company_id', '=', $company_id)
             ->order(['kuickpay_vouchers.id' => 'DESC'])
             ->limit(1)
             ->fetch();
@@ -291,8 +285,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function findActiveByInvoiceId(int $invoice_id, int $company_id, int $exclude_voucher_id = 0)
     {
-        return $this->Record->select(['kuickpay_vouchers.*'])
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->innerJoin(
                 'kuickpay_voucher_invoices',
                 'kuickpay_voucher_invoices.voucher_id',
@@ -301,7 +294,6 @@ class KuickpayVouchers extends KuickpayReconcileModel
                 false
             )
             ->where('kuickpay_voucher_invoices.invoice_id', '=', $invoice_id)
-            ->where('kuickpay_vouchers.company_id', '=', $company_id)
             ->where('kuickpay_vouchers.status', 'in', ['confirmed_unposted', 'posted'])
             ->where('kuickpay_vouchers.id', '!=', $exclude_voucher_id)
             ->limit(1)
@@ -337,8 +329,8 @@ class KuickpayVouchers extends KuickpayReconcileModel
         int $page = 1,
         array $order_by = ['date_created' => 'DESC']
     ): array {
-        $this->Record->select()->from('kuickpay_vouchers');
-        $this->applyListFilters($company_id, $filters);
+        $this->scopedSelect('kuickpay_vouchers', $company_id);
+        $this->applyListFilters($filters);
 
         return $this->Record->order($order_by)
             ->limit($this->getPerPage(), (max(1, $page) - 1) * $this->getPerPage())
@@ -357,8 +349,8 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getListCount(int $company_id, array $filters = []): int
     {
-        $this->Record->select()->from('kuickpay_vouchers');
-        $this->applyListFilters($company_id, $filters);
+        $this->scopedSelect('kuickpay_vouchers', $company_id);
+        $this->applyListFilters($filters);
 
         return $this->Record->numResults();
     }
@@ -371,16 +363,12 @@ class KuickpayVouchers extends KuickpayReconcileModel
      * remaining filter is matched per the FR24 filter map; request values reach
      * the query only as bound parameters or as integer-cast subqueries.
      *
-     * @param int $company_id The authenticated staff company (mandatory scope)
      * @param array $filters Allowlisted filters: status, client_id,
      *  consumer_number, registration_number, kuickpay_reference, amount,
      *  invoice_id, date_from, date_to, has_blesta_transaction
      */
-    private function applyListFilters(int $company_id, array $filters): void
+    private function applyListFilters(array $filters): void
     {
-        // Mandatory tenant scope — never from request input.
-        $this->Record->where('company_id', '=', $company_id);
-
         // Status: exact, validated against the model's own allowlist.
         if (isset($filters['status']) && in_array($filters['status'], self::STATUSES, true)) {
             $this->Record->where('status', '=', $filters['status']);
@@ -672,11 +660,16 @@ class KuickpayVouchers extends KuickpayReconcileModel
         $vars['date_updated'] = date('Y-m-d H:i:s');
         $fields = array_values(array_intersect(array_keys($vars), self::FIELDS));
 
-        $statement = $this->Record
-            ->where('id', '=', $voucher_id)
-            ->where('company_id', '=', $company_id)
-            ->where('status', 'in', $allowed_from)
-            ->update('kuickpay_vouchers', $vars, $fields);
+        $statement = $this->scopedUpdate(
+            'kuickpay_vouchers',
+            $company_id,
+            $vars,
+            $fields,
+            [
+                ['id', '=', $voucher_id],
+                ['status', 'in', $allowed_from],
+            ]
+        );
 
         return $statement->rowCount() === 1;
     }
