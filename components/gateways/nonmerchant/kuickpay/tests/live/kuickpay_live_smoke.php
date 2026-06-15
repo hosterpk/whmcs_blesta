@@ -28,15 +28,22 @@ if (!$plan['run']) {
 
 $client = new KuickPaySoapClient($plan['config']);
 $outcome = kuickpay_live_smoke_call($client, $plan['operation'], $plan['consumer_number']);
-$evidence = (new KuickPayResponseParser())->parse($outcome, [
-    'expected_consumer_number' => $plan['consumer_number'],
-]);
+
+// Only BillPaymentInquiry yields parseable inquiry evidence. Echo and
+// GetInstitutionsList have no inquiry semantics, so feeding them to the parser
+// emits a misleading manual_review/unknown_status block for an otherwise
+// successful transport. Report transport-only evidence for those operations.
+$evidence = $plan['operation'] === 'BillPaymentInquiry'
+    ? (new KuickPayResponseParser())->parse($outcome, ['expected_consumer_number' => $plan['consumer_number']])
+    : null;
 
 $capture = kuickpay_live_smoke_capture($outcome, $plan['capture_path']);
 $report = [
-    'result' => $outcome['ok'] ? 'COMPLETED' : 'FAILED',
+    'result' => ($outcome['ok'] ?? false) ? 'COMPLETED' : 'FAILED',
     'transport' => kuickpay_live_smoke_transport_report($outcome),
-    'evidence' => kuickpay_live_smoke_evidence_report($evidence),
+    'evidence' => $evidence === null
+        ? ['applicable' => false, 'reason' => 'transport-only operation; no inquiry evidence to parse']
+        : kuickpay_live_smoke_evidence_report($evidence),
     'capture' => $capture,
     'no_invoice_paid' => true,
     'no_invoice_paid_reason' => 'DB-free read-only smoke; no voucher, invoice, transaction, posting, or database path is invoked.',
@@ -140,13 +147,13 @@ function kuickpay_live_smoke_capture(array $outcome, ?string $capturePath): arra
     ];
 }
 
-function kuickpay_live_smoke_exit_code(array $outcome, KuickPayEvidence $evidence): int
+function kuickpay_live_smoke_exit_code(array $outcome, ?KuickPayEvidence $evidence): int
 {
     if (($outcome['ok'] ?? false) === false) {
         return 1;
     }
 
-    return $evidence->errorClass() === KuickPayResponseParser::ERROR_CREDENTIAL ? 1 : 0;
+    return $evidence !== null && $evidence->errorClass() === KuickPayResponseParser::ERROR_CREDENTIAL ? 1 : 0;
 }
 
 function kuickpay_live_smoke_print(array $report): void
