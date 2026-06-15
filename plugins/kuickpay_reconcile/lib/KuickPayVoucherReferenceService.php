@@ -529,9 +529,9 @@ class KuickPayVoucherReferenceService
     /**
      * Normalizes an amount to a canonical two-decimal string, or fails closed.
      *
-     * Half-up rounds to 2 dp using decimal-string / bcmath math (never PHP
-     * floats); non-numeric or negative input returns an empty sentinel that can
-     * never compare equal to a valid amount, instead of passing the raw string
+     * Half-up rounds to 2 dp using decimal-string math (never PHP floats);
+     * non-numeric or negative input returns an empty sentinel that can never
+     * compare equal to a valid amount, instead of passing the raw string
      * through. MUST stay byte-for-byte identical to the mirror copy in
      * Kuickpay::normalizeAmount() so the cross-side amount compare is
      * self-consistent (Story 5.5 AC3d; NFR13; architecture 658).
@@ -548,9 +548,37 @@ class KuickPayVoucherReferenceService
             return '';
         }
 
-        // Adding 0.005 then truncating to 2 dp rounds a .xx5 tie up for the
-        // non-negative values that reach here, with no float intermediates.
-        return bcadd($normalized, '0.005', 2);
+        $parts = explode('.', $normalized, 2);
+        $integer = ltrim($parts[0], '0');
+        if ($integer === '') {
+            $integer = '0';
+        }
+
+        $fraction = str_pad($parts[1] ?? '', 3, '0');
+        $cents = (int) substr($fraction, 0, 2);
+        if ((int) $fraction[2] >= 5) {
+            $cents++;
+        }
+
+        if ($cents >= 100) {
+            $cents = 0;
+            $carry = 1;
+            $digits = str_split($integer);
+            for ($i = count($digits) - 1; $i >= 0; $i--) {
+                $sum = (int) $digits[$i] + $carry;
+                $digits[$i] = (string) ($sum % 10);
+                $carry = $sum >= 10 ? 1 : 0;
+                if ($carry === 0) {
+                    break;
+                }
+            }
+            if ($carry === 1) {
+                array_unshift($digits, '1');
+            }
+            $integer = implode('', $digits);
+        }
+
+        return $integer . '.' . str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
     }
 
     /**
