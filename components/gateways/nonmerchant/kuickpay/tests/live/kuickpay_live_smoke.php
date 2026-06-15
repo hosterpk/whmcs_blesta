@@ -120,7 +120,17 @@ function kuickpay_live_smoke_capture(array $outcome, ?string $capturePath): arra
         ? $outcome['raw_envelope']
         : KuickPayRedactor::ENVELOPE_UNPARSEABLE;
 
-    if (file_put_contents($capturePath, $envelope, LOCK_EX) === false) {
+    // Exclusive-create only: a mistyped or wrong capture path must never silently
+    // overwrite an existing file (a prior capture, or unrelated operator data).
+    $handle = @fopen($capturePath, 'x');
+    if ($handle === false) {
+        return ['written' => false, 'reason' => file_exists($capturePath) ? 'target-exists' : 'write-failed'];
+    }
+
+    $written = fwrite($handle, $envelope);
+    fclose($handle);
+
+    if ($written === false) {
         return ['written' => false, 'reason' => 'write-failed'];
     }
 
