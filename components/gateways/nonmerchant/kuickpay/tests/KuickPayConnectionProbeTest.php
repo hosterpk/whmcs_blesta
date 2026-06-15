@@ -50,6 +50,7 @@ class KuickPayConnectionProbeGateway extends Kuickpay
     public $probeCalls = [];
     public $probeResult = ['errno' => 7, 'response_code' => 0];
     public $resolvedAddresses = ['93.184.216.34'];
+    public $transportAvailable = true;
 
     protected function executeConnectionProbe($url, array $options)
     {
@@ -60,6 +61,11 @@ class KuickPayConnectionProbeGateway extends Kuickpay
     protected function resolveProbeAddresses($host)
     {
         return $this->resolvedAddresses;
+    }
+
+    protected function connectionTransportAvailable()
+    {
+        return $this->transportAvailable;
     }
 }
 
@@ -227,6 +233,102 @@ class KuickPayConnectionProbeTest extends TestCase
         $this->assertSame(
             'Kuickpay.!error.connection.url_blocked',
             $input->errors['connection']['url_blocked']
+        );
+    }
+
+    public function testIpv6OnlyHostResolvesValidatesAndPins()
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+        $gateway->resolvedAddresses = ['2606:4700:4700::1111'];
+        $gateway->probeResult = ['errno' => 0, 'response_code' => 200];
+
+        $gateway->editSettings($this->meta([
+            'wsdl_url' => 'https://ipv6.example/api.asmx?WSDL',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $input->errors);
+        $this->assertCount(1, $gateway->probeCalls);
+        // host:port:ipv6 -- the named host has no colons, so the IPv6 tail parses.
+        $this->assertSame(
+            ['ipv6.example:443:2606:4700:4700::1111'],
+            $gateway->probeCalls[0]['options'][CURLOPT_RESOLVE]
+        );
+    }
+
+    /**
+     * @dataProvider privateIpv6Provider
+     */
+    public function testPrivateIpv6ResolvedHostIsBlockedBeforeProbe($address)
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+        $gateway->resolvedAddresses = [$address];
+
+        $gateway->editSettings($this->meta([
+            'wsdl_url' => 'https://ipv6.example/wsdl',
+            'run_connection_test' => 'true',
+        ]));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertSame(
+            'Kuickpay.!error.connection.url_blocked',
+            $input->errors['connection']['url_blocked']
+        );
+    }
+
+    public function privateIpv6Provider()
+    {
+        return [
+            'loopback' => ['::1'],
+            'unique local' => ['fc00::1'],
+            'link local' => ['fe80::1'],
+        ];
+    }
+
+    /**
+     * A redirect or 5xx still completed TLS and returned an HTTP status, so the
+     * documented pure-reachability contract reports it as reachable (no error).
+     *
+     * @dataProvider reachableResponseCodeProvider
+     */
+    public function testNonSuccessResponseCodesAreReachable($responseCode)
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+        $gateway->probeResult = ['errno' => 0, 'response_code' => $responseCode];
+
+        $gateway->editSettings($this->meta(['run_connection_test' => 'true']));
+
+        $this->assertSame([], $input->errors);
+        $this->assertCount(1, $gateway->probeCalls);
+    }
+
+    public function reachableResponseCodeProvider()
+    {
+        return [
+            'moved permanently' => [301],
+            'found redirect' => [302],
+            'unauthorized' => [401],
+            'forbidden' => [403],
+            'server error' => [500],
+            'service unavailable' => [503],
+        ];
+    }
+
+    public function testTransportUnavailableSetsUnavailableError()
+    {
+        $input = new KuickPayConnectionProbeInput();
+        $gateway = $this->gateway($input);
+        $gateway->transportAvailable = false;
+
+        $gateway->editSettings($this->meta(['run_connection_test' => 'true']));
+
+        $this->assertSame([], $gateway->probeCalls);
+        $this->assertSame(
+            'Kuickpay.!error.connection.unavailable',
+            $input->errors['connection']['unavailable']
         );
     }
 
