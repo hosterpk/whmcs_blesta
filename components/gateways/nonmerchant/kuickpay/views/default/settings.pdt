@@ -18,6 +18,16 @@
             ?>
         </div>
         <div class="mb-3">
+            <label for="wsdl_allowed_hosts" class="form-label">
+                <?php $this->_('Kuickpay.wsdl_allowed_hosts'); ?>
+                <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="<?php echo $this->Html->safe($this->_('Kuickpay.wsdl_allowed_hosts_note', true)); ?>"></i>
+            </label>
+            <?php
+            $this->Form->fieldTextarea('wsdl_allowed_hosts', (isset($meta['wsdl_allowed_hosts']) ? $meta['wsdl_allowed_hosts'] : null), ['id' => 'wsdl_allowed_hosts', 'class' => 'form-control', 'rows' => '2']);
+            ?>
+        </div>
+        <div class="mb-3">
             <label for="voucher_username" class="form-label">
                 <?php $this->_('Kuickpay.voucher_username'); ?>
                 <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" data-bs-placement="top"

@@ -354,6 +354,14 @@ class KuickPaySoapClient
     /**
      * Validate WSDL URL at call time, including userinfo rejection.
      *
+     * The HTTPS + userinfo checks below intentionally mirror the format/userinfo
+     * legs of the gateway's shared save-time validator (Kuickpay::wsdlUrlSafety());
+     * keep the two in step so the cron and admin paths cannot drift. The
+     * private-range/allowlist SSRF guard deliberately stays at the save chokepoint
+     * (Kuickpay::validatedProbeAddresses() + the wsdl_url 'host' rule) rather than
+     * here: a value that reaches this client has already passed save-time validation,
+     * so guarding again at call time would duplicate the chokepoint, not add coverage.
+     *
      * @return bool True when the URL is safe enough to attempt
      */
     private function hasUsableWsdlUrl(): bool

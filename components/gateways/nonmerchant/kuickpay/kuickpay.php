@@ -40,6 +40,19 @@ class Kuickpay extends NonmerchantGateway
     ];
 
     /**
+     * @var int Maximum accepted SOAP timeout, in seconds. A misconfigured huge
+     *  value would otherwise pin a connection open far longer than any
+     *  reasonable transport.
+     */
+    const MAX_SOAP_TIMEOUT = 300;
+
+    /**
+     * @var int Maximum accepted due/expiry offset, in days. Bounds the KuickPay
+     *  DueDate/ExpiryDate the voucher payload derives from these offsets.
+     */
+    const MAX_OFFSET_DAYS = 365;
+
+    /**
      * Construct a new non-merchant gateway
      */
     public function __construct()
@@ -190,7 +203,7 @@ class Kuickpay extends NonmerchantGateway
 
         // Trim required identifier fields so whitespace-only input is treated as empty.
         // Blesta's isEmpty() rule only checks string length, so " " would otherwise pass.
-        foreach (['voucher_username', 'inquiry_username', 'institution_id'] as $textField) {
+        foreach (['voucher_username', 'inquiry_username', 'institution_id', 'wsdl_allowed_hosts'] as $textField) {
             if (isset($meta[$textField]) && is_string($meta[$textField])) {
                 $meta[$textField] = trim($meta[$textField]);
             }
@@ -203,7 +216,9 @@ class Kuickpay extends NonmerchantGateway
             unset($meta['inquiry_username'], $meta['inquiry_password']);
         }
 
-        $optionalNumericRule = ['matches', '/^([0-9]+)?$/D'];
+        // Operator-confirmed endpoint allowlist (empty => permissive). No host
+        // literal is hard-coded: the operator pastes their Phase-0 host(s) here.
+        $allowedHosts = self::parseAllowedHosts($meta['wsdl_allowed_hosts'] ?? '');
         $referencePatternRule = ['matches', '/^[A-Za-z0-9_{}+\-]+$/D'];
 
         $rules = [
@@ -220,6 +235,53 @@ class Kuickpay extends NonmerchantGateway
                             && strtolower((string) parse_url($url, PHP_URL_SCHEME)) === 'https';
                     },
                     'message' => Language::_('Kuickpay.!error.wsdl_url.format', true),
+                ],
+                // Reject credentials-in-URL at the save chokepoint: the stored value
+                // is later fetched server-side unguarded by getSoapClient() and the
+                // plugin reconcile cron, so userinfo must never be persisted (NFR8).
+                'userinfo' => [
+                    'rule' => function ($url) {
+                        return parse_url((string) $url, PHP_URL_USER) === null
+                            && parse_url((string) $url, PHP_URL_PASS) === null;
+                    },
+                    'message' => Language::_('Kuickpay.!error.wsdl_url.userinfo', true),
+                ],
+                // SSRF chokepoint: reject private/loopback/link-local/reserved hosts
+                // and (when the allowlist is populated) any non-confirmed host, so the
+                // unguarded cron/getSoapClient() SOAP fetch can never be steered at an
+                // internal service or 169.254.169.254. Format/userinfo problems are
+                // reported by their own rules above; this rule only adds the host check.
+                'host' => [
+                    'rule' => function ($url) use ($allowedHosts) {
+                        $safety = self::wsdlUrlSafety($url, $allowedHosts);
+                        if (in_array($safety['reason'], ['format', 'userinfo'], true)) {
+                            return true;
+                        }
+                        if (!$safety['safe']) {
+                            return false;
+                        }
+
+                        // The deterministic checks passed; a named host must also
+                        // resolve only to public addresses (literal IPs were already
+                        // range-checked in wsdlUrlSafety()).
+                        return $this->validatedProbeAddresses($safety['host']) !== [];
+                    },
+                    'message' => Language::_('Kuickpay.!error.wsdl_url.host', true),
+                ],
+            ],
+            'wsdl_allowed_hosts' => [
+                'valid' => [
+                    'if_set' => true,
+                    'rule' => function ($value) {
+                        foreach (self::parseAllowedHosts($value) as $host) {
+                            if (!self::isPlausibleHost($host)) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    },
+                    'message' => Language::_('Kuickpay.!error.wsdl_allowed_hosts.valid', true),
                 ],
             ],
             'voucher_username' => [
@@ -265,25 +327,45 @@ class Kuickpay extends NonmerchantGateway
                     'message' => Language::_('Kuickpay.!error.consumer_number_pattern.format', true),
                 ],
             ],
+            // soap_timeout: positive (rejects '0'/no-timeout footgun and leading
+            // zeros), bounded. An unset/empty value falls through to the runtime
+            // default, so optional semantics are preserved.
             'soap_timeout' => [
-                'numeric' => [
+                'range' => [
                     'if_set' => true,
-                    'rule' => $optionalNumericRule,
-                    'message' => Language::_('Kuickpay.!error.soap_timeout.numeric', true),
+                    'rule' => function ($value) {
+                        return (string) $value === '' || self::soapTimeoutInRange($value);
+                    },
+                    'message' => Language::_('Kuickpay.!error.soap_timeout.range', true),
                 ],
             ],
+            // Offsets: allow 0, reject leading zeros, bounded.
             'due_date_offset_days' => [
-                'numeric' => [
+                'range' => [
                     'if_set' => true,
-                    'rule' => $optionalNumericRule,
-                    'message' => Language::_('Kuickpay.!error.due_date_offset_days.numeric', true),
+                    'rule' => function ($value) {
+                        return (string) $value === '' || self::offsetDaysInRange($value);
+                    },
+                    'message' => Language::_('Kuickpay.!error.due_date_offset_days.range', true),
                 ],
             ],
             'expiry_date_offset_days' => [
-                'numeric' => [
+                'range' => [
                     'if_set' => true,
-                    'rule' => $optionalNumericRule,
-                    'message' => Language::_('Kuickpay.!error.expiry_date_offset_days.numeric', true),
+                    'rule' => function ($value) {
+                        return (string) $value === '' || self::offsetDaysInRange($value);
+                    },
+                    'message' => Language::_('Kuickpay.!error.expiry_date_offset_days.range', true),
+                ],
+                // Cross-field relation: ExpiryDate (:expiry_date_offset_days) can
+                // never precede DueDate (:due_date_offset_days) in the voucher
+                // payload. Compared only when both are set and well-formed.
+                'before_due' => [
+                    'if_set' => true,
+                    'rule' => function ($value) use ($meta) {
+                        return self::expiryNotBeforeDue($value, $meta['due_date_offset_days'] ?? '');
+                    },
+                    'message' => Language::_('Kuickpay.!error.expiry_date_offset_days.before_due', true),
                 ],
             ],
             'currency_policy' => [
@@ -387,6 +469,142 @@ class Kuickpay extends NonmerchantGateway
         unset($meta['run_connection_test']);
 
         return $meta;
+    }
+
+    /**
+     * Pure WSDL URL safety check shared by the save-time rule and the connection
+     * probe so the two cannot drift. Performs NO DNS and NO network I/O: a named
+     * host's resolved addresses are validated separately (validatedProbeAddresses()).
+     *
+     * Reason tokens: 'ok'; 'format' (empty / not a URL / non-HTTPS); 'userinfo'
+     * (embedded credentials); 'host' (no host, or not in a populated allowlist);
+     * 'private' (literal IP in a private/reserved/loopback range).
+     *
+     * @param mixed $url The candidate WSDL URL
+     * @param array $allowedHosts Normalized lowercase host allowlist; empty => permissive
+     * @return array{safe: bool, reason: string, host: string}
+     */
+    public static function wsdlUrlSafety($url, array $allowedHosts)
+    {
+        $url = (string) $url;
+        if (
+            $url === ''
+            || filter_var($url, FILTER_VALIDATE_URL) === false
+            || strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https'
+        ) {
+            return ['safe' => false, 'reason' => 'format', 'host' => ''];
+        }
+
+        if (parse_url($url, PHP_URL_USER) !== null || parse_url($url, PHP_URL_PASS) !== null) {
+            return ['safe' => false, 'reason' => 'userinfo', 'host' => ''];
+        }
+
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $host = trim($host, '[]');
+        if ($host === '') {
+            return ['safe' => false, 'reason' => 'host', 'host' => ''];
+        }
+
+        // A literal IP host is range-checked here (no DNS). The same flags reject
+        // IPv4 and IPv6 private/reserved/loopback addresses, plus IPv4-mapped IPv6.
+        if (
+            filter_var($host, FILTER_VALIDATE_IP)
+            && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)
+        ) {
+            return ['safe' => false, 'reason' => 'private', 'host' => $host];
+        }
+
+        if ($allowedHosts !== [] && !in_array($host, $allowedHosts, true)) {
+            return ['safe' => false, 'reason' => 'host', 'host' => $host];
+        }
+
+        return ['safe' => true, 'reason' => 'ok', 'host' => $host];
+    }
+
+    /**
+     * Parses the operator allowlist (comma/newline/space-separated) into a
+     * normalized, lowercase, de-duplicated host list. Empty => permissive.
+     *
+     * @param mixed $raw The raw wsdl_allowed_hosts setting value
+     * @return array Lowercase hosts (possibly empty)
+     */
+    public static function parseAllowedHosts($raw)
+    {
+        $hosts = [];
+        foreach (preg_split('/[\s,]+/', (string) $raw) as $entry) {
+            $entry = trim(strtolower((string) $entry));
+            $entry = trim($entry, '[]');
+            if ($entry !== '') {
+                $hosts[$entry] = true;
+            }
+        }
+
+        return array_keys($hosts);
+    }
+
+    /**
+     * Whether a single allowlist entry is a plausible host (DNS name or IP).
+     *
+     * @param mixed $host A normalized allowlist entry
+     * @return bool
+     */
+    public static function isPlausibleHost($host)
+    {
+        $host = trim(strtolower((string) $host), '[]');
+        if ($host === '') {
+            return false;
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return true;
+        }
+
+        return preg_match('/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?)(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/D', $host) === 1;
+    }
+
+    /**
+     * Whether a concrete soap_timeout value is a positive, leading-zero-free
+     * integer within the accepted bound. Empty/unset is handled by the rule layer.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    public static function soapTimeoutInRange($value)
+    {
+        $value = (string) $value;
+
+        return preg_match('/^[1-9][0-9]*$/D', $value) === 1 && (int) $value <= self::MAX_SOAP_TIMEOUT;
+    }
+
+    /**
+     * Whether a concrete offset value is a leading-zero-free integer in [0, MAX].
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    public static function offsetDaysInRange($value)
+    {
+        $value = (string) $value;
+
+        return preg_match('/^(0|[1-9][0-9]*)$/D', $value) === 1 && (int) $value <= self::MAX_OFFSET_DAYS;
+    }
+
+    /**
+     * Whether the expiry offset is greater than or equal to the due offset.
+     * Returns true (no violation) unless both are present and well-formed.
+     *
+     * @param mixed $expiry The expiry_date_offset_days value
+     * @param mixed $due The due_date_offset_days value
+     * @return bool
+     */
+    public static function expiryNotBeforeDue($expiry, $due)
+    {
+        $expiry = (string) $expiry;
+        $due = (string) $due;
+        if ($expiry === '' || $due === '' || !ctype_digit($expiry) || !ctype_digit($due)) {
+            return true;
+        }
+
+        return (int) $expiry >= (int) $due;
     }
 
     /**
@@ -497,11 +715,21 @@ class Kuickpay extends NonmerchantGateway
      * creates no voucher, and does not validate server-side credential failures. The authenticated safe-op test
      * and live labeled-voucher test are deferred to Story 5-1 / Epic 3 after the KuickPay contract is confirmed.
      *
+     * Reachability contract -- intentionally PURE REACHABILITY (deeper endpoint validity is the credentialed
+     * safe-op test, Story 5.1, not this probe):
+     *  - reachable   := errno == 0 && response_code > 0. The host completed TLS and returned ANY HTTP status,
+     *                   INCLUDING 401/403 on an auth-gated WSDL and a 3xx code with CURLOPT_FOLLOWLOCATION
+     *                   disabled. Reported as success (no error set). Rejecting 4xx/5xx/3xx here would break a
+     *                   legitimately auth-protected endpoint, so it is deliberately NOT treated as a failure.
+     *  - unreachable := errno != 0 || response_code == 0.
+     *  - timeout     := errno == CURLE_OPERATION_TIMEDOUT.
+     *  - unavailable := the cURL transport is absent (connectionTransportAvailable() returns false).
+     *
      * @param array $meta The settings data being tested
      */
     private function runConnectionTest(array $meta)
     {
-        if (!function_exists('curl_init')) {
+        if (!$this->connectionTransportAvailable()) {
             $this->Input->setErrors([
                 'connection' => [
                     'unavailable' => Language::_('Kuickpay.!error.connection.unavailable', true),
@@ -524,29 +752,18 @@ class Kuickpay extends NonmerchantGateway
             return;
         }
 
-        // SSRF guard: resolve the host and reject private, loopback, link-local, or
-        // otherwise reserved addresses so the server-side fetch cannot be steered at
-        // internal services or the cloud metadata endpoint (169.254.169.254). A literal
-        // IP is checked directly; a hostname is resolved through the system resolver
-        // (which honors /etc/hosts, so "localhost" is caught) and every resolved address
-        // must be public. A host that resolves to nothing is treated as blocked rather
-        // than handed to an unvalidated cURL re-resolution. Residual, deferred to the
-        // Epic 5 confirmed-endpoint allowlist: IPv6-only hosts named via DNS are not
-        // resolved here (gethostbynamel is IPv4-only).
+        // SSRF guard: reject private, loopback, link-local, or otherwise reserved
+        // addresses so the server-side fetch cannot be steered at internal services
+        // or the cloud metadata endpoint (169.254.169.254). A literal IP is checked
+        // directly; a hostname is resolved (A + AAAA) through the system resolver
+        // (which honors /etc/hosts, so "localhost" is caught) and every resolved
+        // IPv4 and IPv6 address must be public. A host that resolves to nothing is
+        // treated as blocked rather than handed to an unvalidated cURL re-resolution.
+        // The same check gates the save rule (validatedProbeAddresses()).
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
         $host = trim($host, '[]');
-        $addresses = filter_var($host, FILTER_VALIDATE_IP)
-            ? [$host]
-            : $this->resolveProbeAddresses($host);
-
-        $blocked = ($host === '' || $addresses === []);
-        foreach ($addresses as $address) {
-            if (!filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                $blocked = true;
-                break;
-            }
-        }
-        if ($blocked) {
+        $addresses = $this->validatedProbeAddresses($host);
+        if ($addresses === []) {
             $this->Input->setErrors([
                 'connection' => [
                     'url_blocked' => Language::_('Kuickpay.!error.connection.url_blocked', true),
@@ -556,11 +773,14 @@ class Kuickpay extends NonmerchantGateway
         }
 
         // Pin the validated address(es) so cURL connects only to what was checked,
-        // closing the DNS-rebinding window between this check and the fetch.
+        // closing the DNS-rebinding window between this check and the fetch. An IPv6
+        // literal host is bracketed so curl parses the HOST:PORT:ADDRESS grammar
+        // (the address tail may itself contain the IPv6 colons).
         $port = parse_url($url, PHP_URL_PORT);
+        $resolveHost = (strpos($host, ':') !== false) ? '[' . $host . ']' : $host;
         $resolve = [];
         foreach ($addresses as $address) {
-            $resolve[] = $host . ':' . (is_int($port) ? $port : 443) . ':' . $address;
+            $resolve[] = $resolveHost . ':' . (is_int($port) ? $port : 443) . ':' . $address;
         }
 
         $timeout = (int) ($meta['soap_timeout'] ?? 0);
@@ -605,8 +825,12 @@ class Kuickpay extends NonmerchantGateway
      * Executes the cURL transport probe.
      *
      * Callers must validate and pin the host first (see runConnectionTest()'s SSRF guard).
-     * A broader confirmed-endpoint host allowlist is deferred until the production KuickPay
-     * endpoint set is confirmed (Epic 5).
+     * The operator-confirmed host allowlist and the save-time SSRF chokepoint live in
+     * editSettings() (wsdl_url 'host' rule); this method only performs the bounded fetch.
+     *
+     * Returns only the cURL errno and the HTTP response code: reachability is judged purely
+     * on those two per runConnectionTest()'s contract (errno == 0 && response_code > 0 ==
+     * reachable, including 4xx/5xx/3xx). No body and no headers are inspected.
      *
      * @param string $url The HTTPS WSDL URL to fetch
      * @param array $options cURL options for the bounded reachability request
@@ -632,18 +856,82 @@ class Kuickpay extends NonmerchantGateway
     }
 
     /**
-     * Resolves a probe hostname to its IP addresses through the system resolver.
+     * Validates a probe host down to the public addresses cURL may connect to,
+     * or returns [] when the host is empty, unresolvable, or any resolved address
+     * is private, loopback, link-local, or reserved. Shared by the save-time
+     * wsdl_url 'host' rule and runConnectionTest() so the SSRF check cannot drift.
+     * A literal IP host (IPv4 or IPv6) is range-checked directly without DNS; the
+     * NO_PRIV_RANGE|NO_RES_RANGE flags reject both families and IPv4-mapped IPv6.
+     *
+     * @param string $host A lowercase, []-trimmed host
+     * @return array Validated public addresses (empty => blocked)
+     */
+    protected function validatedProbeAddresses($host)
+    {
+        $host = (string) $host;
+        if ($host === '') {
+            return [];
+        }
+
+        $addresses = filter_var($host, FILTER_VALIDATE_IP)
+            ? [$host]
+            : $this->resolveProbeAddresses($host);
+        if ($addresses === []) {
+            return [];
+        }
+
+        foreach ($addresses as $address) {
+            if (!filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                return [];
+            }
+        }
+
+        return $addresses;
+    }
+
+    /**
+     * Whether the cURL transport the probe needs is available.
+     *
+     * Split out as a seam so the 'unavailable' branch is testable without removing
+     * curl_init() from the runtime.
+     *
+     * @return bool
+     */
+    protected function connectionTransportAvailable()
+    {
+        return function_exists('curl_init');
+    }
+
+    /**
+     * Resolves a probe hostname to its IPv4 (A) and IPv6 (AAAA) addresses through
+     * the system resolver.
      *
      * Split out as a seam so connection tests can exercise the SSRF guard without DNS.
+     * gethostbynamel() is IPv4-only, so AAAA records are resolved separately; an
+     * IPv6-only KuickPay host would otherwise resolve to [] and be blocked by accident,
+     * and an AAAA pointing at ::1/fc00::/7/fe80::/10 is explicitly rejected by the caller.
      *
      * @param string $host The WSDL hostname to resolve
-     * @return array The resolved IPv4 addresses, or an empty array when none resolve
+     * @return array The resolved IPv4 and IPv6 addresses, or an empty array when none resolve
      */
     protected function resolveProbeAddresses($host)
     {
-        $addresses = gethostbynamel($host);
+        $addresses = [];
+        $ipv4 = gethostbynamel($host);
+        if (is_array($ipv4)) {
+            $addresses = $ipv4;
+        }
 
-        return is_array($addresses) ? $addresses : [];
+        $records = @dns_get_record($host, DNS_AAAA);
+        if (is_array($records)) {
+            foreach ($records as $record) {
+                if (isset($record['ipv6']) && $record['ipv6'] !== '') {
+                    $addresses[] = (string) $record['ipv6'];
+                }
+            }
+        }
+
+        return $addresses;
     }
 
     /**
