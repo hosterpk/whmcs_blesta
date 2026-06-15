@@ -149,42 +149,42 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
     never calls live"). `require_once` the plan class from `tests/live/` (the gateway `tests/bootstrap.php` loads
     only the `lib/*` classes, not the test-area plan — add the `require_once` in the test).
 
-- [ ] **Task 2 — AC1/AC2: build the CLI-only, web-blocked live smoke runner**
-  - [ ] 2.1 Add `components/gateways/nonmerchant/kuickpay/tests/live/kuickpay_live_smoke.php` — a standalone CLI
+- [x] **Task 2 — AC1/AC2: build the CLI-only, web-blocked live smoke runner**
+  - [x] 2.1 Add `components/gateways/nonmerchant/kuickpay/tests/live/kuickpay_live_smoke.php` — a standalone CLI
     script (**not** `*Test.php`, so the PHPUnit runner never discovers it; mirrors 5.1's
     `tests/integration/*.php`). First lines: `if (PHP_SAPI !== 'cli') { http_response_code(403); exit; }`
     (the 5.1 `live_fixture_round_trip.php:9` guard). Then `require_once` the gateway `lib/*` (reuse
     `tests/bootstrap.php` or require the four libs directly) and the `KuickPayLiveSmokePlan`.
-  - [ ] 2.2 Read the real environment, run the plan (Task 1.1). If `run=false`: print a clear, **secret-free**
+  - [x] 2.2 Read the real environment, run the plan (Task 1.1). If `run=false`: print a clear, **secret-free**
     "SKIPPED — opt-in not set / missing: …" message and `exit(0)` **without** constructing any SOAP client. This
     is the same gate the guard test asserts.
-  - [ ] 2.3 If `run=true`: construct the **real** `new KuickPaySoapClient($config)` with **no** `$soapClientFactory`
+  - [x] 2.3 If `run=true`: construct the **real** `new KuickPaySoapClient($config)` with **no** `$soapClientFactory`
     (so it builds a real `SoapClient` against the operator WSDL) and **no** logger (or a redacting logger). The
     client's own `hasUsableWsdlUrl()` (`:367-382`) already fails closed on userinfo/non-https before any network
     call — defense-in-depth you get for free; you may also pre-validate but do not duplicate the save-time
     private-range guard (that chokepoint is the gateway settings form, Story 5.6).
-  - [ ] 2.4 Invoke the selected **read-only** op: `billPaymentInquiry(['Consumer_Number' => <test ref>])` (default),
+  - [x] 2.4 Invoke the selected **read-only** op: `billPaymentInquiry(['Consumer_Number' => <test ref>])` (default),
     or `echoTest()` / `getInstitutionsList()`. **NEVER** `insertVoucher()`; **NEVER** any posting; **NEVER** open
     the DB. Confirm credential validation is exercised: even an unknown/unmatched Consumer Number still proves the
     real credentials authenticated and a real response transported+parsed+redacted.
-  - [ ] 2.5 Feed the transport outcome through `KuickPayResponseParser::parse($outcome)` to get a normalized
+  - [x] 2.5 Feed the transport outcome through `KuickPayResponseParser::parse($outcome)` to get a normalized
     `KuickPayEvidence`, and emit **only** the redaction allowlist (Dev Notes "Redaction allowlist"): transport
     `ok`/`operation`/`error_class`/redacted `fault`/`redacted_trace_id`/`duration_ms`/`attempts`, and evidence
     `status()`/`errorClass()`/`evidenceHash()`/`redactedTraceId()`/`validationErrors()`. **Do NOT** print
     `raw_result`, `raw_envelope` unredacted, `redacted_request` raw values, or evidence
     `consumerNumber()`/`registrationNumber()`/`reference()`/`amount()`/`currency()`/`paidAt()`/`rawStatus()`.
     Print a single explicit line that no invoice was created or marked paid (the DB-free guarantee).
-  - [ ] 2.6 Exit non-zero on a transport/credential failure (so an operator/CI wrapper sees the failure) but keep
+  - [x] 2.6 Exit non-zero on a transport/credential failure (so an operator/CI wrapper sees the failure) but keep
     the printed diagnostic redacted; exit zero on a clean reachable response. A failure must still leave no
     invoice paid (trivially true — DB-free).
 
 - [ ] **Task 3 — AC3: sanitized live-fixture capture mechanism + scan guard**
-  - [ ] 3.1 Add an optional, opt-in capture path to the smoke (e.g. `KUICKPAY_SMOKE_CAPTURE=<path>`): when set,
+  - [x] 3.1 Add an optional, opt-in capture path to the smoke (e.g. `KUICKPAY_SMOKE_CAPTURE=<path>`): when set,
     write the **redacted** envelope (`KuickPaySoapClient` already exposes `raw_envelope` = redacted via
     `KuickPayRedactor::redactEnvelope()`) — never the raw envelope, never `raw_result` — to the given path. The
     capture must exclude passwords, unredacted SOAP envelopes, customer secrets, and environment-specific values
     (WSDL host, Institution ID).
-  - [ ] 3.2 Add a guard test (extend `tests/KuickPayLiveSmokeGuardTest.php` or a sibling) that, given a sample
+  - [x] 3.2 Add a guard test (extend `tests/KuickPayLiveSmokeGuardTest.php` or a sibling) that, given a sample
     captured-fixture string, asserts it passes a forbidden-pattern scan reusing the
     `KuickPaySecretLeakageTest`-style patterns (credentials, Institution ID placeholder, mobile/CNIC/email PII,
     raw `<userName>`/`<password>` elements). Prove the redactor output is leak-clean **without** committing a real
@@ -194,11 +194,11 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
     (`docs/kuickpay/fixtures/bill-payment-inquiry/` alongside the existing provisional set).
 
 - [ ] **Task 4 — Web-exposure + CLI hardening (AC1 safety)**
-  - [ ] 4.1 Add `components/gateways/nonmerchant/kuickpay/tests/.htaccess` (or a `tests/live/.htaccess`) copying the
+  - [x] 4.1 Add `components/gateways/nonmerchant/kuickpay/tests/.htaccess` (or a `tests/live/.htaccess`) copying the
     plugin precedent (`plugins/kuickpay_reconcile/tests/.htaccess` — `Require all denied` with the legacy
     `Deny from all` fallback) so the smoke script (and all gateway test files) are not web-reachable. Confirm the
     gateway `tests/` dir has no `.htaccess` today (it does not).
-  - [ ] 4.2 Confirm the `PHP_SAPI !== 'cli'` guard (Task 2.1) is the first executable statement, before any
+  - [x] 4.2 Confirm the `PHP_SAPI !== 'cli'` guard (Task 2.1) is the first executable statement, before any
     `require`/env read, so an HTTP hit can never trigger a live call or load credentials.
 
 - [ ] **Task 5 — Operator runbook + sanitized verification record (AC1/AC2/AC3; NFR8/NFR12)**
@@ -473,17 +473,25 @@ GPT-5 Codex
 - 2026-06-16: RED: guard test failed before `tests/live/KuickPayLiveSmokePlan.php` existed.
 - 2026-06-16: GREEN: `/usr/local/bin/php -d display_errors=1 /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/KuickPayLiveSmokeGuardTest.php` passed (6 tests, 38 assertions).
 - 2026-06-16: Lint: `/usr/local/bin/php -l` and `/opt/cpanel/ea-php82/root/usr/bin/php -l` passed for `KuickPayLiveSmokeGuardTest.php` and `KuickPayLiveSmokePlan.php`.
+- 2026-06-16: Runner lint passed with `/usr/local/bin/php -l` and `/opt/cpanel/ea-php82/root/usr/bin/php -l`.
+- 2026-06-16: No-opt-in smoke run printed `SKIPPED` / `opt-in-not-set` and exited 0 without constructing the SOAP client.
+- 2026-06-16: Incomplete opt-in smoke run (`KUICKPAY_LIVE_SMOKE=1` only) printed `SKIPPED` / missing env names and exited 0 without constructing the SOAP client.
+- 2026-06-16: Confirmed `components/gateways/nonmerchant/kuickpay/tests/live` contains no `*Test.php` files.
 
 ### Completion Notes List
 
 - Task 1 complete: added a pure, injected-env live smoke plan under gateway tests; default is skip/no-op unless `KUICKPAY_LIVE_SMOKE=1` and all required protected env inputs are present.
 - Task 1 complete: added default-suite guard coverage for absent opt-in, incomplete opt-in, full opt-in config mapping, safe operation fallback, timeout fallback, and sanitized capture scan controls.
 - Task 4.1 partial complete with Task 1 unit: added gateway `tests/.htaccess` matching the plugin deny precedent so the future live script is not web-reachable under the test tree.
+- Task 2 complete: added the CLI-only, non-discovered live smoke script that gates on the pure plan, constructs the real `KuickPaySoapClient` only after full opt-in, invokes only read-only operations, parses evidence, and emits only allowlisted redacted diagnostics.
+- Task 3.1 complete: added optional `KUICKPAY_SMOKE_CAPTURE` handling that writes only the redacted response envelope or the redactor placeholder, never `raw_result`.
+- Task 4 complete: the live smoke script's first executable statement is the `PHP_SAPI !== 'cli'` refusal before requires or env reads, and the gateway tests directory is web-denied.
 
 ### File List
 
 - components/gateways/nonmerchant/kuickpay/tests/.htaccess
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayLiveSmokeGuardTest.php
 - components/gateways/nonmerchant/kuickpay/tests/live/KuickPayLiveSmokePlan.php
+- components/gateways/nonmerchant/kuickpay/tests/live/kuickpay_live_smoke.php
 - _bmad-output/kuickpay/implementation-artifacts/5-7-opt-in-live-kuickpay-smoke-no-sandbox.md
 - _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
