@@ -4,6 +4,40 @@ use PHPUnit\Framework\TestCase;
 
 class KuickPayVoucherReferenceServiceTest extends TestCase
 {
+    /**
+     * @dataProvider normalizeAmountProvider
+     */
+    public function testNormalizeAmountRoundsHalfUpAndFailsClosed($input, $expected)
+    {
+        // AC3d (5.5): the service copy must half-up round to 2 dp using
+        // decimal-string math (no PHP floats) and fail closed on invalid input,
+        // staying byte-for-byte identical to the gateway copy so the cross-side
+        // amount compare is self-consistent.
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceFakeRepository());
+        $method = new ReflectionMethod(KuickPayVoucherReferenceService::class, 'normalizeAmount');
+        $method->setAccessible(true);
+
+        $this->assertSame($expected, $method->invoke($service, $input));
+    }
+
+    public function normalizeAmountProvider()
+    {
+        return [
+            ['1500', '1500.00'],
+            ['1,000.50', '1000.50'],
+            // Half-up rounding past 2 dp (the decimal(12,4) trap, Story 3-5).
+            ['0.009', '0.01'],
+            ['100.0050', '100.01'],
+            ['999.9999', '1000.00'],
+            ['1000.0000', '1000.00'],
+            // Invalid / negative -> fail-closed empty sentinel.
+            ['-5', ''],
+            ['-10.00', ''],
+            ['abc', ''],
+            ['', ''],
+        ];
+    }
+
     public function testDuplicateInvoiceIdRecordsGenerationFailedAudit()
     {
         $audit = new KuickPayVoucherReferenceFakeAuditService();

@@ -328,14 +328,26 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
     public function amountProvider()
     {
         return [
+            // Clean / separator / short-fraction cases (unchanged).
             ['1500', '1500.00'],
             ['001,500.5', '1500.50'],
-            ['0.009', '0.00'],
             [' 10.2 ', '10.20'],
-            ['-10.00', '-10.00'],
-            ['+10.00', '+10.00'],
-            ['1e3', '1e3'],
-            ['abc', 'abc'],
+            ['1,000.50', '1000.50'],
+            // Half-up rounding past 2 dp — the decimal(12,4) trap (Story 3-5):
+            // truncation used to drop the 4th decimal and route real payments to
+            // manual_review; rounding now keeps them comparable.
+            ['0.009', '0.01'],
+            ['100.0050', '100.01'],
+            ['999.9999', '1000.00'],
+            ['1000.0000', '1000.00'],
+            // Invalid / negative -> fail-closed empty sentinel (never raw
+            // passthrough, so it can never compare equal to a valid amount).
+            ['-10.00', ''],
+            ['+10.00', ''],
+            ['-5', ''],
+            ['1e3', ''],
+            ['abc', ''],
+            ['', ''],
         ];
     }
 
@@ -346,7 +358,8 @@ class KuickPayVoucherGatewayHelpersTest extends TestCase
         $this->assertSame(
             [
                 ['id' => 1, 'amount' => '1500.00'],
-                ['id' => 2, 'amount' => '-5.00'],
+                // Negative invoice amount fails closed to the empty sentinel.
+                ['id' => 2, 'amount' => ''],
             ],
             $gateway->exposeNormalizeInvoiceAmounts([
                 ['id' => 1, 'amount' => '1,500'],

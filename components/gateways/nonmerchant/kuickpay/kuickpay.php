@@ -1479,10 +1479,17 @@ class Kuickpay extends NonmerchantGateway
     }
 
     /**
-     * Normalizes an amount as a decimal string without float math.
+     * Normalizes an amount to a canonical two-decimal string, or fails closed.
+     *
+     * Half-up rounds to 2 dp using decimal-string / bcmath math (never PHP
+     * floats); non-numeric or negative input returns an empty sentinel that can
+     * never compare equal to a valid amount, instead of passing the raw string
+     * through. MUST stay byte-for-byte identical to the mirror copy in
+     * KuickPayVoucherReferenceService::normalizeAmount() so the cross-side
+     * amount compare is self-consistent (Story 5.5 AC3d; NFR13; architecture 658).
      *
      * @param string $amount The amount to normalize
-     * @return string The normalized amount, or original trimmed input when invalid
+     * @return string The normalized 2-dp amount, or '' when invalid
      */
     protected function normalizeAmount(string $amount): string
     {
@@ -1490,17 +1497,12 @@ class Kuickpay extends NonmerchantGateway
         $normalized = str_replace(',', '', $amount);
 
         if (!preg_match('/^\d+(?:\.\d+)?$/', $normalized)) {
-            return $amount;
+            return '';
         }
 
-        $parts = explode('.', $normalized, 2);
-        $integer = ltrim($parts[0], '0');
-        if ($integer === '') {
-            $integer = '0';
-        }
-        $fraction = substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2);
-
-        return $integer . '.' . $fraction;
+        // Adding 0.005 then truncating to 2 dp rounds a .xx5 tie up for the
+        // non-negative values that reach here, with no float intermediates.
+        return bcadd($normalized, '0.005', 2);
     }
 
     /**
