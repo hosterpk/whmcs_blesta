@@ -30,9 +30,9 @@ Date: 2026-06-09
 | BillPaymentInquiry | `bill-payment-inquiry/non-pkr.xml` | `manual_review` |  | Paid candidate with non-PKR currency fails closed with `currency_mismatch`. |
 | BillPaymentInquiry | `bill-payment-inquiry/empty-currency.xml` | `manual_review` |  | Paid candidate with empty currency fails closed with `currency_mismatch`. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/matched-paid.xml` | `confirmed_unposted` |  | Match by stored Consumer Number only; never infer from suffix. |
-| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/unmatched.xml` | `manual_review` | `unmatched_reference` | Record as a run item for manual review. |
+| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/unmatched.xml` | `manual_review` | `unmatched_reference` | Audit-only `evidence.unmatched`; counted in run totals, with no `kuickpay_reconciliation_items` row. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/malformed-xml.xml` | `manual_review` | `malformed_response` | Bounded retry only for transient transport truncation; malformed dataset maps to manual review. |
-| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/mixed-multi-row.xml` | mixed | mixed | Matched rows confirm, unmatched rows fail closed; duplicate Consumer rows remain separate evidence rows. |
+| BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/mixed-multi-row.xml` | mixed | mixed | Matched rows confirm; unmatched and duplicate Consumer rows are audit-only evidence rows with no item row. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/overpayment.xml` | `manual_review` | `amount_mismatch` | Overpayment is not auto-confirmed by the parser. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/late-partial.xml` | `manual_review` | `amount_mismatch` | Late/partial amount remains manual-review evidence. |
 | BillPaymentBulkInquiry | `bill-payment-bulk-inquiry/suffix-pair.xml` | mixed | mixed | Exact Consumer Number matching distinguishes suffix pairs. |
@@ -120,6 +120,14 @@ All fixture rows below are provisional because no sanitized KuickPay response ca
 | `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-overpayment.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for overpayment amount mismatch. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-overpayment` |
 | `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/ambiguous/bill-payment-bulk-late-partial.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for late/partial amount mismatch. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-late-partial` |
 | `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/valid/bill-payment-bulk-suffix-pair.xml` | `synthetic_from_observed_format` | `2026-06-10T00:00:00+05:00` | `Dev Agent` | `Dev Agent` | `provisional` | `true` | Story 3.2 hardening fixture for exact-match Consumer Number suffix discrimination. | `PENDING_HUMAN_APPROVAL` | `story32-hardening-bulk-suffix-pair` |
+
+## See also
+
+- `docs/kuickpay/reconciliation-runbook.md` — operator runbook for the reconciliation flows that
+  consume inquiry and bulk-inquiry evidence.
+- `docs/kuickpay/support-troubleshooting.md` — support guide for reading reconciled voucher evidence
+  and collecting sanitized escalation fields.
+- `docs/kuickpay/live-smoke-runbook.md` — opt-in real-provider smoke and sanitized capture rules.
 
 ## Redaction Confirmation
 

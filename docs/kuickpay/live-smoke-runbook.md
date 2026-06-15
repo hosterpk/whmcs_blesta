@@ -124,3 +124,12 @@ cd components/gateways/nonmerchant/kuickpay
 
 Do not commit a real captured live response unless it has been manually reviewed
 and every sensitive value reads `xxxx`.
+
+## See also
+
+- `docs/kuickpay/reconciliation-runbook.md` — operator runbook for scheduled reconciliation,
+  Check Now, bulk runs, run summaries, and manual review.
+- `docs/kuickpay/support-troubleshooting.md` — support guide for customer payment claims and
+  sanitized escalation evidence.
+- `docs/kuickpay/testing-fixtures.md` — fixture provenance and approval status for parser and
+  reconciliation tests.

@@ -6,7 +6,7 @@ baseline_commit: e6e4919087c75e03799d97e82ebcfbc1485eef82
 
 # Story 5.9: Document Reconciliation and Support Operations
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -81,14 +81,14 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — AC1/AC3/AC4: write the reconciliation runbook** (`docs/kuickpay/reconciliation-runbook.md`)
-  - [ ] 1.1 **Sanitized header + audience.** Open with the standard sanitized-doc header (mirror
+- [x] **Task 1 — AC1/AC3/AC4: write the reconciliation runbook** (`docs/kuickpay/reconciliation-runbook.md`)
+  - [x] 1.1 **Sanitized header + audience.** Open with the standard sanitized-doc header (mirror
     `deployment-guide.md:1-17` / `gateway-settings-and-endpoint-hardening-verification.md:1-8`):
     audience = **support/finance operators**; scope = Story 5.9 reconciliation runbook (rollback/
     upgrade/launch is Story 5.10 — out of scope); the file contains **no** secrets/WSDL host/
     Institution ID/PII; facts verified against source at baseline `e6e49190`; state what is verified
     vs what an operator confirms in their own environment (NFR12).
-  - [ ] 1.2 **Scheduled reconciliation — the three cron tasks.** Document the Blesta plugin cron
+  - [x] 1.2 **Scheduled reconciliation — the three cron tasks.** Document the Blesta plugin cron
     tasks exactly as registered (see Dev Notes "Reconciliation engine reference"):
     - `reconcile_pending` — **"Reconcile Pending KuickPay Vouchers"**, every **5 min**; single-inquiry
       checks **Pending + Retry** vouchers (PKR only, not yet expired), with Pending rechecked no more
@@ -103,7 +103,7 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     Explain operator-visible facts: where these appear in Blesta's automation/cron logs, the 5-min
     cadence, and that nothing posts outside `post_confirmed`. (Do **not** re-document install/enable
     — that's 5.8; link `deployment-guide.md`.)
-  - [ ] 1.3 **Check Now (single manual recheck).** Document the per-voucher **Check Now** action on
+  - [x] 1.3 **Check Now (single manual recheck).** Document the per-voucher **Check Now** action on
     Voucher Detail: available on **Pending, Retry, Confirmed (Unposted)** (per
     `ALLOWED_ACTIONS_BY_STATE`); on Pending/Retry it runs one inquiry, on Confirmed (Unposted) it
     attempts posting. List the operator-visible **outcomes** (posted / already posted / confirmed /
@@ -111,7 +111,7 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     runs **outside** the cron batch lock (a deliberate manual override) and is **safe** (fails
     closed, evidence preserved) — reference the documented during-inquiry race residual only as a
     "rare, self-healing" footnote, not a scare. Requires the **recheck** permission.
-  - [ ] 1.4 **Bulk Reconciliation.** Document the **Bulk Reconciliation** screen
+  - [x] 1.4 **Bulk Reconciliation.** Document the **Bulk Reconciliation** screen
     (`admin_main`): operator supplies a **run date** (`YYYY-MM-DD`, bounded to a 365-day lookback),
     which triggers one `BillPaymentBulkInquiry` for that date. Matching is by **Consumer Number**
     against local Pending/Retry vouchers. Explain the three outcome buckets — **matched** (normal
@@ -119,7 +119,7 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     **duplicate** (same Consumer Number echoed twice in one run → audit-only, counted) — and the
     completion banner ("Bulk reconciliation run #N completed. Checked: …, unmatched: …, manual
     review: …"). Requires the **bulk_reconcile** permission.
-  - [ ] 1.5 **Run summaries (how to read a run).** Document the Reconciliation Runs screen
+  - [x] 1.5 **Run summaries (how to read a run).** Document the Reconciliation Runs screen
     (`admin_reconciliation`) and run-detail drill-down: the per-run count fields (`total_eligible`,
     `total_checked`, `total_confirmed`, `total_retry`, `total_manual_review`, `total_expired`,
     `total_failed`, `total_errors`, `total_unmatched`) and the two displayed labels —
@@ -131,7 +131,7 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     row `(run_id, voucher_id)`; bulk **unmatched/duplicate** evidence produces **no item row** — only
     `evidence.unmatched` / `evidence.duplicate` audit events, which are the only audit events the
     run-detail view surfaces (the run-detail audit allowlist — `[[kuickpay-run-detail-audit-allowlist]]`).
-  - [ ] 1.6 **Manual Review queue + the under/over/late/duplicate/unmatched cases.** Document the
+  - [x] 1.6 **Manual Review queue + the under/over/late/duplicate/unmatched cases.** Document the
     **KuickPay Manual Review** queue (`admin_manual_review`, read-only list of `manual_review`
     vouchers, most-recently-checked first; every row links to Voucher Detail to act). Explain
     **how a voucher lands in Manual Review** and map each AC1-named case to its real cause:
@@ -149,22 +149,22 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     note). State plainly that **Manual Review is a valid safe state, recoverable by admin action — it
     is not a failure of the product** (`architecture.md:86`) and there is **no "force paid" action**
     (`architecture.md:307,375`).
-  - [ ] 1.7 **Admin-review-runbook coverage.** The architecture's planned `admin-review-runbook.md`
+  - [x] 1.7 **Admin-review-runbook coverage.** The architecture's planned `admin-review-runbook.md`
     (`architecture.md:759`) is satisfied by the Manual Review section above. You **may** split that
     section into a separate `docs/kuickpay/admin-review-runbook.md` if cleaner, but cross-link it; a
     single reconciliation-runbook covering AC1's named "Manual Review" topic satisfies the AC
     literally and is less ambiguous. Do **not** start the 5.10 rollback/upgrade/launch docs here.
 
-- [ ] **Task 2 — AC2/AC3/AC4: write the support troubleshooting guide** (`docs/kuickpay/support-troubleshooting.md`)
-  - [ ] 2.1 **Sanitized header + audience.** Same header pattern as Task 1.1; audience =
+- [x] **Task 2 — AC2/AC3/AC4: write the support troubleshooting guide** (`docs/kuickpay/support-troubleshooting.md`)
+  - [x] 2.1 **Sanitized header + audience.** Same header pattern as Task 1.1; audience =
     **support/finance staff handling a customer claim**.
-  - [ ] 2.2 **Search / lookup.** Document the **KuickPay Vouchers** admin list (`admin_vouchers`
+  - [x] 2.2 **Search / lookup.** Document the **KuickPay Vouchers** admin list (`admin_vouchers`
     index) and its filters: **Invoice ID** (exact), **Consumer Number** (partial/LIKE),
     **Registration Number**, **KuickPay Reference**, **Client ID**, **Amount**, **Status** (dropdown
     over the status allowlist), **Date Created from/to**, and **Has Blesta Transaction**. Give the
     "start from a customer claim" recipe: search by Invoice ID or Consumer Number → open Voucher
     Detail. Note this needs the voucher **view** permission.
-  - [ ] 2.3 **Inspect Voucher Detail.** Document the detail screen's boxes: Voucher Summary
+  - [x] 2.3 **Inspect Voucher Detail.** Document the detail screen's boxes: Voucher Summary
     (status, client, Registration/Consumer Number, KuickPay reference, amount/currency, the date
     fields incl. date paid/posted), Invoice Mapping & Posting State (linked invoices; **transaction
     link appears only for `posted`** — UX-DR20), Admin Notes, Manual Actions (state-gated Recheck/
@@ -172,19 +172,19 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     — `diagnostics` action). Make clear the diagnostics box shows the **redacted** audit timeline
     (event label, date, redacted trace id, evidence hash, already-redacted payload) and the
     allowlisted diagnostic fields — **never** raw SOAP/XML, WSDL, or credentials.
-  - [ ] 2.4 **Interpret safe statuses (the label table) — the safety core of this guide.** Provide a
+  - [x] 2.4 **Interpret safe statuses (the label table) — the safety core of this guide.** Provide a
     single table mapping each voucher status → **admin label** → **customer-facing label** →
     operational meaning → **safe to call "paid"?** Use the verified labels (Dev Notes "Status
     vocabulary"). Hammer the rule: the customer surface shows `confirmed_unposted` as **"Waiting for
     payment confirmation"** (NOT paid) and only `posted` as **"Payment received"**; the standing
     customer notice is *"Blesta marks this invoice paid only after KuickPay confirms your payment."*
     (`Kuickpay.process.status_expectation`). **Only `posted` = paid/posted-to-Blesta.**
-  - [ ] 2.5 **Avoid unsafe paid-state claims.** A short, explicit "do / don't" for staff: never tell
+  - [x] 2.5 **Avoid unsafe paid-state claims.** A short, explicit "do / don't" for staff: never tell
     a customer a `pending`/`retry`/`confirmed_unposted`/`manual_review`/`expired` voucher is paid;
     "Confirmed (Unposted)" means **evidence accepted, not yet posted** — posting is a separate task;
     direct the customer/ticket to wait for `posted` (the Blesta invoice itself flips to paid only on
     posting). Tie back to "no force-paid action exists."
-  - [ ] 2.6 **Collect sanitized escalation evidence.** Document what is **safe to copy into an
+  - [x] 2.6 **Collect sanitized escalation evidence.** Document what is **safe to copy into an
     escalation** vs what must **never** leave the system. Safe: status, error class, **KuickPay
     reference**, **Consumer/Registration Number**, amount, currency, paid-at, **redacted trace id**,
     **evidence hash**, validation-reason tokens, run id (the `KuickPayEvidence` safe getters + the
@@ -196,8 +196,8 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     (`[[kuickpay-soapclient-rawresult-unredacted]]`): the raw payload getters exist but are **not**
     for support evidence — use only the safe allowlist / redacted views the admin UI already renders.
 
-- [ ] **Task 3 — AC3/AC4: verification (secret-leak scan + code cross-check)**
-  - [ ] 3.1 **Cross-check every operator-facing term against source** at baseline `e6e49190`: the 8
+- [x] **Task 3 — AC3/AC4: verification (secret-leak scan + code cross-check)**
+  - [x] 3.1 **Cross-check every operator-facing term against source** at baseline `e6e49190`: the 8
     voucher statuses + labels (`models/kuickpay_vouchers.php` STATUSES; `language/.../admin_vouchers.php`
     status/posting_state keys), customer labels (`gateway .../kuickpay.php` `process.status.*`), the
     three cron task keys/labels (`kuickpay_reconcile_plugin.php` cron defs + `language/.../kuickpay_reconcile_plugin.php`),
@@ -205,23 +205,37 @@ it in this story. **The code is truth — if a doc and the code disagree, fix th
     run count fields + the two footnotes (`admin_reconciliation.php` lang), the audit-event names
     (presenter allowlist), and the redaction boundary (`KuickPayRedactor` / `KuickPayEvidence`). Do
     not invent a status/action/count/event the code does not have; do not omit one an AC names.
-  - [ ] 3.2 **Secret-leak self-scan** of every new doc (mirror Story 5.7/5.8 discipline): grep for
+  - [x] 3.2 **Secret-leak self-scan** of every new doc (mirror Story 5.7/5.8 discipline): grep for
     credential / WSDL-host / Institution-ID / Consumer-Number / CNIC / mobile / email / raw-envelope
     shapes and confirm only placeholders appear — no `config/blesta.php` value, no live DB value, no
     real KuickPay traffic.
-  - [ ] 3.3 **Honest reporting (NFR12):** if any documented behavior could not be confirmed against
+  - [x] 3.3 **Honest reporting (NFR12):** if any documented behavior could not be confirmed against
     the code (e.g. a count semantics nuance, or the exact Check-Now outcome token set), say so
     explicitly rather than asserting it; record any doc/code discrepancy as a finding (do not change
     code).
 
-- [ ] **Task 4 — Doc hygiene & commit**
-  - [ ] 4.1 Keep this a **docs-only** change set under `docs/kuickpay/` + the `_bmad-output/` story
+- [x] **Task 4 — Doc hygiene & commit**
+  - [x] 4.1 Keep this a **docs-only** change set under `docs/kuickpay/` + the `_bmad-output/` story
     file. No runtime/test/schema/`config.json` changes, no version bump (`project-context.md:104` —
     don't mix generated docs with runtime changes). Commit style `docs(kuickpay): <summary>`,
     imperative, ≤72 chars (e.g. `docs(kuickpay): add reconciliation and support runbooks`).
-  - [ ] 4.2 Cross-link the new docs into the existing `docs/kuickpay/` set (deployment guide,
+  - [x] 4.2 Cross-link the new docs into the existing `docs/kuickpay/` set (deployment guide,
     blesta-footguns, live-smoke runbook, testing-fixtures) via "See also" sections so they are
     discoverable. No `index.md` exists today — do not invent one unless one appears.
+
+### Review Findings
+
+- [x] [Review][Patch] Existing-doc backlinks were missing despite Task 4.2 being checked off
+  [docs/kuickpay/deployment-guide.md] — fixed by adding See also links from the existing deployment,
+  Blesta footguns, live-smoke, and testing-fixtures docs, and by adding the missing fixture/footgun
+  links from the new runbooks.
+- [x] [Review][Patch] Escalation template claimed every field came from Diagnostics
+  [docs/kuickpay/support-troubleshooting.md:185] — fixed by clarifying that trace/error/hash fields
+  come from Diagnostics while invoice/voucher identifiers come from Voucher Detail or the customer
+  ticket.
+- [x] [Review][Patch] Testing fixtures doc contradicted audit-only bulk unmatched semantics
+  [docs/kuickpay/testing-fixtures.md:33] — fixed by documenting unmatched and duplicate bulk evidence
+  as audit-only evidence with no `kuickpay_reconciliation_items` row.
 
 ## Dev Notes
 
@@ -429,14 +443,116 @@ tokens, in operator-facing copy.
 
 ### Agent Model Used
 
+claude-opus-4-8[1m] (Claude Opus 4.8, 1M context) — BMAD dev-story workflow.
+
 ### Debug Log References
+
+Verification was read-only against the shipped source at baseline `e6e49190` (confirmed
+`git diff --name-only e6e49190 HEAD -- plugins/ components/` is empty, so the working tree equals the
+baseline for all code). No runtime/test execution was required for a docs-only story; the "tests" for
+this story are the source cross-check (Task 3.1) and the secret-leak self-scan (Task 3.2).
+
+- **Source cross-check (Task 3.1).** Every operator-facing term was read from source, not memory:
+  - Statuses (8) + admin labels: `models/kuickpay_vouchers.php` `STATUSES` (:13-22);
+    `language/en_us/admin_vouchers.php` (:31-39).
+  - Customer labels + standing notice: gateway `language/en_us/kuickpay.php` (:20-29).
+  - Cron task keys/names/intervals: `kuickpay_reconcile_plugin.php` `getCronTasks()` (:786-820,
+    reconcile_pending=5m, post_confirmed=5m, expire_vouchers=60m) + dispatch (:217-250); names from
+    `language/en_us/kuickpay_reconcile_plugin.php` (:4-9).
+  - Reconcile constants: `lib/KuickPayReconcileService.php` `BATCH_SIZE=100`, `LOCK_TTL_SECONDS=600`,
+    `PENDING_RECHECK_MINUTES=30`, `RETRY_LIMIT=5`, `MAX_RUNTIME_SECONDS=240`, PKR-only
+    `getInstalledNonmerchant(...,'PKR')` (:802), `reconciliation_enabled` gate (:812), skip reasons
+    `lock_held`/`kuickpay_unavailable`.
+  - Retry backoff: `models/kuickpay_vouchers.php:548` literal `LEAST(360, 30 * POW(2, retry_count))`
+    minutes → 30-min base, doubling, **360-min (6 h) cap** (documented as such, not hand-waved).
+  - Check Now outcomes (10 tokens) + messages: `controllers/admin_vouchers.php`
+    `safeRecheckOutcome()` (:418-434) + `recheckMessage()` (:436-452); recheck flow (:214-281).
+  - Action matrix: `models/kuickpay_vouchers.php` `ALLOWED_ACTIONS_BY_STATE` (:52-61) +
+    `ALLOWED_FROM_BY_ACTION` (:63-67); `review()`/`cancel()` via `noteTransitionAction()` (:283-351).
+  - Bulk run: `controllers/admin_main.php` (`run()` :43-115, `runDateError()` :129-147, 365-day
+    lookback); banner `language/en_us/admin_main.php:5`; field label "Transaction date" (:3).
+  - Run summary: schema `kuickpay_reconcile_plugin.php` `createReconcileTables()` (:592-660) — 9
+    `total_*` counters; controllers `admin_reconciliation.php` (index/detail, ≤500 cap); count labels +
+    **4 footnotes** `language/en_us/admin_reconciliation.php` (:14-25).
+  - Run-detail audit allowlist: `models/kuickpay_audit_events.php` `getByRun()` (:76-88) hard-filters
+    `event_name IN ('evidence.unmatched','evidence.duplicate')`.
+  - Manual-review queue: `controllers/admin_manual_review.php` `index()` (:55-117).
+  - Filter keys / sort / allowlists / diagnostic fields: `lib/KuickPayVoucherListPresenter.php`
+    (`FILTER_KEYS` :67-78, `SORTABLE_FIELDS` :55-61, `STATUS_BADGE_CLASSES` only `posted`→`bg-success`
+    :39-48, `ERROR_CLASS_LABEL_KEYS` :122-133, `EVENT_LABEL_KEYS` :145-165,
+    `VALIDATION_REASON_LABEL_KEYS` :182-202, `DIAGNOSTIC_FIELD_KEYS` :264-277).
+  - Detail boxes + posted-only transaction link: `views/default/admin_vouchers_detail.pdt`
+    (6 Widget boxes; transaction link gated `status === 'posted'`, UX-DR20 :146-147).
+  - Redaction boundary: `components/.../kuickpay/lib/KuickPayEvidence.php` /
+    `lib/KuickPayRedactor.php`; payment policies fixed to `manual_review`
+    (`components/gateways/nonmerchant/kuickpay/kuickpay.php:198-200,401-422`).
+- **Secret-leak self-scan (Task 3.2).** Grepped both new docs for URLs/hosts, emails, CNIC pattern
+  `\d{5}-\d{7}-\d`, any ≥6-digit run, credential-shaped tokens, and raw SOAP/XML shapes — **all clean
+  (zero hits)**. The only numerals in the docs are documented constants/intervals (5, 60, 100, 240,
+  30, 360, 365, 500, 600). Class-casing verified: gateway `Kuickpay`, plugin `KuickpayReconcilePlugin`.
 
 ### Completion Notes List
 
+Delivered two sanitized, operator-facing Markdown runbooks under `docs/kuickpay/`, both verified
+against shipped Epic-3/Epic-4 source at baseline `e6e49190`. **No** runtime/test/schema/`config.json`
+changes and **no** version bump — docs-only. Existing KuickPay docs now link back to the two new
+operator runbooks for discoverability.
+
+- **AC1 (reconciliation runbook).** `reconciliation-runbook.md` covers the three cron tasks
+  (`reconcile_pending`/`post_confirmed`/`expire_vouchers`) with exact names/intervals, Check Now
+  (with the full 10-outcome message table), Bulk Reconciliation (Transaction-date input, 365-day
+  bound, matched/unmatched/duplicate buckets, completion banner), run summaries (9 counters, 6
+  displayed labels, all 4 footnotes, item-rows-vs-audit-only), and the Manual Review queue with the
+  late/under/over/duplicate/unmatched routing and the real action matrix. Per Task 1.7, kept the
+  admin-review coverage **inside** the reconciliation runbook (no separate `admin-review-runbook.md`)
+  — satisfies the AC literally and is less ambiguous.
+- **AC2 (support troubleshooting guide).** `support-troubleshooting.md` covers search by
+  Invoice/Consumer Number (all 10 filters), Voucher Detail (6 boxes incl. posted-only transaction
+  link + separately-permissioned Diagnostics), the safe status table (admin↔customer labels, only
+  `posted` = paid), do/don't on unsafe paid claims, and sanitized escalation evidence (safe getters
+  vs the redaction boundary) with a placeholder-only escalation template.
+- **AC3 (placeholders only).** Self-scan clean; only placeholders (`<consumer-number>`,
+  `<invoice-id>`, `<redacted-trace-id>`, `<evidence-hash>`, `<run-id>`, etc.).
+- **AC4 (honest, code-verified).** Each doc ends with an NFR12 "Honest-reporting notes" section
+  listing what was verified against source vs what the operator confirms in their environment.
+
+**📌 Finding recorded (NFR12 — doc/code discrepancy; NOT changed in code).** Story Task 1.6
+paraphrased the Manual-Review actions as "Check Now (re-run), Review (keep in review … idempotent),
+Cancel." The shipped state machine (`ALLOWED_ACTIONS_BY_STATE['manual_review'] = ['cancel']`, and
+`manual_review` absent from `ALLOWED_FROM_BY_ACTION['recheck']`/`['review']`) offers **only Cancel**
+from a voucher already in `manual_review`; "Mark Manual Review" (`review`) is the action that *routes*
+a voucher *into* the queue (from pending/retry/confirmed_unposted/failed/expired), not an in-queue
+action, and is not idempotent in the "keep-in-review" sense. The runbook documents the **real**
+matrix (§6.2) and states the recovery path honestly (investigate → leave parked / Cancel+reissue /
+resolve via Blesta's native transaction tools; never force-paid). Code is truth — recorded here, not
+altered.
+
+**Other honest-reporting nuances surfaced (documented, not asserted beyond code):**
+- The run summary shows **6** count labels and carries **4** footnotes (not the 2 the story
+  emphasized) — the additional `eligible` and `failed_errors` footnotes are real and operator-visible,
+  so both runbooks document all four.
+- The bulk-reconcile UI field is labeled **"Transaction date"** (input name `run_date`); documented as
+  such rather than "run date".
+- The voucher-detail second box is titled **"Invoice Mapping & Related Records"** (the posting-state
+  is a field within it), not "Invoice Mapping & Posting State" as the Dev Notes paraphrased.
+
 ### File List
+
+- `docs/kuickpay/reconciliation-runbook.md` (new) — AC1/AC3/AC4 reconciliation + manual-review runbook.
+- `docs/kuickpay/support-troubleshooting.md` (new) — AC2/AC3/AC4 support troubleshooting guide.
+- `docs/kuickpay/deployment-guide.md` (updated) — See also links to the new operator runbooks.
+- `docs/kuickpay/blesta-footguns.md` (updated) — See also links to the new operator runbooks.
+- `docs/kuickpay/live-smoke-runbook.md` (updated) — See also links to the new operator runbooks.
+- `docs/kuickpay/testing-fixtures.md` (updated) — See also links to the new operator runbooks.
+- `_bmad-output/kuickpay/implementation-artifacts/5-9-document-reconciliation-and-support-operations.md`
+  (updated) — task checkboxes, review findings, Dev Agent Record, File List, Change Log, Status → done.
+- `_bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml` (updated) — story 5-9
+  ready-for-dev → in-progress → review → done.
 
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-06-16 | Story 5.9 drafted (ready-for-dev): reconciliation + support runbooks scoped against shipped Epic 3/4 behavior, verified to source at baseline `e6e49190`. |
+| 2026-06-16 | Implemented (docs-only): added `docs/kuickpay/reconciliation-runbook.md` and `docs/kuickpay/support-troubleshooting.md`, verified against source at `e6e49190`; secret-leak scan clean; recorded the Manual-Review action-matrix discrepancy as a finding. Status → review pending code review. |
+| 2026-06-16 | Code-review fix: added backlinks from existing KuickPay docs, clarified that the escalation template is filled from Voucher Detail, Diagnostics, and the customer ticket rather than Diagnostics alone, and corrected `testing-fixtures.md` to describe bulk unmatched/duplicate evidence as audit-only with no item row. |

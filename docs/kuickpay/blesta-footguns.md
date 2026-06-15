@@ -233,3 +233,11 @@ L. **`PluginManager::isInstalled(..., null company_id)` matches under ANY compan
 When a new Blesta framework trap is discovered, **add it here** with the same shape — gotcha →
 workaround → named symbol/file → source retro — and reference it from the retro that found it.
 This consolidation exists so the next author does not pay the same tax a sixth time.
+
+## See also
+
+- `docs/kuickpay/reconciliation-runbook.md` — operator runbook for reconciliation, run summaries,
+  and manual-review handling.
+- `docs/kuickpay/support-troubleshooting.md` — support guide for payment claims and sanitized
+  escalation evidence.
+- `docs/kuickpay/deployment-guide.md` — install, enablement, gateway settings, and cron setup.

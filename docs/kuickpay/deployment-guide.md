@@ -321,6 +321,10 @@ procedure).
 
 ## See also
 
+- `docs/kuickpay/reconciliation-runbook.md` — operator runbook for scheduled reconciliation,
+  Check Now, bulk runs, run summaries, and the manual-review queue.
+- `docs/kuickpay/support-troubleshooting.md` — support guide for customer payment claims,
+  safe status interpretation, and sanitized escalation evidence.
 - `docs/kuickpay/blesta-footguns.md` — developer reference for the Blesta framework footguns
   behind these behaviors (e.g. the password re-entry traps).
 - `docs/kuickpay/live-smoke-runbook.md` — the opt-in credentialed real-provider smoke.
