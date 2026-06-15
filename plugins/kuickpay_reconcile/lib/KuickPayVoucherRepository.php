@@ -330,6 +330,23 @@ class KuickPayVoucherRepository
     }
 
     /**
+     * Retires a voucher only while it is not already terminal-cancelled.
+     *
+     * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope
+     * @return bool True only when this call transitioned the row to cancelled
+     */
+    public function retire(int $voucher_id, int $company_id): bool
+    {
+        return $this->KuickpayVouchers->transition(
+            $voucher_id,
+            $company_id,
+            'cancelled',
+            ['pending', 'retry', 'confirmed_unposted', 'failed', 'expired', 'manual_review']
+        );
+    }
+
+    /**
      * Status-guarded voucher update: writes only when the row is still active
      * (status IN 'pending','retry').
      *

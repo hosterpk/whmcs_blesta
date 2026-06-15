@@ -280,7 +280,7 @@ class KuickPayPostingServiceTest extends TestCase
 
         $this->assertSame(1, $first['counts']['posted']);
         $this->assertSame(0, $second['counts']['posted']);
-        $this->assertSame(1, $second['counts']['already_posted']);
+        $this->assertSame(0, $second['counts']['already_posted']);
         $this->assertCount(1, $transactions->adds);
         $this->assertCount(1, $transactions->applies);
     }
@@ -686,7 +686,23 @@ class KuickPayPostingFakeVoucherRepository
     {
         $this->postableCall = [$company_id, $limit, $afterId];
 
-        return $this->vouchers;
+        $postable = [];
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->company_id !== $company_id
+                || (int) $voucher->id <= $afterId
+                || (string) $voucher->status !== 'confirmed_unposted'
+                || !empty($voucher->blesta_transaction_id)
+            ) {
+                continue;
+            }
+
+            $postable[] = $voucher;
+            if (count($postable) >= $limit) {
+                break;
+            }
+        }
+
+        return $postable;
     }
 
     public function record()

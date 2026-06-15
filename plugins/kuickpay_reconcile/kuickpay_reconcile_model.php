@@ -165,6 +165,10 @@ class KuickpayReconcileModel extends AppModel
      */
     protected function scopedInsert(string $table, int $companyId, array $vars, array $fields)
     {
+        if ($companyId < 1) {
+            throw new InvalidArgumentException('scopedInsert requires a positive company_id for ' . $table);
+        }
+
         if (array_key_exists('company_id', $vars) && (int) $vars['company_id'] !== $companyId) {
             throw new InvalidArgumentException('scopedInsert company_id mismatch for ' . $table);
         }

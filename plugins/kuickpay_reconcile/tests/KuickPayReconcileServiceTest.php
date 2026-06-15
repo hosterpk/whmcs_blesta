@@ -1262,7 +1262,23 @@ class KuickPayReconcileFakeVoucherRepository
     {
         $this->lastAfterId = $afterId;
 
-        return $this->vouchers;
+        $reconcilable = [];
+        foreach ($this->vouchers as $voucher) {
+            if ((int) $voucher->id <= $afterId
+                || (int) $voucher->company_id !== $company_id
+                || (string) $voucher->currency !== 'PKR'
+                || !in_array((string) $voucher->status, ['pending', 'retry'], true)
+            ) {
+                continue;
+            }
+
+            $reconcilable[] = $voucher;
+            if (count($reconcilable) >= $limit) {
+                break;
+            }
+        }
+
+        return $reconcilable;
     }
 
     public function getExpirable(int $company_id, int $limit, int $afterId = 0): array

@@ -2,6 +2,8 @@
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/KuickPayReconcileServiceTest.php';
+
 /**
  * Cross-company isolation regression (Story 5.5 AC1.5 / Epic 4 retro AI-8).
  *
@@ -73,6 +75,14 @@ class KuickPayCompanyScopeIsolationTest extends TestCase
         $this->assertSame('int', (string) $param->getType());
     }
 
+    public function testScopedInsertRejectsNonPositiveCompanyId()
+    {
+        $probe = new KuickPayCompanyScopeProbeModel();
+
+        $this->expectException(InvalidArgumentException::class);
+        $probe->probeInsert('kuickpay_vouchers', 0, [], []);
+    }
+
     public function scopedHelperProvider()
     {
         return [
@@ -82,5 +92,17 @@ class KuickPayCompanyScopeIsolationTest extends TestCase
             'scopedDelete' => ['scopedDelete', 1],
             'scopedInsert' => ['scopedInsert', 1],
         ];
+    }
+}
+
+class KuickPayCompanyScopeProbeModel extends KuickpayReconcileModel
+{
+    public function __construct()
+    {
+    }
+
+    public function probeInsert(string $table, int $companyId, array $vars, array $fields)
+    {
+        return $this->scopedInsert($table, $companyId, $vars, $fields);
     }
 }

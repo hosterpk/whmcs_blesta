@@ -228,10 +228,9 @@ class KuickPayVoucherReferenceService
         string $contextAmount,
         array $contextInvoiceAmounts
     ): bool {
-        if (
-            $this->normalizeAmount((string) ($voucherFlat['amount'] ?? ''))
-            !== $this->normalizeAmount($contextAmount)
-        ) {
+        $voucherAmount = $this->normalizeAmount((string) ($voucherFlat['amount'] ?? ''));
+        $requestedAmount = $this->normalizeAmount($contextAmount);
+        if ($voucherAmount === '' || $requestedAmount === '' || $voucherAmount !== $requestedAmount) {
             return false;
         }
 
@@ -265,15 +264,19 @@ class KuickPayVoucherReferenceService
     public function retireVoucher(int $voucherId, int $companyId, string $reason, array $auditPayload = []): bool
     {
         try {
-            $affected = $this->repository->edit($voucherId, $companyId, ['status' => 'cancelled']);
+            if (method_exists($this->repository, 'retire')) {
+                $retired = (bool) $this->repository->retire($voucherId, $companyId);
+            } else {
+                $retired = $this->repository->edit($voucherId, $companyId, ['status' => 'cancelled']) > 0;
+            }
         } catch (Throwable $e) {
             // The retire write itself failed (e.g. a DB error): report failure.
             return false;
         }
 
-        if ($affected < 1) {
-            // No in-scope row matched (wrong/zero company_id, or already gone):
-            // nothing was retired, so skip the audit and report failure.
+        if (!$retired) {
+            // No in-scope row transitioned (wrong/zero company_id, missing row,
+            // or already cancelled): nothing was retired, so skip the audit.
             return false;
         }
 

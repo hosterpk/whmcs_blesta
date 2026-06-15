@@ -65,6 +65,20 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         $this->assertSame('voucher.replaced', $audit->events[0][0]);
         $this->assertSame(1, $audit->events[0][1]['company_id']);
         $this->assertSame($voucherId, $audit->events[0][1]['voucher_id']);
+
+        $this->assertFalse($service->retireVoucher($voucherId, 1, 'amount_changed'));
+        $this->assertCount(1, $audit->events);
+    }
+
+    public function testInvalidAmountsNeverMatchBySentinel()
+    {
+        $service = new KuickPayVoucherReferenceService(new KuickPayVoucherReferenceFakeRepository());
+
+        $this->assertFalse($service->requestMatchesVoucher(
+            ['amount' => 'bad-amount'],
+            'also-bad',
+            []
+        ));
     }
 
     public function testFakeModelsEmptyStringIdentityCollisionButNullDistinctness()
@@ -536,6 +550,20 @@ class KuickPayVoucherReferenceFakeRepository
         );
 
         return 1;
+    }
+
+    public function retire(int $voucherId, int $companyId): bool
+    {
+        if (!isset($this->rows[$voucherId])) {
+            return false;
+        }
+
+        $voucher = $this->rows[$voucherId]['voucher'];
+        if ((int) $voucher->company_id !== $companyId || (string) $voucher->status === 'cancelled') {
+            return false;
+        }
+
+        return $this->edit($voucherId, $companyId, ['status' => 'cancelled']) === 1;
     }
 
     /**
