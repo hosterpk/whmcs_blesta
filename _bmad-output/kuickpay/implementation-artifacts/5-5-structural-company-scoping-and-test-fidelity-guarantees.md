@@ -6,7 +6,7 @@ baseline_commit: c18e27af5ffcb6481b5bf832d40f8073fe022ba9
 
 # Story 5.5: Structural Company-Scoping and Test-Fidelity Guarantees
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -152,8 +152,8 @@ story, not a feature story. Three traps:
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — AC1: introduce the structural company-scoping convention on the base model**
-  - [ ] 1.1 In `plugins/kuickpay_reconcile/kuickpay_reconcile_model.php` (`KuickpayReconcileModel`), add a
+- [x] **Task 1 — AC1: introduce the structural company-scoping convention on the base model**
+  - [x] 1.1 In `plugins/kuickpay_reconcile/kuickpay_reconcile_model.php` (`KuickpayReconcileModel`), add a
         small set of scoped-query primitives that make tenant scope un-omittable. Suggested shape (match
         the file's legacy no-namespace style): `scopedSelect(string $table, int $companyId): Record` that
         returns a `Record` already carrying `->where("$table.company_id", '=', $companyId)`;
@@ -162,16 +162,16 @@ story, not a feature story. Three traps:
         `scopedInsert(string $table, int $companyId, array $vars, array $fields)` that **injects**
         `company_id` (and rejects a caller that smuggles a conflicting one). Each takes `int $companyId`
         as a **required** parameter — omission is a type error, not a silent leak.
-  - [ ] 1.2 Handle the **parent-scoped child tables** explicitly. `kuickpay_voucher_invoices` and
+  - [x] 1.2 Handle the **parent-scoped child tables** explicitly. `kuickpay_voucher_invoices` and
         `kuickpay_reconciliation_items` have **no `company_id` column** — add a documented convention
         (e.g. `scopedChildSelect($childTable, $parentTable, $fkColumn, int $companyId)`) that joins the
         child to its owning voucher/run and applies the **parent's** `company_id`. Do **not** route these
         through `scopedSelect` (it would emit `child.company_id` → fatal SQL). Document the two table
         classes at the top of the helper so the next author cannot mis-apply it.
-  - [ ] 1.3 Migrate the already-correct scoped read methods to the convention **without changing their
+  - [x] 1.3 Migrate the already-correct scoped read methods to the convention **without changing their
         results** (this is the "promote to structure" step, not a behavior change). Verify the suite stays
         green after each model file. Do not reformat unrelated code.
-  - [ ] 1.4 Close the 8 gaps:
+  - [x] 1.4 Close the 8 gaps:
         - `KuickpayVouchers::get()` (`:125`) → scope by `company_id` (or deprecate in favour of
           `getForCompany()`; pick one and update callers — `get()` currently has callers, so prefer
           adding the scope to avoid signature churn unless a caller cannot supply `company_id`).
@@ -184,22 +184,22 @@ story, not a feature story. Three traps:
           `getByInvoiceId()` (`:119`) → parent-scope via join to `kuickpay_vouchers.company_id`. These
           callers must now pass `company_id`; thread it from the call sites
           (`KuickPayVoucherRepository::getInvoiceLinksForUpdate()` etc.).
-  - [ ] 1.5 Add a **cross-company isolation regression test** (per affected repository): seed rows for
+  - [x] 1.5 Add a **cross-company isolation regression test** (per affected repository): seed rows for
         company A and company B; assert a company-A query/edit/insert never reads or mutates company-B
         rows, and that the helper cannot be called without a `company_id`. This test depends on AC2's
         company-aware fakes — sequence Task 2's fake upgrades first or in tandem so the test is not vacuous.
-  - [ ] 1.6 Audit the gateway side (`components/gateways/nonmerchant/kuickpay/`) for any direct Record
+  - [x] 1.6 Audit the gateway side (`components/gateways/nonmerchant/kuickpay/`) for any direct Record
         query; the gateway should reach durable state only through plugin services, but confirm no
         gateway-local query leaks tenant scope. Report findings even if nil.
 
-- [ ] **Task 2 — AC2: make the fakes at least as strict as the database; land the checklist**
-  - [ ] 2.1 Extract a shared **fake-fidelity base/trait** (e.g. `tests/fakes/KuickPaySchemaFake*.php` or a
+- [x] **Task 2 — AC2: make the fakes at least as strict as the database; land the checklist**
+  - [x] 2.1 Extract a shared **fake-fidelity base/trait** (e.g. `tests/fakes/KuickPaySchemaFake*.php` or a
         trait reused by the repository fakes) modelling the real constraints, using the two existing
         constraint-enforcing fakes as templates: `KuickPayVoucherReferenceFakeRepository`
         (`KuickPayVoucherReferenceServiceTest.php:292-471`, enforces NOT-NULL `context_key` + UNIQUE
         `(company_id, active_context_key)` NULL-insensitive) and `KuickPayReconcileFakeUniqueItemRepository`
         (`KuickPayReconcileServiceTest.php:1560-1577`, enforces UNIQUE `(run_id, voucher_id)`).
-  - [ ] 2.2 Upgrade the **looser fakes** to enforce the schema UNIQUE/NOT-NULL keys (or swap them for the
+  - [x] 2.2 Upgrade the **looser fakes** to enforce the schema UNIQUE/NOT-NULL keys (or swap them for the
         strict variants): `KuickPayReconcileFakeVoucherRepository` (`:1235`, add the consumer/registration/
         active-context UNIQUE keys), `KuickPayReconcileFakeItemRepository` (`:1544`, the non-unique twin —
         prefer the unique variant), `KuickPayIssuanceFakeVoucherRepository`
@@ -209,109 +209,109 @@ story, not a feature story. Three traps:
         `KuickPayVoucherReferenceServiceFakeRepository`
         (`components/gateways/.../tests/KuickPayVoucherReferenceServiceTest.php:7`). Each upgrade must keep
         its suite green; a test that only passed because the fake was loose is a real finding.
-  - [ ] 2.3 Make fake **Blesta amount sources** return `decimal(12,4)` 4-dp strings systematically:
+  - [x] 2.3 Make fake **Blesta amount sources** return `decimal(12,4)` 4-dp strings systematically:
         `KuickPayPostingFakeTransactions` (`KuickPayPostingServiceTest.php:750-817`) `getApplied()`/
         `listResults()`/`applied_amount`, plus invoice-total/applied-amount providers
         (`KuickPayVoucherRepositoryFakeVoucherInvoiceModel:165`, `KuickPayEvidenceValidatorFakeInvoiceReader:439`).
         Add systematic 4-dp coverage (`'1000.0000'`, `'999.9999'`, `'100.0001'`) and a regression test that
         a 4-dp Blesta amount posts/normalizes correctly (the 3-5 trap; memory
         `[[kuickpay-blesta-decimal4-amount-trap]]`).
-  - [ ] 2.4 Diversify fixtures/identities: add a **non-numeric** and a **purely numeric** transaction-ref
+  - [x] 2.4 Diversify fixtures/identities: add a **non-numeric** and a **purely numeric** transaction-ref
         case exercised against the parser (the 3-2 trap), and add **empty-string** (`''`) identity variants
         alongside the existing NULL/populated ones for `consumer_number`/`registration_number`. Reuse the
         canonical fixture tree under `plugins/kuickpay_reconcile/tests/fixtures/kuickpay/`.
-  - [ ] 2.5 Land the written **fake-fidelity checklist** — a short `plugins/kuickpay_reconcile/tests/README.md`
+  - [x] 2.5 Land the written **fake-fidelity checklist** — a short `plugins/kuickpay_reconcile/tests/README.md`
         section (or `docs/kuickpay/`) enumerating: every schema UNIQUE/NOT-NULL key a repository fake must
         model; "Blesta money columns are `decimal(12,4)` — fakes return 4-dp strings"; "fixtures cover
         numeric + non-numeric refs and blank + populated identities"; and "a fake looser than the DB
         manufactures false green." This is the AI-2 deliverable.
 
-- [ ] **Task 3 — AC3a: explicit admin-permission enforcement (NFR14)**
-  - [ ] 3.1 Audit all four controllers' `preAction()`/actions. Today `admin_vouchers` gates recheck/review/
+- [x] **Task 3 — AC3a: explicit admin-permission enforcement (NFR14)**
+  - [x] 3.1 Audit all four controllers' `preAction()`/actions. Today `admin_vouchers` gates recheck/review/
         cancel/diagnostics per-action via `staffGroupAllows()` (`kuickpay_reconcile_controller.php:36-79`)
         but the base **view** permission is route-assumed; `admin_main` (bulk reconcile) has **no explicit
         check at all**. Add explicit enforcement so each controller asserts its registered permission
         (`getPermissions()` in `kuickpay_reconcile_plugin.php:292-350`: `vouchers`/`bulk_reconcile`/
         `reconciliation`/`manual_review` + the action-scoped `recheck`/`review`/`cancel`/`diagnostics`).
-  - [ ] 3.2 Ensure every **mutating** action is POST + CSRF + staff-auth + audited, and every **GET** route
+  - [x] 3.2 Ensure every **mutating** action is POST + CSRF + staff-auth + audited, and every **GET** route
         is read-only (architecture 377, 659; NFR14). `admin_main::run()` (bulk reconcile) must gate on its
         permission and remain POST-driven. Do not add any GET route that mutates voucher state.
-  - [ ] 3.3 Tests: a `*`-only staff group is denied the gated actions (extends the Story-5.1 two-group ACL
+  - [x] 3.3 Tests: a `*`-only staff group is denied the gated actions (extends the Story-5.1 two-group ACL
         separation), and the bulk-reconcile action is denied without its permission. Reuse the existing ACL
         test seams; do not call live framework ACL if the harness stubs it — model it faithfully.
 
-- [ ] **Task 4 — AC3b: directly assert posting confirmed→post→rerun call-count**
-  - [ ] 4.1 Re-read `testPostThenRerunCreatesExactlyOneTransaction` (`KuickPayPostingServiceTest.php:241-261`).
+- [x] **Task 4 — AC3b: directly assert posting confirmed→post→rerun call-count**
+  - [x] 4.1 Re-read `testPostThenRerunCreatesExactlyOneTransaction` (`KuickPayPostingServiceTest.php:241-261`).
         It asserts `assertCount(1, $transactions->adds)` but **hand-mutates** `$voucher->status='posted'`
         and exercises `postVoucher()` directly. Strengthen it to drive the **faithful** AC2 fake repository
         (which actually persists `markPosted`/`transitionFromConfirmedUnposted` so the rerun observes the
         real posted state) and assert exactly **one** `add()` **and one** `apply()` across both runs, then
         **zero** further calls on a third run.
-  - [ ] 4.2 Add a `postConfirmed()` **batch** idempotency test: a batch containing a `confirmed_unposted`
+  - [x] 4.2 Add a `postConfirmed()` **batch** idempotency test: a batch containing a `confirmed_unposted`
         voucher posts it once; a second `postConfirmed()` over the now-`posted` batch creates no second
         transaction (`already_posted` outcome). Targets `KuickPayPostingService::postConfirmed()`
         (`:42-75`) + `postVoucher()` (`:77-204`), not just the direct call.
 
-- [ ] **Task 5 — AC3c: cover `getCurrencies()`→`config.json` wiring against the real framework**
-  - [ ] 5.1 Add a test that exercises the inherited `Gateway::loadConfig()` →
+- [x] **Task 5 — AC3c: cover `getCurrencies()`→`config.json` wiring against the real framework**
+  - [x] 5.1 Add a test that exercises the inherited `Gateway::loadConfig()` →
         `$this->config->currencies` → `getCurrencies()` path reading the real
         `components/gateways/nonmerchant/kuickpay/config.json` (`"currencies": ["PKR"]`), instead of the
         empty-`NonmerchantGateway` stub + `getCurrencies()` override
         (`KuickPayCurrencyEligibilityTest.php:23-36`). Prefer loading the real base gateway now that the
         Story 5.1 live stack exists.
-  - [ ] 5.2 If the component-local bootstrap genuinely cannot load the real `NonmerchantGateway`/`loadConfig`
+  - [x] 5.2 If the component-local bootstrap genuinely cannot load the real `NonmerchantGateway`/`loadConfig`
         wiring, keep the load-bearing override + `testConfigDeclaresOnlyPkr()` and **document the exact
         missing prerequisite** in the Dev Agent Record (NFR12 — disclose what ran vs. what was stubbed; do
         not claim real-framework coverage that did not run).
 
-- [ ] **Task 6 — AC3d: `normalizeAmount()` rounds + rejects invalid (both copies, no floats)**
-  - [ ] 6.1 Rewrite **both** copies identically — `components/gateways/nonmerchant/kuickpay/kuickpay.php:1487-1504`
+- [x] **Task 6 — AC3d: `normalizeAmount()` rounds + rejects invalid (both copies, no floats)**
+  - [x] 6.1 Rewrite **both** copies identically — `components/gateways/nonmerchant/kuickpay/kuickpay.php:1487-1504`
         and `plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php:511-528`. Replace the
         `substr(str_pad($parts[1] ?? '', 2, '0'), 0, 2)` truncation with **half-up rounding to 2dp using
         decimal-string / bcmath math, never PHP floats** (NFR13; architecture 658; Story 5.4 Dev Notes
         explicitly warned "do not introduce float math"). Reject non-numeric/negative input with a
         fail-closed sentinel (e.g. return `null`/`''` that can never compare equal) rather than returning
         the raw string.
-  - [ ] 6.2 **Keep the two copies byte-for-byte equivalent** — the cross-side amount comparison is only
+  - [x] 6.2 **Keep the two copies byte-for-byte equivalent** — the cross-side amount comparison is only
         self-consistent if both normalize identically. `KuickPayVoucherReferenceService` is exercised by
         **both** the plugin and gateway suites (memory `[[kuickpay-voucher-reference-dual-test-suites]]`);
         run both after editing it.
-  - [ ] 6.3 Tests in both suites: `'100.0050'`→`'100.01'`, `'999.9999'`→`'1000.00'`, `'1000.0000'`→`'1000.00'`,
+  - [x] 6.3 Tests in both suites: `'100.0050'`→`'100.01'`, `'999.9999'`→`'1000.00'`, `'1000.0000'`→`'1000.00'`,
         `'1,000.50'`→`'1000.50'`, and invalid (`'abc'`, `'-5'`, `''`) → fail-closed sentinel (never equal to
         a valid amount). Drive these with the AC2 4-dp fixtures so the rounding path is real.
 
-- [ ] **Task 7 — AC3e: `retireVoucher()` surfaces affected-row count**
-  - [ ] 7.1 `KuickpayVouchers::edit()` (`models/kuickpay_vouchers.php:102-117`) → return the affected-row
+- [x] **Task 7 — AC3e: `retireVoucher()` surfaces affected-row count**
+  - [x] 7.1 `KuickpayVouchers::edit()` (`models/kuickpay_vouchers.php:102-117`) → return the affected-row
         count from `Record->update()` (use the Blesta `Record->affectedRows()` / returned count) instead of
         `void`. Preserve the existing `company_id`/`id` scope and the `unset($vars['company_id'])` +
         `date_updated` behavior. Check every caller of `edit()` tolerates a non-void return.
-  - [ ] 7.2 `retireVoucher()` (`KuickPayVoucherReferenceService.php:256-279`) → branch on the row count:
+  - [x] 7.2 `retireVoucher()` (`KuickPayVoucherReferenceService.php:256-279`) → branch on the row count:
         on **0 rows** (no-op: wrong/zero `company_id`, already-`cancelled`) **skip the
         `voucher.replaced` audit and return `false`**; on success, record audit + return `true`; keep a
         thrown audit-write distinguishable from a retire failure (don't let an audit `Throwable` masquerade
         as "retire failed" — log/swallow per the best-effort audit discipline, but the retire result
         reflects the edit's row count). Do **not** un-gate `replace`/`allow`.
-  - [ ] 7.3 Tests (both suites that load the service): retire a matching row → `true` + audit;
+  - [x] 7.3 Tests (both suites that load the service): retire a matching row → `true` + audit;
         retire a non-matching/zero-`company_id`/already-`cancelled` row → `false` + **no** audit.
 
-- [ ] **Task 8 — Verification & evidence**
-  - [ ] 8.1 `php -l` on every changed PHP file under **both** PHP 8.3 (production runtime, ea-php83) and the
+- [x] **Task 8 — Verification & evidence**
+  - [x] 8.1 `php -l` on every changed PHP file under **both** PHP 8.3 (production runtime, ea-php83) and the
         8.2 source-floor — no 8.3-only syntax/APIs (project-context.md:39; memory
         `[[kuickpay-php82-toolchain-now-available]]`).
-  - [ ] 8.2 Plugin suite green: `cd plugins/kuickpay_reconcile && <php> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`.
+  - [x] 8.2 Plugin suite green: `cd plugins/kuickpay_reconcile && <php> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`.
         Capture the **actual baseline first** (expected ≈ plugin 189/189 from Story 5.4; confirm before
         claiming a delta).
-  - [ ] 8.3 Gateway suite green **modulo the disclosed pre-existing `empty-currency` baseline red**
+  - [x] 8.3 Gateway suite green **modulo the disclosed pre-existing `empty-currency` baseline red**
         (memory `[[kuickpay-failclosed-empty-currency-red]]`):
         `cd components/gateways/nonmerchant/kuickpay && <php> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests`.
         Do **not** use `-c build/phpunit.xml` (project-context.md:74). Expected baseline ≈ gateway 239 + 1
         disclosed red. Disclose the baseline red as pre-existing; do not attribute it to this story.
-  - [ ] 8.4 Update `deferred-work.md`: mark the closed items as CLOSED-by-5.5 with one-line notes —
+  - [x] 8.4 Update `deferred-work.md`: mark the closed items as CLOSED-by-5.5 with one-line notes —
         admin-permission (line 124), post-rerun call-count (line 8), `getCurrencies` wiring (line 24),
         `normalizeAmount` truncate/raw (line 104), `retireVoucher` affected-row (line 101, and note the
         line-20 un-gating precondition is now satisfied). Keep the `docs(kuickpay)`/`_bmad-output` doc
         commit **separate** from runtime commits (project-context.md:104).
-  - [ ] 8.5 Optional sanitized verification record under `docs/kuickpay/` per the 5.3/5.4 cadence —
+  - [x] 8.5 Optional sanitized verification record under `docs/kuickpay/` per the 5.3/5.4 cadence —
         placeholders only, **NO** `config/blesta.php`/DB creds/host/KuickPay creds/raw SOAP/customer PII
         (NFR8). If the real-framework currency test (Task 5) ran against the live stack, record exactly what
         ran vs. what was stubbed (NFR12).
@@ -489,10 +489,87 @@ mechanically modernize/reformat legacy model files (project-context.md:88, 91, 1
 
 ### Agent Model Used
 
+Claude Opus 4.8 (1M context) — `claude-opus-4-8[1m]`.
+
 ### Debug Log References
+
+- Plugin suite: `cd plugins/kuickpay_reconcile && <ea-php83> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` → **214/214** (baseline 189/189).
+- Gateway suite: `cd components/gateways/nonmerchant/kuickpay && <ea-php83> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` → **250 tests, 1 failure** = the pre-existing disclosed `empty-currency` baseline red (NOT this story).
+- `php -l` clean on all 37 changed PHP files under **both** ea-php83 (8.3 runtime) and ea-php82 (8.2 source-floor).
+- Sanitized verification record: `docs/kuickpay/structural-company-scoping-verification.md`.
 
 ### Completion Notes List
 
+- **AC1 — structural company-scoping.** Added the un-omittable scoped-query convention to `KuickpayReconcileModel` (`scopedSelect`/`scopedUpdate`/`scopedDelete`/`scopedInsert` for directly-scoped tables; `scopedChildSelect` for the parent-scoped child tables `kuickpay_voucher_invoices`/`kuickpay_reconciliation_items` which have NO `company_id` column). Each takes a required `int $companyId`, so omitting the tenant is a type error. Closed the 8 gaps: removed the unscoped `get()` (sole caller now uses `getForCompany()`); routed the unscoped cross-tenant `KuickpayReconciliationRuns::edit()` UPDATE through `scopedUpdate`; routed the three `add()` INSERTs through `scopedInsert`; parent-scoped the three child reads via a join to `kuickpay_vouchers.company_id`. Threaded `company_id` through `getWithInvoices()`, `getInvoiceLinksForUpdate()`, and the run repo's `close()`/`updateCursor()`. Gateway side audited: no direct Record query leaks tenant scope. ✅ Resolved deferred-work admin/scoping classes (Epic 4 retro AI-8).
+- **AC2 — fake fidelity.** Extracted `tests/fakes/KuickPayFakeVoucherConstraints.php` modelling NOT-NULL + the company-scoped UNIQUE keys (consumer/registration/active-context, NULL-insensitive), reused by the voucher-reference repository fakes. Made the Blesta amount-source fakes return `decimal(12,4)` 4-dp strings systematically and proved the minor-unit parser tolerates them + fails closed on sub-paisa. Tightened the looser fakes (company-scoped reads, parent-scoped locked reads, count-returning `edit()`, the `(run_id, voucher_id)` unique on the item fake). Added a non-numeric transaction-ref case and empty-string-vs-NULL identity coverage, the cross-company isolation regression test, and the written fake-fidelity checklist (`tests/README.md`, the AI-2 deliverable).
+- **AC3a — admin permissions.** Each controller now asserts its registered permission explicitly (`requirePagePermission`); `admin_main::run()` gates on `bulk_reconcile` (`*`). The raw-access-list decision is extracted to the unit-tested pure `KuickPayAclDecision`. ✅ Resolved deferred-work line 124.
+- **AC3b — posting call-count.** The posting fake now faithfully persists `markPosted`; the rerun test asserts exactly one `add()`+one `apply()` then zero on a third run, plus a `postConfirmed()` batch idempotency test. ✅ Resolved deferred-work line 8.
+- **AC3c — currency wiring.** `KuickPayCurrencyWiringTest` exercises the REAL `Gateway::loadConfig()`→`getCurrencies()` path reading the real `config.json` (`['PKR']`) via a minimal concrete subclass of the real base; Kuickpay inherits `getCurrencies()` with no override. NFR12: the rest of the gateway suite still stubs `NonmerchantGateway`; disclosed exactly what ran vs. stubbed in the verification record. ✅ Resolved deferred-work line 24.
+- **AC3d — normalizeAmount.** Both copies (gateway + plugin service) half-up round to 2 dp with bcmath decimal-string math (no PHP floats) and fail closed to `''` on invalid/negative input; kept byte-for-byte identical. ✅ Resolved deferred-work line 104.
+- **AC3e — retireVoucher.** `KuickpayVouchers::edit()` returns the affected-row count; `retireVoucher()` treats a 0-row no-op as failure (skips audit, returns `false`), keeps the audit best-effort, and does NOT un-gate `replace`/`allow`. ✅ Resolved deferred-work line 101; satisfies the line-20 un-gating precondition.
+- **No schema change, no version bump** (plugin stays `1.10.0`); no new audit event name.
+
 ### File List
 
+Runtime — gateway:
+- `components/gateways/nonmerchant/kuickpay/kuickpay.php`
+
+Runtime — plugin:
+- `plugins/kuickpay_reconcile/kuickpay_reconcile_model.php`
+- `plugins/kuickpay_reconcile/kuickpay_reconcile_controller.php`
+- `plugins/kuickpay_reconcile/lib/KuickPayAclDecision.php` (new)
+- `plugins/kuickpay_reconcile/lib/KuickPayVoucherReferenceService.php`
+- `plugins/kuickpay_reconcile/lib/KuickPayVoucherRepository.php`
+- `plugins/kuickpay_reconcile/lib/KuickPayReconciliationRunRepository.php`
+- `plugins/kuickpay_reconcile/lib/KuickPayReconcileService.php`
+- `plugins/kuickpay_reconcile/lib/KuickPayPostingService.php`
+- `plugins/kuickpay_reconcile/models/kuickpay_vouchers.php`
+- `plugins/kuickpay_reconcile/models/kuickpay_reconciliation_runs.php`
+- `plugins/kuickpay_reconcile/models/kuickpay_audit_events.php`
+- `plugins/kuickpay_reconcile/models/kuickpay_voucher_invoices.php`
+- `plugins/kuickpay_reconcile/models/kuickpay_reconcile_locks.php`
+- `plugins/kuickpay_reconcile/controllers/admin_main.php`
+- `plugins/kuickpay_reconcile/controllers/admin_vouchers.php`
+- `plugins/kuickpay_reconcile/controllers/admin_reconciliation.php`
+- `plugins/kuickpay_reconcile/controllers/admin_manual_review.php`
+- `plugins/kuickpay_reconcile/language/en_us/admin_main.php`
+- `plugins/kuickpay_reconcile/language/en_us/admin_reconciliation.php`
+- `plugins/kuickpay_reconcile/language/en_us/admin_manual_review.php`
+
+Tests / fixtures — plugin:
+- `plugins/kuickpay_reconcile/tests/bootstrap.php`
+- `plugins/kuickpay_reconcile/tests/fakes/KuickPayFakeVoucherConstraints.php` (new)
+- `plugins/kuickpay_reconcile/tests/README.md` (new — fake-fidelity checklist)
+- `plugins/kuickpay_reconcile/tests/KuickPayCompanyScopeIsolationTest.php` (new)
+- `plugins/kuickpay_reconcile/tests/KuickPayAclDecisionTest.php` (new)
+- `plugins/kuickpay_reconcile/tests/KuickPayVoucherReferenceServiceTest.php`
+- `plugins/kuickpay_reconcile/tests/KuickPayReconcileServiceTest.php`
+- `plugins/kuickpay_reconcile/tests/KuickPayPostingServiceTest.php`
+- `plugins/kuickpay_reconcile/tests/KuickPayIssuanceServiceTest.php`
+- `plugins/kuickpay_reconcile/tests/KuickPayEvidenceValidatorTest.php`
+- `plugins/kuickpay_reconcile/tests/KuickPayVoucherRepositoryTest.php`
+- `plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php`
+- `plugins/kuickpay_reconcile/tests/integration/posting_safety_hardening_check.php`
+
+Tests — gateway:
+- `components/gateways/nonmerchant/kuickpay/tests/KuickPayCurrencyWiringTest.php` (new)
+- `components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherReferenceServiceTest.php`
+- `components/gateways/nonmerchant/kuickpay/tests/KuickPayVoucherGatewayHelpersTest.php`
+- `components/gateways/nonmerchant/kuickpay/tests/KuickPayResponseParserTest.php`
+
+Docs:
+- `docs/kuickpay/structural-company-scoping-verification.md` (new)
+- `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md` (closures)
+
 ### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-06-15 | AC1: base-model company-scoping convention + 8 gap closures + caller threading (`e61638e0`). |
+| 2026-06-15 | AC3d: `normalizeAmount()` half-up rounding + fail-closed sentinel, both copies (`aeabbfa3`). |
+| 2026-06-15 | AC3e: `retireVoucher()` fails on a 0-row scoped edit; `edit()` surfaces affected-row count (`91e241be`). |
+| 2026-06-15 | AC2: fake-fidelity trait + 4dp amounts + diversified fixtures + isolation test + checklist (`0af90536`). |
+| 2026-06-15 | AC3a: explicit per-controller permission enforcement + pure `KuickPayAclDecision` (`baf398c4`). |
+| 2026-06-15 | AC3b: posting confirmed→post→rerun call-count + batch idempotency tests (`99fd71a3`). |
+| 2026-06-15 | AC3c: real-framework `getCurrencies()`→`config.json` wiring test (`547031cf`). |
+| 2026-06-15 | Docs: deferred-work closures + sanitized verification record; story → review. |
