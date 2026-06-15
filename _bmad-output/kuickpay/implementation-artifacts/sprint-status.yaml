@@ -142,6 +142,6 @@ development_status:
   5-6-gateway-settings-and-endpoint-hardening: done
   5-7-opt-in-live-kuickpay-smoke-no-sandbox: done
   5-8-document-deployment-and-configuration: done
-  5-9-document-reconciliation-and-support-operations: backlog
+  5-9-document-reconciliation-and-support-operations: ready-for-dev
   5-10-document-rollback-upgrade-and-production-launch: backlog
   epic-5-retrospective: optional
