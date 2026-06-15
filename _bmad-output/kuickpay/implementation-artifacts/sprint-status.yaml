@@ -139,7 +139,7 @@ development_status:
   5-3-reconcile-and-posting-safety-hardening: done
   5-4-audit-logging-and-redaction-completeness: done
   5-5-structural-company-scoping-and-test-fidelity-guarantees: done
-  5-6-gateway-settings-and-endpoint-hardening: backlog
+  5-6-gateway-settings-and-endpoint-hardening: review
   5-7-opt-in-live-kuickpay-smoke-no-sandbox: backlog
   5-8-document-deployment-and-configuration: backlog
   5-9-document-reconciliation-and-support-operations: backlog
