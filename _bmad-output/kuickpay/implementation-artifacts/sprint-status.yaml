@@ -76,7 +76,7 @@
 # =====================================================================
 
 generated: 2026-06-09
-last_updated: 2026-06-14
+last_updated: 2026-06-15
 project: whmcs_blesta
 project_key: NOKEY
 tracking_system: file-system
@@ -138,7 +138,7 @@ development_status:
   5-2-schema-level-active-context-concurrency-guard: done
   5-3-reconcile-and-posting-safety-hardening: done
   5-4-audit-logging-and-redaction-completeness: done
-  5-5-structural-company-scoping-and-test-fidelity-guarantees: backlog
+  5-5-structural-company-scoping-and-test-fidelity-guarantees: ready-for-dev
   5-6-gateway-settings-and-endpoint-hardening: backlog
   5-7-opt-in-live-kuickpay-smoke-no-sandbox: backlog
   5-8-document-deployment-and-configuration: backlog
