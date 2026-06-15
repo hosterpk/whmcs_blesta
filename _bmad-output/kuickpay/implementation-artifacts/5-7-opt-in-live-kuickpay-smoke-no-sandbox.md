@@ -6,7 +6,7 @@ baseline_commit: 7c3835d88aea366b4297d66b8d549c7d1ed83bdb
 
 # Story 5.7: Opt-In Live KuickPay Smoke (No Sandbox)
 
-Status: review
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -514,3 +514,35 @@ GPT-5 Codex
 - 2026-06-16: Added CLI-only read-only live smoke runner with redacted output and optional sanitized capture.
 - 2026-06-16: Added operator runbook, sanitized verification template, and deferred-work note for the 5.1 live SOAP residual mechanism.
 - 2026-06-16: Completed validation and moved story to review.
+- 2026-06-16: Code review (3 adversarial layers + reviewer verification) applied 5 fixes; moved story to in-progress for dev re-validation. See Review Findings.
+
+## Review Findings
+
+_Code review 2026-06-16 (Blind Hunter + Edge Case Hunter + Acceptance Auditor, Opus 4.8). Verified against real code + empirical runs. Baseline disclosed: gateway suite 320 tests / 1 pre-existing `empty-currency` red. Outcome: 5 patches applied (green), 2 deferred, 5 dismissed, 0 decision-needed._
+
+**AC verdicts:** AC1 SATISFIED · AC2 SATISFIED (after WSDL-host scrub fix) · AC3 SATISFIED-with-caveat (value-clean + manual-review gate; see Patch findings + ⚠ below).
+
+### Patches (applied this review)
+
+- [x] [Review][Patch] Capture could silently overwrite an existing file — exclusive-create + `target-exists` [components/gateways/nonmerchant/kuickpay/tests/live/kuickpay_live_smoke.php] — fixed in `84309f0c`. Sources: blind+edge (B1/E4/E5). Verified: pre-existing file left intact, `capture.reason=target-exists`.
+- [x] [Review][Patch] Non-inquiry ops (`Echo`/`GetInstitutionsList`) emitted contradictory `manual_review`/`unknown_status` evidence; `result` not null-safe — parse evidence only for `BillPaymentInquiry`, emit `applicable:false` otherwise [tests/live/kuickpay_live_smoke.php] — fixed in `4446c7f9`. Sources: edge (E3), blind (B9). Verified end-to-end.
+- [x] [Review][Patch] AC3 leak proof was unrepresentative — guard test scanned a `REDACTED_*` placeholder string, never ran the real redactor (which emits `xxxx`), and missed WSDL/consumer leaks; the real capture would fail the scan's own value patterns — added a test that runs the real `KuickPayRedactor::redactEnvelope()` and asserts no real secret survives, accepted the `xxxx` marker, added WSDL-URL + long-numeric patterns [tests/KuickPayLiveSmokeGuardTest.php] — fixed in `eb43c219`. Sources: auditor (A1/A2) + blind (B2/B6) + edge (E6/E7). Verified: guard test 7/7 green.
+- [x] [Review][Patch] Runbook misdescribed the capture commit-gate (implied the guard test scans an operator file; `KuickPaySecretLeakageTest` only scans `plugins/.../tests/fixtures/kuickpay`, not `docs/kuickpay/fixtures/`) — documented the real `xxxx`-masked full-envelope shape, the no-overwrite behavior, and the mandatory manual-review gate [docs/kuickpay/live-smoke-runbook.md, docs/kuickpay/live-smoke-verification.md] — fixed in `328f3008`. Sources: auditor (A1/A3, NFR12).
+- [x] [Review][Patch] Allowlisted `fault` leaked the operator WSDL URL/host on a WSDL parse/transport error (contradicts AC2 + runbook) — scrub the configured WSDL URL/host from the fault before output [tests/live/kuickpay_live_smoke.php] — fixed in `c79c9e48`. Source: reviewer-found during transport verification. Verified: fault prints `[redacted-wsdl]`.
+
+### Deferred (pre-existing / low; see deferred-work.md)
+
+- [x] [Review][Defer] Leak-scan regex nuances inherited from the plugin pattern set (email `example.invalid` lookahead misses `…example.invalid.<tld>`; bare `\d{13}` false-positives on benign 13-digit values) [tests/KuickPayLiveSmokeGuardTest.php] — deferred, fail-safe and mirrors the existing 2026-06-11 deferred leak-pattern item (B5/E8).
+- [x] [Review][Defer] Plan requires `KUICKPAY_SMOKE_CONSUMER_NUMBER` and exact-case operation tokens even for `Echo`/`GetInstitutionsList` (lowercase silently downgrades to the heavier inquiry) [tests/live/KuickPayLiveSmokePlan.php] — deferred, usability only; every path is read-only and safe (B8/E9).
+
+### Dismissed (false positive / by-design)
+
+- Edge "single-identity: paid → unmatched_reference": premise contradicts the real-response shape (paid inquiry echoes the consumer # in field[1], `[[kuickpay-real-inquiry-response-shape-validator-fix]]`) and the Auditor confirmed single-identity is honored (only one identity field passed). Net `manual_review` is a disclosed-acceptable smoke outcome.
+- Edge "paid inquiry always `missing_expected_context`→`manual_review`": by design — the smoke supplies no `expected_amount`; an unmatched/manual_review result is explicitly an acceptable smoke outcome (proves credentials+transport+parse+redact, not confirmation).
+- Blind "`no_invoice_paid:true` is self-asserted": the DB-free/read-only guarantee is structural (Auditor verified: no DB/posting include anywhere; `InsertVoucher` unreachable) — nothing to assert at runtime.
+- Blind "exit-code vs doc mismatch on unmatched reference": doc conditions success on "transport reachable" → `ok=true` → exit 0 (manual_review carries no errorClass); self-consistent.
+- Blind "positive-control OR doesn't pin the firing pattern": acceptable for "catches-a-leak" semantics; minor.
+
+### ⚠ One item for PM/dev confirmation
+
+AC3 literal text says the captured envelope "passes the `KuickPaySecretLeakageTest` forbidden-pattern scan before any commit." The capture is a full redacted (`xxxx`) envelope, which by design fails that suite's **structural** patterns (`raw soap envelope`/`result element`/`credential key`) — those exist to keep full envelopes out of the persisted-fixture dir, and that suite does not even scan `docs/kuickpay/fixtures/`. This review resolved AC3 as **value-clean redaction + a mandatory manual-review gate** (proven by the new guard test + corrected runbook), rather than forcing the capture into the persisted-fixture shape. Confirm this interpretation, or request the capture emit persisted-fixture-shaped output instead.

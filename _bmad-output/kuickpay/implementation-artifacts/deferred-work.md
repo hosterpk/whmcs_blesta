@@ -10,6 +10,11 @@ Items deferred during reviews. Each entry notes its origin and a one-line reason
   credentials and a test reference are not committed or available in the default
   development environment.
 
+## Deferred from: code review of 5-7-opt-in-live-kuickpay-smoke-no-sandbox (2026-06-16)
+
+- **Live-smoke leak-scan regex nuances** [components/gateways/nonmerchant/kuickpay/tests/KuickPayLiveSmokeGuardTest.php] — the email `(?!example\.invalid\b)` lookahead does not exempt `…@example.invalid.<tld>` (false negative) and the bare `\b\d{13}\b` flags any benign 13-digit value (false positive). Reason: fail-safe and inherited from the plugin pattern set; mirrors the 2026-06-11 deferred leak-pattern item. Revisit when fixtures diversify or a real-secret regression is suspected.
+- **Live-smoke plan requires consumer number + exact-case op for all operations** [components/gateways/nonmerchant/kuickpay/tests/live/KuickPayLiveSmokePlan.php] — `Echo`/`GetInstitutionsList` still require `KUICKPAY_SMOKE_CONSUMER_NUMBER`, and a lowercase operation token silently downgrades to the heavier `BillPaymentInquiry`. Reason: usability only; every operation path is read-only and safe, so this is low-priority polish, not a safety gap.
+
 ## Deferred from: code review of 3-8-verify-payment-safety-contracts (2026-06-11)
 
 - ✅ **CLOSED by Story 5.4** — broadened mobile/CNIC forbidden patterns (international/dashed/spaced mobile + undashed 13-digit CNIC) with paired positive/negative control tests and a diversified clean fixture; leak suite stays green. _Original:_ **Leak-scan PII/credential patterns are narrow and placeholder-keyed** [plugins/kuickpay_reconcile/tests/KuickPaySecretLeakageTest.php:183-202] — the mobile pattern matches only bare `03XXXXXXXXX`, cnic only the dashed form, email allows only `@example.invalid`, and the `<userName>`/`<password>`/`<InstitutionID>` checks are negative-lookahead allow-checks keyed to the exact `REDACTED_*`/`INSTITUTION_ID` placeholders. Reason: fail-safe and green today (all fixtures are clean placeholders), so broadening to alternate PII formats / mixed placeholder styles is a low-priority hardening; doing it now risks false positives on clean fixtures. Revisit when fixtures diversify or a real-secret regression is suspected.
