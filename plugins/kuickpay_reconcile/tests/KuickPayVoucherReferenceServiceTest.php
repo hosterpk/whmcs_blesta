@@ -128,6 +128,30 @@ class KuickPayVoucherReferenceServiceTest extends TestCase
         ));
     }
 
+    public function testFakeModelsUpdateTimeIdentityCollision()
+    {
+        $repo = new KuickPayVoucherReferenceFakeRepository();
+        $repo->seedActiveVoucher([
+            'company_id' => 1,
+            'status' => 'pending',
+            'registration_number' => 'REG-1',
+            'consumer_number' => 'CON-1',
+            'context_key' => 'ctx-1',
+            'invoices' => [['invoice_id' => 55, 'amount' => '1500.00']],
+        ]);
+        $second = $repo->seedActiveVoucher([
+            'company_id' => 1,
+            'status' => 'pending',
+            'registration_number' => 'REG-2',
+            'consumer_number' => 'CON-2',
+            'context_key' => 'ctx-2',
+            'invoices' => [['invoice_id' => 56, 'amount' => '1500.00']],
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $repo->edit($second, 1, ['consumer_number' => 'CON-1']);
+    }
+
     public function testDuplicateInvoiceIdRecordsGenerationFailedAudit()
     {
         $audit = new KuickPayVoucherReferenceFakeAuditService();
@@ -538,14 +562,17 @@ class KuickPayVoucherReferenceFakeRepository
             return 0;
         }
 
-        $oldStatus = (string) $voucher->status;
-        foreach ($vars as $key => $value) {
+        $oldVars = (array) $voucher;
+        $newVars = array_merge($oldVars, $vars);
+        $this->enforceVoucherUpdate($voucherId, $oldVars, $newVars);
+
+        foreach ($newVars as $key => $value) {
             $voucher->{$key} = $value;
         }
         $this->releaseActiveContextOnTerminal(
             $companyId,
-            (string) ($voucher->context_key ?? ''),
-            $oldStatus,
+            (string) ($oldVars['context_key'] ?? ''),
+            (string) ($oldVars['status'] ?? ''),
             (string) $voucher->status
         );
 

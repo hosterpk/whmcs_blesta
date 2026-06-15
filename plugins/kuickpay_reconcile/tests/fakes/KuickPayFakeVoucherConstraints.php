@@ -80,6 +80,27 @@ trait KuickPayFakeVoucherConstraints
     }
 
     /**
+     * Asserts the voucher constraints for an UPDATE and reindexes atomically.
+     *
+     * MySQL enforces these UNIQUE/NOT-NULL keys on UPDATE as well as INSERT.
+     *
+     * @param int $id The voucher id being updated
+     * @param array $oldVars The pre-update voucher fields
+     * @param array $newVars The post-update voucher fields
+     */
+    protected function enforceVoucherUpdate(int $id, array $oldVars, array $newVars): void
+    {
+        $this->removeVoucherIndexes($id, $oldVars);
+
+        try {
+            $this->enforceVoucherInsert($id, $newVars);
+        } catch (RuntimeException $e) {
+            $this->enforceVoucherInsert($id, $oldVars);
+            throw $e;
+        }
+    }
+
+    /**
      * Releases a voucher's active-context slot when it transitions to a terminal
      * state, mirroring the STORED active_context_key going NULL so a fresh active
      * voucher with the same context can be created.
@@ -114,6 +135,35 @@ trait KuickPayFakeVoucherConstraints
     protected function fakeActiveContextKey(string $status, string $contextKey): ?string
     {
         return in_array($status, ['expired', 'cancelled'], true) ? null : $contextKey;
+    }
+
+    /**
+     * Removes a voucher's current unique-index entries.
+     *
+     * @param int $id The voucher id
+     * @param array $vars The voucher fields currently indexed
+     */
+    private function removeVoucherIndexes(int $id, array $vars): void
+    {
+        $companyId = (int) ($vars['company_id'] ?? 0);
+        $consumer = $vars['consumer_number'] ?? null;
+        $registration = $vars['registration_number'] ?? null;
+        $activeContextKey = isset($vars['status'], $vars['context_key'])
+            ? $this->fakeActiveContextKey((string) $vars['status'], (string) $vars['context_key'])
+            : null;
+
+        if ($consumer !== null && ($this->consumerIndex[$companyId . '|' . $consumer] ?? null) === $id) {
+            unset($this->consumerIndex[$companyId . '|' . $consumer]);
+        }
+        if ($registration !== null && ($this->registrationIndex[$companyId . '|' . $registration] ?? null) === $id) {
+            unset($this->registrationIndex[$companyId . '|' . $registration]);
+        }
+        if (
+            $activeContextKey !== null
+            && ($this->activeContextIndex[$companyId . '|' . $activeContextKey] ?? null) === $id
+        ) {
+            unset($this->activeContextIndex[$companyId . '|' . $activeContextKey]);
+        }
     }
 
     /**
