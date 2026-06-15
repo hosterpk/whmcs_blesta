@@ -178,7 +178,7 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
     the printed diagnostic redacted; exit zero on a clean reachable response. A failure must still leave no
     invoice paid (trivially true — DB-free).
 
-- [ ] **Task 3 — AC3: sanitized live-fixture capture mechanism + scan guard**
+- [x] **Task 3 — AC3: sanitized live-fixture capture mechanism + scan guard**
   - [x] 3.1 Add an optional, opt-in capture path to the smoke (e.g. `KUICKPAY_SMOKE_CAPTURE=<path>`): when set,
     write the **redacted** envelope (`KuickPaySoapClient` already exposes `raw_envelope` = redacted via
     `KuickPayRedactor::redactEnvelope()`) — never the raw envelope, never `raw_result` — to the given path. The
@@ -189,7 +189,7 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
     `KuickPaySecretLeakageTest`-style patterns (credentials, Institution ID placeholder, mobile/CNIC/email PII,
     raw `<userName>`/`<password>` elements). Prove the redactor output is leak-clean **without** committing a real
     live response.
-  - [ ] 3.3 **Do NOT commit a real captured live fixture** (none exists; `phase-0-contract.md:78,100`). Document in
+  - [x] 3.3 **Do NOT commit a real captured live fixture** (none exists; `phase-0-contract.md:78,100`). Document in
     the runbook that any operator-captured fixture must clear the 3.2 scan before commit, and where it would live
     (`docs/kuickpay/fixtures/bill-payment-inquiry/` alongside the existing provisional set).
 
@@ -201,19 +201,19 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
   - [x] 4.2 Confirm the `PHP_SAPI !== 'cli'` guard (Task 2.1) is the first executable statement, before any
     `require`/env read, so an HTTP hit can never trigger a live call or load credentials.
 
-- [ ] **Task 5 — Operator runbook + sanitized verification record (AC1/AC2/AC3; NFR8/NFR12)**
-  - [ ] 5.1 Write `docs/kuickpay/live-smoke-runbook.md` (sits beside `live-verification-evidence.md`,
+- [x] **Task 5 — Operator runbook + sanitized verification record (AC1/AC2/AC3; NFR8/NFR12)**
+  - [x] 5.1 Write `docs/kuickpay/live-smoke-runbook.md` (sits beside `live-verification-evidence.md`,
     `gateway-settings-and-endpoint-hardening-verification.md`): the no-sandbox caveat; the exact env vars and how
     to set them safely (never in shell history that persists, never committed); the exact run command
     (`<php> components/gateways/nonmerchant/kuickpay/tests/live/kuickpay_live_smoke.php`); how to read the redacted
     output; the read-only / DB-free / no-paid guarantee; the optional sanitized-capture flow + commit gate; and a
     pointer that this is the **one** sanctioned real-provider check (the automated full-stack verification is
     Story 5.1). This runbook is a hook for the Story 5.8 deployment docs.
-  - [ ] 5.2 Optionally add a sanitized `docs/kuickpay/live-smoke-verification.md` **template/placeholder** (the
+  - [x] 5.2 Optionally add a sanitized `docs/kuickpay/live-smoke-verification.md` **template/placeholder** (the
     actual run is operator-driven post-deploy) recording exactly what the smoke exercises vs. what it cannot
     (NFR12 honesty): credentials + transport + parse + redact = exercised; posting/DB = intentionally untouched.
     Placeholders only — NO `config/blesta.php`/DB creds/WSDL host/KuickPay creds/Institution ID/raw SOAP/PII.
-  - [ ] 5.3 Update `deferred-work.md` if appropriate (no open item is owned by 5.7; the live SOAP leg was carried
+  - [x] 5.3 Update `deferred-work.md` if appropriate (no open item is owned by 5.7; the live SOAP leg was carried
     here by 5.1's risk-acceptance — note that this story discharges the **mechanism** for that leg, with the
     actual run remaining operator-driven). Keep the `docs(kuickpay)`/`_bmad-output` doc commit **separate** from
     the runtime/test-scaffolding commit (project-context.md:104).
@@ -477,6 +477,8 @@ GPT-5 Codex
 - 2026-06-16: No-opt-in smoke run printed `SKIPPED` / `opt-in-not-set` and exited 0 without constructing the SOAP client.
 - 2026-06-16: Incomplete opt-in smoke run (`KUICKPAY_LIVE_SMOKE=1` only) printed `SKIPPED` / missing env names and exited 0 without constructing the SOAP client.
 - 2026-06-16: Confirmed `components/gateways/nonmerchant/kuickpay/tests/live` contains no `*Test.php` files.
+- 2026-06-16: Guard test placeholder WSDL changed to reserved `example.invalid`; targeted guard test remained green.
+- 2026-06-16: Added sanitized operator runbook, verification template, and deferred-work note; no live provider run recorded because credentials are not present here.
 
 ### Completion Notes List
 
@@ -486,6 +488,8 @@ GPT-5 Codex
 - Task 2 complete: added the CLI-only, non-discovered live smoke script that gates on the pure plan, constructs the real `KuickPaySoapClient` only after full opt-in, invokes only read-only operations, parses evidence, and emits only allowlisted redacted diagnostics.
 - Task 3.1 complete: added optional `KUICKPAY_SMOKE_CAPTURE` handling that writes only the redacted response envelope or the redactor placeholder, never `raw_result`.
 - Task 4 complete: the live smoke script's first executable statement is the `PHP_SAPI !== 'cli'` refusal before requires or env reads, and the gateway tests directory is web-denied.
+- Task 3 complete: no real live fixture was committed; the runbook documents the sanitized capture location and required scan/review gate before any later fixture commit.
+- Task 5 complete: added the live-smoke runbook, the sanitized verification placeholder, and a deferred-work note that this story discharges the mechanism while the real provider run remains operator-driven.
 
 ### File List
 
@@ -493,5 +497,8 @@ GPT-5 Codex
 - components/gateways/nonmerchant/kuickpay/tests/KuickPayLiveSmokeGuardTest.php
 - components/gateways/nonmerchant/kuickpay/tests/live/KuickPayLiveSmokePlan.php
 - components/gateways/nonmerchant/kuickpay/tests/live/kuickpay_live_smoke.php
+- docs/kuickpay/live-smoke-runbook.md
+- docs/kuickpay/live-smoke-verification.md
+- _bmad-output/kuickpay/implementation-artifacts/deferred-work.md
 - _bmad-output/kuickpay/implementation-artifacts/5-7-opt-in-live-kuickpay-smoke-no-sandbox.md
 - _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
