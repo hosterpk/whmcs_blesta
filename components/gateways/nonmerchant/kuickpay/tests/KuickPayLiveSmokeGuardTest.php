@@ -21,7 +21,7 @@ class KuickPayLiveSmokeGuardTest extends TestCase
     {
         $plan = KuickPayLiveSmokePlan::plan([
             'KUICKPAY_LIVE_SMOKE' => '1',
-            'KUICKPAY_SMOKE_WSDL_URL' => 'https://kuickpay.example.invalid/service?wsdl',
+            'KUICKPAY_SMOKE_WSDL_URL' => 'https://example.invalid/service?wsdl',
         ]);
 
         $this->assertFalse($plan['run']);
@@ -46,7 +46,7 @@ class KuickPayLiveSmokeGuardTest extends TestCase
         $this->assertSame('ready', $plan['reason']);
         $this->assertSame('Echo', $plan['operation']);
         $this->assertSame([], $plan['missing']);
-        $this->assertSame('https://kuickpay.example.invalid/service?wsdl', $plan['config']['wsdl_url']);
+        $this->assertSame('https://example.invalid/service?wsdl', $plan['config']['wsdl_url']);
         $this->assertSame('inquiry-user', $plan['config']['inquiry_username']);
         $this->assertSame('inquiry-pass', $plan['config']['inquiry_password']);
         $this->assertSame('12345', $plan['config']['institution_id']);
@@ -96,7 +96,7 @@ class KuickPayLiveSmokeGuardTest extends TestCase
     {
         return array_merge([
             'KUICKPAY_LIVE_SMOKE' => '1',
-            'KUICKPAY_SMOKE_WSDL_URL' => 'https://kuickpay.example.invalid/service?wsdl',
+            'KUICKPAY_SMOKE_WSDL_URL' => 'https://example.invalid/service?wsdl',
             'KUICKPAY_SMOKE_INQUIRY_USERNAME' => 'inquiry-user',
             'KUICKPAY_SMOKE_INQUIRY_PASSWORD' => 'inquiry-pass',
             'KUICKPAY_SMOKE_INSTITUTION_ID' => '12345',
