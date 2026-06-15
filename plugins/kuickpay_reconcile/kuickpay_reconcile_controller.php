@@ -50,8 +50,28 @@ class KuickpayReconcileController extends AppController
      */
     protected function staffGroupAllows(string $action): bool
     {
+        return $this->staffGroupAllowsOn('kuickpay_reconcile.admin_vouchers', $action);
+    }
+
+    /**
+     * Checks an explicit ACL action on a given plugin permission alias.
+     *
+     * Generalises staffGroupAllows() so a controller can assert its OWN
+     * registered permission (e.g. admin_main's bulk_reconcile `*`) rather than
+     * relying solely on the framework route gate (NFR14). The page-level grant
+     * is the `*` action; fine-grained grants use their own action token. The
+     * raw-access-list decision is delegated to KuickPayAclDecision so it is unit
+     * testable without the live framework.
+     *
+     * @param string $alias The plugin permission alias (e.g. kuickpay_reconcile.admin_main)
+     * @param string $action The exact ACL action token ('*' for the page grant)
+     * @return bool True when the current staff group explicitly allows the action
+     */
+    protected function staffGroupAllowsOn(string $alias, string $action): bool
+    {
         Loader::loadComponents($this, ['Acl']);
         Loader::loadModels($this, ['StaffGroups']);
+        Loader::load(dirname(__FILE__) . DS . 'lib' . DS . 'KuickPayAclDecision.php');
 
         $staff_group = $this->StaffGroups->getStaffGroupByStaff(
             $this->Session->read('blesta_staff_id'),
@@ -61,20 +81,30 @@ class KuickpayReconcileController extends AppController
             return false;
         }
 
-        // ACL alias is always admin_vouchers — the recheck/review/cancel
-        // permissions belong to admin_vouchers, not the calling controller.
-        $access_list = $this->Acl->getAccessList(
-            'staff_group_' . $staff_group->id,
-            'kuickpay_reconcile.admin_vouchers'
-        );
-        foreach ($access_list as $access) {
-            if (($access->action ?? null) !== $action) {
-                continue;
-            }
+        $access_list = $this->Acl->getAccessList('staff_group_' . $staff_group->id, $alias);
 
-            return ($access->permission ?? null) === 'allow';
+        return KuickPayAclDecision::allows($access_list, $action);
+    }
+
+    /**
+     * Enforces a controller's registered page-level permission explicitly.
+     *
+     * Defense in depth over the framework route gate (NFR14): a staff group
+     * without the controller's `*` grant is bounced to the admin home rather
+     * than relying on the route being gated upstream.
+     *
+     * @param string $alias The controller's plugin permission alias
+     * @param string $denied_message_key The localized "access denied" key
+     * @return bool True when the current staff group may render the page
+     */
+    protected function requirePagePermission(string $alias, string $denied_message_key): bool
+    {
+        if ($this->staffGroupAllowsOn($alias, '*')) {
+            return true;
         }
 
+        $this->flashMessage('error', Language::_($denied_message_key, true), null, false);
+        $this->redirect($this->base_uri);
         return false;
     }
 

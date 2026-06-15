@@ -8,3 +8,4 @@ $lang['AdminMain.!error.run_date_future'] = 'The transaction date cannot be in t
 $lang['AdminMain.!error.run_date_too_old'] = 'The transaction date is too far in the past (maximum look-back is 365 days).';
 $lang['AdminMain.!error.bulk_skipped'] = 'Bulk reconciliation was skipped: %1$s.';
 $lang['AdminMain.!error.bulk_failed'] = 'Bulk reconciliation did not complete. Status: %1$s.';
+$lang['AdminMain.!error.acl_denied'] = 'You do not have permission to run bulk reconciliation.';

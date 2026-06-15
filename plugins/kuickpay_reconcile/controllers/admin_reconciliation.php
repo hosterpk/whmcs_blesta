@@ -61,6 +61,10 @@ class AdminReconciliation extends KuickpayReconcileController
             return;
         }
 
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_reconciliation', 'AdminReconciliation.!error.acl_denied')) {
+            return;
+        }
+
         $company_id = (int) $this->company_id;
 
         $page = $this->positiveRouteInt($this->get[0] ?? null, 1);
@@ -101,6 +105,10 @@ class AdminReconciliation extends KuickpayReconcileController
     public function detail()
     {
         if (!$this->requireGetOnly($this->base_uri . 'plugin/kuickpay_reconcile/admin_reconciliation/index/')) {
+            return;
+        }
+
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_reconciliation', 'AdminReconciliation.!error.acl_denied')) {
             return;
         }
 

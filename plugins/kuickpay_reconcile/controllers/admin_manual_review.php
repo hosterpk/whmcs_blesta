@@ -58,6 +58,10 @@ class AdminManualReview extends KuickpayReconcileController
             return;
         }
 
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_manual_review', 'AdminManualReview.!error.acl_denied')) {
+            return;
+        }
+
         $company_id = (int) $this->company_id;
 
         // Default sort: most-recently-checked first. date_last_checked is

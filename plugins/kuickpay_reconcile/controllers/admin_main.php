@@ -30,6 +30,10 @@ class AdminMain extends KuickpayReconcileController
      */
     public function index()
     {
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_main', 'AdminMain.!error.acl_denied')) {
+            return;
+        }
+
         $this->set('vars', (object) []);
     }
 
@@ -38,6 +42,13 @@ class AdminMain extends KuickpayReconcileController
      */
     public function run()
     {
+        // Explicit ACL enforcement of the registered bulk_reconcile permission
+        // (the admin_main `*` grant): this POST mutation must not rely solely on
+        // the framework route gate (NFR14; AC3a).
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_main', 'AdminMain.!error.acl_denied')) {
+            return;
+        }
+
         if (empty($this->post)) {
             $this->redirect($this->base_uri . 'plugin/kuickpay_reconcile/admin_main/index/');
         }

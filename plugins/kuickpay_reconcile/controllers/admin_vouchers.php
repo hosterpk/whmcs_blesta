@@ -48,6 +48,10 @@ class AdminVouchers extends KuickpayReconcileController
      */
     public function index()
     {
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_vouchers', 'AdminVouchers.!error.acl_denied')) {
+            return;
+        }
+
         $company_id = (int) $this->company_id;
 
         // Resolve sort/order from GET, validated against the presenter allowlist.
@@ -142,6 +146,10 @@ class AdminVouchers extends KuickpayReconcileController
      */
     public function detail()
     {
+        if (!$this->requirePagePermission('kuickpay_reconcile.admin_vouchers', 'AdminVouchers.!error.acl_denied')) {
+            return;
+        }
+
         // Company scope is resolved explicitly and never read from the request.
         $company_id = (int) $this->company_id;
 

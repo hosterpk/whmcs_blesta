@@ -12,3 +12,6 @@ $lang['AdminManualReview.heading.next_action'] = 'Next Allowed Action';
 
 // Empty state
 $lang['AdminManualReview.no_results'] = 'No Vouchers are awaiting manual review.';
+
+// Access control
+$lang['AdminManualReview.!error.acl_denied'] = 'You do not have permission to view the manual review queue.';

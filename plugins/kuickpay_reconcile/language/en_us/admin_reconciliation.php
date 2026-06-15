@@ -33,6 +33,7 @@ $lang['AdminReconciliation.no_results'] = 'No reconciliation runs have been reco
 $lang['AdminReconciliation.detail.boxtitle'] = 'Reconciliation Run';
 $lang['AdminReconciliation.link.back_to_runs'] = 'Back to Reconciliation Runs';
 $lang['AdminReconciliation.!error.not_found'] = 'The requested reconciliation run could not be found.';
+$lang['AdminReconciliation.!error.acl_denied'] = 'You do not have permission to view reconciliation runs.';
 
 // Detail section headings
 $lang['AdminReconciliation.detail.heading.counts'] = 'Count Breakdown';
