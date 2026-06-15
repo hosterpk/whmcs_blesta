@@ -6,7 +6,8 @@ manual-review queue.
 Scope: Story 5.9 reconciliation runbook — scheduled reconciliation, Check Now, bulk
 reconciliation, run summaries, and the manual-review queue (including the late / under / over /
 duplicate / unmatched cases). Install/enable/configuration is **Story 5.8** (`deployment-guide.md`)
-and rollback/upgrade/launch is **Story 5.10** — both out of scope here.
+and rollback/upgrade/launch is **Story 5.10** (`rollback-runbook.md`, `upgrade-runbook.md`,
+`production-launch-checklist.md`) — both out of scope here.
 
 This document is sanitized. It contains **NO** `config/blesta.php` values, database credentials,
 KuickPay credentials, Institution ID values, real WSDL host names, raw SOAP payloads, real
@@ -360,6 +361,10 @@ the rest are visible on the individual voucher's timeline.)
   Detail, the safe status table, and collecting sanitized escalation evidence.
 - `docs/kuickpay/deployment-guide.md` — install, enable, configuration, and the gateway settings
   (including `reconciliation_enabled` and the cron setup) referenced above.
+- `docs/kuickpay/rollback-runbook.md` — disabling gateway/cron while preserving voucher and audit
+  evidence.
+- `docs/kuickpay/production-launch-checklist.md` — launch monitoring gates that reference this
+  runbook's cron and Manual Review sections.
 - `docs/kuickpay/blesta-footguns.md` — developer-facing Blesta framework footguns behind these
   behaviors.
 - `docs/kuickpay/live-smoke-runbook.md` — the opt-in credentialed real-provider smoke (Story 5.7).

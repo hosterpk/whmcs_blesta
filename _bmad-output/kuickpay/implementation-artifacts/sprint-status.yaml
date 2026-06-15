@@ -143,5 +143,5 @@ development_status:
   5-7-opt-in-live-kuickpay-smoke-no-sandbox: done
   5-8-document-deployment-and-configuration: done
   5-9-document-reconciliation-and-support-operations: done
-  5-10-document-rollback-upgrade-and-production-launch: backlog
+  5-10-document-rollback-upgrade-and-production-launch: done
   epic-5-retrospective: optional

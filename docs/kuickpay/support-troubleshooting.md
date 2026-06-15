@@ -6,7 +6,8 @@ invoice still say unpaid?").
 Scope: Story 5.9 support troubleshooting — finding a voucher, reading Voucher Detail, interpreting
 the safe status labels, and collecting sanitized escalation evidence. The reconciliation engine and
 the manual-review queue are documented in `reconciliation-runbook.md`. Install/config is **Story
-5.8** (`deployment-guide.md`).
+5.8** (`deployment-guide.md`). Rollback/upgrade/launch guidance is **Story 5.10**
+(`rollback-runbook.md`, `upgrade-runbook.md`, `production-launch-checklist.md`).
 
 This document is sanitized. It contains **NO** `config/blesta.php` values, credentials, Institution
 ID, real WSDL host, raw SOAP/XML, real Consumer/Registration/KuickPay reference values, or customer
@@ -245,6 +246,9 @@ unverified, Missing expected context, Underpayment, Overpayment, Unknown status.
 - `docs/kuickpay/reconciliation-runbook.md` — the reconciliation engine, run summaries, and the
   manual-review queue / action matrix referenced above.
 - `docs/kuickpay/deployment-guide.md` — install, enable, and gateway settings.
+- `docs/kuickpay/rollback-runbook.md` — disabling KuickPay while keeping evidence readable.
+- `docs/kuickpay/production-launch-checklist.md` — first-week monitoring and Manual Review launch
+  gates.
 - `docs/kuickpay/blesta-footguns.md` — developer-facing framework traps behind the operator-visible
   behavior.
 - `docs/kuickpay/live-smoke-runbook.md` — the opt-in credentialed real-provider smoke (Story 5.7),

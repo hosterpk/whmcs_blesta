@@ -3,7 +3,8 @@
 Date: 2026-06-16
 Audience: **operators** deploying and configuring the KuickPay gateway + companion plugin.
 Scope: Story 5.8 (deployment + configuration). Reconciliation/support runbooks are Story 5.9;
-rollback/upgrade/launch-checklist is Story 5.10 — out of scope here.
+rollback/upgrade/launch guidance is Story 5.10:
+`rollback-runbook.md`, `upgrade-runbook.md`, and `production-launch-checklist.md`.
 
 This document is sanitized. It contains **NO** `config/blesta.php` values, database
 credentials, KuickPay credentials, Institution ID values, real WSDL host names, raw SOAP
@@ -302,9 +303,14 @@ not the runtime. If you mirror this deployment elsewhere, run it on the PHP 8.3 
 
 The gateway can be **disabled independently** of the plugin cron, and the voucher / audit /
 payment-evidence tables are **preserved on uninstall** — so disabling the gateway does not
-destroy reconciliation history. This guide only notes the separation; the full
-rollback/upgrade/launch runbook is **Story 5.10** (do not treat this section as the rollback
-procedure).
+destroy reconciliation history. This guide only notes the separation; do not treat this section
+as the rollback procedure.
+
+Use:
+
+- `docs/kuickpay/rollback-runbook.md` for disabling the gateway/cron while preserving evidence.
+- `docs/kuickpay/upgrade-runbook.md` for future plugin/gateway upgrades and post-upgrade checks.
+- `docs/kuickpay/production-launch-checklist.md` for the pre-go-live gate checklist.
 
 ---
 
@@ -325,6 +331,9 @@ procedure).
   Check Now, bulk runs, run summaries, and the manual-review queue.
 - `docs/kuickpay/support-troubleshooting.md` — support guide for customer payment claims,
   safe status interpretation, and sanitized escalation evidence.
+- `docs/kuickpay/rollback-runbook.md` — disabling KuickPay while preserving evidence.
+- `docs/kuickpay/upgrade-runbook.md` — upgrade order, migrations, and verification checks.
+- `docs/kuickpay/production-launch-checklist.md` — launch gates and first-week monitoring.
 - `docs/kuickpay/blesta-footguns.md` — developer reference for the Blesta framework footguns
   behind these behaviors (e.g. the password re-entry traps).
 - `docs/kuickpay/live-smoke-runbook.md` — the opt-in credentialed real-provider smoke.
