@@ -77,12 +77,12 @@ class KuickPayVoucherRepositoryTest extends TestCase
         $repository = $this->repository($model, $invoiceModel);
 
         $voucher = $repository->getForUpdate(44, 7);
-        $links = $repository->getInvoiceLinksForUpdate(44);
+        $links = $repository->getInvoiceLinksForUpdate(44, 7);
 
         $this->assertSame($model->activeVoucher, $voucher);
         $this->assertSame([$invoiceModel->invoiceLink], $links);
         $this->assertSame([44, 7], $model->forUpdateCall);
-        $this->assertSame([44], $invoiceModel->forUpdateCall);
+        $this->assertSame([44, 7], $invoiceModel->forUpdateCall);
     }
 
     private function repository($model, $invoiceModel = null): KuickPayVoucherRepository
@@ -172,9 +172,9 @@ class KuickPayVoucherRepositoryFakeVoucherInvoiceModel
         $this->invoiceLink = (object) ['voucher_id' => 44, 'invoice_id' => 55, 'amount' => '1000.00'];
     }
 
-    public function getByVoucherIdForUpdate(int $voucher_id): array
+    public function getByVoucherIdForUpdate(int $voucher_id, int $company_id): array
     {
-        $this->forUpdateCall = [$voucher_id];
+        $this->forUpdateCall = [$voucher_id, $company_id];
 
         return [$this->invoiceLink];
     }

@@ -93,7 +93,7 @@ class KuickPayPostingService
             $begun = true;
 
             $lockedVoucher = $this->voucherRepository->getForUpdate($voucher_id, $company_id);
-            $lockedLinks = $this->voucherRepository->getInvoiceLinksForUpdate($voucher_id);
+            $lockedLinks = $this->voucherRepository->getInvoiceLinksForUpdate($voucher_id, $company_id);
 
             if (!$lockedVoucher || (int) ($lockedVoucher->company_id ?? 0) !== $company_id) {
                 $record->commit();

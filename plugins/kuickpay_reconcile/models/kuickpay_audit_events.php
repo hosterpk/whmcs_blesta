@@ -22,7 +22,8 @@ class KuickpayAuditEvents extends KuickpayReconcileModel
     {
         $vars['date_created'] = $vars['date_created'] ?? date('Y-m-d H:i:s');
 
-        $this->Record->insert('kuickpay_audit_events', $vars, self::FIELDS);
+        // scopedInsert enforces the tenant column on every audit INSERT.
+        $this->scopedInsert('kuickpay_audit_events', (int) ($vars['company_id'] ?? 0), $vars, self::FIELDS);
 
         return $this->Record->lastInsertId();
     }

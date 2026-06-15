@@ -10,14 +10,18 @@ class KuickpayReconcileLocks extends KuickpayReconcileModel
     public function insertLock(int $company_id, string $lock_name, string $owner_token, string $expires): bool
     {
         try {
-            $this->Record->insert('kuickpay_reconcile_locks', [
-                'company_id' => $company_id,
-                'lock_name' => $lock_name,
-                'owner_token' => $owner_token,
-                'date_acquired' => date('Y-m-d H:i:s'),
-                'date_expires' => $expires,
-                'date_heartbeat' => date('Y-m-d H:i:s'),
-            ]);
+            $this->scopedInsert(
+                'kuickpay_reconcile_locks',
+                $company_id,
+                [
+                    'lock_name' => $lock_name,
+                    'owner_token' => $owner_token,
+                    'date_acquired' => date('Y-m-d H:i:s'),
+                    'date_expires' => $expires,
+                    'date_heartbeat' => date('Y-m-d H:i:s'),
+                ],
+                ['lock_name', 'owner_token', 'date_acquired', 'date_expires', 'date_heartbeat']
+            );
 
             return true;
         } catch (Exception $e) {
@@ -68,10 +72,9 @@ class KuickpayReconcileLocks extends KuickpayReconcileModel
 
     public function release(int $company_id, string $lock_name, string $owner_token): void
     {
-        $this->Record->from('kuickpay_reconcile_locks')
-            ->where('company_id', '=', $company_id)
-            ->where('lock_name', '=', $lock_name)
-            ->where('owner_token', '=', $owner_token)
-            ->delete();
+        $this->scopedDelete('kuickpay_reconcile_locks', $company_id, [
+            ['lock_name', '=', $lock_name],
+            ['owner_token', '=', $owner_token],
+        ]);
     }
 }

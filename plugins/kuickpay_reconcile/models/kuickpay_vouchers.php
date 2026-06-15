@@ -83,7 +83,9 @@ class KuickpayVouchers extends KuickpayReconcileModel
             return;
         }
 
-        $this->Record->insert('kuickpay_vouchers', $vars, self::FIELDS);
+        // company_id is validated non-empty above; scopedInsert enforces its
+        // presence in the written row so an INSERT can never omit the tenant.
+        $this->scopedInsert('kuickpay_vouchers', (int) ($vars['company_id'] ?? 0), $vars, self::FIELDS);
 
         if ($this->Input->errors()) {
             return;
@@ -95,11 +97,17 @@ class KuickpayVouchers extends KuickpayReconcileModel
     /**
      * Updates an existing voucher.
      *
+     * Routes through the scoped-update convention so the tenant predicate can
+     * never be omitted, and surfaces the affected-row count so a 0-row no-op
+     * (wrong/zero company_id, already-terminal row) is observable by callers
+     * (e.g. KuickPayVoucherReferenceService::retireVoucher()).
+     *
      * @param int $voucher_id The voucher ID
      * @param int $company_id The company ID scope
      * @param array $vars Voucher fields
+     * @return int The number of rows affected (0 when no in-scope row matched)
      */
-    public function edit(int $voucher_id, int $company_id, array $vars)
+    public function edit(int $voucher_id, int $company_id, array $vars): int
     {
         unset($vars['company_id']);
 
@@ -107,37 +115,26 @@ class KuickpayVouchers extends KuickpayReconcileModel
 
         $fields = array_values(array_intersect(array_keys($vars), self::FIELDS));
         if (empty($fields)) {
-            return;
+            return 0;
         }
 
-        $this->Record
-            ->where('id', '=', $voucher_id)
-            ->where('company_id', '=', $company_id)
-            ->update('kuickpay_vouchers', $vars, $fields);
-    }
-
-    /**
-     * Fetches a voucher by ID.
-     *
-     * @param int $voucher_id The voucher ID
-     * @return mixed The voucher row, or false when absent
-     */
-    public function get(int $voucher_id)
-    {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
-            ->where('id', '=', $voucher_id)
-            ->fetch();
+        return $this->scopedUpdate(
+            'kuickpay_vouchers',
+            $company_id,
+            $vars,
+            $fields,
+            [['id', '=', $voucher_id]]
+        )->rowCount();
     }
 
     /**
      * Fetches a voucher by ID, scoped to a company.
      *
-     * Company-scoped counterpart to get(): the detail page MUST use this so a
-     * voucher ID outside the authenticated staff company resolves to a safe
-     * "not found" (false), never another company's row. Mirrors the
-     * getByConsumerNumber() shape; the unscoped get() is reserved for the
-     * already-scoped reconcile/posting callers.
+     * The detail page MUST use this so a voucher ID outside the authenticated
+     * staff company resolves to a safe "not found" (false), never another
+     * company's row. This is the single scoped fetch-by-id for the plugin; the
+     * unscoped get() was removed in Story 5.5 so the tenant scope cannot be
+     * omitted.
      *
      * @param int $voucher_id The voucher ID
      * @param int $company_id The company ID scope
@@ -145,10 +142,8 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getForCompany(int $voucher_id, int $company_id)
     {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('id', '=', $voucher_id)
-            ->where('company_id', '=', $company_id)
             ->fetch();
     }
 
@@ -161,10 +156,8 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getByConsumerNumber(string $consumer_number, int $company_id)
     {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('consumer_number', '=', $consumer_number)
-            ->where('company_id', '=', $company_id)
             ->fetch();
     }
 
@@ -177,10 +170,8 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getByRegistrationNumber(string $registration_number, int $company_id)
     {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('registration_number', '=', $registration_number)
-            ->where('company_id', '=', $company_id)
             ->fetch();
     }
 
@@ -281,10 +272,8 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function findActiveByKuickpayReference(string $reference, int $company_id, int $exclude_voucher_id = 0)
     {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('kuickpay_reference', '=', $reference)
-            ->where('company_id', '=', $company_id)
             ->where('status', 'in', ['confirmed_unposted', 'posted'])
             ->where('id', '!=', $exclude_voucher_id)
             ->where('kuickpay_reference', '!=', null)
@@ -540,9 +529,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
     ): array {
         $pending_min_recheck_before = $pending_min_recheck_before ?: date('Y-m-d H:i:s', strtotime('-30 minutes'));
 
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
-            ->where('company_id', '=', $company_id)
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('currency', '=', 'PKR')
             ->where('status', 'in', ['pending', 'retry'])
             ->where('id', '>', max(0, $after_id))
@@ -592,9 +579,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getPostable(int $company_id, int $limit, int $after_id = 0): array
     {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
-            ->where('company_id', '=', $company_id)
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('currency', '=', 'PKR')
             ->where('status', '=', 'confirmed_unposted')
             ->where('blesta_transaction_id', '=', null)
@@ -615,9 +600,7 @@ class KuickpayVouchers extends KuickpayReconcileModel
      */
     public function getExpirable(int $company_id, int $limit, int $after_id = 0): array
     {
-        return $this->Record->select()
-            ->from('kuickpay_vouchers')
-            ->where('company_id', '=', $company_id)
+        return $this->scopedSelect('kuickpay_vouchers', $company_id)
             ->where('currency', '=', 'PKR')
             ->where('status', 'in', ['pending', 'retry'])
             ->where('date_expires', '!=', null)

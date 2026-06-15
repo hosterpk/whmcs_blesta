@@ -36,29 +36,47 @@ class KuickpayVoucherInvoices extends KuickpayReconcileModel
     }
 
     /**
-     * Fetches invoice links by voucher ID.
+     * Fetches invoice links by voucher ID, scoped to the owning company.
+     *
+     * This is a PARENT-SCOPED child table (no company_id column); the tenant
+     * scope is enforced by joining to the owning kuickpay_vouchers row, never
+     * by a direct company_id filter (which would be a fatal SQL error).
      *
      * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope (of the owning voucher)
      * @return array Invoice link rows
      */
-    public function getByVoucherId(int $voucher_id)
+    public function getByVoucherId(int $voucher_id, int $company_id)
     {
-        return $this->Record->select()
-            ->from('kuickpay_voucher_invoices')
-            ->where('voucher_id', '=', $voucher_id)
+        return $this->scopedChildSelect('kuickpay_voucher_invoices', 'kuickpay_vouchers', 'voucher_id', $company_id)
+            ->where('kuickpay_voucher_invoices.voucher_id', '=', $voucher_id)
             ->fetchAll();
     }
 
     /**
-     * Locks and fetches invoice links by voucher ID.
+     * Locks and fetches invoice links by voucher ID, scoped to the owning company.
+     *
+     * Parent-scoped via a join to kuickpay_vouchers. FOR UPDATE needs raw SQL
+     * (the Record builder has no lock-clause primitive); the join also pins the
+     * parent voucher, which the posting flow already holds locked, so no new
+     * lock-ordering hazard is introduced.
      *
      * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope (of the owning voucher)
      * @return array Invoice link rows
      */
-    public function getByVoucherIdForUpdate(int $voucher_id)
+    public function getByVoucherIdForUpdate(int $voucher_id, int $company_id)
     {
         return $this->Record
-            ->query('SELECT * FROM kuickpay_voucher_invoices WHERE voucher_id = ? FOR UPDATE', $voucher_id)
+            ->query(
+                'SELECT kuickpay_voucher_invoices.* FROM kuickpay_voucher_invoices'
+                . ' INNER JOIN kuickpay_vouchers'
+                . ' ON kuickpay_vouchers.id = kuickpay_voucher_invoices.voucher_id'
+                . ' WHERE kuickpay_voucher_invoices.voucher_id = ? AND kuickpay_vouchers.company_id = ?'
+                . ' FOR UPDATE',
+                $voucher_id,
+                $company_id
+            )
             ->fetchAll();
     }
 
@@ -111,16 +129,19 @@ class KuickpayVoucherInvoices extends KuickpayReconcileModel
     }
 
     /**
-     * Fetches invoice links by invoice ID.
+     * Fetches invoice links by invoice ID, scoped to the owning company.
+     *
+     * Parent-scoped via a join to kuickpay_vouchers (the links table has no
+     * company_id of its own).
      *
      * @param int $invoice_id The invoice ID
+     * @param int $company_id The company ID scope (of the owning voucher)
      * @return array Invoice link rows
      */
-    public function getByInvoiceId(int $invoice_id)
+    public function getByInvoiceId(int $invoice_id, int $company_id)
     {
-        return $this->Record->select()
-            ->from('kuickpay_voucher_invoices')
-            ->where('invoice_id', '=', $invoice_id)
+        return $this->scopedChildSelect('kuickpay_voucher_invoices', 'kuickpay_vouchers', 'voucher_id', $company_id)
+            ->where('kuickpay_voucher_invoices.invoice_id', '=', $invoice_id)
             ->fetchAll();
     }
 

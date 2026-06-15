@@ -1492,6 +1492,7 @@ class KuickPayReconcileFakeRunRepository
 {
     public int $opened = 0;
     public int $closedCursor = -1;
+    public ?int $closedCompanyId = null;
     public int $resumeCalls = 0;
     public ?string $resumeTriggerType = null;
     public ?string $openedBulkDate = null;
@@ -1530,12 +1531,13 @@ class KuickPayReconcileFakeRunRepository
         return 10;
     }
 
-    public function updateCursor(int $run_id, int $cursor): void
+    public function updateCursor(int $run_id, int $company_id, int $cursor): void
     {
     }
 
-    public function close(int $run_id, string $status, array $counts, int $cursor, string $summary): void
+    public function close(int $run_id, int $company_id, string $status, array $counts, int $cursor, string $summary): void
     {
+        $this->closedCompanyId = $company_id;
         $this->closedCursor = $status === 'completed' ? 0 : $cursor;
         $this->closedCounts = $counts;
     }

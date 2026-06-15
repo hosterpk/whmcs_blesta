@@ -58,14 +58,37 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
     {
         $vars['date_started'] = $vars['date_started'] ?? date('Y-m-d H:i:s');
 
-        $this->Record->insert('kuickpay_reconciliation_runs', $vars, self::FIELDS);
+        // scopedInsert enforces the tenant column on every run INSERT.
+        $this->scopedInsert(
+            'kuickpay_reconciliation_runs',
+            (int) ($vars['company_id'] ?? 0),
+            $vars,
+            self::FIELDS
+        );
 
         return $this->Record->lastInsertId();
     }
 
-    public function edit(int $run_id, array $vars): void
+    /**
+     * Updates a reconciliation run, scoped to its owning company.
+     *
+     * Previously an UNSCOPED cross-tenant UPDATE (Story 5.5 gap): the
+     * company_id predicate is now mandatory via scopedUpdate, so a run id can
+     * never be edited outside its company.
+     *
+     * @param int $run_id The run ID
+     * @param int $company_id The company ID scope
+     * @param array $vars Run fields to update
+     */
+    public function edit(int $run_id, int $company_id, array $vars): void
     {
-        $this->Record->where('id', '=', $run_id)->update('kuickpay_reconciliation_runs', $vars, self::FIELDS);
+        $this->scopedUpdate(
+            'kuickpay_reconciliation_runs',
+            $company_id,
+            $vars,
+            self::FIELDS,
+            [['id', '=', $run_id]]
+        );
     }
 
     /**
@@ -82,9 +105,7 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
      */
     public function getResumeCursor(int $company_id, string $trigger_type = 'cron'): int
     {
-        $run = $this->Record->select()
-            ->from('kuickpay_reconciliation_runs')
-            ->where('company_id', '=', $company_id)
+        $run = $this->scopedSelect('kuickpay_reconciliation_runs', $company_id)
             ->where('trigger_type', '=', $trigger_type)
             ->where('status', '=', 'aborted')
             ->where('cursor', '!=', null)
@@ -148,10 +169,8 @@ class KuickpayReconciliationRuns extends KuickpayReconcileModel
      */
     public function getForCompany(int $run_id, int $company_id)
     {
-        return $this->Record->select()
-            ->from('kuickpay_reconciliation_runs')
+        return $this->scopedSelect('kuickpay_reconciliation_runs', $company_id)
             ->where('id', '=', $run_id)
-            ->where('company_id', '=', $company_id)
             ->fetch();
     }
 

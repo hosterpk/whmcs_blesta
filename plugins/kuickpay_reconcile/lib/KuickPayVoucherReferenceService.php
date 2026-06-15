@@ -100,7 +100,7 @@ class KuickPayVoucherReferenceService
                 ? $this->repository->getPendingByInvoiceSet($invoiceIds, $company_id)
                 : $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
             if ($pending) {
-                $pendingFlat = $this->flatten($this->repository->getWithInvoices((int) $pending->id));
+                $pendingFlat = $this->flatten($this->repository->getWithInvoices((int) $pending->id, $company_id));
                 if ($pendingFlat === null) {
                     return null;
                 }
@@ -180,14 +180,14 @@ class KuickPayVoucherReferenceService
 
             $voucher_id = $this->repository->create($voucherData, $invoiceLinks);
             if ($voucher_id) {
-                return $this->flatten($this->repository->getWithInvoices($voucher_id));
+                return $this->flatten($this->repository->getWithInvoices($voucher_id, $company_id));
             }
 
             $pending = $useInvoiceSet
                 ? $this->repository->getPendingByInvoiceSet($invoiceIds, $company_id)
                 : $this->repository->getPendingByInvoiceId($invoice_id, $company_id);
             if ($pending) {
-                return $this->flatten($this->repository->getWithInvoices((int) $pending->id));
+                return $this->flatten($this->repository->getWithInvoices((int) $pending->id, $company_id));
             }
 
             // Genuine create fall-through: create() returned falsy AND the

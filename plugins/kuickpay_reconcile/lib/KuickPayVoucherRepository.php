@@ -142,21 +142,26 @@ class KuickPayVoucherRepository
     }
 
     /**
-     * Fetches a voucher with its invoice links.
+     * Fetches a company-scoped voucher with its invoice links.
+     *
+     * Both the voucher read and the parent-scoped invoice-link read are bounded
+     * to $company_id, so a voucher id outside the company resolves to null
+     * (never another tenant's row or links).
      *
      * @param int $voucher_id The voucher ID
-     * @return array|null Nested voucher/invoices data, or null when absent
+     * @param int $company_id The company ID scope
+     * @return array|null Nested voucher/invoices data, or null when absent or out of scope
      */
-    public function getWithInvoices(int $voucher_id): ?array
+    public function getWithInvoices(int $voucher_id, int $company_id): ?array
     {
-        $voucher = $this->KuickpayVouchers->get($voucher_id);
+        $voucher = $this->KuickpayVouchers->getForCompany($voucher_id, $company_id);
         if (!$voucher) {
             return null;
         }
 
         return [
             'voucher' => $voucher,
-            'invoices' => $this->KuickpayVoucherInvoices->getByVoucherId($voucher_id),
+            'invoices' => $this->KuickpayVoucherInvoices->getByVoucherId($voucher_id, $company_id),
         ];
     }
 
@@ -290,14 +295,15 @@ class KuickPayVoucherRepository
     }
 
     /**
-     * Locks and fetches invoice links for a voucher.
+     * Locks and fetches company-scoped invoice links for a voucher.
      *
      * @param int $voucher_id The voucher ID
+     * @param int $company_id The company ID scope (of the owning voucher)
      * @return array Invoice link rows
      */
-    public function getInvoiceLinksForUpdate(int $voucher_id): array
+    public function getInvoiceLinksForUpdate(int $voucher_id, int $company_id): array
     {
-        return $this->KuickpayVoucherInvoices->getByVoucherIdForUpdate($voucher_id);
+        return $this->KuickpayVoucherInvoices->getByVoucherIdForUpdate($voucher_id, $company_id);
     }
 
     /**
@@ -316,10 +322,11 @@ class KuickPayVoucherRepository
      * @param int $voucher_id The voucher ID
      * @param int $company_id The company ID scope
      * @param array $vars Voucher fields
+     * @return int The number of rows affected (0 when no in-scope row matched)
      */
-    public function edit(int $voucher_id, int $company_id, array $vars): void
+    public function edit(int $voucher_id, int $company_id, array $vars): int
     {
-        $this->KuickpayVouchers->edit($voucher_id, $company_id, $vars);
+        return $this->KuickpayVouchers->edit($voucher_id, $company_id, $vars);
     }
 
     /**

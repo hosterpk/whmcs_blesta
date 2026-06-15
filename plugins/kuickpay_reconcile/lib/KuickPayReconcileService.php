@@ -145,7 +145,7 @@ class KuickPayReconcileService
                 }
 
                 $cursor = (int) $voucher->id;
-                $this->runRepository->updateCursor($run_id, $cursor);
+                $this->runRepository->updateCursor($run_id, $company_id, $cursor);
                 $outcome = $this->processVoucher($company_id, $run_id, $voucher, $client, $gateway_config);
                 $counts = $this->countOutcome($counts, $outcome['new_status'], $outcome['error']);
             }
@@ -156,7 +156,7 @@ class KuickPayReconcileService
             try {
                 if ($run_id > 0) {
                     $summary = json_encode(['status' => $status, 'counts' => $counts]);
-                    $this->runRepository->close($run_id, $status, $counts, $cursor, $summary);
+                    $this->runRepository->close($run_id, $company_id, $status, $counts, $cursor, $summary);
                     $this->auditService->record('reconciliation.run.completed', [
                         'company_id' => $company_id,
                         'run_id' => $run_id,
@@ -234,7 +234,7 @@ class KuickPayReconcileService
             try {
                 if ($run_id > 0) {
                     $summary = json_encode(['status' => $status, 'counts' => $counts]);
-                    $this->runRepository->close($run_id, $status, $counts, 0, $summary);
+                    $this->runRepository->close($run_id, $company_id, $status, $counts, 0, $summary);
                     $this->auditService->record('reconciliation.run.completed', [
                         'company_id' => $company_id,
                         'run_id' => $run_id,
@@ -359,7 +359,7 @@ class KuickPayReconcileService
                         'status' => $status,
                         'counts' => $counts,
                     ]);
-                    $this->runRepository->close($run_id, $status, $counts, 0, $summary);
+                    $this->runRepository->close($run_id, $company_id, $status, $counts, 0, $summary);
                     $this->auditService->record('reconciliation.run.completed', [
                         'company_id' => $company_id,
                         'run_id' => $run_id,
@@ -535,7 +535,7 @@ class KuickPayReconcileService
         }
 
         if ($evidence->isConfirmedUnposted()) {
-            $freshData = $this->voucherRepository->getWithInvoices((int) $voucher->id);
+            $freshData = $this->voucherRepository->getWithInvoices((int) $voucher->id, $company_id);
             $freshVoucher = $freshData['voucher'] ?? null;
             $invoiceLinks = $freshData['invoices'] ?? [];
 

@@ -645,13 +645,13 @@ class KuickPaySecretLeakageRunRepository
         return 10;
     }
 
-    public function updateCursor(int $run_id, int $cursor): void
+    public function updateCursor(int $run_id, int $company_id, int $cursor): void
     {
     }
 
-    public function close(int $run_id, string $status, array $counts, int $cursor, string $summary): void
+    public function close(int $run_id, int $company_id, string $status, array $counts, int $cursor, string $summary): void
     {
-        $this->summaries[] = compact('run_id', 'status', 'counts', 'cursor', 'summary');
+        $this->summaries[] = compact('run_id', 'company_id', 'status', 'counts', 'cursor', 'summary');
     }
 }
 

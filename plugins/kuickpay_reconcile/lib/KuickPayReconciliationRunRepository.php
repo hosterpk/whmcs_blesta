@@ -35,9 +35,9 @@ class KuickPayReconciliationRunRepository
         ]);
     }
 
-    public function close(int $run_id, string $status, array $counts, int $cursor, string $summary): void
+    public function close(int $run_id, int $company_id, string $status, array $counts, int $cursor, string $summary): void
     {
-        $this->KuickpayReconciliationRuns->edit($run_id, array_merge($counts, [
+        $this->KuickpayReconciliationRuns->edit($run_id, $company_id, array_merge($counts, [
             'status' => $status,
             'cursor' => $status === 'completed' ? 0 : $cursor,
             'date_completed' => date('Y-m-d H:i:s'),
@@ -45,9 +45,9 @@ class KuickPayReconciliationRunRepository
         ]));
     }
 
-    public function updateCursor(int $run_id, int $cursor): void
+    public function updateCursor(int $run_id, int $company_id, int $cursor): void
     {
-        $this->KuickpayReconciliationRuns->edit($run_id, ['cursor' => $cursor]);
+        $this->KuickpayReconciliationRuns->edit($run_id, $company_id, ['cursor' => $cursor]);
     }
 
     public function getResumeCursor(int $company_id, string $trigger_type = 'cron'): int

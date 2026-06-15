@@ -1128,7 +1128,7 @@ class Kuickpay extends NonmerchantGateway
     ): array {
         $voucherFlat = $this->voucherRowToView($latest);
         if (($meta['multi_invoice_policy'] ?? 'block') === 'allow') {
-            $withInvoices = $repository->getWithInvoices((int) ($latest->id ?? 0));
+            $withInvoices = $repository->getWithInvoices((int) ($latest->id ?? 0), (int) ($latest->company_id ?? 0));
             if (!empty($withInvoices['invoices'])) {
                 $voucherFlat['invoices'] = $withInvoices['invoices'];
             }
