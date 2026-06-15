@@ -248,16 +248,41 @@ class KuickPayPostingServiceTest extends TestCase
         $transactions = new KuickPayPostingFakeTransactions();
         $service = $this->service($repo, $transactions);
 
+        // The faithful fake actually persists markPosted (status + transaction id)
+        // via edit(), so the rerun observes the real posted state — no
+        // hand-mutated status.
         $first = $service->postVoucher(1, $voucher);
-        // Simulate the markPosted persistence the real DB would apply, so the rerun
-        // sees a posted voucher.
-        $voucher->status = 'posted';
-        $voucher->blesta_transaction_id = $first['blesta_transaction_id'];
         $second = $service->postVoucher(1, $voucher);
+        $third = $service->postVoucher(1, $voucher);
 
         $this->assertSame('posted', $first['outcome']);
         $this->assertSame('already_posted', $second['outcome']);
+        $this->assertSame('already_posted', $third['outcome']);
+        // Exactly one Blesta transaction add() and one apply() across all runs;
+        // the rerun and the third run create zero further calls.
         $this->assertCount(1, $transactions->adds);
+        $this->assertCount(1, $transactions->applies);
+    }
+
+    public function testPostConfirmedBatchIsIdempotentAcrossReruns()
+    {
+        // deferred-work.md:8 — idempotency through the BATCH entry
+        // (postConfirmed -> postVoucher), not only a direct postVoucher call: a
+        // confirmed_unposted voucher posts once; a second batch over the now-
+        // posted voucher creates no second Blesta transaction (already_posted).
+        $voucher = $this->voucher();
+        $repo = new KuickPayPostingFakeVoucherRepository([$voucher], [$this->invoiceLink()]);
+        $transactions = new KuickPayPostingFakeTransactions();
+        $service = $this->service($repo, $transactions);
+
+        $first = $service->postConfirmed(1);
+        $second = $service->postConfirmed(1);
+
+        $this->assertSame(1, $first['counts']['posted']);
+        $this->assertSame(0, $second['counts']['posted']);
+        $this->assertSame(1, $second['counts']['already_posted']);
+        $this->assertCount(1, $transactions->adds);
+        $this->assertCount(1, $transactions->applies);
     }
 
     public function testExistingApprovedAppliedTransactionIsAdoptedWithoutAdd()
@@ -699,6 +724,13 @@ class KuickPayPostingFakeVoucherRepository
 
         foreach ($this->vouchers as $voucher) {
             if ((int) $voucher->id === $voucher_id && (int) $voucher->company_id === $company_id) {
+                // Faithfully persist the write (e.g. markPosted's status/
+                // blesta_transaction_id) so a rerun observes the real posted
+                // state instead of relying on a hand-mutated status.
+                foreach ($vars as $key => $value) {
+                    $voucher->{$key} = $value;
+                }
+
                 return 1;
             }
         }
