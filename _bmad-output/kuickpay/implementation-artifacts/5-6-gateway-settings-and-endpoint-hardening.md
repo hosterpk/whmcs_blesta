@@ -6,7 +6,7 @@ baseline_commit: f8a6be40affda5e0a5c8390532e0a524991f069e
 
 # Story 5.6: Gateway Settings and Endpoint Hardening
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -415,8 +415,9 @@ claude-opus-4-8[1m] (Opus 4.8, 1M context) — BMAD dev-story workflow.
   no-op `Input` fake cannot evaluate field rules) AND unit-tests the pure
   validators directly. `KuickPayConnectionProbeTest` extended for IPv6
   resolve/validate/pin, private-IPv6 blocking, redirect/4xx/5xx-as-reachable, and
-  the transport-unavailable branch. No live DB or KuickPay SOAP call (offline;
-  NFR11) — DNS stubbed via the `resolveProbeAddresses()` seam.
+  the transport-unavailable branch. Review added a real-Input regression that
+  invalid settings do not run the probe. No live DB or KuickPay SOAP call
+  (offline; NFR11) — DNS stubbed via the `resolveProbeAddresses()` seam.
 - **No schema change, no version bump.** Gateway `config.json` stays `1.0.0`; no
   plugin or core edits; shared base `getLogo()` untouched.
 
@@ -435,7 +436,7 @@ claude-opus-4-8[1m] (Opus 4.8, 1M context) — BMAD dev-story workflow.
 - `components/gateways/nonmerchant/kuickpay/views/default/images/logo.png` (added) —
   real 150×69 transparent 8-bit RGBA PNG.
 - `components/gateways/nonmerchant/kuickpay/tests/KuickPaySettingsValidationTest.php`
-  (added) — 51 tests (pure validators + real-`Input` editSettings end-to-end).
+  (added) — 52 tests (pure validators + real-`Input` editSettings end-to-end).
 - `components/gateways/nonmerchant/kuickpay/tests/KuickPayConnectionProbeTest.php`
   (modified) — +11 tests (IPv6, redirect/4xx/5xx reachable, transport unavailable).
 - `_bmad-output/kuickpay/implementation-artifacts/deferred-work.md` (modified) —
@@ -445,6 +446,12 @@ claude-opus-4-8[1m] (Opus 4.8, 1M context) — BMAD dev-story workflow.
 - `docs/kuickpay/gateway-settings-and-endpoint-hardening-verification.md` (added) —
   sanitized verification record (NFR8/NFR12).
 
+### Review Findings
+
+- [x] [Review][Patch] Probe must reuse the shared WSDL safety validator [components/gateways/nonmerchant/kuickpay/kuickpay.php:741] — Fixed by routing `runConnectionTest()` through `Kuickpay::wsdlUrlSafety()` before address validation, so the save rule and probe share the same format/userinfo/allowlist decision path.
+- [x] [Review][Patch] IPv6 `CURLOPT_RESOLVE` entries need bracketed address literals [components/gateways/nonmerchant/kuickpay/kuickpay.php:780] — Fixed by bracketing IPv6 resolved addresses in the address slot and updating the probe test expectation to match libcurl syntax.
+- [x] [Review][Patch] SOAP timeout validation and runtime bounds must agree [components/gateways/nonmerchant/kuickpay/lib/KuickPaySoapClient.php:13] — Fixed by aligning the SOAP client runtime bounds and probe cap to the Story 5.6 accepted range of `1..300`, plus adding a real-Input regression that invalid settings do not run the probe.
+
 ### Change Log
 
 | Date | Change |
@@ -452,5 +459,6 @@ claude-opus-4-8[1m] (Opus 4.8, 1M context) — BMAD dev-story workflow.
 | 2026-06-15 | AC1: shared `wsdl_url` safety validator + save-time userinfo/SSRF/allowlist hardening; IPv6 AAAA resolution + `CURLOPT_RESOLVE` bracketing in the probe. |
 | 2026-06-15 | AC2: split numeric rules — `soap_timeout` ∈ [1,300], offsets ∈ [0,365], leading-zero rejection, and the `expiry_date_offset_days >= due_date_offset_days` relation. |
 | 2026-06-15 | AC3: documented the pure-reachability contract + honest probe coverage (redirect/4xx/5xx + `connection.unavailable`); shipped a real 150×69 RGBA `logo.png`. |
-| 2026-06-15 | Tests: new `KuickPaySettingsValidationTest` (real `Input` + pure validators); extended `KuickPayConnectionProbeTest`. Gateway suite 312 tests / 1 disclosed baseline red. |
+| 2026-06-15 | Tests: new `KuickPaySettingsValidationTest` (real `Input` + pure validators); extended `KuickPayConnectionProbeTest`. Gateway suite 313 tests / 1 disclosed baseline red after review fixes. |
 | 2026-06-15 | Docs: `deferred-work.md` closures + sanitized verification record. |
+| 2026-06-16 | Review fixes: shared validator reuse in the probe, bracketed IPv6 `CURLOPT_RESOLVE` addresses, and runtime timeout alignment with the accepted `1..300` range. |

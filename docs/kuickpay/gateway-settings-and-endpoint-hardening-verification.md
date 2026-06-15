@@ -40,7 +40,7 @@ No schema change and no gateway version bump (gateway `config.json` stays at
 
 | Suite | Baseline (Story 5.5) | Story 5.6 | Notes |
 |---|---|---|---|
-| Gateway `components/gateways/nonmerchant/kuickpay` | 250, 1 red | **312, 1 red** | +62 tests (51 settings-validation, 11 probe). The single red is the pre-existing disclosed baseline (below). |
+| Gateway `components/gateways/nonmerchant/kuickpay` | 250, 1 red | **313, 1 red** | +63 tests (52 settings-validation, 11 probe). The single red is the pre-existing disclosed baseline (below). |
 
 ### Disclosed pre-existing baseline red (NOT introduced by this story)
 
@@ -57,7 +57,8 @@ carried forward as a known baseline item.
   and drives `editSettings()` through `setRules()`/`validates()` so the actual
   field rules run (userinfo rejection, private/literal-IP + named-host-resolves-
   private blocking, allowlist match/miss/empty fallback, soap_timeout/offset
-  bounds + leading-zero, the `expiry >= due` relation, unset-passes). The pure
+  bounds + leading-zero, the `expiry >= due` relation, unset-passes, and the
+  reviewed regression that invalid settings do not run the connection probe). The pure
   validators (`wsdlUrlSafety`, `parseAllowedHosts`, `isPlausibleHost`,
   `soapTimeoutInRange`, `offsetDaysInRange`, `expiryNotBeforeDue`) are also unit-
   tested directly. The connection-probe suite's no-op `Input` fake CANNOT
