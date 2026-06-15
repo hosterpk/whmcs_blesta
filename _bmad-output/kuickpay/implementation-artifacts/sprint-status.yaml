@@ -140,7 +140,7 @@ development_status:
   5-4-audit-logging-and-redaction-completeness: done
   5-5-structural-company-scoping-and-test-fidelity-guarantees: done
   5-6-gateway-settings-and-endpoint-hardening: done
-  5-7-opt-in-live-kuickpay-smoke-no-sandbox: in-progress
+  5-7-opt-in-live-kuickpay-smoke-no-sandbox: review
   5-8-document-deployment-and-configuration: backlog
   5-9-document-reconciliation-and-support-operations: backlog
   5-10-document-rollback-upgrade-and-production-launch: backlog

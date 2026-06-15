@@ -6,7 +6,7 @@ baseline_commit: 7c3835d88aea366b4297d66b8d549c7d1ed83bdb
 
 # Story 5.7: Opt-In Live KuickPay Smoke (No Sandbox)
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -193,7 +193,7 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
     the runbook that any operator-captured fixture must clear the 3.2 scan before commit, and where it would live
     (`docs/kuickpay/fixtures/bill-payment-inquiry/` alongside the existing provisional set).
 
-- [ ] **Task 4 — Web-exposure + CLI hardening (AC1 safety)**
+- [x] **Task 4 — Web-exposure + CLI hardening (AC1 safety)**
   - [x] 4.1 Add `components/gateways/nonmerchant/kuickpay/tests/.htaccess` (or a `tests/live/.htaccess`) copying the
     plugin precedent (`plugins/kuickpay_reconcile/tests/.htaccess` — `Require all denied` with the legacy
     `Deny from all` fallback) so the smoke script (and all gateway test files) are not web-reachable. Confirm the
@@ -218,18 +218,18 @@ the plugin `tests/.htaccess` `Require all denied` is the pattern to copy).
     actual run remaining operator-driven). Keep the `docs(kuickpay)`/`_bmad-output` doc commit **separate** from
     the runtime/test-scaffolding commit (project-context.md:104).
 
-- [ ] **Task 6 — Verification & evidence (NFR12)**
-  - [ ] 6.1 `php -l` on every new PHP file under **both** ea-php83 (production, `/usr/local/bin/php` or
+- [x] **Task 6 — Verification & evidence (NFR12)**
+  - [x] 6.1 `php -l` on every new PHP file under **both** ea-php83 (production, `/usr/local/bin/php` or
     `/opt/cpanel/ea-php83/root/usr/bin/php`) and the ea-php82 source-floor
     (`/opt/cpanel/ea-php82/root/usr/bin/php`) — no 8.3-only syntax/APIs (project-context.md:39; memory
     `[[kuickpay-php82-toolchain-now-available]]`). `getenv`/`PHP_SAPI`/`SoapClient` are all ≤8.2-safe.
-  - [ ] 6.2 Run the **gateway** suite and confirm green-modulo-the-disclosed-`empty-currency`-baseline-red, and
+  - [x] 6.2 Run the **gateway** suite and confirm green-modulo-the-disclosed-`empty-currency`-baseline-red, and
     that the new guard test runs **and that the live smoke script was NOT discovered/executed** (it is not a
     `*Test.php`): `cd components/gateways/nonmerchant/kuickpay && <php> /root/tools/phpunit-8.5/vendor/bin/phpunit
     --bootstrap tests/bootstrap.php tests`. **Do NOT** use `-c build/phpunit.xml` (project-context.md:74).
     Capture the actual baseline first; disclose the `empty-currency` red as pre-existing
     (`[[kuickpay-failclosed-empty-currency-red]]`), do not attribute it to this story.
-  - [ ] 6.3 Prove AC1 operationally without the provider: run the smoke script with **no** env opt-in and confirm
+  - [x] 6.3 Prove AC1 operationally without the provider: run the smoke script with **no** env opt-in and confirm
     it prints "SKIPPED" and constructs no SOAP client (exit 0); confirm the same with `KUICKPAY_LIVE_SMOKE=1` but
     missing inputs → "SKIPPED / missing …". Record these (secret-free) in the Dev Agent Record. The actual live
     run against the real endpoint is operator-driven (no credentials in this environment) — state that honestly
@@ -479,6 +479,10 @@ GPT-5 Codex
 - 2026-06-16: Confirmed `components/gateways/nonmerchant/kuickpay/tests/live` contains no `*Test.php` files.
 - 2026-06-16: Guard test placeholder WSDL changed to reserved `example.invalid`; targeted guard test remained green.
 - 2026-06-16: Added sanitized operator runbook, verification template, and deferred-work note; no live provider run recorded because credentials are not present here.
+- 2026-06-16: Final lint: `/usr/local/bin/php -l` and `/opt/cpanel/ea-php82/root/usr/bin/php -l` passed for all three new PHP files.
+- 2026-06-16: Production-runtime gateway suite (`/usr/local/bin/php ... phpunit --bootstrap tests/bootstrap.php tests`) ran 319 tests / 1453 assertions with 1 failure: the disclosed pre-existing `empty-currency` baseline red.
+- 2026-06-16: Supplemental ea-php82 gateway suite ran 319 tests / 1452 assertions with 2 failures: the disclosed `empty-currency` baseline red plus unrelated WSDL IPv4-mapped private literal assertion; no 5.7 code path involved.
+- 2026-06-16: Forbidden-pattern scan of the new docs found no docs hits; matches were only deliberate guard-test positive/negative controls.
 
 ### Completion Notes List
 
@@ -490,6 +494,7 @@ GPT-5 Codex
 - Task 4 complete: the live smoke script's first executable statement is the `PHP_SAPI !== 'cli'` refusal before requires or env reads, and the gateway tests directory is web-denied.
 - Task 3 complete: no real live fixture was committed; the runbook documents the sanitized capture location and required scan/review gate before any later fixture commit.
 - Task 5 complete: added the live-smoke runbook, the sanitized verification placeholder, and a deferred-work note that this story discharges the mechanism while the real provider run remains operator-driven.
+- Task 6 complete: lint passed on PHP 8.3 and 8.2; the production-runtime gateway suite is green modulo the known `empty-currency` baseline red; no-provider operational skip checks passed; the actual live provider run was not performed because credentials are not present here.
 
 ### File List
 
@@ -502,3 +507,10 @@ GPT-5 Codex
 - _bmad-output/kuickpay/implementation-artifacts/deferred-work.md
 - _bmad-output/kuickpay/implementation-artifacts/5-7-opt-in-live-kuickpay-smoke-no-sandbox.md
 - _bmad-output/kuickpay/implementation-artifacts/sprint-status.yaml
+
+### Change Log
+
+- 2026-06-16: Added pure opt-in gate, default-suite guard test, and gateway tests web-deny file.
+- 2026-06-16: Added CLI-only read-only live smoke runner with redacted output and optional sanitized capture.
+- 2026-06-16: Added operator runbook, sanitized verification template, and deferred-work note for the 5.1 live SOAP residual mechanism.
+- 2026-06-16: Completed validation and moved story to review.
