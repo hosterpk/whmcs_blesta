@@ -6,7 +6,7 @@ baseline_commit: c18e27af5ffcb6481b5bf832d40f8073fe022ba9
 
 # Story 5.5: Structural Company-Scoping and Test-Fidelity Guarantees
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -493,7 +493,7 @@ Claude Opus 4.8 (1M context) — `claude-opus-4-8[1m]`.
 
 ### Debug Log References
 
-- Plugin suite: `cd plugins/kuickpay_reconcile && <ea-php83> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` → **214/214** (baseline 189/189).
+- Plugin suite: `cd plugins/kuickpay_reconcile && <ea-php83> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` → **217/217** (baseline 189/189).
 - Gateway suite: `cd components/gateways/nonmerchant/kuickpay && <ea-php83> /root/tools/phpunit-8.5/vendor/bin/phpunit --bootstrap tests/bootstrap.php tests` → **250 tests, 1 failure** = the pre-existing disclosed `empty-currency` baseline red (NOT this story).
 - `php -l` clean on all 37 changed PHP files under **both** ea-php83 (8.3 runtime) and ea-php82 (8.2 source-floor).
 - Sanitized verification record: `docs/kuickpay/structural-company-scoping-verification.md`.
@@ -501,13 +501,23 @@ Claude Opus 4.8 (1M context) — `claude-opus-4-8[1m]`.
 ### Completion Notes List
 
 - **AC1 — structural company-scoping.** Added the un-omittable scoped-query convention to `KuickpayReconcileModel` (`scopedSelect`/`scopedUpdate`/`scopedDelete`/`scopedInsert` for directly-scoped tables; `scopedChildSelect` for the parent-scoped child tables `kuickpay_voucher_invoices`/`kuickpay_reconciliation_items` which have NO `company_id` column). Each takes a required `int $companyId`, so omitting the tenant is a type error. Closed the 8 gaps: removed the unscoped `get()` (sole caller now uses `getForCompany()`); routed the unscoped cross-tenant `KuickpayReconciliationRuns::edit()` UPDATE through `scopedUpdate`; routed the three `add()` INSERTs through `scopedInsert`; parent-scoped the three child reads via a join to `kuickpay_vouchers.company_id`. Threaded `company_id` through `getWithInvoices()`, `getInvoiceLinksForUpdate()`, and the run repo's `close()`/`updateCursor()`. Gateway side audited: no direct Record query leaks tenant scope. ✅ Resolved deferred-work admin/scoping classes (Epic 4 retro AI-8).
-- **AC2 — fake fidelity.** Extracted `tests/fakes/KuickPayFakeVoucherConstraints.php` modelling NOT-NULL + the company-scoped UNIQUE keys (consumer/registration/active-context, NULL-insensitive), reused by the voucher-reference repository fakes. Made the Blesta amount-source fakes return `decimal(12,4)` 4-dp strings systematically and proved the minor-unit parser tolerates them + fails closed on sub-paisa. Tightened the looser fakes (company-scoped reads, parent-scoped locked reads, count-returning `edit()`, the `(run_id, voucher_id)` unique on the item fake). Added a non-numeric transaction-ref case and empty-string-vs-NULL identity coverage, the cross-company isolation regression test, and the written fake-fidelity checklist (`tests/README.md`, the AI-2 deliverable).
+- **AC2 — fake fidelity.** Extracted `tests/fakes/KuickPayFakeVoucherConstraints.php` modelling NOT-NULL + the company-scoped UNIQUE keys (consumer/registration/active-context, NULL-insensitive), reused by the voucher-reference repository fakes. Made the Blesta amount-source fakes return `decimal(12,4)` 4-dp strings systematically and proved the minor-unit parser tolerates them + fails closed on sub-paisa. Tightened the looser fakes (company-scoped reads, parent-scoped locked reads, count-returning `edit()`, update-time uniqueness, the `(run_id, voucher_id)` unique on the item fake). Added a non-numeric transaction-ref case and empty-string-vs-NULL identity coverage, the cross-company isolation regression test, and the written fake-fidelity checklist (`tests/README.md`, the AI-2 deliverable).
 - **AC3a — admin permissions.** Each controller now asserts its registered permission explicitly (`requirePagePermission`); `admin_main::run()` gates on `bulk_reconcile` (`*`). The raw-access-list decision is extracted to the unit-tested pure `KuickPayAclDecision`. ✅ Resolved deferred-work line 124.
 - **AC3b — posting call-count.** The posting fake now faithfully persists `markPosted`; the rerun test asserts exactly one `add()`+one `apply()` then zero on a third run, plus a `postConfirmed()` batch idempotency test. ✅ Resolved deferred-work line 8.
 - **AC3c — currency wiring.** `KuickPayCurrencyWiringTest` exercises the REAL `Gateway::loadConfig()`→`getCurrencies()` path reading the real `config.json` (`['PKR']`) via a minimal concrete subclass of the real base; Kuickpay inherits `getCurrencies()` with no override. NFR12: the rest of the gateway suite still stubs `NonmerchantGateway`; disclosed exactly what ran vs. stubbed in the verification record. ✅ Resolved deferred-work line 24.
-- **AC3d — normalizeAmount.** Both copies (gateway + plugin service) half-up round to 2 dp with bcmath decimal-string math (no PHP floats) and fail closed to `''` on invalid/negative input; kept byte-for-byte identical. ✅ Resolved deferred-work line 104.
+- **AC3d — normalizeAmount.** Both copies (gateway + plugin service) half-up round to 2 dp with decimal-string math (no PHP floats and no undeclared `bcmath` runtime dependency) and fail closed to `''` on invalid/negative input. ✅ Resolved deferred-work line 104.
 - **AC3e — retireVoucher.** `KuickpayVouchers::edit()` returns the affected-row count; `retireVoucher()` treats a 0-row no-op as failure (skips audit, returns `false`), keeps the audit best-effort, and does NOT un-gate `replace`/`allow`. ✅ Resolved deferred-work line 101; satisfies the line-20 un-gating precondition.
 - **No schema change, no version bump** (plugin stays `1.10.0`); no new audit event name.
+
+### Review Findings
+
+- [x] [Review][Patch] Reject tenantless scoped inserts — `scopedInsert()` silently allowed missing `company_id` as company `0`; now it requires a positive company id and tests cover the guard.
+- [x] [Review][Patch] Prevent invalid amount sentinel equality — invalid normalized amounts can no longer compare equal through the empty sentinel.
+- [x] [Review][Patch] Make retireVoucher a real transition — retiring an already-cancelled voucher now returns false and skips a duplicate replacement audit.
+- [x] [Review][Patch] Remove undeclared bcmath runtime dependency — half-up rounding now uses decimal-string operations without PHP floats or `bcadd()`.
+- [x] [Review][Patch] Complete scoped-helper rollout for model reads — list/detail/audit/item reads now start from the base scoping helpers while preserving selected fields.
+- [x] [Review][Patch] Enforce update-time fake uniqueness — voucher fakes now model MySQL unique constraints on edits as well as inserts.
+- [x] [Review][Patch] Tighten remaining scoped fakes — posting/reconcile/issuance/evidence-validator fakes now respect production company/status/cursor/affected-row behavior.
 
 ### File List
 
@@ -573,3 +583,4 @@ Docs:
 | 2026-06-15 | AC3b: posting confirmed→post→rerun call-count + batch idempotency tests (`99fd71a3`). |
 | 2026-06-15 | AC3c: real-framework `getCurrencies()`→`config.json` wiring test (`547031cf`). |
 | 2026-06-15 | Docs: deferred-work closures + sanitized verification record; story → review. |
+| 2026-06-15 | Code review fixes: tenantless insert guard, retire transition, bcmath-free rounding, helper rollout, and stricter fakes (`67d370ea`..`35df6dd7`). |
