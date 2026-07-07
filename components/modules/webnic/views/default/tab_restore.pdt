@@ -1,0 +1,60 @@
+<?php
+/**
+ * Admin Restore Domain tab (WN-4-4, FR24 / UX-DR12).
+ *
+ * Explicit admin-only registry restore surface. The POST requires a fee
+ * acknowledgement and is re-gated server-side before performRestore() can call WebNIC.
+ *
+ * @var string $domain Service domain
+ * @var bool $eligible Whether the action is currently available
+ * @var array|null $restore_prompt Restore prompt data
+ * @var bool $restore_accepted Whether the last submitted restore was accepted
+ * @var bool $restore_pending Whether the accepted restore is pending at the registry
+ * @var string|null $alias Current rendered status alias
+ */
+$webnic_dir = __DIR__ . DIRECTORY_SEPARATOR;
+$price = isset($restore_prompt['price']) ? (float) $restore_prompt['price'] : 0.0;
+$currency = isset($restore_prompt['currency']) ? (string) $restore_prompt['currency'] : '';
+$price_label = trim($currency . ' ' . number_format($price, 2, '.', ''));
+?>
+<div class="webnic-tab-restore my-2">
+    <h3 class="h5"><?php $this->_('Webnic.tab_restore.heading'); ?></h3>
+
+    <?php if (isset($alias) && $alias !== null) { ?>
+    <div class="mb-2"><?php include $webnic_dir . 'status_badge.pdt'; ?></div>
+    <?php } ?>
+
+    <?php if (!empty($restore_accepted)) { ?>
+    <div class="webnic-restore-accepted alert <?php echo !empty($restore_pending) ? 'alert-info' : 'alert-success'; ?> mb-0" role="alert">
+        <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+        <?php $this->_(!empty($restore_pending) ? 'Webnic.restore.pending' : 'Webnic.restore.ok'); ?>
+    </div>
+    <?php } elseif (empty($eligible) || empty($restore_prompt)) { ?>
+    <div class="alert alert-secondary mb-0" role="alert">
+        <i class="bi bi-lock me-1" aria-hidden="true"></i>
+        <?php $this->_('Webnic.tab_restore.unavailable'); ?>
+    </div>
+    <?php } else { ?>
+    <div class="alert alert-warning" role="alert">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <strong><?php $this->_('Webnic.tab_restore.warning'); ?></strong>
+            <span class="price-cell badge bg-light text-dark border"><?php echo $this->Html->safe($price_label); ?></span>
+        </div>
+        <div class="small mt-1"><?php $this->_('Webnic.tab_restore.help'); ?></div>
+    </div>
+
+    <?php echo $this->Form->create(); ?>
+        <?php $this->Form->fieldHidden('action', 'restore'); ?>
+        <div class="form-check mb-2">
+            <?php $this->Form->fieldCheckbox('ack_restore_fee', '1', false, ['class' => 'form-check-input', 'id' => 'ack_restore_fee']); ?>
+            <label class="form-check-label" for="ack_restore_fee"><?php $this->_('Webnic.tab_restore.ack'); ?></label>
+        </div>
+        <button type="submit" class="btn btn-warning btn-sm">
+            <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i><?php $this->_('Webnic.tab_restore.btn'); ?>
+        </button>
+        <?php if (!empty($domain)) { ?>
+        <span class="small text-muted ms-2"><?php echo $this->Html->safe($domain); ?></span>
+        <?php } ?>
+    <?php echo $this->Form->end(); ?>
+    <?php } ?>
+</div>

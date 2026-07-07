@@ -1,0 +1,221 @@
+<?php
+$forwarding_urls = isset($forwarding_urls) && is_array($forwarding_urls) ? array_values($forwarding_urls) : [];
+$forwarding_emails = isset($forwarding_emails) && is_array($forwarding_emails) ? array_values($forwarding_emails) : [];
+$forwarding_errors = isset($forwarding_errors) && is_array($forwarding_errors) ? $forwarding_errors : [];
+$forwarding_form_state = isset($forwarding_form_state) && is_array($forwarding_form_state) ? $forwarding_form_state : [];
+$forwarding_form_scope = (string) ($forwarding_form_state['scope'] ?? '');
+$forwarding_form_key = (string) ($forwarding_form_state['key'] ?? '');
+$forwarding_form_values = isset($forwarding_form_state['values']) && is_array($forwarding_form_state['values']) ? $forwarding_form_state['values'] : [];
+$forwarding_form_value = static function ($field, $default = '') use ($forwarding_form_values) {
+    return array_key_exists($field, $forwarding_form_values) ? $forwarding_form_values[$field] : $default;
+};
+$forwarding_show_error = static function ($field, $active) use ($forwarding_errors) {
+    return $active && !empty($forwarding_errors[$field]);
+};
+$forwarding_field_attrs = static function ($field, $field_id, $active, array $attrs = []) use ($forwarding_show_error) {
+    $attrs = array_merge(['id' => $field_id], $attrs);
+    if ($forwarding_show_error($field, $active)) {
+        $attrs['aria-describedby'] = $field_id . '_error';
+    }
+
+    return $attrs;
+};
+$forwarding_error_id = static function ($field_id) {
+    return $field_id . '_error';
+};
+$forwarding_alert_key = isset($forwarding_alert_key) ? (string) $forwarding_alert_key : 'Webnic.tab_forwarding.unavailable';
+$url_add_active = $forwarding_form_scope === 'add_url';
+$email_add_active = $forwarding_form_scope === 'add_email';
+$forwarding_domain = isset($forwarding_domain) ? (string) $forwarding_domain : '';
+?>
+<div class="webnic-forwarding">
+    <h3 class="h5"><?php $this->_('Webnic.tab_forwarding.heading'); ?></h3>
+    <p class="text-muted small"><?php $this->_('Webnic.tab_forwarding.help'); ?></p>
+
+    <?php if (empty($manageable)) { ?>
+        <div class="alert alert-warning">
+            <?php $this->_($forwarding_alert_key); ?>
+        </div>
+    <?php } elseif (empty($forwarding_urls) && empty($forwarding_emails)) { ?>
+        <div class="alert alert-info">
+            <?php $this->_('Webnic.tab_forwarding.empty'); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($forwarding_errors['_general']) || !empty($forwarding_errors['forwarding']) || !empty($forwarding_errors['record_token']) || !empty($forwarding_errors['action'])) { ?>
+        <div class="alert alert-danger">
+            <?php echo $this->Html->safe(implode(' ', array_merge(
+                $forwarding_errors['_general'] ?? [],
+                $forwarding_errors['forwarding'] ?? [],
+                $forwarding_errors['record_token'] ?? [],
+                $forwarding_errors['action'] ?? []
+            ))); ?>
+        </div>
+    <?php } ?>
+
+    <h4 class="h6 mt-3"><?php $this->_('Webnic.tab_forwarding.url_section'); ?></h4>
+    <?php if (!empty($forwarding_urls)) { ?>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.url_subdomain'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.url_target'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.status'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.added'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.modified'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($forwarding_urls as $i => $row) { ?>
+                        <?php
+                        $record_token = (string) ($row['record_token'] ?? '');
+                        $delete_form_id = 'webnic_forwarding_url_delete_' . $i;
+                        ?>
+                        <tr class="webnic-forwarding-url">
+                            <td><?php echo $this->Html->safe($row['display_subdomain'] ?? $row['subdomain'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['targetUrl'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['status'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['dtcreate'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['dtmodify'] ?? ''); ?></td>
+                            <td class="text-nowrap">
+                                <?php if (!empty($manageable)) { ?>
+                                    <?php $this->Form->create(null, ['id' => $delete_form_id]); ?>
+                                    <?php $this->Form->fieldHidden('action', 'delete_url'); ?>
+                                    <?php $this->Form->fieldHidden('record_token', $record_token); ?>
+                                    <?php $this->Form->fieldSubmit('delete', $this->_('Webnic.tab_forwarding.delete', true), ['class' => 'btn btn-sm btn-outline-danger']); ?>
+                                    <?php $this->Form->end(); ?>
+                                <?php } ?>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable)) { ?>
+        <?php
+        $url_subdomain_id = 'webnic_forwarding_url_subdomain';
+        $url_target_id = 'webnic_forwarding_url_target';
+        $url_subdomain_attrs = $forwarding_field_attrs('subdomain', $url_subdomain_id, $url_add_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_forwarding.placeholder.url_subdomain', true),
+        ]);
+        $url_target_attrs = $forwarding_field_attrs('targetUrl', $url_target_id, $url_add_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_forwarding.placeholder.url_target', true),
+        ]);
+        ?>
+        <?php $this->Form->create(); ?>
+        <?php $this->Form->fieldHidden('action', 'add_url'); ?>
+        <div class="row g-3 mt-2 webnic-forwarding-url-add">
+            <div class="col-md-3">
+                <label class="form-label" for="webnic_forwarding_url_subdomain"><?php $this->_('Webnic.tab_forwarding.field.url_subdomain'); ?></label>
+                <?php $this->Form->fieldText('subdomain', $url_add_active ? $forwarding_form_value('subdomain') : '', $url_subdomain_attrs); ?>
+                <?php if ($forwarding_show_error('subdomain', $url_add_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($forwarding_error_id($url_subdomain_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $forwarding_errors['subdomain'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="webnic_forwarding_url_target"><?php $this->_('Webnic.tab_forwarding.field.url_target'); ?></label>
+                <?php $this->Form->fieldText('targetUrl', $url_add_active ? $forwarding_form_value('targetUrl') : '', $url_target_attrs); ?>
+                <?php if ($forwarding_show_error('targetUrl', $url_add_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($forwarding_error_id($url_target_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $forwarding_errors['targetUrl'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_forwarding.add_url', true), ['class' => 'btn btn-primary']); ?>
+            </div>
+        </div>
+        <?php $this->Form->end(); ?>
+    <?php } ?>
+
+    <h4 class="h6 mt-4"><?php $this->_('Webnic.tab_forwarding.email_section'); ?></h4>
+    <?php if (!empty($manageable) || $forwarding_alert_key === 'Webnic.tab_forwarding.not_webnic_dns') { ?>
+        <p class="text-muted small"><?php $this->_('Webnic.tab_forwarding.email_mx_side_effect'); ?></p>
+    <?php } ?>
+
+    <?php if (!empty($forwarding_emails)) { ?>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.email_source'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.email_destination'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.status'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.added'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.modified'); ?></th>
+                        <th><?php $this->_('Webnic.tab_forwarding.column.actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($forwarding_emails as $i => $row) { ?>
+                        <?php
+                        $record_token = (string) ($row['record_token'] ?? '');
+                        $delete_form_id = 'webnic_forwarding_email_delete_' . $i;
+                        $source = (string) ($row['user'] ?? '');
+                        if ($source !== '' && $forwarding_domain !== '') {
+                            $source .= '@' . $forwarding_domain;
+                        }
+                        ?>
+                        <tr class="webnic-forwarding-email">
+                            <td><?php echo $this->Html->safe($source); ?></td>
+                            <td><?php echo $this->Html->safe($row['targetEmail'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['status'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['dtcreate'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($row['dtmodify'] ?? ''); ?></td>
+                            <td class="text-nowrap">
+                                <?php if (!empty($manageable)) { ?>
+                                    <?php $this->Form->create(null, ['id' => $delete_form_id]); ?>
+                                    <?php $this->Form->fieldHidden('action', 'delete_email'); ?>
+                                    <?php $this->Form->fieldHidden('record_token', $record_token); ?>
+                                    <?php $this->Form->fieldSubmit('delete', $this->_('Webnic.tab_forwarding.delete', true), ['class' => 'btn btn-sm btn-outline-danger']); ?>
+                                    <?php $this->Form->end(); ?>
+                                <?php } ?>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable)) { ?>
+        <?php
+        $email_source_id = 'webnic_forwarding_email_source';
+        $email_destination_id = 'webnic_forwarding_email_destination';
+        $email_source_attrs = $forwarding_field_attrs('user', $email_source_id, $email_add_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_forwarding.placeholder.email_source', true),
+        ]);
+        $email_destination_attrs = $forwarding_field_attrs('targetEmail', $email_destination_id, $email_add_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_forwarding.placeholder.email_destination', true),
+        ]);
+        ?>
+        <?php $this->Form->create(); ?>
+        <?php $this->Form->fieldHidden('action', 'add_email'); ?>
+        <div class="row g-3 mt-2 webnic-forwarding-email-add">
+            <div class="col-md-3">
+                <label class="form-label" for="webnic_forwarding_email_source"><?php $this->_('Webnic.tab_forwarding.field.email_source'); ?></label>
+                <?php $this->Form->fieldText('user', $email_add_active ? $forwarding_form_value('user') : '', $email_source_attrs); ?>
+                <?php if ($forwarding_show_error('user', $email_add_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($forwarding_error_id($email_source_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $forwarding_errors['user'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="webnic_forwarding_email_destination"><?php $this->_('Webnic.tab_forwarding.field.email_destination'); ?></label>
+                <?php $this->Form->fieldText('targetEmail', $email_add_active ? $forwarding_form_value('targetEmail') : '', $email_destination_attrs); ?>
+                <?php if ($forwarding_show_error('targetEmail', $email_add_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($forwarding_error_id($email_destination_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $forwarding_errors['targetEmail'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_forwarding.add_email', true), ['class' => 'btn btn-primary']); ?>
+            </div>
+        </div>
+        <?php $this->Form->end(); ?>
+    <?php } ?>
+</div>

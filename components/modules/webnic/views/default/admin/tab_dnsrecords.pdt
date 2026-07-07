@@ -1,0 +1,297 @@
+<?php
+$dns_records = isset($dns_records) && is_array($dns_records) ? array_values($dns_records) : [];
+$unsupported_dns_records = isset($unsupported_dns_records) && is_array($unsupported_dns_records) ? array_values($unsupported_dns_records) : [];
+$record_types = isset($record_types) && is_array($record_types) ? array_values($record_types) : [];
+$dns_record_errors = isset($dns_record_errors) && is_array($dns_record_errors) ? $dns_record_errors : [];
+$dns_form_state = isset($dns_form_state) && is_array($dns_form_state) ? $dns_form_state : [];
+$dns_form_scope = (string) ($dns_form_state['scope'] ?? '');
+$dns_form_key = (string) ($dns_form_state['key'] ?? '');
+$dns_form_values = isset($dns_form_state['values']) && is_array($dns_form_state['values']) ? $dns_form_state['values'] : [];
+$dns_form_value = static function ($field, $default = '') use ($dns_form_values) {
+    return array_key_exists($field, $dns_form_values) ? $dns_form_values[$field] : $default;
+};
+$dns_show_error = static function ($field, $active) use ($dns_record_errors) {
+    return $active && !empty($dns_record_errors[$field]);
+};
+$dns_field_attrs = static function ($field, $field_id, $active, array $attrs = []) use ($dns_show_error) {
+    $attrs = array_merge(['id' => $field_id], $attrs);
+    if ($dns_show_error($field, $active)) {
+        $attrs['aria-describedby'] = $field_id . '_error';
+    }
+
+    return $attrs;
+};
+$dns_error_id = static function ($field_id) {
+    return $field_id . '_error';
+};
+$dns_alert_key = isset($dns_alert_key) ? (string) $dns_alert_key : 'Webnic.tab_dnsrecords.unavailable';
+$add_form_active = $dns_form_scope === 'add';
+$type_options = [];
+foreach ($record_types as $type) {
+    $type = strtoupper((string) $type);
+    $type_options[$type] = $this->_('Webnic.tab_dnsrecords.type.' . $type, true);
+}
+?>
+<div class="webnic-dnsrecords">
+    <h3 class="h5"><?php $this->_('Webnic.tab_dnsrecords.heading'); ?></h3>
+    <p class="text-muted small"><?php $this->_('Webnic.tab_dnsrecords.help'); ?></p>
+
+    <?php if (empty($manageable)) { ?>
+        <div class="alert alert-warning">
+            <?php $this->_($dns_alert_key); ?>
+        </div>
+    <?php } elseif (!empty($empty_records)) { ?>
+        <div class="alert alert-info">
+            <?php $this->_('Webnic.tab_dnsrecords.empty'); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($dns_record_errors['_general']) || !empty($dns_record_errors['records'])) { ?>
+        <div class="alert alert-danger">
+            <?php echo $this->Html->safe(implode(' ', array_merge(
+                $dns_record_errors['_general'] ?? [],
+                $dns_record_errors['records'] ?? []
+            ))); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($dns_records)) { ?>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.type'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.name'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.value'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.ttl'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.priority'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.weight'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.port'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($dns_records as $i => $record) { ?>
+                        <?php
+                        $record_type = strtoupper((string) ($record['type'] ?? ''));
+                        $record_name = (string) ($record['provider_name'] ?? '');
+                        $record_token = (string) ($record['record_token'] ?? '');
+                        $record_form_active = $dns_form_scope === 'record' && $dns_form_key === $record_token;
+                        $edit_form_id = 'webnic_dns_edit_' . $i;
+                        $delete_form_id = 'webnic_dns_delete_' . $i;
+                        $value_value = $record_form_active ? $dns_form_value('value', $record['value'] ?? '') : ($record['value'] ?? '');
+                        $ttl_value = $record_form_active ? $dns_form_value('ttl', $record['ttl'] ?? '') : ($record['ttl'] ?? '');
+                        $priority_value = $record_form_active ? $dns_form_value('priority', $record['priority'] ?? '') : ($record['priority'] ?? '');
+                        $weight_value = $record_form_active ? $dns_form_value('weight', $record['weight'] ?? '') : ($record['weight'] ?? '');
+                        $port_value = $record_form_active ? $dns_form_value('port', $record['port'] ?? '') : ($record['port'] ?? '');
+                        $value_id = 'webnic_dns_value_' . $i;
+                        $ttl_id = 'webnic_dns_ttl_' . $i;
+                        $priority_id = 'webnic_dns_priority_' . $i;
+                        $weight_id = 'webnic_dns_weight_' . $i;
+                        $port_id = 'webnic_dns_port_' . $i;
+                        $value_attrs = $dns_field_attrs('value', $value_id, $record_form_active, [
+                            'class' => 'form-control form-control-sm',
+                            'form' => $edit_form_id,
+                            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.value', true),
+                        ]);
+                        $ttl_attrs = $dns_field_attrs('ttl', $ttl_id, $record_form_active, [
+                            'class' => 'form-control form-control-sm',
+                            'form' => $edit_form_id,
+                            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.ttl', true),
+                        ]);
+                        $priority_attrs = $dns_field_attrs('priority', $priority_id, $record_form_active, [
+                            'class' => 'form-control form-control-sm',
+                            'form' => $edit_form_id,
+                            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.priority', true),
+                        ]);
+                        $weight_attrs = $dns_field_attrs('weight', $weight_id, $record_form_active, [
+                            'class' => 'form-control form-control-sm',
+                            'form' => $edit_form_id,
+                            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.weight', true),
+                        ]);
+                        $port_attrs = $dns_field_attrs('port', $port_id, $record_form_active, [
+                            'class' => 'form-control form-control-sm',
+                            'form' => $edit_form_id,
+                            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.port', true),
+                        ]);
+                        ?>
+                        <tr class="webnic-dns-record" data-type="<?php echo $this->Html->safe($record['type'] ?? ''); ?>">
+                            <td>
+                                <?php echo $this->Html->safe($record['type'] ?? ''); ?>
+                            </td>
+                            <td><?php echo $this->Html->safe($record['name'] ?? ''); ?></td>
+                            <td>
+                                <?php $this->Form->fieldText('value', $value_value, $value_attrs); ?>
+                                <?php if ($dns_show_error('value', $record_form_active)) { ?>
+                                    <div id="<?php echo $this->Html->safe($dns_error_id($value_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['value'])); ?></div>
+                                <?php } ?>
+                            </td>
+                            <td>
+                                <?php $this->Form->fieldText('ttl', $ttl_value, $ttl_attrs); ?>
+                                <?php if ($dns_show_error('ttl', $record_form_active)) { ?>
+                                    <div id="<?php echo $this->Html->safe($dns_error_id($ttl_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['ttl'])); ?></div>
+                                <?php } ?>
+                            </td>
+                            <td>
+                                <?php $this->Form->fieldText('priority', $priority_value, $priority_attrs); ?>
+                                <?php if ($dns_show_error('priority', $record_form_active)) { ?>
+                                    <div id="<?php echo $this->Html->safe($dns_error_id($priority_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['priority'])); ?></div>
+                                <?php } ?>
+                            </td>
+                            <td>
+                                <?php $this->Form->fieldText('weight', $weight_value, $weight_attrs); ?>
+                                <?php if ($dns_show_error('weight', $record_form_active)) { ?>
+                                    <div id="<?php echo $this->Html->safe($dns_error_id($weight_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['weight'])); ?></div>
+                                <?php } ?>
+                            </td>
+                            <td>
+                                <?php $this->Form->fieldText('port', $port_value, $port_attrs); ?>
+                                <?php if ($dns_show_error('port', $record_form_active)) { ?>
+                                    <div id="<?php echo $this->Html->safe($dns_error_id($port_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['port'])); ?></div>
+                                <?php } ?>
+                            </td>
+                            <td class="text-nowrap">
+                                <?php if (!empty($manageable)) { ?>
+                                    <?php $this->Form->create(null, ['id' => $edit_form_id]); ?>
+                                    <?php $this->Form->fieldHidden('action', 'edit'); ?>
+                                    <?php $this->Form->fieldHidden('record_token', $record_token); ?>
+                                    <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_dnsrecords.edit', true), ['class' => 'btn btn-sm btn-primary']); ?>
+                                    <?php $this->Form->end(); ?>
+                                    <?php $this->Form->create(null, ['id' => $delete_form_id, 'class' => 'mt-1']); ?>
+                                    <?php $this->Form->fieldHidden('action', 'delete'); ?>
+                                    <?php $this->Form->fieldHidden('record_token', $record_token); ?>
+                                    <?php $this->Form->fieldSubmit('delete', $this->_('Webnic.tab_dnsrecords.delete', true), ['class' => 'btn btn-sm btn-outline-danger']); ?>
+                                    <?php $this->Form->end(); ?>
+                                <?php } ?>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($unsupported_dns_records)) { ?>
+        <div class="alert alert-secondary small">
+            <?php $this->_('Webnic.tab_dnsrecords.unsupported'); ?>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.type'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.name'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.value'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.ttl'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnsrecords.column.reason'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($unsupported_dns_records as $record) { ?>
+                        <tr>
+                            <td><?php echo $this->Html->safe($record['type'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($record['name'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($record['value'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($record['ttl'] ?? ''); ?></td>
+                            <td><?php $this->_($record['reason_key'] ?? 'Webnic.tab_dnsrecords.read_only_type'); ?></td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable)) { ?>
+        <?php
+        $add_type_id = 'webnic_dns_type';
+        $add_name_id = 'webnic_dns_name';
+        $add_value_id = 'webnic_dns_value';
+        $add_ttl_id = 'webnic_dns_ttl';
+        $add_priority_id = 'webnic_dns_priority';
+        $add_weight_id = 'webnic_dns_weight';
+        $add_port_id = 'webnic_dns_port';
+        $add_type_attrs = $dns_field_attrs('type', $add_type_id, $add_form_active, ['class' => 'form-select']);
+        $add_name_attrs = $dns_field_attrs('name', $add_name_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.name', true),
+        ]);
+        $add_value_attrs = $dns_field_attrs('value', $add_value_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.value', true),
+        ]);
+        $add_ttl_attrs = $dns_field_attrs('ttl', $add_ttl_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.ttl', true),
+        ]);
+        $add_priority_attrs = $dns_field_attrs('priority', $add_priority_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.priority', true),
+        ]);
+        $add_weight_attrs = $dns_field_attrs('weight', $add_weight_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.weight', true),
+        ]);
+        $add_port_attrs = $dns_field_attrs('port', $add_port_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnsrecords.placeholder.port', true),
+        ]);
+        ?>
+        <?php $this->Form->create(); ?>
+        <?php $this->Form->fieldHidden('action', 'add'); ?>
+        <div class="row g-3 mt-2 webnic-dns-add">
+            <div class="col-md-2">
+                <label class="form-label" for="webnic_dns_type"><?php $this->_('Webnic.tab_dnsrecords.field.type'); ?></label>
+                <?php $this->Form->fieldSelect('type', $type_options, $add_form_active ? $dns_form_value('type', $record_types[0] ?? '') : ($record_types[0] ?? ''), $add_type_attrs); ?>
+                <?php if ($dns_show_error('type', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_type_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['type'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="webnic_dns_name"><?php $this->_('Webnic.tab_dnsrecords.field.name'); ?></label>
+                <?php $this->Form->fieldText('name', $add_form_active ? $dns_form_value('name') : '', $add_name_attrs); ?>
+                <?php if ($dns_show_error('name', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_name_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['name'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="webnic_dns_value"><?php $this->_('Webnic.tab_dnsrecords.field.value'); ?></label>
+                <?php $this->Form->fieldText('value', $add_form_active ? $dns_form_value('value') : '', $add_value_attrs); ?>
+                <?php if ($dns_show_error('value', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_value_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['value'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="webnic_dns_ttl"><?php $this->_('Webnic.tab_dnsrecords.field.ttl'); ?></label>
+                <?php $this->Form->fieldText('ttl', $add_form_active ? $dns_form_value('ttl') : '', $add_ttl_attrs); ?>
+                <?php if ($dns_show_error('ttl', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_ttl_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['ttl'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="webnic_dns_priority"><?php $this->_('Webnic.tab_dnsrecords.field.priority'); ?></label>
+                <?php $this->Form->fieldText('priority', $add_form_active ? $dns_form_value('priority') : '', $add_priority_attrs); ?>
+                <?php if ($dns_show_error('priority', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_priority_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['priority'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="webnic_dns_weight"><?php $this->_('Webnic.tab_dnsrecords.field.weight'); ?></label>
+                <?php $this->Form->fieldText('weight', $add_form_active ? $dns_form_value('weight') : '', $add_weight_attrs); ?>
+                <?php if ($dns_show_error('weight', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_weight_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['weight'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label" for="webnic_dns_port"><?php $this->_('Webnic.tab_dnsrecords.field.port'); ?></label>
+                <?php $this->Form->fieldText('port', $add_form_active ? $dns_form_value('port') : '', $add_port_attrs); ?>
+                <?php if ($dns_show_error('port', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dns_error_id($add_port_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dns_record_errors['port'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_dnsrecords.add', true), ['class' => 'btn btn-primary']); ?>
+            </div>
+        </div>
+        <?php $this->Form->end(); ?>
+    <?php } ?>
+</div>

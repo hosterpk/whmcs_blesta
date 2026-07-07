@@ -1,0 +1,162 @@
+<?php
+$dnssec_records = isset($dnssec_records) && is_array($dnssec_records) ? array_values($dnssec_records) : [];
+$dnssec_errors = isset($dnssec_errors) && is_array($dnssec_errors) ? $dnssec_errors : [];
+$dnssec_form_state = isset($dnssec_form_state) && is_array($dnssec_form_state) ? $dnssec_form_state : [];
+$dnssec_form_scope = (string) ($dnssec_form_state['scope'] ?? '');
+$dnssec_form_values = isset($dnssec_form_state['values']) && is_array($dnssec_form_state['values']) ? $dnssec_form_state['values'] : [];
+$dnssec_form_value = static function ($field, $default = '') use ($dnssec_form_values) {
+    return array_key_exists($field, $dnssec_form_values) ? $dnssec_form_values[$field] : $default;
+};
+$dnssec_show_error = static function ($field, $active) use ($dnssec_errors) {
+    return $active && !empty($dnssec_errors[$field]);
+};
+$dnssec_field_attrs = static function ($field, $field_id, $active, array $attrs = []) use ($dnssec_show_error) {
+    $attrs = array_merge(['id' => $field_id], $attrs);
+    if ($dnssec_show_error($field, $active)) {
+        $attrs['aria-describedby'] = $field_id . '_error';
+    }
+
+    return $attrs;
+};
+$dnssec_error_id = static function ($field_id) {
+    return $field_id . '_error';
+};
+$dnssec_alert_key = isset($dnssec_alert_key) ? (string) $dnssec_alert_key : 'Webnic.tab_dnssec.unavailable';
+$support_state = isset($support_state) ? (string) $support_state : 'unknown';
+$add_form_active = $dnssec_form_scope === 'add';
+$dnssec_algorithms = isset($dnssec_algorithms) && is_array($dnssec_algorithms) ? array_values($dnssec_algorithms) : [];
+$dnssec_digest_types = isset($dnssec_digest_types) && is_array($dnssec_digest_types) ? array_values($dnssec_digest_types) : [];
+$algorithm_options = [];
+foreach ($dnssec_algorithms as $algorithm) {
+    $algorithm = (int) $algorithm;
+    $algorithm_options[$algorithm] = $this->_('Webnic.tab_dnssec.algorithm.' . $algorithm, true);
+}
+$digest_type_options = [];
+foreach ($dnssec_digest_types as $digest_type) {
+    $digest_type = (int) $digest_type;
+    $digest_type_options[$digest_type] = $this->_('Webnic.tab_dnssec.digesttype.' . $digest_type, true);
+}
+?>
+<div class="webnic-dnssec">
+    <h3 class="h5"><?php $this->_('Webnic.tab_dnssec.heading'); ?></h3>
+    <p class="text-muted small"><?php $this->_('Webnic.tab_dnssec.help'); ?></p>
+
+    <?php if (empty($manageable) && $support_state === 'unsupported') { ?>
+        <div class="alert alert-warning">
+            <strong><?php $this->_('Webnic.tab_dnssec.unsupported'); ?></strong>
+            <div class="small mt-1"><?php $this->_('Webnic.tab_dnssec.unsupported_reason'); ?></div>
+        </div>
+    <?php } elseif (empty($manageable)) { ?>
+        <div class="alert alert-warning">
+            <?php $this->_($dnssec_alert_key); ?>
+        </div>
+    <?php } elseif (!empty($empty_records)) { ?>
+        <div class="alert alert-info">
+            <?php $this->_('Webnic.tab_dnssec.empty'); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($dnssec_errors['_general']) || !empty($dnssec_errors['records'])) { ?>
+        <div class="alert alert-danger">
+            <?php echo $this->Html->safe(implode(' ', array_merge(
+                $dnssec_errors['_general'] ?? [],
+                $dnssec_errors['records'] ?? []
+            ))); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable) && !empty($dnssec_records)) { ?>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th><?php $this->_('Webnic.tab_dnssec.column.keytag'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnssec.column.algorithm'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnssec.column.digesttype'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnssec.column.digest'); ?></th>
+                        <th><?php $this->_('Webnic.tab_dnssec.column.actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($dnssec_records as $record) { ?>
+                        <?php $record_token = (string) ($record['record_token'] ?? ''); ?>
+                        <tr class="webnic-dnssec-record">
+                            <td><?php echo $this->Html->safe($record['keyTag'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($record['algorithm'] ?? ''); ?></td>
+                            <td><?php echo $this->Html->safe($record['digestType'] ?? ''); ?></td>
+                            <td class="text-break"><code><?php echo $this->Html->safe($record['digest'] ?? ''); ?></code></td>
+                            <td class="text-nowrap">
+                                <?php
+                                $confirm_action = 'delete';
+                                $confirm_variant = 'delete';
+                                $confirm_message_key = 'Webnic.tab_dnssec.confirm_remove';
+                                $confirm_btn_key = 'Webnic.tab_dnssec.remove';
+                                $confirm_btn_class = 'btn btn-sm btn-outline-danger';
+                                $confirm_icon = '';
+                                $extra_hiddens = ['record_token' => $record_token];
+                                $confirm_after_button_html = '';
+                                include dirname(__DIR__) . DIRECTORY_SEPARATOR . 'confirm_modal.pdt';
+                                ?>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable)) { ?>
+        <?php
+        $keytag_id = 'webnic_dnssec_keytag';
+        $algorithm_id = 'webnic_dnssec_algorithm';
+        $digesttype_id = 'webnic_dnssec_digesttype';
+        $digest_id = 'webnic_dnssec_digest';
+        $keytag_attrs = $dnssec_field_attrs('keytag', $keytag_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnssec.placeholder.keytag', true),
+        ]);
+        $algorithm_attrs = $dnssec_field_attrs('algorithm', $algorithm_id, $add_form_active, ['class' => 'form-select']);
+        $digesttype_attrs = $dnssec_field_attrs('digesttype', $digesttype_id, $add_form_active, ['class' => 'form-select']);
+        $digest_attrs = $dnssec_field_attrs('digest', $digest_id, $add_form_active, [
+            'class' => 'form-control',
+            'placeholder' => $this->_('Webnic.tab_dnssec.placeholder.digest', true),
+        ]);
+        ?>
+        <?php $this->Form->create(); ?>
+        <?php $this->Form->fieldHidden('action', 'add'); ?>
+        <div class="row g-3 mt-2 webnic-dnssec-add">
+            <div class="col-md-2">
+                <label class="form-label" for="webnic_dnssec_keytag"><?php $this->_('Webnic.tab_dnssec.field.keytag'); ?></label>
+                <?php $this->Form->fieldText('keytag', $add_form_active ? $dnssec_form_value('keytag') : '', $keytag_attrs); ?>
+                <?php if ($dnssec_show_error('keytag', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dnssec_error_id($keytag_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dnssec_errors['keytag'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="webnic_dnssec_algorithm"><?php $this->_('Webnic.tab_dnssec.field.algorithm'); ?></label>
+                <?php $this->Form->fieldSelect('algorithm', $algorithm_options, $add_form_active ? $dnssec_form_value('algorithm', $dnssec_algorithms[0] ?? '') : ($dnssec_algorithms[0] ?? ''), $algorithm_attrs); ?>
+                <?php if ($dnssec_show_error('algorithm', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dnssec_error_id($algorithm_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dnssec_errors['algorithm'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="webnic_dnssec_digesttype"><?php $this->_('Webnic.tab_dnssec.field.digesttype'); ?></label>
+                <?php $this->Form->fieldSelect('digesttype', $digest_type_options, $add_form_active ? $dnssec_form_value('digesttype', $dnssec_digest_types[0] ?? '') : ($dnssec_digest_types[0] ?? ''), $digesttype_attrs); ?>
+                <?php if ($dnssec_show_error('digesttype', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dnssec_error_id($digesttype_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dnssec_errors['digesttype'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="webnic_dnssec_digest"><?php $this->_('Webnic.tab_dnssec.field.digest'); ?></label>
+                <?php $this->Form->fieldText('digest', $add_form_active ? $dnssec_form_value('digest') : '', $digest_attrs); ?>
+                <?php if ($dnssec_show_error('digest', $add_form_active)) { ?>
+                    <div id="<?php echo $this->Html->safe($dnssec_error_id($digest_id)); ?>" class="text-danger small mt-1"><?php echo $this->Html->safe(implode(' ', $dnssec_errors['digest'])); ?></div>
+                <?php } ?>
+            </div>
+            <div class="col-12">
+                <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_dnssec.add', true), ['class' => 'btn btn-primary']); ?>
+            </div>
+        </div>
+        <?php $this->Form->end(); ?>
+    <?php } ?>
+</div>

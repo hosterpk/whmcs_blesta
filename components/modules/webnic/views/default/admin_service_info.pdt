@@ -1,0 +1,35 @@
+<?php
+/**
+ * Admin service-info lifecycle chrome (Story 3.4a, AC2/AC4/AC6).
+ *
+ * Same server-rendered-from-state contract as the client variant, but the failed
+ * callout renders its admin variant ($is_admin=true): the masked tracking record plus
+ * a recovery action linking to the admin Recovery tab. The full INV-9 trace + the
+ * retry/finalise/resolve POST buttons live in that tab (tabRecovery), not here.
+ *
+ * @var string $alias One of WebnicStatus::PENDING|FAILED|SUSPENDED|CANCELLED
+ * @var string $banner_key Age-softened pending-banner copy key
+ * @var string $suspended_reason_key Suspended reason copy key
+ * @var stdClass|null $order Masked tracking record
+ * @var bool $is_admin Always true here (admin variant)
+ * @var string $recovery_url Admin Recovery-tab URL (or '' to show the hint)
+ * @var array|null $summary Active-domain summary cells (WN-5-1), or null
+ * @var bool $summary_unavailable True when the active summary's live read failed (WN-5-1)
+ * @var bool $show_suspended_reason True only for locally suspended services
+ */
+$webnic_dir = __DIR__ . DIRECTORY_SEPARATOR;
+?>
+<div class="webnic-service-info my-2">
+    <div class="mb-2"><?php include $webnic_dir . 'status_badge.pdt'; ?></div>
+    <?php
+    if (!empty($summary) || !empty($summary_unavailable)) {
+        include $webnic_dir . 'service_summary.pdt';
+    } elseif ($alias === 'pending' && !empty($order)) {
+        include $webnic_dir . 'pending_banner.pdt';
+    } elseif ($alias === 'failed') {
+        include $webnic_dir . 'failed_callout.pdt';
+    } elseif ($alias === 'suspended' && !empty($show_suspended_reason)) {
+        include $webnic_dir . 'suspended_reason.pdt';
+    }
+    ?>
+</div>

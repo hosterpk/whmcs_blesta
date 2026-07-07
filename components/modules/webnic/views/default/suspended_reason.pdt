@@ -1,0 +1,9 @@
+<?php
+/**
+ * Suspended-service reason line (WN-4-5 / AC2).
+ *
+ * @var string $suspended_reason_key Language key for the visible reason line
+ */
+$key = isset($suspended_reason_key) ? $suspended_reason_key : 'Webnic.service_info.suspended_reason';
+?>
+<div class="small text-muted mb-0"><?php $this->_($key); ?></div>

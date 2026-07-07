@@ -1,0 +1,67 @@
+<?php
+/**
+ * Shared Blesta confirm-modal trigger form for WebNIC gated actions.
+ *
+ * The Blesta theme JS wires modal-confirm-{delete|warning|success} triggers
+ * from the button class and reads the consequence copy from data-confirm-message.
+ *
+ * @var string $confirm_action Hidden action value
+ * @var string $confirm_variant Modal variant suffix
+ * @var string $confirm_message_key Language key for consequence copy
+ * @var string $confirm_btn_key Language key for button label
+ * @var string $confirm_btn_class Button classes before modal-confirm-* suffix
+ * @var string|null $confirm_icon Optional Bootstrap icon class
+ * @var array|null $extra_hiddens Optional hidden fields
+ * @var array|null $confirm_trigger_attrs Optional scalar attributes for the trigger button
+ * @var string|null $confirm_after_button_html Optional already-escaped HTML after the button
+ */
+$confirm_action = isset($confirm_action) ? (string) $confirm_action : '';
+$confirm_variant = isset($confirm_variant) && in_array((string) $confirm_variant, ['delete', 'warning', 'success'], true)
+    ? (string) $confirm_variant
+    : 'warning';
+$confirm_message_key = isset($confirm_message_key) ? (string) $confirm_message_key : '';
+$confirm_btn_key = isset($confirm_btn_key) ? (string) $confirm_btn_key : '';
+$confirm_btn_class = isset($confirm_btn_class) ? (string) $confirm_btn_class : 'btn btn-secondary btn-sm';
+$confirm_icon = isset($confirm_icon) ? (string) $confirm_icon : '';
+$extra_hiddens = isset($extra_hiddens) && is_array($extra_hiddens) ? $extra_hiddens : [];
+$confirm_trigger_attrs = isset($confirm_trigger_attrs) && is_array($confirm_trigger_attrs) ? $confirm_trigger_attrs : [];
+$confirm_after_button_html = isset($confirm_after_button_html) ? (string) $confirm_after_button_html : '';
+// Reusable primitive: render nothing rather than a blank/half-wired confirm form when a
+// future caller omits a required var (an omitted action/key would otherwise POST a blank op).
+if ($confirm_action === '' || $confirm_message_key === '' || $confirm_btn_key === '') {
+    return;
+}
+?>
+<?php echo $this->Form->create(); ?>
+    <?php $this->Form->fieldHidden('action', $confirm_action); ?>
+    <?php foreach ($extra_hiddens as $hidden_key => $hidden_value) { ?>
+        <?php if (is_scalar($hidden_value)) { $this->Form->fieldHidden((string) $hidden_key, (string) $hidden_value); } ?>
+    <?php } ?>
+    <button type="button" class="<?php echo $this->Html->safe($confirm_btn_class); ?> modal-confirm-<?php echo $this->Html->safe($confirm_variant); ?>"
+        data-confirm-message="<?php echo $this->Html->safe($this->_($confirm_message_key, true)); ?>"
+        <?php foreach ($confirm_trigger_attrs as $attr_name => $attr_value) { ?>
+            <?php if (is_string($attr_name) && $attr_name !== '' && is_string($attr_value) && $attr_value !== '') { ?>
+                <?php echo $this->Html->safe($attr_name); ?>="<?php echo $this->Html->safe($attr_value); ?>"
+            <?php } ?>
+        <?php } ?>>
+        <?php if ($confirm_icon !== '') { ?><i class="bi <?php echo $this->Html->safe($confirm_icon); ?> me-1" aria-hidden="true"></i><?php } ?><?php echo $this->Html->safe($this->_($confirm_btn_key, true)); ?>
+    </button><?php echo $confirm_after_button_html; ?>
+<?php echo $this->Form->end(); ?>
+<?php
+// The partial shares the including view's scope; clear caller vars so a second include
+// on the same page cannot silently inherit this include's values via isset() defaults.
+unset(
+    $confirm_action,
+    $confirm_variant,
+    $confirm_message_key,
+    $confirm_btn_key,
+    $confirm_btn_class,
+    $confirm_icon,
+    $extra_hiddens,
+    $confirm_trigger_attrs,
+    $confirm_after_button_html,
+    $attr_name,
+    $attr_value,
+    $hidden_key,
+    $hidden_value
+);

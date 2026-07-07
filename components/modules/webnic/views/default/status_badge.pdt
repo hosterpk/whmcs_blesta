@@ -1,0 +1,23 @@
+<?php
+/**
+ * Shared WebNIC status-badge partial.
+ *
+ * Renders one lifecycle status as a Blesta pill carrying icon + text + color
+ * together, never color alone. Before fetch(), the consumer must set $alias to a
+ * WebnicStatus::* value, load the Html helper on the View, and ensure the
+ * `webnic` language domain is loaded (Language::loadLang('webnic', ...)) so
+ * $this->_($label_key) resolves to text instead of echoing the raw key. The
+ * defensive self-load keeps the partial from fataling when a caller has not
+ * preloaded the class.
+ *
+ * @var string $alias One of WebnicStatus::ALIASES
+ */
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..'
+    . DIRECTORY_SEPARATOR . 'apis' . DIRECTORY_SEPARATOR . 'webnic_status.php';
+
+$badge = WebnicStatus::presentation(isset($alias) ? $alias : WebnicStatus::PENDING);
+?>
+<span class="badge rounded-pill <?php echo $this->Html->safe($badge['class']); ?>">
+    <i class="bi <?php echo $this->Html->safe($badge['icon']); ?>" aria-hidden="true"></i>
+    <?php $this->_($badge['label_key']); ?>
+</span>

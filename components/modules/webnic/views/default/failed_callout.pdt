@@ -1,0 +1,61 @@
+<?php
+/**
+ * Failed-order callout (Story 3.4a, AC4). Role-gated by $is_admin.
+ *
+ *  - Client variant: a dead-end support callout (red, exclamation-triangle) with NO
+ *    retry control — client retry is forbidden by design (prevents client-triggered
+ *    duplicate charges).
+ *  - Admin variant: the same callout PLUS the masked tracking record (id/state/
+ *    attempts/created/last_polled/give_up_at — webnic_order_id never rendered, INV-7)
+ *    and a btn-danger recovery action linking to the admin Recovery tab (the POST
+ *    surface; an inline POST form here is rejected — Dev Notes §E).
+ *
+ * Native Blesta bootstrap-5 + Bootstrap-Icons, zero new CSS/hues (Dev Notes §J).
+ *
+ * @var bool $is_admin   @var stdClass $order   @var string $recovery_url
+ */
+$webnic_is_admin = isset($is_admin) ? (bool) $is_admin : false;
+$webnic_empty = $this->_('Webnic.failed_order.empty', true);
+$webnic_value = function ($value) use ($webnic_empty) {
+    return ($value === null || $value === '') ? $webnic_empty : $value;
+};
+?>
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading h6 mb-1">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+        <?php $this->_('Webnic.failed_order.heading'); ?>
+    </h4>
+    <p class="mb-0"><?php $this->_('Webnic.failed_order.client_body'); ?></p>
+</div>
+<?php if ($webnic_is_admin && isset($order)) { ?>
+<div class="card border-danger mt-2">
+    <div class="card-header bg-danger text-white py-1">
+        <i class="bi bi-clipboard-data me-1" aria-hidden="true"></i>
+        <?php $this->_('Webnic.failed_order.tracking_title'); ?>
+    </div>
+    <div class="card-body p-2">
+        <dl class="row small mb-0">
+            <dt class="col-sm-4"><?php $this->_('Webnic.failed_order.field.id'); ?></dt>
+            <dd class="col-sm-8"><?php echo $this->Html->safe($webnic_value($order->id)); ?></dd>
+            <dt class="col-sm-4"><?php $this->_('Webnic.failed_order.field.state'); ?></dt>
+            <dd class="col-sm-8"><?php echo $this->Html->safe($webnic_value($order->state)); ?></dd>
+            <dt class="col-sm-4"><?php $this->_('Webnic.failed_order.field.attempts'); ?></dt>
+            <dd class="col-sm-8"><?php echo $this->Html->safe($webnic_value($order->attempts)); ?></dd>
+            <dt class="col-sm-4"><?php $this->_('Webnic.failed_order.field.created'); ?></dt>
+            <dd class="col-sm-8"><?php echo $this->Html->safe($webnic_value($order->created)); ?></dd>
+            <dt class="col-sm-4"><?php $this->_('Webnic.failed_order.field.last_polled'); ?></dt>
+            <dd class="col-sm-8"><?php echo $this->Html->safe($webnic_value($order->last_polled)); ?></dd>
+            <dt class="col-sm-4"><?php $this->_('Webnic.failed_order.field.give_up_at'); ?></dt>
+            <dd class="col-sm-8"><?php echo $this->Html->safe($webnic_value($order->give_up_at)); ?></dd>
+        </dl>
+        <?php if (!empty($recovery_url)) { ?>
+        <a href="<?php echo $this->Html->safe($recovery_url); ?>" class="btn btn-danger btn-sm mt-2">
+            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+            <?php $this->_('Webnic.failed_order.recover_btn'); ?>
+        </a>
+        <?php } else { ?>
+        <p class="text-muted small mb-0 mt-2"><?php $this->_('Webnic.failed_order.recover_hint'); ?></p>
+        <?php } ?>
+    </div>
+</div>
+<?php } ?>

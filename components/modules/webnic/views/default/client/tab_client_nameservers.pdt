@@ -1,0 +1,63 @@
+<?php
+$nameservers = isset($nameservers) && is_array($nameservers) ? array_values($nameservers) : [];
+$nameserver_errors = isset($nameserver_errors) && is_array($nameserver_errors) ? $nameserver_errors : [];
+$nameserver_alert_key = isset($nameserver_alert_key) ? (string) $nameserver_alert_key : 'Webnic.tab_nameservers.unavailable';
+$this->Form->create();
+?>
+<div class="webnic-nameservers">
+    <h3 class="h5"><?php $this->_('Webnic.tab_nameservers.heading'); ?></h3>
+    <p class="text-muted small"><?php $this->_('Webnic.tab_nameservers.help'); ?></p>
+
+    <?php if (empty($manageable)) { ?>
+        <div class="alert alert-warning">
+            <?php $this->_($nameserver_alert_key); ?>
+        </div>
+    <?php } elseif (!empty($empty_nameservers)) { ?>
+        <div class="alert alert-info">
+            <?php $this->_('Webnic.tab_nameservers.empty'); ?>
+        </div>
+    <?php } ?>
+
+    <div class="row g-3">
+        <?php for ($i = 1; $i <= 5; $i++) {
+            $field = 'ns' . $i;
+            $error_id = 'webnic_' . $field . '_error';
+            $attrs = [
+                'id' => 'webnic_' . $field,
+                'class' => 'form-control',
+                'placeholder' => $this->_('Webnic.tab_nameservers.placeholder.ns', true, $i),
+            ];
+            if (!empty($nameserver_errors[$field])) {
+                $attrs['aria-describedby'] = $error_id;
+            }
+            if (empty($manageable)) {
+                $attrs['disabled'] = 'disabled';
+            }
+            ?>
+            <div class="col-md-6 webnic-nameserver-field" data-field="<?php echo $this->Html->safe($field); ?>">
+                <label class="form-label" for="<?php echo $this->Html->safe('webnic_' . $field); ?>">
+                    <?php echo $this->Html->safe($this->_('Webnic.tab_nameservers.field.ns', true, $i)); ?>
+                </label>
+                <?php $this->Form->fieldText($field, $nameservers[$i - 1] ?? '', $attrs); ?>
+                <?php if (!empty($nameserver_errors[$field])) { ?>
+                    <div id="<?php echo $this->Html->safe($error_id); ?>" class="text-danger small mt-1" data-field="<?php echo $this->Html->safe($field); ?>">
+                        <?php echo $this->Html->safe(implode(' ', $nameserver_errors[$field])); ?>
+                    </div>
+                <?php } ?>
+            </div>
+        <?php } ?>
+    </div>
+
+    <?php if (!empty($nameserver_errors['_general'])) { ?>
+        <div class="alert alert-danger mt-3">
+            <?php echo $this->Html->safe(implode(' ', $nameserver_errors['_general'])); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable)) { ?>
+        <div class="d-flex justify-content-end mt-3">
+            <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_nameservers.save', true), ['class' => 'btn btn-primary']); ?>
+        </div>
+    <?php } ?>
+</div>
+<?php $this->Form->end(); ?>

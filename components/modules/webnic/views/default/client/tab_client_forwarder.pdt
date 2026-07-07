@@ -1,0 +1,2 @@
+<?php
+include dirname(__DIR__) . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'tab_forwarder.pdt';

@@ -1,0 +1,37 @@
+<?php
+/**
+ * Resend verification email tab (WN-4-2, FR22 / EXPERIENCE.md Flow 2).
+ *
+ * The ONE allowed lifecycle action while a transfer/registration is awaiting verification
+ * (decision #8): the transfer pending banner + status badge atop a single inline resend
+ * button. Single-click, NO confirm modal — resend is safe/reversible, so the button is
+ * btn-primary, NOT btn-danger (EXPERIENCE.md L120 / DESIGN.md component table). Rendered on
+ * BOTH the client and admin service surfaces by tabResendVerification. The inline confirmation
+ * ("Transfer email resent.") is set via setMessage() and rendered above this view by the
+ * service-tab dispatch. Native Blesta bootstrap-5 + Bootstrap-Icons, zero new CSS (Dev Notes §J).
+ *
+ * @var string|null $alias Current rendered status alias (expected PENDING)
+ * @var string $banner_key Transfer-pending banner copy key
+ */
+$webnic_dir = __DIR__ . DIRECTORY_SEPARATOR;
+if (!isset($banner_key) || $banner_key === '') {
+    $banner_key = 'Webnic.service_info.transfer_pending_banner';
+}
+?>
+<div class="webnic-tab-resend my-2">
+    <h3 class="h5"><?php $this->_('Webnic.tab_resend.heading'); ?></h3>
+
+    <?php if (isset($alias) && $alias !== null) { ?>
+    <div class="mb-2"><?php include $webnic_dir . 'status_badge.pdt'; ?></div>
+    <?php } ?>
+
+    <?php include $webnic_dir . 'pending_banner.pdt'; ?>
+
+    <p class="text-muted small"><?php $this->_('Webnic.tab_resend.help'); ?></p>
+
+    <?php echo $this->Form->create(); ?>
+        <button type="submit" name="action" value="resend" class="btn btn-primary btn-sm">
+            <i class="bi bi-envelope me-1" aria-hidden="true"></i><?php $this->_('Webnic.tab_resend.btn'); ?>
+        </button>
+    <?php echo $this->Form->end(); ?>
+</div>

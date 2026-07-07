@@ -1,0 +1,56 @@
+<?php
+/**
+ * Active-domain summary partial (WN-5-1, FR36/AC1/AC5).
+ *
+ * Shared by admin_service_info.pdt and client_service_info.pdt and included AFTER the
+ * status badge: the badge (rendered by status_badge.pdt from the live info().status) is
+ * the status cell; this partial adds the registration/expiry dates, a registrar-lock pill,
+ * a WHOIS-privacy pill, and the nameserver list. On a failed live read ($summary_unavailable)
+ * it renders the localized "temporarily unavailable" note instead — never a blank, never a
+ * fatal (AC5). All copy comes from the webnic language domain; the registrar emits native
+ * Bootstrap classes (Dev Notes §J), not the UI/UX shim. INV-7: only the AC1 cells are shown —
+ * the raw info() payload (contactId/userId) is never carried here.
+ *
+ * @var array|null $summary Normalized summary cells (status_alias rendered by the badge), or null
+ * @var bool $summary_unavailable True when the live read failed (render the unavailable note)
+ */
+$empty = Language::_('Webnic.service_info.summary_empty', true);
+?>
+<?php if (!empty($summary) && is_array($summary)) { ?>
+<div class="webnic-domain-summary mt-2">
+    <h4 class="h6 mb-2"><?php $this->_('Webnic.service_info.summary_heading'); ?></h4>
+    <dl class="row mb-2">
+        <dt class="col-sm-4"><?php $this->_('Webnic.service_info.summary_registered_on'); ?></dt>
+        <dd class="col-sm-8"><?php echo $this->Html->safe($summary['registration'] !== '' ? $summary['registration'] : $empty); ?></dd>
+        <dt class="col-sm-4"><?php $this->_('Webnic.service_info.summary_expires_on'); ?></dt>
+        <dd class="col-sm-8"><?php echo $this->Html->safe($summary['expiry'] !== '' ? $summary['expiry'] : $empty); ?></dd>
+    </dl>
+    <div class="webnic-domain-pills mb-2">
+        <span class="badge rounded-pill <?php echo $summary['locked'] ? 'text-bg-secondary' : 'text-bg-light'; ?> me-1">
+            <i class="bi <?php echo $summary['locked'] ? 'bi-lock-fill' : 'bi-unlock'; ?>" aria-hidden="true"></i>
+            <?php $this->_($summary['locked'] ? 'Webnic.service_info.summary_locked' : 'Webnic.service_info.summary_unlocked'); ?>
+        </span>
+        <span class="badge rounded-pill <?php echo $summary['whois_privacy'] ? 'text-bg-success' : 'text-bg-light'; ?>">
+            <i class="bi <?php echo $summary['whois_privacy'] ? 'bi-shield-fill-check' : 'bi-shield'; ?>" aria-hidden="true"></i>
+            <?php $this->_($summary['whois_privacy'] ? 'Webnic.service_info.summary_privacy_on' : 'Webnic.service_info.summary_privacy_off'); ?>
+        </span>
+    </div>
+    <div class="webnic-domain-nameservers">
+        <span class="fw-bold"><?php $this->_('Webnic.service_info.summary_nameservers'); ?></span>
+        <?php if (!empty($summary['nameservers']) && is_array($summary['nameservers'])) { ?>
+        <ul class="list-unstyled mb-0">
+            <?php foreach ($summary['nameservers'] as $nameserver) { ?>
+            <li><i class="bi bi-server me-1" aria-hidden="true"></i><?php echo $this->Html->safe($nameserver); ?></li>
+            <?php } ?>
+        </ul>
+        <?php } else { ?>
+        <span class="text-muted"><?php echo $this->Html->safe($empty); ?></span>
+        <?php } ?>
+    </div>
+</div>
+<?php } elseif (!empty($summary_unavailable)) { ?>
+<div class="alert alert-secondary mt-2" role="alert">
+    <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+    <?php $this->_('Webnic.service_info.summary_unavailable'); ?>
+</div>
+<?php } ?>

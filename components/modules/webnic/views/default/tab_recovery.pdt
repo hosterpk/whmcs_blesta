@@ -1,0 +1,118 @@
+<?php
+/**
+ * Admin failed-order Recovery tab (Story 3.4a, AC4/AC5/AC6).
+ *
+ * The POST surface for money-safe recovery: the masked tracking record, the correlated
+ * INV-9 structured-log trace, and the retry/finalise/resolve actions. Buttons show only
+ * while the order is still failed; once recovered the tab re-renders the new state and
+ * the trace. Native Blesta bootstrap-5 + Bootstrap-Icons, zero new CSS (Dev Notes §J).
+ *
+ * @var stdClass|null $order Masked tracking record (no webnic_order_id — INV-7)
+ * @var string|null $alias Current rendered status alias
+ * @var bool $is_failed True while the order is still recoverable
+ * @var array $trace Newest-first correlated INV-9 trace entries (already scrubbed)
+ */
+$webnic_dir = __DIR__ . DIRECTORY_SEPARATOR;
+$webnic_empty = $this->_('Webnic.failed_order.empty', true);
+$webnic_value = function ($value) use ($webnic_empty) {
+    return ($value === null || $value === '') ? $webnic_empty : $value;
+};
+?>
+<div class="webnic-recovery my-2">
+    <h3 class="h5"><?php $this->_('Webnic.tab_recovery.heading'); ?></h3>
+
+    <?php if (isset($order)) { ?>
+    <div class="mb-2">
+        <?php if ($alias !== null) { include $webnic_dir . 'status_badge.pdt'; } ?>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header py-1">
+            <i class="bi bi-clipboard-data me-1" aria-hidden="true"></i>
+            <?php $this->_('Webnic.failed_order.tracking_title'); ?>
+        </div>
+        <div class="card-body p-2">
+            <dl class="row small mb-0">
+                <dt class="col-sm-3"><?php $this->_('Webnic.failed_order.field.id'); ?></dt>
+                <dd class="col-sm-9"><?php echo $this->Html->safe($webnic_value($order->id)); ?></dd>
+                <dt class="col-sm-3"><?php $this->_('Webnic.failed_order.field.state'); ?></dt>
+                <dd class="col-sm-9"><?php echo $this->Html->safe($webnic_value($order->state)); ?></dd>
+                <dt class="col-sm-3"><?php $this->_('Webnic.failed_order.field.attempts'); ?></dt>
+                <dd class="col-sm-9"><?php echo $this->Html->safe($webnic_value($order->attempts)); ?></dd>
+                <dt class="col-sm-3"><?php $this->_('Webnic.failed_order.field.created'); ?></dt>
+                <dd class="col-sm-9"><?php echo $this->Html->safe($webnic_value($order->created)); ?></dd>
+                <dt class="col-sm-3"><?php $this->_('Webnic.failed_order.field.last_polled'); ?></dt>
+                <dd class="col-sm-9"><?php echo $this->Html->safe($webnic_value($order->last_polled)); ?></dd>
+                <dt class="col-sm-3"><?php $this->_('Webnic.failed_order.field.give_up_at'); ?></dt>
+                <dd class="col-sm-9"><?php echo $this->Html->safe($webnic_value($order->give_up_at)); ?></dd>
+            </dl>
+        </div>
+    </div>
+    <?php } else { ?>
+    <div class="alert alert-secondary"><?php $this->_('Webnic.tab_recovery.no_order'); ?></div>
+    <?php } ?>
+
+    <?php if ($is_failed) { ?>
+    <div class="card border-danger mb-3">
+        <div class="card-header bg-danger text-white py-1"><?php $this->_('Webnic.tab_recovery.actions_title'); ?></div>
+        <div class="card-body p-2">
+            <p class="small text-muted"><?php $this->_('Webnic.tab_recovery.actions_help'); ?></p>
+            <?php echo $this->Form->create(); ?>
+                <button type="submit" name="action" value="retry" class="btn btn-danger btn-sm me-1 mb-1">
+                    <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i><?php $this->_('Webnic.tab_recovery.btn_retry'); ?>
+                </button>
+                <button type="submit" name="action" value="finalise" class="btn btn-danger btn-sm me-1 mb-1">
+                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i><?php $this->_('Webnic.tab_recovery.btn_finalise'); ?>
+                </button>
+                <button type="submit" name="action" value="resolve" class="btn btn-outline-danger btn-sm mb-1">
+                    <i class="bi bi-x-octagon me-1" aria-hidden="true"></i><?php $this->_('Webnic.tab_recovery.btn_resolve'); ?>
+                </button>
+            <?php echo $this->Form->end(); ?>
+        </div>
+    </div>
+    <?php } ?>
+
+    <div class="card">
+        <div class="card-header py-1">
+            <i class="bi bi-list-columns-reverse me-1" aria-hidden="true"></i>
+            <?php $this->_('Webnic.tab_recovery.trace_title'); ?>
+        </div>
+        <div class="card-body p-2">
+            <?php if (empty($trace)) { ?>
+            <p class="text-muted small mb-0"><?php $this->_('Webnic.tab_recovery.trace_empty'); ?></p>
+            <?php } else { ?>
+            <div class="table-responsive">
+                <table class="table table-sm small mb-0">
+                    <thead>
+                        <tr>
+                            <th><?php $this->_('Webnic.tab_recovery.trace.when'); ?></th>
+                            <th><?php $this->_('Webnic.tab_recovery.trace.command'); ?></th>
+                            <th><?php $this->_('Webnic.tab_recovery.trace.transition'); ?></th>
+                            <th><?php $this->_('Webnic.tab_recovery.trace.class'); ?></th>
+                            <th><?php $this->_('Webnic.tab_recovery.trace.message'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($trace as $entry) {
+                            $rec = is_object($entry) ? ($entry->record ?? null) : null;
+                            $from = is_array($rec) ? ($rec['from_state'] ?? '') : '';
+                            $to = is_array($rec) ? ($rec['to_state'] ?? '') : '';
+                            $cmd = is_array($rec) ? ($rec['command'] ?? '') : '';
+                            $class = is_array($rec) ? ($rec['error_class'] ?? '') : '';
+                            $msg = is_array($rec) ? ($rec['message'] ?? '') : '';
+                        ?>
+                        <tr>
+                            <td><?php echo $this->Html->safe($webnic_value($entry->date_added ?? null)); ?></td>
+                            <td><?php echo $this->Html->safe($webnic_value($cmd)); ?></td>
+                            <td><?php echo $this->Html->safe(($from === '' && $to === '') ? $webnic_empty : ($from . ' → ' . $to)); ?></td>
+                            <td><?php echo $this->Html->safe($webnic_value($class)); ?></td>
+                            <td><?php echo $this->Html->safe($webnic_value($msg)); ?></td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php } ?>
+        </div>
+    </div>
+</div>

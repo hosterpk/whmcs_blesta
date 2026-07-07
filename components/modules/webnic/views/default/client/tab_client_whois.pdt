@@ -1,0 +1,93 @@
+<?php
+$fields = ['first_name', 'last_name', 'organization', 'address1', 'address2', 'city', 'state', 'zip', 'country', 'phone', 'email'];
+$contact_errors = isset($contact_errors) && is_array($contact_errors) ? $contact_errors : [];
+$this->Form->create();
+?>
+<div class="webnic-whois">
+    <h3 class="h5"><?php $this->_('Webnic.tab_whois.heading'); ?></h3>
+    <p class="text-muted small"><?php $this->_('Webnic.tab_whois.help'); ?></p>
+
+    <?php if (empty($manageable)) { ?>
+        <div class="alert alert-warning">
+            <?php $this->_('Webnic.tab_whois.unavailable'); ?>
+        </div>
+    <?php } ?>
+
+    <?php foreach ($roles as $role) {
+        $contact = $contacts[$role] ?? ['role' => $role, 'editable' => false, 'external_id' => ''];
+        $disabled = empty($manageable) || empty($contact['editable']);
+        ?>
+        <section class="webnic-whois-role mb-4" data-role="<?php echo $this->Html->safe($role); ?>">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <h4 class="h6 mb-2"><?php $this->_('Webnic.tab_whois.role.' . $role); ?></h4>
+                <?php if ($disabled) { ?>
+                    <span class="badge text-bg-secondary"><?php $this->_('Webnic.tab_whois.read_only'); ?></span>
+                <?php } ?>
+            </div>
+
+            <?php if (!empty($contact['unavailable'])) { ?>
+                <div class="alert alert-secondary small">
+                    <?php echo $this->Html->safe($contact['error'] ?? $this->_('Webnic.!error.contact_unavailable', true)); ?>
+                </div>
+            <?php } ?>
+            <?php if (!empty($contact['shared_handle'])) { ?>
+                <div class="alert alert-info small">
+                    <?php echo $this->Html->safe(Language::_(
+                        'Webnic.tab_whois.shared_contact',
+                        true,
+                        $contact['external_id'] ?? '',
+                        (string) ($contact['shared_count'] ?? 0)
+                    )); ?>
+                </div>
+            <?php } ?>
+
+            <?php if (!$disabled) {
+                $this->Form->fieldHidden('contacts[' . $role . '][external_id]', $contact['external_id'] ?? '');
+                $this->Form->fieldHidden('contacts[' . $role . '][editable]', '1');
+            } ?>
+            <div class="row g-3">
+                <?php foreach ($fields as $field) {
+                    $field_id = 'contacts_' . $role . '_' . $field;
+                    $error_key = 'contacts.' . $role . '.' . $field;
+                    $error_id = $field_id . '_error';
+                    $attrs = ['id' => $field_id, 'class' => 'form-control'];
+                    if (!empty($contact_errors[$error_key])) {
+                        $attrs['aria-describedby'] = $error_id;
+                    }
+                    if ($disabled) {
+                        $attrs['disabled'] = 'disabled';
+                    }
+                    ?>
+                    <div class="col-md-6">
+                        <label class="form-label" for="<?php echo $this->Html->safe($field_id); ?>">
+                            <?php $this->_('Webnic.tab_whois.field.' . $field); ?>
+                        </label>
+                        <?php $this->Form->fieldText(
+                            'contacts[' . $role . '][' . $field . ']',
+                            $contact[$field] ?? '',
+                            $attrs
+                        ); ?>
+                        <?php if (!empty($contact_errors[$error_key])) { ?>
+                            <div id="<?php echo $this->Html->safe($error_id); ?>" class="text-danger small mt-1">
+                                <?php echo $this->Html->safe(implode(' ', $contact_errors[$error_key])); ?>
+                            </div>
+                        <?php } ?>
+                    </div>
+                <?php } ?>
+            </div>
+        </section>
+    <?php } ?>
+
+    <?php if (!empty($contact_errors['_general'])) { ?>
+        <div class="alert alert-danger">
+            <?php echo $this->Html->safe(implode(' ', $contact_errors['_general'])); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($manageable)) { ?>
+        <div class="d-flex justify-content-end">
+            <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_whois.save', true), ['class' => 'btn btn-primary']); ?>
+        </div>
+    <?php } ?>
+</div>
+<?php $this->Form->end(); ?>

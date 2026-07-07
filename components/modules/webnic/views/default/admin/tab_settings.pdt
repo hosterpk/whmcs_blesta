@@ -1,0 +1,171 @@
+<?php
+$settings_state = isset($settings_state) && is_array($settings_state) ? $settings_state : [];
+$settings_errors = isset($settings_errors) && is_array($settings_errors) ? $settings_errors : [];
+$settings_alert_key = isset($settings_alert_key) ? (string) $settings_alert_key : 'Webnic.tab_settings.unavailable';
+$settings_domain = isset($settings_domain) ? (string) $settings_domain : (string) ($settings_state['domain'] ?? '');
+$privacy = isset($settings_state['privacy']) && is_array($settings_state['privacy']) ? $settings_state['privacy'] : [];
+$privacy_state = (string) ($settings_state['privacy_state'] ?? ($privacy['state'] ?? 'unavailable'));
+$locked = !empty($settings_state['locked']);
+$whois_privacy = !empty($settings_state['whois_privacy']);
+$auto_renew_known = array_key_exists('auto_renew', $settings_state) && $settings_state['auto_renew'] !== null;
+$auto_renew = $auto_renew_known && !empty($settings_state['auto_renew']);
+$status_label_key = $locked ? 'Webnic.tab_settings.lock_on' : 'Webnic.tab_settings.lock_off';
+$auto_renew_label_key = $auto_renew ? 'Webnic.tab_settings.autorenew_on' : 'Webnic.tab_settings.autorenew_off';
+$confirm_modal_path = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'confirm_modal.pdt';
+$privacy_error_id = 'webnic_settings_privacy_error';
+$privacy_action_attrs = [];
+if (!empty($settings_errors['privacy'])) {
+    $privacy_action_attrs['aria-describedby'] = $privacy_error_id;
+}
+$privacy_enable_attrs = array_merge(['class' => 'btn btn-primary btn-sm'], $privacy_action_attrs);
+?>
+<div class="webnic-settings">
+    <h3 class="h5"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.heading', true)); ?></h3>
+    <p class="text-muted small"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.help', true)); ?></p>
+
+    <?php if (empty($manageable)) { ?>
+        <div class="alert alert-warning">
+            <?php echo $this->Html->safe($this->_($settings_alert_key, true)); ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!empty($settings_errors['_general']) || !empty($settings_errors['settings']) || !empty($settings_errors['action'])) { ?>
+        <div class="alert alert-danger">
+            <?php echo $this->Html->safe(implode(' ', array_merge(
+                $settings_errors['_general'] ?? [],
+                $settings_errors['settings'] ?? [],
+                $settings_errors['action'] ?? []
+            ))); ?>
+        </div>
+    <?php } ?>
+
+    <section class="webnic-settings-autorenew mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h4 class="h6 mb-1"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.autorenew_label', true)); ?></h4>
+                <div class="text-muted small"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.autorenew_sor_note', true)); ?></div>
+            </div>
+            <?php if ($auto_renew_known) { ?>
+                <span class="badge rounded-pill <?php echo $auto_renew ? 'text-bg-success' : 'text-bg-light'; ?>">
+                    <i class="bi <?php echo $auto_renew ? 'bi-check-circle' : 'bi-x-circle'; ?> me-1" aria-hidden="true"></i>
+                    <?php echo $this->Html->safe($this->_($auto_renew_label_key, true)); ?>
+                </span>
+            <?php } ?>
+        </div>
+    </section>
+
+    <section class="webnic-settings-lock mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h4 class="h6 mb-1"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.lock_heading', true)); ?></h4>
+                <div class="text-muted small">
+                    <?php echo $this->Html->safe($this->_($status_label_key, true)); ?>
+                    <?php if ($settings_domain !== '') { ?>
+                        <span class="ms-1"><?php echo $this->Html->safe($settings_domain); ?></span>
+                    <?php } ?>
+                </div>
+            </div>
+            <?php if (!empty($manageable)) { ?>
+                <?php if ($locked) { ?>
+                    <?php
+                    $confirm_action = 'unlock';
+                    $confirm_variant = 'warning';
+                    $confirm_message_key = 'Webnic.tab_settings.unlock_confirm';
+                    $confirm_btn_key = 'Webnic.tab_settings.lock_disable';
+                    $confirm_btn_class = 'btn btn-outline-warning btn-sm';
+                    $confirm_icon = '';
+                    $extra_hiddens = [];
+                    $confirm_after_button_html = '';
+                    include $confirm_modal_path;
+                    ?>
+                <?php } else { ?>
+                    <?php $this->Form->create(); ?>
+                    <?php $this->Form->fieldHidden('action', 'lock'); ?>
+                    <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_settings.lock_enable', true), ['class' => 'btn btn-primary btn-sm']); ?>
+                    <?php $this->Form->end(); ?>
+                <?php } ?>
+            <?php } ?>
+        </div>
+    </section>
+
+    <section class="webnic-settings-epp mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h4 class="h6 mb-1"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.epp_heading', true)); ?></h4>
+                <div class="text-muted small"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.epp_send_label', true)); ?></div>
+            </div>
+            <?php if (!empty($manageable)) { ?>
+                <div class="d-flex flex-wrap gap-2">
+                    <?php $this->Form->create(); ?>
+                    <?php $this->Form->fieldHidden('action', 'send_epp'); ?>
+                    <?php $this->Form->fieldSubmit('send', $this->_('Webnic.tab_settings.epp_send', true), ['class' => 'btn btn-primary btn-sm']); ?>
+                    <?php $this->Form->end(); ?>
+
+                    <?php if (!empty($is_admin)) { ?>
+                        <?php
+                        $confirm_action = 'reset_epp';
+                        $confirm_variant = 'delete';
+                        $confirm_message_key = 'Webnic.tab_settings.reset_epp_confirm';
+                        $confirm_btn_key = 'Webnic.tab_settings.epp_reset';
+                        $confirm_btn_class = 'btn btn-outline-danger btn-sm';
+                        $confirm_icon = '';
+                        $extra_hiddens = [];
+                        $confirm_after_button_html = '';
+                        include $confirm_modal_path;
+                        ?>
+                    <?php } ?>
+                </div>
+            <?php } ?>
+        </div>
+    </section>
+
+    <section class="webnic-settings-privacy">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h4 class="h6 mb-1"><?php echo $this->Html->safe($this->_('Webnic.tab_settings.privacy_heading', true)); ?></h4>
+                <?php if ($privacy_state === 'capable') { ?>
+                    <div class="text-muted small">
+                        <?php echo $this->Html->safe($this->_($whois_privacy ? 'Webnic.tab_settings.privacy_on' : 'Webnic.tab_settings.privacy_off', true)); ?>
+                    </div>
+                <?php } ?>
+            </div>
+            <?php if (!empty($manageable) && $privacy_state === 'capable') { ?>
+                <?php if ($whois_privacy) { ?>
+                    <?php
+                    $confirm_action = 'privacy_off';
+                    $confirm_variant = 'warning';
+                    $confirm_message_key = 'Webnic.tab_settings.disable_privacy_confirm';
+                    $confirm_btn_key = 'Webnic.tab_settings.privacy_disable';
+                    $confirm_btn_class = 'btn btn-outline-warning btn-sm';
+                    $confirm_icon = '';
+                    $extra_hiddens = [];
+                    $confirm_trigger_attrs = $privacy_action_attrs;
+                    $confirm_after_button_html = '';
+                    include $confirm_modal_path;
+                    ?>
+                <?php } else { ?>
+                    <?php $this->Form->create(); ?>
+                    <?php $this->Form->fieldHidden('action', 'privacy_on'); ?>
+                    <?php $this->Form->fieldSubmit('save', $this->_('Webnic.tab_settings.privacy_enable', true), $privacy_enable_attrs); ?>
+                    <?php $this->Form->end(); ?>
+                <?php } ?>
+            <?php } ?>
+        </div>
+
+        <?php if (!empty($manageable) && $privacy_state === 'not_capable') { ?>
+            <div class="alert alert-info mt-2 mb-0">
+                <?php echo $this->Html->safe($this->_('Webnic.tab_settings.privacy_not_capable', true)); ?>
+            </div>
+        <?php } elseif (!empty($manageable) && $privacy_state === 'unavailable') { ?>
+            <div class="alert alert-warning mt-2 mb-0">
+                <?php echo $this->Html->safe($this->_('Webnic.tab_settings.privacy_capability_unavailable', true)); ?>
+            </div>
+        <?php } ?>
+
+        <?php if (!empty($settings_errors['privacy'])) { ?>
+            <div id="<?php echo $this->Html->safe($privacy_error_id); ?>" class="text-danger small mt-2">
+                <?php echo $this->Html->safe(implode(' ', $settings_errors['privacy'])); ?>
+            </div>
+        <?php } ?>
+    </section>
+</div>

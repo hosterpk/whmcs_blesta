@@ -1,0 +1,55 @@
+<?php
+$environments = [
+    'ote' => $this->_('Webnic.row_meta.environment.ote', true),
+    'production' => $this->_('Webnic.row_meta.environment.production', true),
+];
+
+$this->Form->create(null, ['class' => 'disable-on-submit']);
+$this->Widget->create($this->_('Webnic.edit_row.box_title', true));
+?>
+
+<div class="mb-3">
+    <label for="username" class="form-label">
+        <?php $this->_('Webnic.row_meta.username'); ?>
+    </label>
+    <?php $this->Form->fieldText('username', $vars->username ?? null, [
+        'id' => 'username',
+        'class' => 'form-control',
+    ]); ?>
+</div>
+
+<div class="mb-3">
+    <label for="secret" class="form-label">
+        <?php $this->_('Webnic.row_meta.secret'); ?>
+    </label>
+    <?php $this->Form->fieldPassword('secret', [
+        'id' => 'secret',
+        'class' => 'form-control',
+        'aria-describedby' => 'secret_help secret_verify_help',
+    ]); ?>
+    <div id="secret_help" class="form-text"><?php $this->_('Webnic.row_meta.secret.help'); ?></div>
+    <div id="secret_verify_help" class="form-text"><?php $this->_('Webnic.row_meta.secret.verify_help'); ?></div>
+</div>
+
+<div class="mb-3">
+    <label for="environment" class="form-label">
+        <?php $this->_('Webnic.row_meta.environment'); ?>
+    </label>
+    <?php $this->Form->fieldSelect(
+        'environment',
+        $environments,
+        $vars->environment ?? 'production',
+        ['id' => 'environment', 'class' => 'form-select'],
+    ); ?>
+    <div class="form-text"><?php $this->_('Webnic.row_meta.environment.help'); ?></div>
+</div>
+
+<?php $this->Widget->footer(); ?>
+<div class="d-flex justify-content-end">
+    <?php $this->Form->fieldSubmit('save', $this->_('Webnic.edit_row.edit_btn', true), ['class' => 'btn btn-primary']); ?>
+</div>
+
+<?php
+$this->Widget->end();
+$this->Form->end();
+?>

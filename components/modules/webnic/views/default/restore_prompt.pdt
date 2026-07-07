@@ -1,0 +1,20 @@
+<?php
+/**
+ * Client restore price/guidance prompt (WN-4-4, UX-DR12).
+ *
+ * Non-mutating by design: there is no POST action in this partial because no paid
+ * client restore caller exists yet.
+ *
+ * @var array $restore_prompt Restore prompt data
+ */
+$price = isset($restore_prompt['price']) ? (float) $restore_prompt['price'] : 0.0;
+$currency = isset($restore_prompt['currency']) ? (string) $restore_prompt['currency'] : '';
+$price_label = trim($currency . ' ' . number_format($price, 2, '.', ''));
+?>
+<div class="webnic-restore-prompt alert alert-warning mt-2 mb-0" role="alert">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <strong><?php $this->_('Webnic.restore_prompt.heading'); ?></strong>
+        <span class="price-cell badge bg-light text-dark border"><?php echo $this->Html->safe($price_label); ?></span>
+    </div>
+    <div class="small mt-1"><?php $this->_('Webnic.restore_prompt.client_guidance'); ?></div>
+</div>

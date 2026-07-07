@@ -1,0 +1,25 @@
+<?php
+/**
+ * Blocked-state tab view (Story 3.4a, AC2 / UX-DR11.2 — block, not queue).
+ *
+ * Epic 4/5 lifecycle tabs render THIS instead of their controls while a register order
+ * is still in flight: the reusable pending banner paired with the inline "why it's
+ * unavailable" reason. Shipped here as the forward-binding contract; Epic 3 has no
+ * lifecycle tabs of its own, so no tab consumes it yet. A pending order BLOCKS
+ * lifecycle (it is never queued), and pending never reads as active.
+ *
+ * @var string $alias One of WebnicStatus::ALIASES (expected PENDING)
+ * @var string $banner_key Age-softened pending-banner copy key
+ */
+$webnic_dir = __DIR__ . DIRECTORY_SEPARATOR;
+if (!isset($alias)) {
+    $alias = 'pending';
+}
+?>
+<div class="webnic-tab-unavailable my-2">
+    <?php include $webnic_dir . 'pending_banner.pdt'; ?>
+    <p class="text-muted small mb-0">
+        <i class="bi bi-lock me-1" aria-hidden="true"></i>
+        <?php $this->_('Webnic.service_info.lifecycle_blocked'); ?>
+    </p>
+</div>

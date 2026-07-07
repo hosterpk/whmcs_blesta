@@ -1,0 +1,46 @@
+<?php
+/**
+ * Admin Delete Domain tab (WN-4-6, FR26 / UX-DR9).
+ *
+ * Explicit admin-only registry deletion surface. The POST is guarded by a confirm-modal
+ * and re-gated server-side before performDelete() can call WebNIC.
+ *
+ * @var string $domain Service domain
+ * @var bool $eligible Whether the action is currently available
+ * @var string|null $alias Current rendered status alias
+ */
+$webnic_dir = __DIR__ . DIRECTORY_SEPARATOR;
+?>
+<div class="webnic-tab-delete my-2">
+    <h3 class="h5"><?php $this->_('Webnic.tab_delete.heading'); ?></h3>
+
+    <?php if (isset($alias) && $alias !== null) { ?>
+    <div class="mb-2"><?php include $webnic_dir . 'status_badge.pdt'; ?></div>
+    <?php } ?>
+
+    <?php if (empty($eligible)) { ?>
+    <div class="alert alert-secondary mb-0" role="alert">
+        <i class="bi bi-lock me-1" aria-hidden="true"></i>
+        <?php $this->_('Webnic.tab_delete.unavailable'); ?>
+    </div>
+    <?php } else { ?>
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+        <?php $this->_('Webnic.tab_delete.warning'); ?>
+    </div>
+
+    <?php
+    $confirm_action = 'delete';
+    $confirm_variant = 'delete';
+    $confirm_message_key = 'Webnic.tab_delete.confirm';
+    $confirm_btn_key = 'Webnic.tab_delete.btn';
+    $confirm_icon = 'bi-trash';
+    $confirm_btn_class = 'btn btn-danger btn-sm';
+    $extra_hiddens = [];
+    $confirm_after_button_html = !empty($domain)
+        ? "\n        " . '<span class="small text-muted ms-2">' . $this->Html->safe($domain) . '</span>'
+        : '';
+    include $webnic_dir . 'confirm_modal.pdt';
+    ?>
+    <?php } ?>
+</div>

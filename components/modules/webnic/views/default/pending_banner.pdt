@@ -1,0 +1,24 @@
+<?php
+/**
+ * Reusable pending-banner partial (Story 3.4a, AC2 / UX-DR4).
+ *
+ * A reassurance window, NOT a countdown/ETA/progress-bar (EXP:139). Amber alert +
+ * clock icon — pending NEVER reads as active (FR39c, UX-DR11.1): never green, never a
+ * check. The copy key is chosen UPSTREAM by WebnicStatus::pendingBannerKey() (age
+ * softened), so this partial only renders the resolved key. Forward-binding: Epic 4/5
+ * tabs MUST render this banner atop their content while an order is pending.
+ *
+ * Before include, the consumer must set $banner_key and load the Html helper + the
+ * `webnic` language domain on the View (the service-info path and tab_unavailable.pdt
+ * both do). $this is the View; $this->_() echoes the resolved copy.
+ *
+ * @var string $banner_key Language key for the (age-softened) reassurance copy
+ */
+$webnic_banner_key = isset($banner_key) && $banner_key !== ''
+    ? $banner_key
+    : 'Webnic.service_info.pending_banner';
+?>
+<div class="alert alert-warning d-flex align-items-center" role="status">
+    <i class="bi bi-clock-history me-2" aria-hidden="true"></i>
+    <span><?php $this->_($webnic_banner_key); ?></span>
+</div>
