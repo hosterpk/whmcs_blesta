@@ -36,8 +36,28 @@ class DomainsController extends AppController
             $this->portal = 'admin';
         }
 
-        // Override default view directory
+        // Override default view directory.
+        // HOSTERPK-SEAM: the client portal honors the company client_view_dir (with a
+        // fallback to 'default') so the domains list can be OWNED at
+        // plugins/domains/views/<client_view_dir>/; the admin portal stays 'default'.
+        // Dir-gated so it only switches when that per-template plugin view dir exists.
+        // Story 7.1 / UI-UX (DEC-1/DEC-2) — domains plugin ONLY. Do not remove or reword
+        // the HOSTERPK-SEAM sentinel: tooling/check.sh greps it as a drift tripwire.
         $this->view->view = 'default';
+        if ($this->portal == 'client') {
+            $this->uses(['Companies']);
+            $client_view_dir = $this->Companies->getSetting(
+                Configure::get('Blesta.company_id'),
+                'client_view_dir'
+            );
+            $client_view_dir = ($client_view_dir ? $client_view_dir->value : null);
+            if (!empty($client_view_dir) && $client_view_dir !== 'default'
+                && preg_match('/^[A-Za-z0-9_-]+$/', $client_view_dir)
+                && is_dir(PLUGINDIR . 'domains' . DS . 'views' . DS . $client_view_dir)
+            ) {
+                $this->view->view = $client_view_dir;
+            }
+        }
         $this->orig_structure_view = $this->structure->view;
         $this->structure->view = 'default';
 

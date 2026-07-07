@@ -1,0 +1,382 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient chrome with the HosterPK card/status-tabs/table pattern, adds a net-new Status badge column and the UJ-4 expiry / scheduled-cancel warnings, and reflows to cards <=760px (data-label), while preserving the controller->view data contract, the filters[package_name]/filters[service_meta] POST shape, the byte-verbatim widget-mode guard, and the #client_domains service-info expansion DOM (serviceinfo endpoint). Lives in the plugin tree (reached via the domains_controller HOSTERPK-SEAM), so copy loads from the app template path (DEC-6). Stock baseline: ../default/client_main.pdt @ 6.0.0-b1 sha256:84309e0dbebc2d518d1ddd9916a06635da814fe6dd09695a40b0eca6576e8bab */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too.
+ * DEC-6: this view lives in the PLUGIN tree, so $this->view_dir points into
+ * plugins/domains/views/hosterpk/ - the core view_dir-relative derivation would
+ * look in the wrong (plugin) language dir. The canonical copy table is the app
+ * template's language/en_us/hosterpk.php; load it from the app template path. */
+if (defined('ROOTWEBDIR') && defined('APPDIR')) {
+    Language::loadLang(
+        'hosterpk',
+        null,
+        ROOTWEBDIR . APPDIR . 'views' . DS . 'client' . DS . 'hosterpk' . DS . 'language' . DS
+    );
+}
+
+$hpk_is_inner = (isset($render_section) ? $render_section : null) || (isset($is_ajax) ? $is_ajax : null);
+$hpk_status_whitelist = ['active', 'pending', 'suspended', 'canceled'];
+$hpk_status = (isset($status) && in_array($status, $hpk_status_whitelist, true)) ? $status : 'active';
+$hpk_action = isset($action) ? $action : 'index';
+$hpk_sort = isset($sort) ? $sort : 'date_added';
+$hpk_order = (isset($order) && in_array($order, ['asc', 'desc'], true)) ? $order : 'desc';
+$hpk_negate_order = (isset($negate_order) && in_array($negate_order, ['asc', 'desc'], true))
+    ? $negate_order
+    : ($hpk_order == 'asc' ? 'desc' : 'asc');
+$hpk_status_count = (isset($status_count) && is_array($status_count)) ? $status_count : [];
+$hpk_domains = (isset($domains) && is_array($domains)) ? $domains : [];
+$hpk_num_domains = count($hpk_domains);
+
+$hpk_status_badges = [
+    'active' => ['success', 'Hosterpk.domain.status_active'],
+    'pending' => ['warning', 'Hosterpk.domain.status_pending'],
+    'suspended' => ['danger', 'Hosterpk.domain.status_suspended'],
+    'canceled' => ['neutral', 'Hosterpk.domain.status_canceled']
+];
+
+$hpk_columns = [
+    'domain' => $this->_('Hosterpk.domain.heading_domain', true),
+    'term' => $this->_('Hosterpk.domain.heading_term', true),
+    'date_added' => $this->_('Hosterpk.domain.heading_registration_date', true),
+    'date_renews' => $this->_('Hosterpk.domain.heading_renewal_date', true),
+    'expiration' => $this->_('Hosterpk.domain.heading_expiration_date', true),
+    'date_suspended' => $this->_('Hosterpk.domain.heading_suspension_date', true),
+    'date_canceled' => $this->_('Hosterpk.domain.heading_deletion_date', true),
+    'status' => $this->_('Hosterpk.domain.heading_status', true),
+    'actions' => $this->_('Hosterpk.domain.heading_actions', true)
+];
+
+// Stock domains makes Domain and Expiration date plain (non-sortable) headers;
+// only term / registration / renewal (+ the per-tab suspension|deletion date) sort.
+$hpk_sortable_keys = [
+    'active' => ['term', 'date_added', 'date_renews'],
+    'pending' => ['term', 'date_added', 'date_renews'],
+    'suspended' => ['term', 'date_added', 'date_renews', 'date_suspended'],
+    'canceled' => ['term', 'date_added', 'date_renews', 'date_canceled']
+];
+$hpk_current_sortable = isset($hpk_sortable_keys[$hpk_status]) ? $hpk_sortable_keys[$hpk_status] : [];
+
+// DEC-9: active/pending = 7 cols; suspended/canceled = 8 (extra suspension|deletion
+// date column). Status is net-new on every tab; Actions is net-new on canceled.
+$hpk_col_count = ($hpk_status == 'suspended' || $hpk_status == 'canceled') ? 8 : 7;
+
+$hpk_build_url = function ($target_status, $target_page = null, $target_sort = null, $target_order = null) use ($hpk_action) {
+    $url = $this->base_uri . 'plugin/domains/client_main/' . $hpk_action . '/' . $target_status . '/';
+    if ($target_page !== null) {
+        $url .= $target_page . '/';
+    }
+
+    $params = [];
+    if ($target_sort !== null) {
+        $params['sort'] = $target_sort;
+        $params['order'] = $target_order;
+    }
+
+    return $url . (!empty($params) ? '?' . http_build_query($params, '', '&') : '');
+};
+
+$hpk_sort_url = function ($target_sort) use ($hpk_build_url, $hpk_status, $hpk_sort, $hpk_order, $hpk_negate_order) {
+    return $hpk_build_url(
+        $hpk_status,
+        null,
+        $target_sort,
+        ($hpk_sort == $target_sort ? $hpk_negate_order : $hpk_order)
+    );
+};
+
+// Cross-tab sort normalization (6.1 review): a sort key valid on the current tab
+// (e.g. date_suspended) is meaningless on another - drop it rather than carry a
+// dead param when switching tabs.
+$hpk_tab_url = function ($target_status) use ($hpk_build_url, $hpk_sort, $hpk_order, $hpk_sortable_keys) {
+    $hpk_target_sortable = isset($hpk_sortable_keys[$target_status]) ? $hpk_sortable_keys[$target_status] : [];
+    if (!in_array($hpk_sort, $hpk_target_sortable, true)) {
+        return $hpk_build_url($target_status);
+    }
+
+    return $hpk_build_url($target_status, null, $hpk_sort, $hpk_order);
+};
+
+$hpk_sort_class = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    return 'hpk-domains__sort' . ($hpk_sort == $target_sort ? ' ' . $hpk_order : '');
+};
+
+$hpk_aria_sort = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    if ($hpk_sort != $target_sort) {
+        return null;
+    }
+
+    return $hpk_order == 'asc' ? 'ascending' : 'descending';
+};
+
+$hpk_render_header = function ($key) use ($hpk_is_inner, $hpk_columns, $hpk_current_sortable, $hpk_sort_class, $hpk_sort_url, $hpk_aria_sort) {
+    $hpk_label = $hpk_columns[$key];
+    $hpk_is_sortable = in_array($key, $hpk_current_sortable, true);
+    if (!$hpk_is_sortable) {
+?><th scope="col"><?php echo $this->Html->safe($hpk_label); ?></th><?php
+        return;
+    }
+
+    $hpk_aria = $hpk_is_inner ? null : $hpk_aria_sort($key);
+?><th scope="col"<?php if ($hpk_aria !== null) { ?> aria-sort="<?php echo $this->Html->safe($hpk_aria); ?>"<?php } elseif (!$hpk_is_inner) { ?> aria-sort="none"<?php } ?>>
+    <?php if ($hpk_is_inner) { ?>
+        <?php echo $this->Html->safe($hpk_label); ?>
+    <?php } else { ?>
+        <a class="<?php echo $this->Html->safe($hpk_sort_class($key)); ?>" href="<?php echo $this->Html->safe($hpk_sort_url($key)); ?>" data-hpk-filter-link><?php echo $this->Html->safe($hpk_label); ?></a>
+    <?php } ?>
+</th><?php
+};
+
+$hpk_filter_label_keys = [
+    'filters[package_name]' => 'Hosterpk.domain.filter_tld',
+    'filters[service_meta]' => 'Hosterpk.domain.filter_domain_name'
+];
+
+$hpk_filter_action = $hpk_build_url($hpk_status, null, $hpk_sort, $hpk_order);
+?>
+<div id="client_domains" class="hpk-domains<?php echo $this->Html->safe($hpk_is_inner ? ' hpk-domains--embedded' : ''); ?>">
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    <section class="hpk-card hpk-domains__shell" aria-labelledby="hpk-domains-title">
+        <div class="hpk-domains__header">
+            <div>
+                <h1 id="hpk-domains-title" class="hpk-domains__title"><?php echo $this->Html->safe($this->_('Hosterpk.domain.page_title', true)); ?></h1>
+            </div>
+            <nav class="hpk-tabs hpk-domains__tabs" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.domain.tabs_label', true)); ?>">
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('active')); ?>"<?php echo ($hpk_status == 'active' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.domain.tab_active', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['active']) ? $hpk_status_count['active'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('pending')); ?>"<?php echo ($hpk_status == 'pending' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.domain.tab_pending', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['pending']) ? $hpk_status_count['pending'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('suspended')); ?>"<?php echo ($hpk_status == 'suspended' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.domain.tab_suspended', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['suspended']) ? $hpk_status_count['suspended'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('canceled')); ?>"<?php echo ($hpk_status == 'canceled' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.domain.tab_canceled', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['canceled']) ? $hpk_status_count['canceled'] : 0); ?></span>
+                </a>
+            </nav>
+        </div>
+
+        <?php if (isset($filters)) { ?>
+        <?php $this->Form->create($hpk_filter_action, ['class' => 'hpk-domains__filters hpk-domains__filter-form', 'method' => 'post']); ?>
+            <?php
+            foreach ($filters->getFields() as $hpk_filter_field) {
+                foreach ($hpk_filter_field->fields as $hpk_filter_input) {
+                    if (!method_exists($this->Form, $hpk_filter_input->type)) {
+                        continue;
+                    }
+
+                    if ($hpk_filter_input->type == 'fieldHidden') {
+                        call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_input->params);
+                        continue;
+                    }
+
+                    $hpk_filter_params = $hpk_filter_input->params;
+                    $hpk_filter_name = isset($hpk_filter_params['name']) ? $hpk_filter_params['name'] : '';
+                    $hpk_filter_attrs = isset($hpk_filter_params['attributes']) ? $hpk_filter_params['attributes'] : [];
+                    $hpk_filter_id = isset($hpk_filter_attrs['id']) ? $hpk_filter_attrs['id'] : preg_replace('/[^A-Za-z0-9_-]+/', '_', $hpk_filter_name);
+                    $hpk_filter_classes = isset($hpk_filter_attrs['class']) ? preg_split('/\s+/', trim($hpk_filter_attrs['class'])) : [];
+                    $hpk_filter_classes = array_diff($hpk_filter_classes, ['form-control', 'stretch', 'input-sm']);
+                    $hpk_filter_classes[] = 'hpk-domains__control';
+                    $hpk_filter_attrs['id'] = $hpk_filter_id;
+                    $hpk_filter_attrs['class'] = trim(implode(' ', array_unique(array_filter($hpk_filter_classes))));
+
+                    $hpk_label_key = isset($hpk_filter_label_keys[$hpk_filter_name])
+                        ? $hpk_filter_label_keys[$hpk_filter_name]
+                        : 'Hosterpk.domain.filter_generic';
+                    $hpk_filter_attrs['placeholder'] = $this->_($hpk_label_key, true);
+                    $hpk_filter_params['attributes'] = $hpk_filter_attrs;
+            ?>
+            <div class="hpk-domains__filter">
+                <?php $this->Form->label($this->_($hpk_label_key, true), $hpk_filter_id, ['class' => 'hpk-domains__filter-label']); ?>
+                <?php call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_params); ?>
+            </div>
+            <?php
+                }
+            }
+            ?>
+            <div class="hpk-domains__filter-actions">
+                <?php $this->Form->fieldSubmit('submit', $this->_('Hosterpk.domain.filter_submit', true), ['class' => 'hpk-btn hpk-btn-outline hpk-btn-sm', 'formaction' => $hpk_build_url($hpk_status)]); ?>
+            </div>
+        <?php $this->Form->end(); ?>
+        <?php } ?>
+    <?php } ?>
+
+        <div class="hpk-domains__results" aria-live="polite">
+            <?php if ($hpk_num_domains > 0) { ?>
+            <div class="hpk-domains__table">
+                <table class="hpk-table" id="hpk-domains-table">
+                    <thead>
+                        <tr>
+                            <?php $hpk_render_header('domain'); ?>
+                            <?php $hpk_render_header('term'); ?>
+                            <?php $hpk_render_header('date_added'); ?>
+                            <?php $hpk_render_header('date_renews'); ?>
+                            <?php $hpk_render_header('expiration'); ?>
+                            <?php if ($hpk_status == 'suspended') { ?>
+                            <?php $hpk_render_header('date_suspended'); ?>
+                            <?php } elseif ($hpk_status == 'canceled') { ?>
+                            <?php $hpk_render_header('date_canceled'); ?>
+                            <?php } ?>
+                            <?php $hpk_render_header('status'); ?>
+                            <?php $hpk_render_header('actions'); ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php for ($i = 0; $i < $hpk_num_domains; $i++) {
+                            $hpk_domain = $hpk_domains[$i];
+                            $hpk_badge = isset($hpk_status_badges[$hpk_status]) ? $hpk_status_badges[$hpk_status] : ['neutral', 'Hosterpk.domain.status_active'];
+                            $hpk_badge_class = $hpk_badge[0];
+                            $hpk_badge_key = $hpk_badge[1];
+
+                            // Scheduled-cancel (auto-renew off): promote the stock bare-clock signal to a
+                            // labelled warning. Only on a non-canceled row with a FUTURE date_canceled.
+                            $hpk_scheduled_cancel = ($hpk_status != 'canceled'
+                                && !empty($hpk_domain->date_canceled)
+                                && $this->Date->toTime($this->Date->cast($hpk_domain->date_canceled)) > $this->Date->toTime($this->Date->cast(date('c'))));
+
+                            // Expiring-soon (UJ-4): only when expiration_date is parseable, the domain is
+                            // not canceled, and it is 0-30 days out. Integer math (no floats); past /
+                            // null / unparseable values get no invented warning.
+                            $hpk_exp_days = null;
+                            if (!empty($hpk_domain->expiration_date)) {
+                                $hpk_exp_ts = $this->Date->toTime($this->Date->cast($hpk_domain->expiration_date));
+                                $hpk_now_ts = $this->Date->toTime($this->Date->cast(date('c')));
+                                if ($hpk_exp_ts !== false && $hpk_now_ts !== false) {
+                                    $hpk_exp_day_ts = strtotime(date('Y-m-d', (int) $hpk_exp_ts));
+                                    $hpk_now_day_ts = strtotime(date('Y-m-d', (int) $hpk_now_ts));
+                                    $hpk_exp_seconds = (
+                                        $hpk_exp_day_ts !== false && $hpk_now_day_ts !== false
+                                            ? $hpk_exp_day_ts - $hpk_now_day_ts
+                                            : -1
+                                    );
+                                    $hpk_exp_days = ($hpk_exp_seconds >= 0 ? intdiv($hpk_exp_seconds, 86400) : -1);
+                                }
+                            }
+                            $hpk_expiring_soon = ($hpk_status != 'canceled' && $hpk_exp_days !== null && $hpk_exp_days >= 0 && $hpk_exp_days <= 30);
+                        ?>
+                        <tr class="expand service_info">
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['domain']); ?>"><?php (print (isset($hpk_domain->name) ? $this->Html->safe($hpk_domain->name) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['term']); ?>">
+                                <?php
+                                if ((isset($hpk_domain->package_pricing->period) ? $hpk_domain->package_pricing->period : null) == 'onetime') {
+                                    (print (isset($periods[$hpk_domain->package_pricing->period]) ? $this->Html->safe($periods[$hpk_domain->package_pricing->period]) : null));
+                                } else {
+                                    $hpk_term = (isset($hpk_domain->package_pricing->term) ? $this->Html->safe($hpk_domain->package_pricing->term) : '');
+                                    $hpk_period = ($hpk_term == 1
+                                        ? (isset($periods[$hpk_domain->package_pricing->period]) ? $this->Html->safe($periods[$hpk_domain->package_pricing->period]) : '')
+                                        : (isset($periods[$hpk_domain->package_pricing->period . '_plural']) ? $this->Html->safe($periods[$hpk_domain->package_pricing->period . '_plural']) : ''));
+                                    $hpk_renewal_price = $this->CurrencyFormat->format(
+                                        (isset($hpk_domain->renewal_price) ? $hpk_domain->renewal_price : (isset($hpk_domain->package_pricing->price_renews) ? $hpk_domain->package_pricing->price_renews : null)),
+                                        (isset($hpk_domain->override_currency) ? $hpk_domain->override_currency : (isset($hpk_domain->package_pricing->currency) ? $hpk_domain->package_pricing->currency : null))
+                                    );
+                                    $this->_('Hosterpk.domain.recurring_term', false, $this->Html->safe($hpk_term), $this->Html->safe($hpk_period), $this->Html->safe($hpk_renewal_price));
+                                }
+                                ?>
+                            </td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_added']); ?>"><?php echo $this->Html->safe($this->Date->cast((isset($hpk_domain->date_added) ? $hpk_domain->date_added : null))); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_renews']); ?>">
+                                <?php echo (
+                                    empty($hpk_domain->date_paid_through)
+                                        ? (empty($hpk_domain->date_renews)
+                                            ? $this->Html->safe($this->_('Hosterpk.domain.text_never', true))
+                                            : $this->Html->safe($this->Date->cast($hpk_domain->date_renews)))
+                                        : $this->Html->safe($this->Date->cast($hpk_domain->date_paid_through))
+                                ); ?>
+                                <?php if ($hpk_scheduled_cancel) { ?>
+                                <span class="hpk-domains__warning hpk-badge hpk-badge-warning" data-toggle="tooltip" title="<?php echo $this->Html->safe($this->_('Hosterpk.domain.cancel_pending_tooltip', true, $this->Date->cast($hpk_domain->date_canceled))); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.domain.auto_renew_off', true)); ?></span>
+                                <?php } ?>
+                            </td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['expiration']); ?>">
+                                <?php echo (!empty($hpk_domain->expiration_date) ? $this->Html->safe($this->Date->cast($hpk_domain->expiration_date)) : ''); ?>
+                                <?php if ($hpk_expiring_soon) { ?>
+                                <span class="hpk-domains__warning hpk-badge hpk-badge-warning"><?php echo $this->Html->safe($this->_('Hosterpk.domain.expiring_soon', true)); ?></span>
+                                <span class="hpk-domains__warning-detail"><?php echo $this->Html->safe($this->_('Hosterpk.domain.expiring_soon_detail', true, $this->Date->cast($hpk_domain->expiration_date))); ?></span>
+                                <?php } ?>
+                            </td>
+                            <?php if ($hpk_status == 'suspended') { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_suspended']); ?>"><?php echo (empty($hpk_domain->date_suspended) ? $this->Html->safe($this->_('Hosterpk.domain.text_never', true)) : $this->Html->safe($this->Date->cast((isset($hpk_domain->date_suspended) ? $hpk_domain->date_suspended : null)))); ?></td>
+                            <?php } elseif ($hpk_status == 'canceled') { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_canceled']); ?>"><?php echo (empty($hpk_domain->date_canceled) ? $this->Html->safe($this->_('Hosterpk.domain.text_never', true)) : $this->Html->safe($this->Date->cast((isset($hpk_domain->date_canceled) ? $hpk_domain->date_canceled : null)))); ?></td>
+                            <?php } ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['status']); ?>"><span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_badge_class); ?>"><?php echo $this->Html->safe($this->_($hpk_badge_key, true)); ?></span></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['actions']); ?>">
+                                <div class="hpk-domains__actions">
+                                    <a href="<?php echo $this->Html->safe($this->client_uri . 'services/manage/' . (isset($hpk_domain->id) ? $hpk_domain->id : null) . '/'); ?>" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.domain.action_manage', true)); ?></a>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="expand_details" id="domains_<?php (print (isset($hpk_domain->id) ? $this->Html->safe($hpk_domain->id) : null)); ?>">
+                            <td colspan="<?php echo $this->Html->safe($hpk_col_count); ?>" class="subtable"></td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php } else { ?>
+            <div class="hpk-empty hpk-empty--domains">
+                <svg class="hpk-icon hpk-empty__icon" aria-hidden="true" focusable="false"><use href="#hpk-icon-globe2"></use></svg>
+                <?php
+                $hpk_empty_title_key = 'Hosterpk.domain.empty_' . $hpk_status . '_title';
+                $hpk_empty_body_key = 'Hosterpk.domain.empty_' . $hpk_status . '_body';
+                ?>
+                <?php if ($hpk_is_inner) { ?>
+                <h3 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h3>
+                <?php } else { ?>
+                <h2 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h2>
+                <?php } ?>
+                <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_($hpk_empty_body_key, true)); ?></p>
+            </div>
+            <?php } ?>
+
+            <?php if (!$hpk_is_inner && $this->Pagination->hasPages()) { ?>
+            <nav class="hpk-domains__pagination" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.domain.pagination_label', true)); ?>">
+                <?php $this->Pagination->build(); ?>
+            </nav>
+            <?php } ?>
+        </div>
+
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    </section>
+    <?php } ?>
+</div>
+
+<!-- HOSTERPK FILTER-BRIDGE PRESERVED: replacement for WidgetClient's filter-link form-action bridge. -->
+<script type="text/javascript">
+    $(document).ready(function () {
+        $(".hpk-domains").on("click", "a[data-hpk-filter-link], .hpk-domains__pagination a", function(e) {
+            if ($(this).closest(".disabled").length) {
+                e.preventDefault();
+                return false;
+            }
+
+            var form = $(this).closest(".hpk-domains").find("form.hpk-domains__filter-form");
+            if (!form.length) {
+                return;
+            }
+
+            e.preventDefault();
+            $(form).attr("action", $(this).attr("href"));
+            HTMLFormElement.prototype.submit.call(form.get(0));
+            return false;
+        });
+
+        // Make disabled pagination links keyboard-inert regardless of whether the Pagination helper emits <a> or <span>.
+        $(".hpk-domains__pagination .disabled a").attr("tabindex", "-1").attr("aria-disabled", "true");
+    });
+</script>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#client_domains").on('click', '.service_info a,.service_info input', function(e) {
+        e.stopPropagation();
+    });
+    $("#client_domains").on('click', '.service_info', function() {
+        $(this).blestaUpdateRow("<?php echo (isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'plugin/domains/client_main/serviceinfo/'; ?>" + $(this).next("tr").attr("id").split("_")[1], ".subtable");
+    });
+});
+</script>
+<!-- /PRESERVED -->
