@@ -1,0 +1,177 @@
+/*
+ * HosterPK design tokens — cross-app source of truth.
+ * Seeded from the sealed UX design (UX-DR1 light / UX-DR2 dark; values from
+ * planning-artifacts/ux-designs/.../DESIGN.md, mirrored in mockups/app.css).
+ *
+ * These are INERT custom-property DECLARATIONS only. Nothing here consumes a
+ * token, so on its own this file changes no rendering (assertion-free; AC2).
+ * The component/Reach rules that USE these tokens arrive in Epic 2.
+ *
+ * Naming: every property is `--hpk-*` and lives in :root (D1 keystone — tokens
+ * resolve at use-site; layering buys them nothing). Dark overrides ride
+ * [data-theme="dark"]; the 5 semantic states keep EXPLICIT per-theme pairs so
+ * global inversion never turns a light tint into a near-white "broken" block.
+ *
+ * This file is copied verbatim into app/views/client/hosterpk/css/src/tokens.css
+ * on build (brand/ WINS on drift). check.sh is the only writer of the bundle.
+ */
+
+:root {
+  /* Brand */
+  --hpk-primary: #1457E6;
+  --hpk-primary-hover: #0F49C4;
+  --hpk-primary-tint: #EAF0FD;
+  /* Content-link colour. Brand blue on white is AA (5.94:1); the dark block
+     brightens it because raw #1457E6 is only ~2.2:1 on surface-dark.
+     gen-contrast.sh gates both themes. */
+  --hpk-link: #1457E6;
+  --hpk-link-hover: #0F49C4;
+  --hpk-secondary: #F78326;
+  --hpk-secondary-tint: #FEF0E4;
+
+  /* Semantic states (light) */
+  --hpk-success: #17CA68;
+  --hpk-success-tint: #E7FAF0;
+  --hpk-warning: #F5B14B;
+  --hpk-warning-tint: #FEF5E8;
+  --hpk-danger: #EC5F67;
+  --hpk-danger-tint: #FDECEC;
+  --hpk-info: #4EC2F0;
+  --hpk-info-tint: #E8F7FD;
+
+  /* 5-state TEXT floor (Story 2.4 — the state-color floor 2.2/2.3 deferred here).
+     The darkened-hue text drawn on each pale *-tint for badges + alerts (one set
+     for both, per OQ2). These were COMPUTED to clear WCAG 2.2 AA 4.5:1 on their
+     tint, not assumed — gen-contrast.sh (wired into check.sh build) RE-VERIFIES
+     all 20 cells and FAILS the build on any sub-AA cell, so the gate (not this
+     hex) is the source of truth: if a cell fails, darken/brighten the token here.
+     Light ratios: success 5.86 · warning 5.74 · danger 5.33 · info 6.29 ·
+     neutral 6.41 (neutral text = g700 on g200). The [data-theme="dark"] block
+     carries the theme switch (brightened pairs) so components need NO dark rule. */
+  --hpk-success-text: #0A6E37;
+  --hpk-warning-text: #8A5512;
+  --hpk-danger-text: #B5303A;
+  --hpk-info-text: #0E6088;
+  --hpk-neutral-text: #4D5875;
+
+  /* Ink / text / surfaces */
+  --hpk-ink: #03123E;
+  --hpk-text: #6B6B7E;
+  --hpk-muted: #5F6B82;
+  --hpk-border: #E9E9E9;
+  --hpk-page: #F4F6FA;
+  --hpk-surface: #FFFFFF;
+
+  /* Neutral greys — full 9-step ramp (DESIGN.md §colors).
+     NOTE: g600 #7987A1 (and dark .40) are DECORATIVE-only — rest-state icons,
+     dividers. They fail AA for essential text; use --hpk-muted for real
+     secondary text (table headers, timestamps, helper copy). */
+  --hpk-g100: #F9FAFB;
+  --hpk-g200: #F2F4F5;
+  --hpk-g300: #E6EAEB;
+  --hpk-g400: #DBDFE1;
+  --hpk-g500: #949EB7;
+  --hpk-g600: #7987A1;
+  --hpk-g700: #4D5875;
+  --hpk-g800: #383853;
+  --hpk-g900: #323251;
+
+  /* Radii */
+  --hpk-r-sm: .3125rem;
+  --hpk-r-md: .3rem;
+  --hpk-r-lg: .625rem;
+  --hpk-r-pill: 50rem;
+
+  /* Elevation + focus */
+  --hpk-shadow: 0 3px 10px rgba(0, 0, 0, .08);
+  --hpk-topbar-shadow: 0 2px 12px rgba(3, 18, 62, .18);
+  --hpk-focus: 0 0 0 2px var(--hpk-surface), 0 0 0 4px var(--hpk-primary);
+
+  /* Type families (self-hosted, OFL — see brand/fonts/) */
+  --hpk-font-display: "Urbanist", "Urbanist Fallback", system-ui, sans-serif;
+  --hpk-font-body: "Hind Siliguri", "Hind Siliguri Fallback", system-ui, sans-serif;
+
+  /* Type ramp (UX-DR3; DESIGN.md §typography). Headings inherit 1.2;
+     body 1.5. Page titles use the 700 (display) weight; all other headings 600.
+     Eyebrow/section labels = Urbanist 600 + letter-spacing ~.08–.09em, applied
+     by the chrome/component rules (Story 2.10), not base.css — letter-spacing is
+     element-application, not a token. */
+  --hpk-h1-font-size: 2.5rem;   --hpk-h1-font-weight: 700;
+  --hpk-h2-font-size: 2rem;     --hpk-h2-font-weight: 600;
+  --hpk-h3-font-size: 1.5rem;   --hpk-h3-font-weight: 600;
+  --hpk-h4-font-size: 1.25rem;  --hpk-h4-font-weight: 600;
+  --hpk-h5-font-size: 1.05rem;  --hpk-h5-font-weight: 600;
+  --hpk-h6-font-size: 0.95rem;  --hpk-h6-font-weight: 600;
+  --hpk-heading-line-height: 1.2;
+  --hpk-body-font-size: 1rem;   --hpk-body-font-weight: 400;  --hpk-body-line-height: 1.5;
+  --hpk-small-font-size: 0.8125rem;
+  --hpk-button-font-size: 0.85rem;    --hpk-button-font-weight: 500;
+  --hpk-input-font-size: 0.875rem;
+  --hpk-nav-link-font-size: 0.92rem;  --hpk-nav-link-font-weight: 500;
+
+  /* Spacing scale (DESIGN.md §spacing; Bootstrap-5 base 1rem $spacer) */
+  --hpk-space-1: .25rem;
+  --hpk-space-2: .5rem;
+  --hpk-space-3: 1rem;
+  --hpk-space-4: 1.5rem;
+  --hpk-space-5: 3rem;
+  --hpk-space-gutter: 1.5rem;
+  --hpk-space-container-xl: 1140px;
+  --hpk-space-container-xxl: 1320px;
+  --hpk-space-topbar-height: 64px;
+  --hpk-space-sidebar-width: 248px;
+  --hpk-space-card-padding: 1.25rem;
+  --hpk-space-button-padding: .5rem 1rem;
+}
+
+[data-theme="dark"] {
+  /* Tints become translucent so they read on the navy surface */
+  --hpk-primary-tint: rgba(20, 87, 230, .18);
+  --hpk-secondary-tint: rgba(247, 131, 38, .18);
+  --hpk-success-tint: rgba(23, 202, 104, .18);
+  --hpk-warning-tint: rgba(245, 177, 75, .18);
+  --hpk-danger-tint: rgba(236, 95, 103, .18);
+  --hpk-info-tint: rgba(78, 194, 240, .18);
+
+  /* Content links (dark): raw brand #1457E6 is only ~2.2:1 on surface-dark, so
+     links brighten to a blue that clears AA on #1E3150 (gen-contrast-gated). */
+  --hpk-link: #8AB4F8;
+  --hpk-link-hover: #B9D2FB;
+
+  /* 5-state TEXT floor (dark) — brightened text on the composited rgba(hue,.18)
+     tints over surface-dark #1E3150. Brightened hexes from the sealed mock
+     (mockups/app.css:58). Computed AA: success 5.45 · warning 5.73 · danger 4.57
+     (tight — keep) · info 5.46. NEUTRAL is the documented trap: bare --hpk-muted
+     (55% white) on the dark neutral badge bg = 4.12:1 → FAILS 4.5:1, so dark
+     neutral text MUST be --hpk-text (70% white = 5.86:1), NOT --hpk-muted.
+     gen-contrast.sh exists to catch exactly this — wiring muted (correctly) fails
+     the build. */
+  --hpk-success-text: #3CE08A;
+  --hpk-warning-text: #F5C578;
+  --hpk-danger-text: #F58A90;
+  --hpk-info-text: #7FD4F5;
+  --hpk-neutral-text: var(--hpk-text);
+
+  /* Ink / text / surfaces (dark) */
+  --hpk-ink: #FFFFFF;
+  --hpk-text: rgba(255, 255, 255, .70);
+  --hpk-muted: rgba(255, 255, 255, .55);
+  --hpk-border: rgba(255, 255, 255, .10);
+  --hpk-page: #17263A;
+  --hpk-surface: #1E3150;
+
+  /* Neutral greys (dark) */
+  --hpk-g100: rgba(255, 255, 255, .04);
+  --hpk-g200: rgba(255, 255, 255, .07);
+  --hpk-g300: rgba(255, 255, 255, .10);
+
+  /* Elevation + focus (dark) */
+  --hpk-shadow: 0 3px 10px rgba(0, 0, 0, .35);
+  /* Focus ring (dark): the :root ring draws its outer band from --hpk-primary
+     (raw brand #1457E6), which is only ~2.2:1 on surface-dark #1E3150 — a real
+     WCAG 2.2 SC 1.4.11 (non-text contrast) / 2.4.13 (focus appearance) fail on
+     every focusable element in dark mode. Retarget the dark ring to the
+     brightened content link --hpk-link (#8AB4F8), which clears AA on the dark
+     surface (gen-contrast link-dark cell = 6.19:1). */
+  --hpk-focus: 0 0 0 2px var(--hpk-surface), 0 0 0 4px var(--hpk-link);
+}

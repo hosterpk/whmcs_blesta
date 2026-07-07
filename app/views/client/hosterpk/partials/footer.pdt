@@ -1,0 +1,17 @@
+<?php /** @var View $this **/ ?>
+<?php /* HosterPK footer (Story 2.10, AC A). Compact brand-blue strip replacing the
+       stock "Powered by Blesta" footer (NOT the marketing footer). A COMPONENT partial
+       (counts toward structure.pdt's scoped RULE 8 aggregate). A real <footer>
+       landmark: a Home link + the company copyright line. The link set is
+       INTENTIONALLY minimal - a fuller set lands when its destinations exist (the same
+       "no CTA without a destination" call as the omitted support card, Israr decision
+       #3). The dynamic year + company name go through Html escaping; the rights text
+       is a copy key (RULE 10, no inline English). x-ref="footer" lets the drawer
+       factory mark it inert while the mobile drawer is open (harmless when no x-data
+       wraps it, i.e. the show_header=false slim shell never renders this). No
+       inline-style attributes. */ ?>
+<?php $hpk_footer_company = (isset($system_company->name) ? trim((string) $system_company->name) : ''); ?>
+<footer id="hpk-structure-footer" class="hpk-footer" x-ref="footer">
+    <a href="<?php echo $this->Html->safe($this->base_uri);?>" class="hpk-footer-home"><?php $this->_('Hosterpk.footer.home');?></a>
+    <span class="hpk-footer-copyright">&copy; <?php echo $this->Html->safe(date('Y'));?><?php if ($hpk_footer_company !== '') { ?> <?php echo $this->Html->safe($hpk_footer_company);?> &middot;<?php } ?> <?php $this->_('Hosterpk.footer.rights');?></span>
+</footer>

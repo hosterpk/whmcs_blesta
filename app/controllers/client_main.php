@@ -82,6 +82,22 @@ class ClientMain extends ClientController
      */
     public function index()
     {
+        if ($this->loadHosterpkDashboardLanguage()) {
+            $greeting_name = !empty($this->client->first_name)
+                ? $this->client->first_name
+                : (isset($this->contact->first_name) ? $this->contact->first_name : '');
+            $dashboard_greeting = $greeting_name !== ''
+                ? Language::_('Hosterpk.dashboard.greeting', true, $greeting_name)
+                : Language::_('Hosterpk.dashboard.greeting_noname', true);
+
+            $this->structure->set('title', Language::_('Hosterpk.dashboard.heading', true));
+            $this->structure->set('dashboard_greeting', $dashboard_greeting);
+            $this->set('title', Language::_('Hosterpk.dashboard.heading', true));
+            $this->set('dashboard_greeting', $dashboard_greeting);
+        }
+        $action_items = [];
+        $action_item_rank = 0;
+
         if ($this->hasPermission('client_invoices')) {
             // Get all client currencies that there may be amounts due in
             $currencies = $this->Invoices->invoicedCurrencies($this->client->id);
@@ -120,11 +136,35 @@ class ClientMain extends ClientController
             }
 
             if ($amount_due_message) {
+                $invoice_action_url = $this->base_uri . 'pay/index/' . $max_due_currency . '/';
+                $invoice_action_label = Language::_('Hosterpk.action.pay_now', true);
+                $invoice_severity = 'warning';
+                $invoice_status_label = 'Hosterpk.status.due';
+                $invoice_icon = 'receipt';
+                $invoice_title = Language::_('Hosterpk.dashboard.invoice_due_title', true);
+                $invoice_detail = Language::_(
+                    'Hosterpk.dashboard.invoice_due_detail',
+                    true,
+                    $this->CurrencyFormat->format($max_due, $max_due_currency, ['suffix' => false, 'code' => false])
+                );
+
                 // Set a past due button
                 $past_due_btn = [];
                 $message_type = 'info';
                 if ($past_due > 0) {
                     $message_type = 'notice';
+                    $invoice_action_url = $this->base_uri . 'pay/index/' . $max_due_currency . '/pastdue/';
+                    $invoice_action_label = Language::_('Hosterpk.action.pay_past_due', true);
+                    $invoice_severity = 'danger';
+                    $invoice_status_label = 'Hosterpk.status.overdue';
+                    $invoice_icon = 'exclamation-triangle-fill';
+                    $invoice_title = Language::_('Hosterpk.dashboard.invoice_overdue_title', true);
+                    $invoice_detail = Language::_(
+                        'Hosterpk.dashboard.invoice_overdue_detail',
+                        true,
+                        $this->CurrencyFormat->format($max_due, $max_due_currency, ['suffix' => false, 'code' => false]),
+                        $this->CurrencyFormat->format($past_due, $max_due_currency, ['suffix' => false, 'code' => false])
+                    );
 
                     $past_due_btn = [
                         'class' => 'btn',
@@ -162,11 +202,56 @@ class ClientMain extends ClientController
                     $params[$message_type . '_buttons'][] = $past_due_btn;
                 }
 
-                $this->setMessage($message_type, $message, false, $params);
+                // Story 4.4: dashboard summary is rendered as action cards, so the
+                // duplicate stock setMessage banner is suppressed. Genuine
+                // post-redirect/session flashes are rendered by the view flash region.
+
+                $action_items[] = [
+                    'band' => 'action_needed',
+                    'severity' => $invoice_severity,
+                    'status_label' => $invoice_status_label,
+                    'icon' => $invoice_icon,
+                    'title' => $invoice_title,
+                    'detail' => $invoice_detail,
+                    'action' => [
+                        'label' => $invoice_action_label,
+                        'url' => $invoice_action_url
+                    ],
+                    'key' => 'invoice-due',
+                    '_rank' => $action_item_rank++
+                ];
             }
 
             // Add a note regarding in-review messages
-            $this->setInReviewMessage();
+            $in_review = $this->buildInReviewList();
+            if (!empty($in_review['messages'])) {
+                // Story 4.4: dashboard summary is rendered as action cards, so the
+                // duplicate stock setMessage banner is suppressed.
+
+                foreach ($in_review['items'] as $index => $service) {
+                    $action_item = [
+                        'band' => 'in_progress',
+                        'severity' => 'info',
+                        'status_label' => 'Hosterpk.status.in_review',
+                        'icon' => 'info-circle-fill',
+                        'title' => Language::_('Hosterpk.dashboard.service_in_review_title', true),
+                        'detail' => $service['detail'],
+                        'action' => [
+                            'label' => Language::_('Hosterpk.action.manage_service', true),
+                            'url' => $this->base_uri . 'services/'
+                        ],
+                        'key' => $service['key'],
+                        '_rank' => $action_item_rank++
+                    ];
+
+                    if ($index === count($in_review['items']) - 1 && $in_review['overflow'] > 0) {
+                        $action_item['overflow'] = $in_review['overflow'];
+                        $action_item['overflow_url'] = $this->base_uri . 'services/';
+                    }
+
+                    $action_items[] = $action_item;
+                }
+            }
         }
 
         // Set a message if the email hasn't been verified
@@ -218,31 +303,533 @@ class ClientMain extends ClientController
 
                 $time = time();
                 $hash = $this->Clients->systemHash('c=' . $email_verification->contact_id . '|t=' . $time);
-                $options = [
-                    'info_buttons' => [
-                        [
-                            'url' => $this->base_uri . 'verify/send/?sid=' . rawurlencode(
-                                $this->Clients->systemEncrypt(
-                                    'c=' . $email_verification->contact_id . '|t=' . $time . '|h=' . substr($hash, -16)
-                                )
-                            ),
-                            'label' => Language::_('ClientMain.!info.email_pending_verification_button', true),
-                            'icon_class' => 'fa-share'
-                        ]
-                    ]
-                ];
+                $verify_url = $this->base_uri . 'verify/send/?sid=' . rawurlencode(
+                    $this->Clients->systemEncrypt(
+                        'c=' . $email_verification->contact_id . '|t=' . $time . '|h=' . substr($hash, -16)
+                    )
+                );
+                // Story 4.4: dashboard summary is rendered as action cards, so the
+                // duplicate stock setMessage banner is suppressed.
 
-                $this->setMessage('info', $message, false, $options);
+                $action_items[] = [
+                    'band' => 'action_needed',
+                    'severity' => 'warning',
+                    'status_label' => 'Hosterpk.status.verify_pending',
+                    'icon' => 'person-circle',
+                    'title' => Language::_('Hosterpk.dashboard.email_verify_title', true),
+                    'detail' => Language::_(
+                        'Hosterpk.dashboard.email_verify_detail',
+                        true,
+                        $email_verification->email
+                    ),
+                    'action' => [
+                        'label' => Language::_('Hosterpk.action.verify_email', true),
+                        'url' => $verify_url
+                    ],
+                    'key' => 'email-verify',
+                    '_rank' => $action_item_rank++
+                ];
             }
         }
 
+        $this->sortDashboardActionItems($action_items);
+        foreach ($action_items as &$action_item) {
+            unset($action_item['_rank']);
+        }
+        unset($action_item);
+
+        $this->set('action_items', $action_items);
         $this->set('client', $this->client);
+
+        // Story 4.2: at-a-glance stats, recent activity, and quick actions.
+        // All data is read-only, client+company-scoped, and pulled from core
+        // Blesta models only. The domains tile is omitted when the client has
+        // zero domains in any status, so the grid reflows to 3-up.
+        $dashboard_stats = [];
+        $recent_activity = [];
+        $quick_actions = [];
+        $domain_any_count = 0;
+        $active_services_count = null;
+        $latest_invoice = null;
+        $next_domain_renewal = null;
+        $dashboard_hero_state = 'healthy';
+
+        if ($this->loadHosterpkDashboardLanguage()) {
+            Loader::loadModels($this, ['Services', 'Invoices', 'Transactions']);
+
+            $client_id = $this->client->id;
+            $currency_code = isset($this->client->settings['default_currency'])
+                ? $this->client->settings['default_currency']
+                : null;
+            $can_view_invoices = $this->hasPermission('client_invoices');
+
+            // Active services (non-domain)
+            if ($this->hasPermission('client_services')) {
+                $active_services_count = $this->Services->getStatusCount(
+                    $client_id,
+                    'active',
+                    true,
+                    ['type' => 'services']
+                );
+                $dashboard_stats[] = [
+                    'key' => 'services',
+                    'icon' => 'hdd-stack',
+                    'severity' => 'info',
+                    'value' => $active_services_count,
+                    'label' => ((int)$active_services_count === 1)
+                        ? 'Hosterpk.dashboard.stat_services_singular'
+                        : 'Hosterpk.dashboard.stat_services',
+                    'empty_copy' => 'Hosterpk.dashboard.stat_services_empty',
+                    'url' => $this->base_uri . 'services/'
+                ];
+            }
+
+            // Domains tile is shown only when the client has at least one domain
+            // in any status. Count domains via the core Services type filter.
+            if ($this->hasPermission('client_services')) {
+                $domain_any_count = $this->Services->getStatusCount(
+                    $client_id,
+                    'all',
+                    true,
+                    ['type' => 'domains']
+                );
+
+                if ($domain_any_count > 0) {
+                    $active_domains = $this->Services->getStatusCount(
+                        $client_id,
+                        'active',
+                        true,
+                        ['type' => 'domains']
+                    );
+                    $dashboard_stats[] = [
+                        'key' => 'domains',
+                        'icon' => 'globe2',
+                        'severity' => 'primary',
+                        'value' => $active_domains,
+                        'label' => ((int)$active_domains === 1)
+                            ? 'Hosterpk.dashboard.stat_domains_singular'
+                            : 'Hosterpk.dashboard.stat_domains',
+                        'empty_copy' => 'Hosterpk.dashboard.stat_domains_empty',
+                        'url' => $this->base_uri . 'plugin/domains/client_main/'
+                    ];
+                }
+            }
+
+            // Unpaid invoices
+            if ($can_view_invoices) {
+                $unpaid_invoices = $this->Invoices->getStatusCount($client_id, 'open');
+                $dashboard_stats[] = [
+                    'key' => 'invoices_unpaid',
+                    'icon' => 'receipt',
+                    'severity' => 'warning',
+                    'value' => $unpaid_invoices,
+                    'label' => ((int)$unpaid_invoices === 1)
+                        ? 'Hosterpk.dashboard.stat_invoices_unpaid_singular'
+                        : 'Hosterpk.dashboard.stat_invoices_unpaid',
+                    'empty_copy' => 'Hosterpk.dashboard.stat_invoices_unpaid_empty',
+                    'url' => $this->base_uri . 'invoices/'
+                ];
+            }
+
+            // Account credit (mirrors getCurrencyAmounts() credit handling)
+            if ($this->hasPermission('_credits') && $currency_code !== null) {
+                $payment_credit_enabled = isset($this->client->settings['payment_credit_enabled'])
+                    ? $this->client->settings['payment_credit_enabled']
+                    : '1';
+                $show_credit = true;
+
+                if ($payment_credit_enabled == '0') {
+                    $show_credit = false;
+                    $used_currencies = array_unique(
+                        array_merge(
+                            $this->Clients->usedCurrencies($client_id),
+                            [$currency_code]
+                        )
+                    );
+                    foreach ($used_currencies as $check_currency) {
+                        if ($this->Transactions->getTotalCredit($client_id, $check_currency) > 0) {
+                            $show_credit = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($show_credit) {
+                    $credit_amount = $this->Transactions->getTotalCredit($client_id, $currency_code);
+                    $credit_stat = [
+                        'key' => 'credit',
+                        'icon' => 'credit-card',
+                        'severity' => 'success',
+                        'value' => $this->CurrencyFormat->format(
+                            $credit_amount,
+                            $currency_code,
+                            ['suffix' => false, 'code' => false]
+                        ),
+                        'label' => 'Hosterpk.dashboard.stat_credit',
+                        'empty_copy' => 'Hosterpk.dashboard.stat_credit_empty',
+                        'is_empty' => $this->isDashboardAmountZeroOrLess($credit_amount)
+                    ];
+                    if ($can_view_invoices) {
+                        $credit_stat['url'] = $this->base_uri . 'invoices/';
+                    }
+                    $dashboard_stats[] = $credit_stat;
+                }
+            }
+
+            // Recent activity: transactions first, then single most-recent invoice fallback
+            $has_transactions_permission = $this->hasPermission('client_transactions');
+            if ($has_transactions_permission) {
+                $transactions = $this->Transactions->getList(
+                    $client_id,
+                    'approved',
+                    1,
+                    ['date_added' => 'DESC']
+                );
+
+                if (!empty($transactions)) {
+                    $transactions = array_slice($transactions, 0, 5);
+                    foreach ($transactions as $transaction) {
+                        $amount = $this->CurrencyFormat->format(
+                            (isset($transaction->amount) ? $transaction->amount : 0),
+                            (isset($transaction->currency) ? $transaction->currency : $currency_code),
+                            ['suffix' => false, 'code' => false]
+                        );
+                        $date = $this->formatDashboardActivityDate($transaction->date_added ?? null);
+                        $date_suffix = $this->formatDashboardActivityDateSuffix($date);
+
+                        $recent_activity[] = [
+                            'text' => Language::_(
+                                'Hosterpk.dashboard.activity_payment',
+                                true,
+                                $amount,
+                                $date_suffix
+                            ),
+                            'date' => $date
+                        ];
+                    }
+                }
+            }
+
+            if (empty($recent_activity) && $can_view_invoices) {
+                $latest_invoices = $this->Invoices->getList(
+                    $client_id,
+                    'all',
+                    1,
+                    ['date_billed' => 'DESC']
+                );
+
+                if (!empty($latest_invoices)) {
+                    $invoice = $latest_invoices[0];
+                    $amount = $this->CurrencyFormat->format(
+                        (isset($invoice->total) ? $invoice->total : 0),
+                        (isset($invoice->currency) ? $invoice->currency : $currency_code),
+                        ['suffix' => false, 'code' => false]
+                    );
+                    $date = $this->formatDashboardActivityDate($invoice->date_billed ?? null);
+                    $date_suffix = $this->formatDashboardActivityDateSuffix($date);
+                    $invoice_number = $this->getDashboardInvoiceNumber($invoice);
+                    $activity_key = $invoice_number === ''
+                        ? 'Hosterpk.dashboard.activity_invoice_no_number'
+                        : 'Hosterpk.dashboard.activity_invoice';
+                    $activity_args = $invoice_number === ''
+                        ? [$amount, $date_suffix]
+                        : [$invoice_number, $amount, $date_suffix];
+
+                    $recent_activity[] = [
+                        'text' => Language::_($activity_key, true, ...$activity_args),
+                        'date' => $date
+                    ];
+                }
+            }
+
+            // Quick actions: static, permission-aware navigation links
+            if ($can_view_invoices) {
+                $quick_actions[] = [
+                    'label' => 'Hosterpk.action.pay_invoice',
+                    'url' => $this->base_uri . 'invoices/',
+                    'icon' => 'receipt'
+                ];
+            }
+
+            if ($this->hasPermission('client_services')) {
+                $quick_actions[] = [
+                    'label' => 'Hosterpk.action.manage_service',
+                    'url' => $this->base_uri . 'services/',
+                    'icon' => 'hdd-stack'
+                ];
+            }
+
+            if ($domain_any_count > 0 && $this->hasPermission('client_services')) {
+                $quick_actions[] = [
+                    'label' => 'Hosterpk.action.manage_domains',
+                    'url' => $this->base_uri . 'plugin/domains/client_main/',
+                    'icon' => 'globe2'
+                ];
+            }
+
+            if ($this->hasPermission('support_manager.*')) {
+                $quick_actions[] = [
+                    'label' => 'Hosterpk.action.open_ticket',
+                    'url' => $this->base_uri . 'plugin/support_manager/client_tickets/',
+                    'icon' => 'life-preserver'
+                ];
+            }
+
+            if ($this->hasPermission('client_contacts')) {
+                $quick_actions[] = [
+                    'label' => 'Hosterpk.action.update_account',
+                    'url' => $this->base_uri . 'main/edit/',
+                    'icon' => 'person-circle'
+                ];
+            }
+
+            // Story 4.4: latest-invoice summary card (read-only, core model)
+            $latest_invoice = null;
+            if ($can_view_invoices) {
+                $latest_invoices = $this->Invoices->getList(
+                    $client_id,
+                    'all',
+                    1,
+                    ['date_billed' => 'DESC']
+                );
+                if (!empty($latest_invoices[0])) {
+                    $invoice = $latest_invoices[0];
+                    $invoice_currency = isset($invoice->currency) ? $invoice->currency : $currency_code;
+                    $invoice_due = isset($invoice->due) ? $invoice->due : 0;
+                    $is_past_due = (
+                        !empty($invoice->date_due)
+                        && empty($invoice->date_closed)
+                        && strtotime($invoice->date_due) < strtotime(date('Y-m-d'))
+                        && $this->isDashboardAmountZeroOrLess($invoice_due) === false
+                    );
+                    $invoice_pay_url = $this->base_uri . 'pay/index/'
+                        . rawurlencode($invoice_currency) . '/'
+                        . ($is_past_due ? 'pastdue/' : '');
+
+                    $latest_invoice = [
+                        'id' => isset($invoice->id) ? (int)$invoice->id : 0,
+                        'id_code' => isset($invoice->id_code) ? (string)$invoice->id_code : '',
+                        'id_value' => isset($invoice->id_value) ? (string)$invoice->id_value : '',
+                        'total' => isset($invoice->total) ? (string)$invoice->total : '0.0000',
+                        'currency' => $invoice_currency,
+                        'status' => isset($invoice->status) ? (string)$invoice->status : '',
+                        'due' => (string)$invoice_due,
+                        'date_due' => isset($invoice->date_due) ? (string)$invoice->date_due : null,
+                        'date_due_formatted' => isset($invoice->date_due)
+                            ? $this->formatDashboardActivityDate($invoice->date_due)
+                            : null,
+                        'date_closed' => isset($invoice->date_closed) ? (string)$invoice->date_closed : null,
+                        'pay_url' => $invoice_pay_url,
+                        'view_url' => $this->base_uri . 'invoices/view/'
+                            . (isset($invoice->id) ? (int)$invoice->id : 0) . '/',
+                        'is_past_due' => $is_past_due
+                    ];
+                }
+            }
+
+            // Story 4.4: next domain-renewal summary card (read-only, core model)
+            $next_domain_renewal = null;
+            if ($domain_any_count > 0 && $this->hasPermission('client_services')) {
+                $domain_list = $this->Services->getList(
+                    $client_id,
+                    'active',
+                    1,
+                    ['date_renews' => 'ASC'],
+                    true,
+                    ['type' => 'domains']
+                );
+                if (!empty($domain_list[0])) {
+                    $domain = $domain_list[0];
+                    $renewal_date = !empty($domain->date_renews) ? (string)$domain->date_renews : null;
+                    $days_until_renewal = null;
+                    if ($renewal_date !== null) {
+                        $days_until_renewal = floor((strtotime($renewal_date) - time()) / 86400);
+                    }
+
+                    $next_domain_renewal = [
+                        'id' => isset($domain->id) ? (int)$domain->id : 0,
+                        'name' => isset($domain->name) ? (string)$domain->name : '',
+                        'date_renews' => $renewal_date,
+                        'date_renews_formatted' => $renewal_date !== null
+                            ? $this->formatDashboardActivityDate($renewal_date)
+                            : null,
+                        'manage_url' => $this->base_uri . 'services/manage/'
+                            . (isset($domain->id) ? (int)$domain->id : 0) . '/',
+                        'days_until_renewal' => $days_until_renewal
+                    ];
+                }
+            }
+
+            // Story 4.4: state-aware hero (attention / healthy / empty)
+            $dashboard_hero_state = 'healthy';
+            if (!empty($action_items)) {
+                $dashboard_hero_state = 'attention';
+            } elseif ($active_services_count !== null && (int)$active_services_count === 0) {
+                $dashboard_hero_state = 'empty';
+            }
+        }
+
+        $this->set('dashboard_stats', $dashboard_stats);
+        $this->set('recent_activity', $recent_activity);
+        $this->set('quick_actions', $quick_actions);
+        $this->set('latest_invoice', $latest_invoice);
+        $this->set('next_domain_renewal', $next_domain_renewal);
+        $this->set('dashboard_hero_state', $dashboard_hero_state);
     }
 
     /**
-     * Sets a message to the view regarding in-review services
+     * Loads HosterPK dashboard copy when the client theme is active.
      */
-    private function setInReviewMessage()
+    private function loadHosterpkDashboardLanguage()
+    {
+        if (!defined('ROOTWEBDIR') || !defined('WEBDIR')) {
+            return false;
+        }
+
+        $active_view_dir = null;
+        if (isset($this->structure) && isset($this->structure->view_dir)) {
+            $active_view_dir = $this->structure->view_dir;
+        } elseif (isset($this->view_dir)) {
+            $active_view_dir = $this->view_dir;
+        }
+        if ($active_view_dir === null) {
+            return false;
+        }
+
+        $active_view_dir = rtrim(str_replace('\\', '/', $active_view_dir), '/') . '/';
+        $hosterpk_view_dir = rtrim(str_replace('\\', '/', WEBDIR . 'app/views/client/hosterpk/'), '/') . '/';
+        if ($active_view_dir !== $hosterpk_view_dir) {
+            return false;
+        }
+
+        $view_root = realpath(ROOTWEBDIR . 'app' . DS . 'views' . DS . 'client' . DS . 'hosterpk');
+        $language_path = realpath(ROOTWEBDIR . 'app' . DS . 'views' . DS . 'client' . DS . 'hosterpk' . DS . 'language');
+        if (
+            $view_root === false
+            || $language_path === false
+            || strpos($language_path . DS, $view_root . DS) !== 0
+        ) {
+            return false;
+        }
+
+        Language::loadLang('hosterpk', null, $language_path . DS);
+        return true;
+    }
+
+    /**
+     * Formats a dashboard activity date with Blesta's timezone-aware date helper.
+     *
+     * @param string|null $date The source date
+     * @return string The formatted date, or an empty string when unavailable
+     */
+    private function formatDashboardActivityDate($date)
+    {
+        if (!is_scalar($date)) {
+            return '';
+        }
+
+        $date = trim((string)$date);
+        if ($date === '' || strtotime($date) === false) {
+            return '';
+        }
+
+        return isset($this->Date) ? $this->Date->cast($date, 'j M') : date('j M', strtotime($date));
+    }
+
+    /**
+     * Returns the optional translated date suffix for an activity line.
+     *
+     * @param string $date The pre-formatted activity date
+     * @return string The suffix including separator, or empty string
+     */
+    private function formatDashboardActivityDateSuffix($date)
+    {
+        return $date === '' ? '' : Language::_('Hosterpk.dashboard.activity_date_suffix', true, $date);
+    }
+
+    /**
+     * Gets the best available display invoice number.
+     *
+     * @param stdClass $invoice The invoice row
+     * @return string The invoice number, or empty string
+     */
+    private function getDashboardInvoiceNumber($invoice)
+    {
+        foreach (['id_code', 'id_value', 'id'] as $field) {
+            if (isset($invoice->{$field}) && trim((string)$invoice->{$field}) !== '') {
+                return (string)$invoice->{$field};
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Determines whether a decimal amount is zero or negative without floats.
+     *
+     * @param mixed $amount The raw amount value from the model
+     * @return bool True when the amount is parseable as zero or less
+     */
+    private function isDashboardAmountZeroOrLess($amount)
+    {
+        if ($amount === null || $amount === '') {
+            return true;
+        }
+
+        $amount = preg_replace('/[,\s]/', '', (string)$amount);
+        if (!preg_match('/^[+-]?\d+(?:\.\d+)?$/', $amount)) {
+            return false;
+        }
+        if (strpos($amount, '-') === 0) {
+            return true;
+        }
+
+        $amount = ltrim($amount, '+');
+        return trim(str_replace('.', '', $amount), '0') === '';
+    }
+
+    /**
+     * Sorts dashboard action items by the Story 4.1 contract.
+     *
+     * @param array $items The action items to sort in place
+     */
+    private function sortDashboardActionItems(&$items)
+    {
+        $band_order = [
+            'action_needed' => 0,
+            'in_progress' => 1,
+            'settled' => 2
+        ];
+        $severity_order = [
+            'danger' => 0,
+            'warning' => 1,
+            'info' => 2,
+            'success' => 3
+        ];
+
+        usort($items, function ($left, $right) use ($band_order, $severity_order) {
+            $left_band = $band_order[$left['band'] ?? 'settled'] ?? 99;
+            $right_band = $band_order[$right['band'] ?? 'settled'] ?? 99;
+            if ($left_band !== $right_band) {
+                return $left_band - $right_band;
+            }
+
+            $left_severity = $severity_order[$left['severity'] ?? 'success'] ?? 99;
+            $right_severity = $severity_order[$right['severity'] ?? 'success'] ?? 99;
+            if ($left_severity !== $right_severity) {
+                return $left_severity - $right_severity;
+            }
+
+            return ($left['_rank'] ?? 0) - ($right['_rank'] ?? 0);
+        });
+    }
+
+    /**
+     * Builds the in-review service list used by messages and dashboard cards.
+     *
+     * @return array A messages/items/overflow tuple
+     */
+    private function buildInReviewList()
     {
         if (!isset($this->Services)) {
             $this->uses(['Services']);
@@ -258,35 +845,40 @@ class ClientMain extends ClientController
 
         // Construct a message to notify the client of their in-review services
         $service_list = [];
+        $action_services = [];
         $num_services = count($services);
         $max_services = 5;
         for ($i = 0; $i < min($max_services, $num_services); $i++) {
-            $service_list[] = Language::_('ClientMain.!info.service_name', true, $services[$i]->package->name, $services[$i]->name);
+            $service_name = Language::_(
+                'ClientMain.!info.service_name',
+                true,
+                $services[$i]->package->name,
+                $services[$i]->name
+            );
+            $service_list[] = $service_name;
+            $action_services[] = [
+                'detail' => $service_name,
+                'key' => 'service-in-review-' . (isset($services[$i]->id) ? $services[$i]->id : ($i + 1))
+            ];
         }
         unset($services);
 
+        $overflow = 0;
         // Add a note about additional services
         if ($num_services > $max_services) {
-            $services_over = ($num_services - $max_services);
+            $overflow = ($num_services - $max_services);
             $service_list[] = Language::_(
-                'ClientMain.!info.additional_service' . ($services_over > 1 ? 's' : ''),
+                'ClientMain.!info.additional_service' . ($overflow > 1 ? 's' : ''),
                 true,
-                $services_over
+                $overflow
             );
         }
 
-        // Set the in-review message
-        if (!empty($service_list)) {
-            $this->setMessage(
-                'info',
-                [$service_list],
-                false,
-                [
-                    'info_title' => Language::_('ClientMain.!info.service_in_review', true),
-                    'info_buttons' => []
-                ]
-            );
-        }
+        return [
+            'messages' => $service_list,
+            'items' => $action_services,
+            'overflow' => $overflow
+        ];
     }
 
     /**
@@ -542,16 +1134,41 @@ class ClientMain extends ClientController
         );
         $vars->two_factor_key_base32 = $base32->encode(pack('H*', $vars->two_factor_key));
 
+        // Aggregate model errors (if any) so the owned HosterPK view + partials can render
+        // per-field inline errors (.hpk-invalid/.hpk-field-error). The Form helper has no
+        // error()/setErrors() in this Blesta version, so per-field inline is sourced from
+        // this array, keyed by Blesta field name. Empty on the initial (non-submit) render.
+        $errors = (isset($errors) && is_array($errors)) ? $errors : [];
+
         $this->set('enabled_fields', $this->editable_settings);
         $this->set('show_additional_settings', $show_additional_settings);
         $this->set('vars', $vars);
-        $this->set('two_factor_issuer', rawurlencode($company->name));
+        $this->set('errors', $errors);
+        // Pass the RAW company name; the owned view encodes the otpauth issuer exactly once
+        // (Story 9.2, AC C). Encoding here too produced %2520 double-encoding for a
+        // space-containing name.
+        $this->set('two_factor_issuer', $company->name);
         $this->set('is_primary', $is_primary);
 
+        // Story 9.2 (OQ-A): thread the ACTIVE password policy to the owned view so the
+        // weak-password hint states exactly what the server enforces (additive, read-only —
+        // no validation/save/auth/CSRF change). Mirror the same company settings (and the
+        // same 6/any//.*/i fallbacks) Users::getRules() reads (users.php:933-942); guard
+        // against getSetting() returning false. Companies is already loaded in edit().
+        $hpk_pw_len = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'password_length');
+        $hpk_pw_len_val = (is_object($hpk_pw_len) && isset($hpk_pw_len->value) ? $hpk_pw_len->value : '6');
+        // Guard against a non-numeric DB value so the view hint can never disagree with
+        // the server-enforced length (and so the client-side check has a sane threshold).
+        $this->set('password_min_length', (is_numeric($hpk_pw_len_val) ? $hpk_pw_len_val : '6'));
+        $hpk_pw_fmt = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'password_format');
+        $this->set('password_format', (is_object($hpk_pw_fmt) && isset($hpk_pw_fmt->value) ? $hpk_pw_fmt->value : 'any'));
+        $hpk_pw_rule = $this->Companies->getSetting(Configure::get('Blesta.company_id'), 'password_rule');
+        $this->set('password_rule', (is_object($hpk_pw_rule) && isset($hpk_pw_rule->value) ? $hpk_pw_rule->value : '/.*/i'));
+
         // Set partials to view
-        $this->setContactView($vars, $this->contact);
-        $this->setPhoneView($vars);
-        $this->setCustomFieldView($vars);
+        $this->setContactView($vars, $this->contact, $errors);
+        $this->setPhoneView($vars, $errors);
+        $this->setCustomFieldView($vars, $errors);
     }
 
     /**
@@ -656,7 +1273,7 @@ class ClientMain extends ClientController
         $temp_field_errors = [];
         foreach ($custom_fields_set as $field_id => $value) {
             $this->Clients->setCustomField($field_id, $client_id, $value);
-            $temp_field_errors[] = $this->Clients->errors();
+            $temp_field_errors[$field_id] = $this->Clients->errors();
         }
         unset($field_id, $value);
 
@@ -667,21 +1284,29 @@ class ClientMain extends ClientController
 
         // Combine multiple custom field errors together
         $custom_field_errors = [];
-        for ($i = 0, $num_errors = count($temp_field_errors); $i < $num_errors; $i++) {
+        $i = 0;
+        foreach ($temp_field_errors as $field_id => $field_errors) {
             // Skip any "error" that is not an array already
-            if (!is_array($temp_field_errors[$i])) {
+            if (!is_array($field_errors)) {
+                $i++;
                 continue;
             }
 
             // Change the keys of each custom field error so we can display all of them at once
-            $error_keys = array_keys($temp_field_errors[$i]);
+            $error_keys = array_keys($field_errors);
             $temp_error = [];
 
             foreach ($error_keys as $key) {
-                $temp_error[$key . $i] = $temp_field_errors[$i][$key];
+                $temp_error[$key . $i] = $field_errors[$key];
+                // Emit the HosterPK view key only once per custom field so multiple
+                // distinct errors are not overwritten under the same control key.
+                if (!isset($temp_error[$this->custom_field_prefix . $field_id])) {
+                    $temp_error[$this->custom_field_prefix . $field_id] = $field_errors[$key];
+                }
             }
 
             $custom_field_errors = array_merge($custom_field_errors, $temp_error);
+            $i++;
         }
 
         return (empty($custom_field_errors) ? false : $custom_field_errors);
@@ -694,7 +1319,7 @@ class ClientMain extends ClientController
      * @param stdClass $vars The input vars object for use in the view
      * @param stdClass $contact An object representing the current contact being updated
      */
-    private function setContactView(stdClass $vars, $contact = null)
+    private function setContactView(stdClass $vars, $contact = null, array $errors = [])
     {
         $this->uses(['Countries', 'States', 'ClientGroups', 'Users', 'Clients', 'Companies', 'PluginManager']);
 
@@ -713,6 +1338,7 @@ class ClientMain extends ClientController
             ),
             'states' => $this->Form->collapseObjectArray($this->States->getList($vars->country), 'name', 'code'),
             'vars' => $vars,
+            'errors' => $errors,
             'edit' => true,
             'show_email' => true,
             'show_avatar' => true
@@ -759,7 +1385,7 @@ class ClientMain extends ClientController
      *
      * @param stdClass $vars The input vars object for use in the view
      */
-    private function setPhoneView(stdClass $vars)
+    private function setPhoneView(stdClass $vars, array $errors = [])
     {
         $contact_fields_groups = ['required_contact_fields', 'shown_contact_fields', 'read_only_contact_fields'];
 
@@ -767,7 +1393,8 @@ class ClientMain extends ClientController
         $partial_vars = [
             'numbers' => (isset($vars->numbers) ? $vars->numbers : []),
             'number_types' => $this->Contacts->getNumberTypes(),
-            'number_locations' => $this->Contacts->getNumberLocations()
+            'number_locations' => $this->Contacts->getNumberLocations(),
+            'errors' => $errors
         ];
 
         // Get contact field groups
@@ -805,7 +1432,7 @@ class ClientMain extends ClientController
      *
      * @param stdClass $vars An stdClass object representing the client vars
      */
-    private function setCustomFieldView(stdClass $vars)
+    private function setCustomFieldView(stdClass $vars, array $errors = [])
     {
         // Set partial for custom fields
         $custom_fields = $this->Clients->getCustomFields($this->client->company_id, $this->client->client_group_id);
@@ -838,7 +1465,8 @@ class ClientMain extends ClientController
         $partial_vars = [
             'vars' => $vars,
             'custom_fields' => $custom_fields,
-            'custom_field_prefix' => $this->custom_field_prefix
+            'custom_field_prefix' => $this->custom_field_prefix,
+            'errors' => $errors
         ];
         $this->set('custom_fields', $this->partial('client_main_custom_fields', $partial_vars));
     }

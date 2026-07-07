@@ -1,0 +1,166 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces Bootstrap WidgetClient/table chrome with HosterPK .hpk-card + .hpk-payment-method radio-card list for the native auto-debit form. The auto-debit POST contract (account_id, type), per-row Edit/Verify/Remove actions, and core blestaModalConfirm delete flow are preserved verbatim. Stock baseline: bootstrap/client_accounts.pdt @ 6.0.0-b1 sha256:038f4637af8276f61f9c438fbecb2489a9fbfd457bf32f3601832ba3498f067b */ ?>
+<?php
+/* Page-level language load: Blesta captures content before structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-accounts">
+    <div class="hpk-accounts__nav">
+        <?php echo ($navigation ?? null); ?>
+    </div>
+    <div class="hpk-accounts__content">
+        <?php echo ($message ?? null); ?>
+        <div class="hpk-card" id="hpk-accounts-list">
+            <h1 class="hpk-accounts__title"><?php $this->_('Hosterpk.account.page_title');?></h1>
+            <p class="hpk-accounts__intro"><?php $this->_('Hosterpk.account.intro');?></p>
+
+            <?php
+            if (($accounts ?? false) && (($num_accounts = count($accounts)) > 0)) {
+                // Default account type source for the submitted hidden type field.
+                $account_type = 'cc';
+
+                $this->Form->create(null, ['class' => 'disable-on-submit', 'id' => 'hpk-accounts-form']);
+            ?>
+            <fieldset class="hpk-payment-method-list">
+                <legend class="hpk-payment-method-list__legend"><?php $this->_('Hosterpk.account.legend');?></legend>
+
+                <label class="hpk-payment-method hpk-payment-method--none">
+                    <input type="radio" name="account_id" value="none" class="hpk-payment-method__input"<?php echo ((isset($vars->account_id) ? $this->Html->safe($vars->account_id) : null) == 'none') ? ' checked' : '';?>>
+                    <span class="hpk-payment-method__content">
+                        <span class="hpk-payment-method__radio"></span>
+                        <span class="hpk-payment-method__body">
+                            <span class="hpk-payment-method__label"><?php $this->_('Hosterpk.account.no_autodebit');?></span>
+                            <span class="hpk-payment-method__meta"><?php $this->_('Hosterpk.account.no_autodebit_detail');?></span>
+                        </span>
+                    </span>
+                </label>
+
+                <?php
+                for ($i = 0; $i < $num_accounts; $i++) {
+                    $hpk_account_id = (isset($accounts[$i]->id) ? $accounts[$i]->id : null);
+                    $hpk_account_type = ($accounts[$i]->account_type ?? null);
+                    $hpk_account_status = ($accounts[$i]->status ?? 'active');
+                    $hpk_last4 = (isset($accounts[$i]->last4) ? $accounts[$i]->last4 : null);
+                    $hpk_first_name = (isset($accounts[$i]->first_name) ? $accounts[$i]->first_name : null);
+                    $hpk_last_name = (isset($accounts[$i]->last_name) ? $accounts[$i]->last_name : null);
+
+                    // Radio is checked if both account ID and account type match.
+                    $radio_checked = false;
+                    if (((isset($vars->account_id) ? $vars->account_id : null) == $hpk_account_id) &&
+                        ((isset($vars->type) ? $vars->type : null) == $hpk_account_type)) {
+                        $radio_checked = true;
+                        $account_type = $hpk_account_type;
+                    }
+
+                    // Type label: cc/ach specific subtype if available, else the account type family.
+                    if ($hpk_account_type == 'ach' && isset($ach_types[$accounts[$i]->type])) {
+                        $hpk_type_label = $ach_types[$accounts[$i]->type];
+                    } elseif ($hpk_account_type == 'cc' && isset($cc_types[$accounts[$i]->type])) {
+                        $hpk_type_label = $cc_types[$accounts[$i]->type];
+                    } else {
+                        $hpk_type_label = (isset($account_types[$hpk_account_type]) ? $account_types[$hpk_account_type] : $hpk_account_type);
+                    }
+
+                    $hpk_edit_kind = ($hpk_account_type == 'cc' ? 'cc' : 'ach');
+                    $hpk_edit_url = $this->base_uri . 'accounts/edit' . $hpk_edit_kind . '/' . $hpk_account_id . '/';
+                    $hpk_delete_url = $this->base_uri . 'accounts/delete' . $hpk_edit_kind . '/' . $hpk_account_id . '/';
+                    $hpk_verify_url = $this->base_uri . 'accounts/verifyach/' . $hpk_account_id . '/';
+                ?>
+                <div class="hpk-payment-method-row">
+                    <label class="hpk-payment-method">
+                        <input type="radio" name="account_id" value="<?php echo $this->Html->safe($hpk_account_id);?>" class="hpk-payment-method__input"<?php echo $radio_checked ? ' checked' : '';?>>
+                        <span class="hpk-payment-method__content">
+                            <span class="hpk-payment-method__radio"></span>
+                            <span class="hpk-payment-method__body">
+                                <span class="hpk-payment-method__label"><?php echo $this->Html->safe($hpk_first_name);?> <?php echo $this->Html->safe($hpk_last_name);?></span>
+                                <span class="hpk-payment-method__meta"><?php echo $this->Html->safe($hpk_type_label);?> • <?php $this->_('Hosterpk.account.last4');?> <?php (print (isset($hpk_last4) ? $this->Html->safe($hpk_last4) : null));?></span>
+                                <?php
+                                if ($hpk_account_status != 'active') {
+                                    $hpk_status_key = ($hpk_account_status == 'unverified')
+                                        ? 'Hosterpk.account.status_unverified'
+                                        : 'Hosterpk.account.status_inactive';
+                                ?>
+                                <span class="hpk-badge hpk-badge-warning hpk-payment-method__status"><?php $this->_($hpk_status_key);?></span>
+                                <?php
+                                }
+                                ?>
+                            </span>
+                        </span>
+                        <?php $this->Form->fieldHidden('account_type', $hpk_account_type);?>
+                    </label>
+                    <span class="hpk-payment-method__actions">
+                        <?php
+                        if ($hpk_account_status == 'active') {
+                        ?>
+                        <a href="<?php echo $this->Html->safe($hpk_edit_url);?>" class="hpk-btn hpk-btn-sm hpk-btn-outline"><?php $this->_('Hosterpk.account.action_edit');?></a>
+                        <?php
+                        } elseif ($hpk_account_type == 'ach' && $hpk_account_status == 'unverified') {
+                        ?>
+                        <a href="<?php echo $this->Html->safe($hpk_verify_url);?>" class="hpk-btn hpk-btn-sm hpk-btn-secondary"><?php $this->_('Hosterpk.account.action_verify');?></a>
+                        <?php
+                        }
+                        ?>
+                        <a href="<?php echo $this->Html->safe($hpk_delete_url);?>" class="hpk-btn hpk-btn-sm hpk-btn-ghost" rel="<?php echo $this->Html->safe($this->_('Hosterpk.account.confirm_remove', true));?>">
+                            <?php $this->Form->fieldHidden('id', $this->Html->safe($hpk_account_id));?>
+                            <?php $this->_('Hosterpk.account.action_remove');?>
+                        </a>
+                    </span>
+                </div>
+                <?php
+                }
+                ?>
+            </fieldset>
+
+            <?php $this->Form->fieldHidden('type', (isset($account_type) ? $this->Html->safe($account_type) : null), ['id' => 'account_type']);?>
+
+            <div class="hpk-accounts__form-actions">
+                <button id="remove-auto-debit" class="hpk-btn hpk-btn-outline" type="button"><?php $this->_('Hosterpk.account.remove_autodebit');?></button>
+                <button type="submit" class="hpk-btn hpk-btn-primary"><?php $this->_('Hosterpk.account.set_autodebit');?></button>
+            </div>
+            <?php
+                $this->Form->end();
+            } else {
+            ?>
+            <div class="hpk-empty">
+                <div class="hpk-empty__icon"><i class="fas fa-credit-card"></i></div>
+                <p class="hpk-empty__title"><?php $this->_('Hosterpk.account.empty_title');?></p>
+                <p class="hpk-empty__body"><?php $this->_('Hosterpk.account.empty_body');?></p>
+                <div class="hpk-empty__action">
+                    <a href="<?php echo $this->Html->safe($this->base_uri . 'accounts/add/');?>" class="hpk-btn hpk-btn-primary"><?php $this->_('Hosterpk.account.action_add');?></a>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+        </div>
+    </div>
+</div>
+
+<!-- HOSTERPK STOCK-JS PRESERVED (RULE 6 tier b): account-type sync, core blestaModalConfirm delete binding, and remove-auto-debit trigger. Selectors are retargeted because the card DOM replaces the stock table; the POST contract is unchanged. -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#hpk-accounts-form input[name="account_id"]').on('change click', function() {
+            $('#account_type').val($('input[name="account_type"]', $(this).closest('.hpk-payment-method')).val());
+        });
+
+        // Handle confirmation on delete action
+        $('#hpk-accounts-list a[rel]').each(function() {
+            $(this).blestaModalConfirm({
+                base_url: '<?php echo $this->Html->safe($this->base_uri);?>',
+                confirm_data: {id: $('input[name="id"]', $(this)).val()}
+            });
+        });
+
+        // Remove auto debit
+        $('#remove-auto-debit').click(function() {
+            $('#hpk-accounts-form input[name="account_id"][value="none"]').trigger('click');
+            $('#hpk-accounts-form [type="submit"]').trigger('click');
+        });
+    });
+</script>
+<!-- /PRESERVED -->

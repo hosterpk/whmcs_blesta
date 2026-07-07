@@ -1,0 +1,91 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient/Bootstrap chrome with HosterPK card, table, alert, and primary button components while preserving $invoice_info, credit field, Form->create, and submit behavior. Stock baseline: bootstrap/client_pay.pdt @ 6.0.0-b1 sha256:36f543048e7be12445139646f914ec81f12958bc8510e3312cbd71e4b5d1cc9a */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-card hpk-payment-flow">
+    <?php
+    echo (isset($message) ? $message : null);
+
+    $this->Form->create(null, ['class' => 'disable-on-submit']);
+
+    echo (isset($invoice_info) ? $invoice_info : null);
+    ?>
+    <hr class="hpk-divider" />
+    <?php
+    if (($payment_credit_enabled ?? '1') == '1') {
+    ?>
+    <div class="hpk-payment-flow__credit">
+        <div class="hpk-form-group">
+            <?php
+            $this->Form->label($this->_('ClientPay.index.field_credit', true), 'credit');
+            ?>
+            <div class="hpk-input-group">
+                <?php
+                $this->Form->fieldText('credit', (isset($vars->credit) ? $vars->credit : null), ['id' => 'credit', 'class' => 'form-control']);
+                ?>
+                <span class="hpk-input-group__suffix"><?php (print (isset($currency) ? $this->Html->safe($currency) : null));?></span>
+            </div>
+            <?php
+            if ($has_credit_limits ?? false) {
+                if ($credit_min && $credit_max) {
+            ?>
+            <p class="hpk-help-text"><i class="fas fa-info-circle fa-fw"></i> <?php $this->_('ClientPay.index.text_credit_limits', false, $this->Html->safe($credit_min), $this->Html->safe($credit_max));?></p>
+            <?php
+                } elseif ($credit_min) {
+            ?>
+            <p class="hpk-help-text"><i class="fas fa-info-circle fa-fw"></i> <?php $this->_('ClientPay.index.text_credit_min_only', false, $this->Html->safe($credit_min));?></p>
+            <?php
+                } elseif ($credit_max) {
+            ?>
+            <p class="hpk-help-text"><i class="fas fa-info-circle fa-fw"></i> <?php $this->_('ClientPay.index.text_credit_max_only', false, $this->Html->safe($credit_max));?></p>
+            <?php
+                }
+            }
+            ?>
+        </div>
+    </div>
+    <?php
+    }
+    ?>
+
+    <div class="hpk-payment-flow__actions">
+        <button type="submit" class="hpk-btn hpk-btn-primary">
+            <i class="fas fa-arrow-circle-right"></i> <?php $this->_('ClientPay.index.field_submit');?>
+        </button>
+    </div>
+    <?php
+    $this->Form->end();
+    ?>
+</div>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        selectAllPayments();
+
+        $("input[name='invoice_id[]']").on("change", function() {
+            if ($(this).val() == "all") {
+                if ($(this).is(":checked"))
+                    $("input[name='invoice_id[]']").prop('checked', true);
+                else
+                    $("input[name='invoice_id[]']").prop('checked', false);
+            }
+        });
+    });
+
+    function selectAllPayments() {
+        var element = $("input[name='invoice_id[]']");
+        if ($(element).val() == "all" && $(element).prop('checked')) {
+            if ($(element).is(":checked"))
+                $(element).prop('checked', true);
+        }
+    }
+</script>
+<!-- /PRESERVED -->

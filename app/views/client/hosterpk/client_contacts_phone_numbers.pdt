@@ -1,0 +1,131 @@
+<?php /* HOSTERPK OVERRIDE — restyles the stock phone/fax number rows into the HosterPK .hpk-table (with the <=760px reflow) + .hpk-form-group, and replaces the Bootstrap dropdown action group (its data-toggle="dropdown" is dead since application.min.css was dropped, Story 2.2) with direct .hpk-btn add/remove buttons. The <tr class="phone_row"> structure and the .phone_row_add/.phone_row_remove/.phone_id class hooks the preserved clone/remove JS binds are kept byte-exact; every field name/id is unchanged. Injected synchronously by ClientMain::edit + ClientContacts::add/edit (and AJAX-capable per PAGES.md §8a) — branding once covers both. Stock baseline: bootstrap/client_contacts_phone_numbers.pdt @ 6.0.0-b1 sha256:d085ee4364e0578cd82c4e9dabe5c678dbacfcbf1b3b721eb91d6c985704da97 */ ?>
+<?php
+$hpk_errors = (isset($errors) && is_array($errors)) ? $errors : [];
+$hpk_field_error = function ($field) use ($hpk_errors) {
+    if (empty($hpk_errors[$field])) {
+        return '';
+    }
+    $msg = $hpk_errors[$field];
+    while (is_array($msg)) {
+        $msg = reset($msg);
+    }
+    return (string) $msg;
+};
+if (
+    in_array('phone', $required_contact_fields ?? []) || in_array('phone', $shown_contact_fields ?? [])
+    || in_array('fax', $required_contact_fields ?? []) || in_array('fax', $shown_contact_fields ?? [])
+) {
+// Blesta validates phone rows with the empty-bracket key `numbers[][<field>]`
+// (Contacts model, multiple=true), so a failure carries NO row index — it cannot be
+// attributed to a specific row. Surface each field-level message ONCE at the group
+// level rather than smearing `.hpk-invalid` onto every rendered row (incl. valid ones).
+$hpk_number_messages = [];
+foreach (['number', 'type', 'location'] as $hpk_num_field) {
+    $hpk_num_msg = $hpk_field_error('numbers[][' . $hpk_num_field . ']');
+    if ($hpk_num_msg !== '' && !in_array($hpk_num_msg, $hpk_number_messages, true)) {
+        $hpk_number_messages[] = $hpk_num_msg;
+    }
+}
+$hpk_numbers_error = $hpk_field_error('numbers');
+if ($hpk_numbers_error !== '' && !in_array($hpk_numbers_error, $hpk_number_messages, true)) {
+    array_unshift($hpk_number_messages, $hpk_numbers_error);
+}
+?>
+<h3 class="hpk-profile__section-title"><?php $this->_('ClientContacts.phone_numbers.heading_phone');?></h3>
+<div class="hpk-form-group">
+    <?php
+    foreach ($hpk_number_messages as $hpk_number_message) {
+        echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_number_message) . '</span>';
+    }
+    ?>
+    <table class="hpk-table hpk-phone-numbers">
+        <thead>
+            <tr>
+                <th><?php $this->_('ClientContacts.phone_numbers.field_phonetype');?></th>
+                <th><?php $this->_('ClientContacts.phone_numbers.field_phonelocation');?></th>
+                <th><?php $this->_('ClientContacts.phone_numbers.field_phonenumber');?></th>
+                <th><?php $this->_('ClientContacts.phone_numbers.field_phoneoptions');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $num_numbers = count((isset($numbers['type']) ? $numbers['type'] : []));
+            for ($i = 0; $i < max(1, $num_numbers); $i++) {
+            ?>
+            <tr class="phone_row">
+                <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.phone_numbers.field_phonetype', true));?>">
+                    <?php $this->Form->fieldHidden('numbers[id][]', (isset($numbers['id'][$i]) ? $numbers['id'][$i] : null), ['class' => 'phone_id']);?>
+                    <?php
+                    $this->Form->fieldSelect('numbers[type][]', (isset($number_types) ? $number_types : null), (isset($numbers['type'][$i]) ? $numbers['type'][$i] : null), ['class' => 'form-control']);
+                    ?>
+                </td>
+                <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.phone_numbers.field_phonelocation', true));?>">
+                    <?php
+                    $this->Form->fieldSelect('numbers[location][]', (isset($number_locations) ? $number_locations : null), (isset($numbers['location'][$i]) ? $numbers['location'][$i] : null), ['class' => 'form-control']);
+                    ?>
+                </td>
+                <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.phone_numbers.field_phonenumber', true));?>">
+                    <?php
+                    $this->Form->fieldText('numbers[number][]', (isset($numbers['number'][$i]) ? $numbers['number'][$i] : null), ['type' => 'tel', 'class' => 'form-control', 'placeholder' => $this->_('ClientContacts.phone_numbers.field_phonenumber', true)]);
+                    ?>
+                </td>
+                <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.phone_numbers.field_phoneoptions', true));?>">
+                    <div class="hpk-phone-numbers__actions">
+                        <button type="button" class="hpk-btn hpk-btn-sm hpk-btn-outline phone_row_add"><i class="fas fa-plus fa-fw" aria-hidden="true"></i> <?php $this->_('ClientContacts.phone_numbers.categorylink_number');?></button>
+                        <button type="button" class="hpk-btn hpk-btn-sm hpk-btn-ghost phone_row_remove"><i class="fas fa-trash fa-fw" aria-hidden="true"></i> <?php $this->_('ClientContacts.phone_numbers.text_remove');?></button>
+                    </div>
+                </td>
+            </tr>
+            <?php
+            }
+
+            // Reset any numbers that should be deleted
+            foreach ((isset($numbers['id']) ? $numbers['id'] : []) as $index => $id) {
+                if (!isset($numbers['type'][$index])) {
+                    $this->Form->fieldHidden('numbers[id][]', (isset($id) ? $id : null), ['class' => 'phone_id']);
+                }
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- HOSTERPK STOCK-JS PRESERVED (RULE 6 tier b): clone-row add + keep-id remove. Echoed verbatim from stock (class hooks unchanged). -->
+<?php
+$this->Javascript->setInline("
+$(document).ready(function() {
+    $('.phone_row_add').click(function() {
+        var fields = $(this).parents('tr').clone(true);
+        // Remove input text/hidden and textarea data
+        fields.find('input:text,input:hidden,textarea').val('');
+        // Remove checkbox/radio data
+        fields.find('input:checkbox,input:radio').prop('checked', false);
+        // Unselect options
+        fields.find('option:selected').prop('selected', false);
+        // Remove any stale inline validation messages copied from a previous error render
+        fields.find('.hpk-field-error').remove();
+
+        var last_tr = $(this).parents('tr').last();
+        $(last_tr).after(fields);
+        // Empty the phone ID
+        fields.find('.phone_id').attr('value', '');
+
+        return false;
+    });
+
+    $('.phone_row_remove').click(function() {
+        if ($('tr.phone_row').length > 1) {
+            // Keep ID, remove everything else
+            var tr = $(this).parents('tr');
+            $(tr).parents('table').after($(tr).find('input.phone_id'));
+            $(tr).remove();
+        }
+        return false;
+    });
+});
+");
+?>
+<!-- /PRESERVED -->
+<?php
+}
+?>

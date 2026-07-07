@@ -1,0 +1,207 @@
+/*
+ * HosterPK vendor-compat shim — the CLOSED 33-class legacy/BS4 bridge.
+ * Story 2.9 (AR-ENF1; architecture D1). UNLAYERED, .hpk-client-scoped frame tier.
+ *
+ * WHAT THIS IS. Story 2.2 dropped the stock application.min.css link, so un-owned
+ * markup — fallback stock .pdt pages (Blesta per-file View::fetch() fallback) and
+ * enabled plugin/module fragments — keeps emitting BS4.6 + Blesta-legacy class
+ * names that now have NO stylesheet at all. This file re-provides working CSS for
+ * EXACTLY the legacy vocabulary those surfaces emit, bounded to a CLOSED
+ * ENUMERATION (never a sample — else it is an unbounded second framework, D1).
+ *
+ * SOURCE OF TRUTH. _bmad-output/uiux/implementation-artifacts/spikes/
+ * G4-class-enumeration.csv (Story 1.7 / Spike F): the rows whose `shim_disposition`
+ * contains "SHIM MAP" — exactly 33 of 338 audited tokens. Reproduce/verify the set
+ * with `python3 classify-g4.py` (same dir) and diff. If the authored set and the
+ * CSV disagree, THE CSV WINS. The other 305 tokens are BS5-stable (owned bundle),
+ * icon-font (Story 2.5), or bespoke (FR34 per-page deferral) — NOT this shim's job.
+ *
+ * RE-DECLARATION, NOT ALIAS. CSS cannot alias one class onto another, so each
+ * legacy class is re-declared with the CSS that reproduces the behaviour its
+ * disposition describes (e.g. float-right becomes float:right; sr-only becomes the
+ * visually-hidden recipe). The disposition's "BS5 idiom" names the INTENT.
+ *
+ * REACH RULE — FRAME TIER (architecture:608-626). Every rule is .hpk-client-scoped:
+ * intentional global reach over owned + stock + plugin fallback markup INSIDE the
+ * client area, never leaking to admin/other contexts. No component-tier assumption
+ * of authored DOM, no structure beyond what the legacy class itself means.
+ *
+ * THEME + BRAND. Visual classes (the badge-* family) reuse the --hpk-* state tokens
+ * the .hpk-badge-* look already uses (components.css), so a fallback .badge-danger
+ * reads on-brand in BOTH themes via the [data-theme="dark"] token overrides — no
+ * per-component dark rule, never a raw hex. The one sanctioned literal is the #fff
+ * filled-badge text on the theme-agnostic --hpk-primary fill (mirrors .hpk-btn-
+ * primary's documented #fff). Structural/util classes are plain functional decls.
+ *
+ * RULE 2 override flags: the bundle is flag-free EXCEPT the 6 SEMANTIC badge colour
+ * declarations below (the audited RULE 2 allowlist — see project-context.md's
+ * override-flag policy + FOUNDATION.md). Those must out-rank Blesta's GENERATED
+ * /client/theme/theme.css, which flags .badge-{danger,info,success,warning,primary,
+ * secondary} background+color and is linked (via structure.pdt's $theme_css) BEFORE
+ * our bundle — so .hpk-client specificity alone cannot win, and theme.css's
+ * white-on-fill is several sub-AA. badge-default has NO theme.css competitor, so it
+ * stays flag-free. Everything else wins by .hpk-client scope + source-order (this
+ * layer concatenates AFTER base/components, and application.min.css is gone).
+ * UNLAYERED is the winning tier (base.css cascade contract) — do NOT wrap in @layer.
+ *
+ * The BS .badge / .btn / .table / .input-group BASE classes are NOT in the closed
+ * set (BS5-stable, owned-bundle scope), so the badge/button shims below carry their
+ * own self-contained look rather than leaning on an unstyled base.
+ */
+
+/* ── Badges (7) — BS4 .badge-* -> the BS5 .text-bg-* idiom, rendered on-brand as
+ * the .hpk-badge-* tint look. No ::before dot (that is a bespoke .hpk-badge
+ * flourish, not BS badge behaviour). */
+.hpk-client .badge-danger,
+.hpk-client .badge-info,
+.hpk-client .badge-success,
+.hpk-client .badge-warning,
+.hpk-client .badge-default,
+.hpk-client .badge-primary,
+.hpk-client .badge-secondary {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  line-height: 1;
+  padding: .4rem .65rem;
+  border-radius: var(--hpk-r-pill);
+}
+/* The 6 SEMANTIC badge colours carry the audited RULE 2 override flag (header note):
+ * they must beat the generated theme.css's flagged .badge-* (background+color), which
+ * loads first; a plain rule loses regardless of specificity. Single-line so the gate
+ * can allowlist each flag by its on-line selector. danger/info/success/warning reuse
+ * the gate-verified --hpk-{state}-tint/-text pairs (the .hpk-badge-* look, AA in both
+ * themes). secondary -> BS .text-bg-secondary = NEUTRAL/grey (BS "secondary" is grey,
+ * not brand orange): the .hpk-badge-neutral recipe. primary -> BS .text-bg-primary =
+ * SOLID --hpk-primary + literal #fff (the shipped .hpk-btn-primary contrast; the tint
+ * recipe has no gate-verified --hpk-primary-text and fails AA in dark). */
+.hpk-client .badge-success   { background: var(--hpk-success-tint) !important; color: var(--hpk-success-text) !important; }
+.hpk-client .badge-info      { background: var(--hpk-info-tint) !important;    color: var(--hpk-info-text) !important; }
+.hpk-client .badge-danger    { background: var(--hpk-danger-tint) !important;  color: var(--hpk-danger-text) !important; }
+.hpk-client .badge-warning   { background: var(--hpk-warning-tint) !important; color: var(--hpk-warning-text) !important; }
+.hpk-client .badge-secondary { background: var(--hpk-g200) !important;         color: var(--hpk-neutral-text) !important; }
+.hpk-client .badge-primary   { background: var(--hpk-primary) !important;      color: #fff !important; }
+/* badge-default: BS3 fallback badge, NO theme.css competitor -> stays flag-free
+ * (the .hpk-badge-neutral recipe wins by scope + source-order). */
+.hpk-client .badge-default { background: var(--hpk-g200); color: var(--hpk-neutral-text); }
+
+/* ── Buttons (3). The BS .btn base is NOT in the closed set, so btn-block/btn-xs are
+ * sizing/layout MODIFIERS (they pair with a colour class) and btn-default carries a
+ * self-contained neutral look. base.css already gives <button> its font + cursor. */
+.hpk-client .btn-block { display: block; width: 100%; }   /* BS4 -> .d-grid / .w-100 */
+.hpk-client .btn-xs {                                      /* bundle-custom -> .btn-sm, smaller */
+  padding: .2rem .5rem;
+  font-size: var(--hpk-small-font-size);
+  border-radius: var(--hpk-r-sm);
+}
+.hpk-client .btn-default {                                 /* BS3 -> .btn-secondary: a neutral default button */
+  display: inline-block;
+  padding: var(--hpk-space-button-padding);
+  background: var(--hpk-surface);
+  color: var(--hpk-ink);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  text-decoration: none;
+}
+
+/* ── Floats (3). BS4 .float-left / .float-right + BS3 .pull-right. */
+.hpk-client .float-left { float: left; }    /* -> .float-start */
+.hpk-client .float-right,
+.hpk-client .pull-right { float: right; }   /* -> .float-end */
+
+/* ── Sort indicators (2). Blesta th>a.asc / th>a.desc pseudo-icon: preserve the
+ * sort-direction affordance with a currentColor arrow via ::after (no icon font). */
+.hpk-client .asc::after  { content: "\2191"; }   /* up   = ascending  */
+.hpk-client .desc::after { content: "\2193"; }   /* down = descending */
+.hpk-client .asc::after,
+.hpk-client .desc::after { margin-inline-start: .25em; font-size: .85em; }
+
+/* ── Visibility (1). Blesta legacy .hide (BS5 uses .d-none). */
+.hpk-client .hide { display: none; }
+
+/* ── Spacing (4). Blesta legacy margin utils + BS4 .form-group + panel padding. */
+.hpk-client .marbot10   { margin-bottom: 10px; }
+.hpk-client .martop10   { margin-top: 10px; }
+.hpk-client .form-group { margin-bottom: var(--hpk-space-3); }   /* BS4 -> .mb-3 (1rem) */
+.hpk-client .panel-pad  { padding: var(--hpk-space-card-padding); }
+
+/* ── Typography (2). BS4 .font-weight-bold / .font-italic. */
+.hpk-client .font-weight-bold { font-weight: 700; }     /* -> .fw-bold   */
+.hpk-client .font-italic      { font-style: italic; }   /* -> .fst-italic */
+
+/* ── Screen-reader-only (1). BS4 .sr-only -> BS5 .visually-hidden: the standard
+ * off-screen-but-in-the-a11y-tree recipe. */
+.hpk-client .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Close control (1). BS4 .close (the × dismiss) -> BS5 .btn-close. The × glyph
+ * rides in the markup (&times;); style the floated dismiss affordance on-brand. */
+.hpk-client .close {
+  float: right;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--hpk-muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+.hpk-client .close:hover { color: var(--hpk-ink); }
+
+/* ── Input group (1). BS4 .input-group-append wrapper -> BS5 flattened (the addon is
+ * a direct child of .input-group). Keep the addon inline with the field. */
+.hpk-client .input-group-append { display: flex; align-items: center; }
+
+/* ── Grid vestiges (2). BS3/4 .col-xs-* (the always-on smallest breakpoint, no media
+ * query). They carry their OWN column behaviour — base.css ships no grid, so do NOT
+ * defer to a .col-12 / .col-4 that does not exist. col-xs-4 floats to sit 3-across
+ * (the BS3 xs idiom); col-xs-12 is a full-width block. */
+.hpk-client .col-xs-12 { width: 100%; }
+.hpk-client .col-xs-4  { float: left; width: 33.3333%; }
+
+/* ── Custom controls (4). BS4 .custom-control / -input / -label / .custom-switch map
+ * to the BS5 .form-check family. Render a usable NATIVE checkbox + label (NOT the
+ * BS4 opacity:0 input + drawn visual, which without the redraw would be invisible —
+ * "not broken" is the bar). base.css excludes checkbox/radio from the field reset,
+ * so the box keeps its UA paint. */
+.hpk-client .custom-control {
+  position: relative;
+  display: block;
+  min-height: 1.5rem;
+  padding-left: 1.5em;
+}
+.hpk-client .custom-switch { padding-left: 2.5em; }
+.hpk-client .custom-control-input {
+  width: 1em;
+  height: 1em;
+  margin-left: -1.5em;
+  vertical-align: top;
+}
+.hpk-client .custom-control-label { position: relative; vertical-align: top; }
+
+/* ── Tables (2). Blesta .table-curved (rounded wrapper) + .table-striped-alt
+ * (alternate striping). table-curved flips border-collapse so the radius clips;
+ * .hpk-client .table-curved (0,2,0) out-specifies base .hpk-client table (0,1,1).
+ * Striping is the class's OWN meaning, so :nth-child is in-bounds (not a bare
+ * frame-tier positional selector). */
+.hpk-client .table-curved {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--hpk-r-lg);
+  overflow: hidden;
+}
+.hpk-client .table-striped-alt tbody tr:nth-child(odd) {
+  background-color: var(--hpk-g100);
+}

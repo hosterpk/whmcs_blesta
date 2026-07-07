@@ -1,0 +1,363 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient chrome with HosterPK card, status tabs, table, a net-new Status badge column, empty state, and scoped pagination while preserving the controller->view data contract, filter field names, byte-verbatim widget-mode guard, and the applied-transactions expansion DOM. Transactions are read-only history: no per-row Pay/Actions (DEC-3). Stock baseline: bootstrap/client_transactions.pdt @ 6.0.0-b1 sha256:eca249b2f7ed23e6f6388bb81e53cf1afbe7a61062c38b3f8ac17d30c9a4bbfc */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+$hpk_icon_var_names = ['icon', 'icon_class', 'icon_label'];
+$hpk_view_vars_property = null;
+$hpk_get_view_vars_property = function ($view) use (&$hpk_view_vars_property) {
+    if ($hpk_view_vars_property === null) {
+        $hpk_reflection = new ReflectionClass($view);
+        if (!$hpk_reflection->hasProperty('vars')) {
+            $hpk_view_vars_property = false;
+        } else {
+            $hpk_view_vars_property = $hpk_reflection->getProperty('vars');
+            $hpk_view_vars_property->setAccessible(true);
+        }
+    }
+
+    return $hpk_view_vars_property;
+};
+$hpk_snapshot_icon_vars = function ($view) use ($hpk_icon_var_names, $hpk_get_view_vars_property) {
+    $hpk_property = $hpk_get_view_vars_property($view);
+    if ($hpk_property === false) {
+        return null;
+    }
+
+    $hpk_vars = $hpk_property->getValue($view);
+    $hpk_snapshot = [];
+    foreach ($hpk_icon_var_names as $hpk_name) {
+        $hpk_snapshot[$hpk_name] = [
+            'exists' => array_key_exists($hpk_name, $hpk_vars),
+            'value' => array_key_exists($hpk_name, $hpk_vars) ? $hpk_vars[$hpk_name] : null
+        ];
+    }
+
+    return $hpk_snapshot;
+};
+$hpk_restore_icon_vars = function ($view, $hpk_snapshot) use ($hpk_get_view_vars_property) {
+    if ($hpk_snapshot === null) {
+        return;
+    }
+
+    $hpk_property = $hpk_get_view_vars_property($view);
+    if ($hpk_property === false) {
+        return;
+    }
+
+    $hpk_vars = $hpk_property->getValue($view);
+    foreach ($hpk_snapshot as $hpk_name => $hpk_state) {
+        if ($hpk_state['exists']) {
+            $hpk_vars[$hpk_name] = $hpk_state['value'];
+            continue;
+        }
+
+        unset($hpk_vars[$hpk_name]);
+    }
+    $hpk_property->setValue($view, $hpk_vars);
+};
+
+$hpk_is_inner = (isset($render_section) ? $render_section : null) || (isset($is_ajax) ? $is_ajax : null);
+$hpk_status_whitelist = ['approved', 'pending', 'declined', 'void', 'error', 'refunded', 'returned'];
+$hpk_status = (isset($status) && in_array($status, $hpk_status_whitelist, true)) ? $status : 'approved';
+$hpk_sort = isset($sort) ? $sort : 'date_added';
+$hpk_order = isset($order) ? $order : 'desc';
+$hpk_negate_order = isset($negate_order) ? $negate_order : ($hpk_order == 'asc' ? 'desc' : 'asc');
+$hpk_status_count = (isset($status_count) && is_array($status_count)) ? $status_count : [];
+$hpk_transactions = (isset($transactions) && is_array($transactions)) ? $transactions : [];
+$hpk_num_transactions = count($hpk_transactions);
+
+$hpk_columns = [
+    'type' => $this->_('Hosterpk.transaction.heading_type', true),
+    'amount' => $this->_('Hosterpk.transaction.heading_amount', true),
+    'credited' => $this->_('Hosterpk.transaction.heading_credited', true),
+    'applied' => $this->_('Hosterpk.transaction.heading_applied', true),
+    'number' => $this->_('Hosterpk.transaction.heading_number', true),
+    'date' => $this->_('Hosterpk.transaction.heading_date', true),
+    'status' => $this->_('Hosterpk.transaction.heading_status', true)
+];
+
+/* Net-new Status column (AC7): badge class + HosterPK copy key per DEC-2. */
+$hpk_status_badges = [
+    'approved' => ['success', 'Hosterpk.transaction.status_approved'],
+    'pending' => ['warning', 'Hosterpk.transaction.status_pending'],
+    'declined' => ['danger', 'Hosterpk.transaction.status_declined'],
+    'error' => ['danger', 'Hosterpk.transaction.status_error'],
+    'void' => ['neutral', 'Hosterpk.transaction.status_void'],
+    'refunded' => ['info', 'Hosterpk.transaction.status_refunded'],
+    'returned' => ['danger', 'Hosterpk.transaction.status_returned']
+];
+
+$hpk_build_url = function ($target_status, $target_page = null, $target_sort = null, $target_order = null) {
+    $url = $this->base_uri . 'transactions/index/' . $target_status . '/';
+    if ($target_page !== null) {
+        $url .= $target_page . '/';
+    }
+
+    $params = [];
+    if ($target_sort !== null) {
+        $params['sort'] = $target_sort;
+        $params['order'] = $target_order;
+    }
+
+    return $url . (!empty($params) ? '?' . http_build_query($params, '', '&') : '');
+};
+
+$hpk_sort_url = function ($target_sort) use ($hpk_build_url, $hpk_status, $hpk_sort, $hpk_order, $hpk_negate_order) {
+    return $hpk_build_url(
+        $hpk_status,
+        null,
+        $target_sort,
+        ($hpk_sort == $target_sort ? $hpk_negate_order : $hpk_order)
+    );
+};
+
+$hpk_sort_class = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    return 'hpk-transactions__sort' . ($hpk_sort == $target_sort ? ' ' . $hpk_order : '');
+};
+
+$hpk_aria_sort = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    if ($hpk_sort != $target_sort) {
+        return null;
+    }
+
+    return $hpk_order == 'asc' ? 'ascending' : 'descending';
+};
+
+$hpk_render_sort_header = function ($key, $label) use ($hpk_is_inner, $hpk_sort_class, $hpk_sort_url, $hpk_aria_sort) {
+    $hpk_aria = $hpk_is_inner ? null : $hpk_aria_sort($key);
+?><th scope="col"<?php if ($hpk_aria !== null) { ?> aria-sort="<?php echo $this->Html->safe($hpk_aria); ?>"<?php } elseif (!$hpk_is_inner) { ?> aria-sort="none"<?php } ?>>
+    <?php if ($hpk_is_inner) { ?>
+        <?php echo $this->Html->safe($label); ?>
+    <?php } else { ?>
+        <a class="<?php echo $this->Html->safe($hpk_sort_class($key)); ?>" href="<?php echo $this->Html->safe($hpk_sort_url($key)); ?>" data-hpk-filter-link><?php echo $this->Html->safe($label); ?></a>
+    <?php } ?>
+</th><?php
+};
+
+$hpk_filter_label_keys = [
+    'filters[payment_type]' => 'Hosterpk.transaction.filter_payment_type',
+    'filters[transaction_id]' => 'Hosterpk.transaction.filter_transaction_id',
+    'filters[applied_status]' => 'Hosterpk.transaction.filter_applied_status',
+    'filters[start_date]' => 'Hosterpk.transaction.filter_start_date',
+    'filters[end_date]' => 'Hosterpk.transaction.filter_end_date',
+    'filters[minimum_amount]' => 'Hosterpk.transaction.filter_minimum_amount',
+    'filters[maximum_amount]' => 'Hosterpk.transaction.filter_maximum_amount'
+];
+
+$hpk_filter_placeholder_keys = [
+    'filters[transaction_id]' => 'Hosterpk.transaction.filter_placeholder_transaction_id',
+    'filters[start_date]' => 'Hosterpk.transaction.filter_placeholder_start_date',
+    'filters[end_date]' => 'Hosterpk.transaction.filter_placeholder_end_date',
+    'filters[minimum_amount]' => 'Hosterpk.transaction.filter_placeholder_minimum_amount',
+    'filters[maximum_amount]' => 'Hosterpk.transaction.filter_placeholder_maximum_amount'
+];
+
+$hpk_filter_action = $hpk_build_url($hpk_status, null, $hpk_sort, $hpk_order);
+?>
+<div id="hpk-transactions" class="hpk-transactions<?php echo $this->Html->safe($hpk_is_inner ? ' hpk-transactions--embedded' : ''); ?>">
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    <section class="hpk-card hpk-transactions__shell" aria-labelledby="hpk-transactions-title">
+        <div class="hpk-transactions__header">
+            <div>
+                <h1 id="hpk-transactions-title" class="hpk-transactions__title"><?php echo $this->Html->safe($this->_('Hosterpk.transaction.page_title', true)); ?></h1>
+            </div>
+            <nav class="hpk-tabs hpk-transactions__tabs" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.transaction.tabs_label', true)); ?>">
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_build_url('approved', null, $hpk_sort, $hpk_order)); ?>"<?php echo ($hpk_status == 'approved' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.transaction.tab_approved', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['approved']) ? $hpk_status_count['approved'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_build_url('pending', null, $hpk_sort, $hpk_order)); ?>"<?php echo ($hpk_status == 'pending' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.transaction.tab_pending', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['pending']) ? $hpk_status_count['pending'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_build_url('declined', null, $hpk_sort, $hpk_order)); ?>"<?php echo ($hpk_status == 'declined' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.transaction.tab_declined', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['declined']) ? $hpk_status_count['declined'] : 0); ?></span>
+                </a>
+            </nav>
+        </div>
+
+        <?php if (isset($filters)) { ?>
+        <?php $this->Form->create($hpk_filter_action, ['class' => 'hpk-transactions__filters hpk-transactions__filter-form']); ?>
+            <?php
+            foreach ($filters->getFields() as $hpk_filter_field) {
+                foreach ($hpk_filter_field->fields as $hpk_filter_input) {
+                    if ($hpk_filter_input->type == 'fieldHidden') {
+                        call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_input->params);
+                        continue;
+                    }
+
+                    $hpk_filter_params = $hpk_filter_input->params;
+                    $hpk_filter_name = isset($hpk_filter_params['name']) ? $hpk_filter_params['name'] : '';
+                    $hpk_filter_attrs = isset($hpk_filter_params['attributes']) ? $hpk_filter_params['attributes'] : [];
+                    $hpk_filter_id = isset($hpk_filter_attrs['id']) ? $hpk_filter_attrs['id'] : preg_replace('/[^A-Za-z0-9_-]+/', '_', $hpk_filter_name);
+                    $hpk_filter_classes = isset($hpk_filter_attrs['class']) ? preg_split('/\s+/', trim($hpk_filter_attrs['class'])) : [];
+                    $hpk_filter_classes = array_diff($hpk_filter_classes, ['form-control', 'stretch', 'input-sm']);
+                    $hpk_filter_classes[] = 'hpk-transactions__control';
+                    $hpk_filter_attrs['class'] = trim(implode(' ', array_unique(array_filter($hpk_filter_classes))));
+                    $hpk_filter_params['attributes'] = $hpk_filter_attrs;
+
+                    // Replace stock filter option/placeholder copy with HosterPK-owned keys (AC13).
+                    if ($hpk_filter_input->type == 'fieldSelect') {
+                        if ($hpk_filter_name == 'filters[payment_type]') {
+                            $hpk_filter_options = isset($hpk_filter_params['options']) ? $hpk_filter_params['options'] : [];
+                            $hpk_filter_options[''] = $this->_('Hosterpk.transaction.filter_option_any', true);
+                            $hpk_filter_params['options'] = $hpk_filter_options;
+                        } elseif ($hpk_filter_name == 'filters[applied_status]') {
+                            $hpk_filter_params['options'] = [
+                                '' => $this->_('Hosterpk.transaction.filter_option_any', true),
+                                'fully_applied' => $this->_('Hosterpk.transaction.filter_option_fully_applied', true),
+                                'partially_applied' => $this->_('Hosterpk.transaction.filter_option_partially_applied', true),
+                                'not_applied' => $this->_('Hosterpk.transaction.filter_option_not_applied', true)
+                            ];
+                        }
+                    } elseif ($hpk_filter_input->type == 'fieldText' && isset($hpk_filter_attrs['placeholder'], $hpk_filter_placeholder_keys[$hpk_filter_name])) {
+                        $hpk_filter_attrs['placeholder'] = $this->_($hpk_filter_placeholder_keys[$hpk_filter_name], true);
+                        $hpk_filter_params['attributes'] = $hpk_filter_attrs;
+                    }
+
+                    $hpk_label_key = isset($hpk_filter_label_keys[$hpk_filter_name])
+                        ? $hpk_filter_label_keys[$hpk_filter_name]
+                        : 'Hosterpk.transaction.filter_generic';
+            ?>
+            <div class="hpk-transactions__filter">
+                <?php $this->Form->label($this->_($hpk_label_key, true), $hpk_filter_id, ['class' => 'hpk-transactions__filter-label']); ?>
+                <?php call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_params); ?>
+            </div>
+            <?php
+                }
+            }
+            ?>
+            <div class="hpk-transactions__filter-actions">
+                <?php $this->Form->fieldSubmit('submit', $this->_('Hosterpk.transaction.filter_submit', true), ['class' => 'hpk-btn hpk-btn-outline hpk-btn-sm']); ?>
+            </div>
+        <?php $this->Form->end(); ?>
+        <?php echo $filters->getHtml(); ?>
+        <?php } ?>
+    <?php } ?>
+
+        <div class="hpk-transactions__results" aria-live="polite">
+            <?php if ($hpk_num_transactions > 0) { ?>
+            <div class="hpk-transactions__table">
+                <table class="hpk-table" id="hpk-transactions-table">
+                    <thead>
+                        <tr>
+                            <?php $hpk_render_sort_header('type', $hpk_columns['type']); ?>
+                            <?php $hpk_render_sort_header('amount', $hpk_columns['amount']); ?>
+                            <th scope="col"><?php echo $this->Html->safe($hpk_columns['credited']); ?></th>
+                            <?php $hpk_render_sort_header('applied_amount', $hpk_columns['applied']); ?>
+                            <?php $hpk_render_sort_header('transaction_id', $hpk_columns['number']); ?>
+                            <?php $hpk_render_sort_header('date_added', $hpk_columns['date']); ?>
+                            <th scope="col"><?php echo $this->Html->safe($hpk_columns['status']); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php for ($i = 0; $i < $hpk_num_transactions; $i++) {
+                            if ((isset($hpk_transactions[$i]->type) ? $hpk_transactions[$i]->type : null) == 'other'
+                                && (isset($hpk_transactions[$i]->gateway_type) ? $hpk_transactions[$i]->gateway_type : null) == 'nonmerchant') {
+                                $hpk_trans_type = $hpk_transactions[$i]->gateway_name;
+                            } else {
+                                $hpk_trans_type = (isset($transaction_types[($hpk_transactions[$i]->type_name != '' ? $hpk_transactions[$i]->type_name : $hpk_transactions[$i]->type)])
+                                    ? $transaction_types[($hpk_transactions[$i]->type_name != '' ? $hpk_transactions[$i]->type_name : $hpk_transactions[$i]->type)] : null);
+                            }
+
+                            $hpk_row_status = isset($hpk_transactions[$i]->status) ? $hpk_transactions[$i]->status : '';
+                            if (isset($hpk_status_badges[$hpk_row_status])) {
+                                $hpk_badge_class = $hpk_status_badges[$hpk_row_status][0];
+                                $hpk_badge_key = $hpk_status_badges[$hpk_row_status][1];
+                            } else {
+                                $hpk_badge_class = 'neutral';
+                                $hpk_badge_key = 'Hosterpk.transaction.status_unknown';
+                            }
+                        ?>
+                        <tr class="expand transaction_applied">
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['type']); ?>"><?php (print (isset($hpk_trans_type) ? $this->Html->safe($hpk_trans_type) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['amount']); ?>"><?php echo $this->CurrencyFormat->format((isset($hpk_transactions[$i]->amount) ? $this->Html->safe($hpk_transactions[$i]->amount) : null), (isset($hpk_transactions[$i]->currency) ? $this->Html->safe($hpk_transactions[$i]->currency) : null), ['html_code' => true]); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['credited']); ?>"><?php echo $this->CurrencyFormat->format((isset($hpk_transactions[$i]->credited_amount) ? $this->Html->safe($hpk_transactions[$i]->credited_amount) : null), (isset($hpk_transactions[$i]->currency) ? $this->Html->safe($hpk_transactions[$i]->currency) : null), ['html_code' => true]); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['applied']); ?>"><?php echo $this->CurrencyFormat->format((isset($hpk_transactions[$i]->applied_amount) ? $this->Html->safe($hpk_transactions[$i]->applied_amount) : null), (isset($hpk_transactions[$i]->currency) ? $this->Html->safe($hpk_transactions[$i]->currency) : null), ['html_code' => true]); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['number']); ?>"><?php (print (isset($hpk_transactions[$i]->transaction_id) ? $this->Html->safe($hpk_transactions[$i]->transaction_id) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date']); ?>"><?php echo $this->Date->cast((isset($hpk_transactions[$i]->date_added) ? $this->Html->safe($hpk_transactions[$i]->date_added) : null), 'date'); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['status']); ?>"><span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_badge_class); ?>"><?php echo $this->Html->safe($this->_($hpk_badge_key, true)); ?></span></td>
+                        </tr>
+                        <tr class="expand_details" id="transactions_<?php (print (isset($hpk_transactions[$i]->id) ? $this->Html->safe($hpk_transactions[$i]->id) : null)); ?>">
+                            <td colspan="7" class="subtable"></td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php } else { ?>
+            <div class="hpk-empty hpk-empty--transactions">
+                <?php
+                $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+                try {
+                    $this->set('icon', 'receipt');
+                    $this->set('icon_class', 'hpk-empty__icon');
+                    $this->set('icon_label', null);
+                    view('partials/icon', $this);
+                } finally {
+                    $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+                }
+                ?>
+                <?php
+                $hpk_empty_title_key = 'Hosterpk.transaction.empty_' . $hpk_status . '_title';
+                $hpk_empty_body_key = 'Hosterpk.transaction.empty_' . $hpk_status . '_body';
+                ?>
+                <?php if ($hpk_is_inner) { ?>
+                <h3 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h3>
+                <?php } else { ?>
+                <h2 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h2>
+                <?php } ?>
+                <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_($hpk_empty_body_key, true)); ?></p>
+            </div>
+            <?php } ?>
+
+            <?php if (!$hpk_is_inner && $this->Pagination->hasPages()) { ?>
+            <nav class="hpk-transactions__pagination" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.transaction.pagination_label', true)); ?>">
+                <?php $this->Pagination->build(); ?>
+            </nav>
+            <?php } ?>
+        </div>
+
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    </section>
+    <?php } ?>
+</div>
+
+<!-- HOSTERPK FILTER-BRIDGE PRESERVED: inherited from Story 5.1 DEC-5; replaces WidgetClient's filter-link form-action bridge. -->
+<script type="text/javascript">
+    $(document).ready(function () {
+        $(".hpk-transactions").on("click", "a[data-hpk-filter-link], .hpk-transactions__pagination a", function(e) {
+            var form = $(this).closest(".hpk-transactions").find("form.hpk-transactions__filter-form");
+            if (!form.length) {
+                return;
+            }
+
+            e.preventDefault();
+            $(form).attr("action", $(this).attr("href"));
+            HTMLFormElement.prototype.submit.call(form.get(0));
+            return false;
+        });
+
+        // Make disabled pagination links keyboard-inert regardless of whether the Pagination helper emits <a> or <span>.
+        $(".hpk-transactions__pagination .disabled a").attr("tabindex", "-1").attr("aria-disabled", "true");
+    });
+</script>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+$(document).ready(function() {
+    // Fetch all invoices the given transaction has been applied to
+    $(".transaction_applied").click(function() {
+        $(this).blestaUpdateRow("<?php echo $this->Html->safe((isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'transactions/applied/');?>" + $(this).next("tr").attr("id").split("_")[1], ".subtable");
+    });
+});
+</script>
+<!-- /PRESERVED -->

@@ -1,0 +1,81 @@
+<?php /* HOSTERPK OVERRIDE - verbatim passthrough of the stock field-rendering partial. The HOSTERPK-SEAM flips bucket-3 plugin client views (support_manager, domains) to this client_view_dir, so EVERY view fetched while that flip is active must exist here too (the "whole-dir switch needs every fetched view present" rule, memory uiux-plugin-owned-page-override-mechanism). Blesta's FieldsHtml->generate() renders client/<view_dir>/partial_fields.pdt through its OWN View (vendors/minphp/bridge/src/Lib/View.php), which throws a hard "Files does not exist" Exception with NO app_controller bootstrap fallback (that fallback only covers client_*.pdt main views) - so a missing partial_fields.pdt here aborts the WHOLE action render (e.g. the Story 8.2 ticket reply page, which renders $department custom fields, rendered an empty body until this existed). Content is byte-equivalent to stock (the fields it draws are styled by the base.css frame-tier .form-group/input rules already), so this is a passthrough, not a fork. Stock baseline: bootstrap/partial_fields.pdt @ 6.0.0-b1 sha256:bf2a563678035fad85589d90a740b65f133399379f8fb09438980eb4b7a06f0e */ ?>
+<?php
+if (!empty($fields) || !empty($html)) {
+?>
+<div class="generated_fields_div">
+    <?php
+    foreach ((isset($fields) ? $fields : []) as $field) {
+        // Set any hidden fields
+        foreach ($field->fields as $input) {
+            if ($input->type == 'fieldHidden') {
+                call_user_func_array([$this->Form, $input->type], $input->params);
+                continue 2;
+            }
+        }
+
+        if ($field->type != 'fieldHidden') {
+        ?>
+        <div class="form-group">
+        <?php
+        }
+
+        // Draw the primary label/field
+        call_user_func_array([$this->Form, $field->type], $field->params);
+
+        // Draw each form field associated with this label
+        foreach ($field->fields as $input) {
+            // Draw each tooltip
+            if ($input->type == 'tooltip') {
+                ?>
+                <a href="#" data-toggle="tooltip" data-html="false" title="<?php (print (isset($input->params['message']) ? $this->Html->safe($input->params['message']) : null));?>"><i class="fas fa-question-circle text-info"></i></a>
+                <?php
+                continue;
+            } else {
+                // Draw the form field's secondary label if checkbox or radio item
+                if (($input->type == 'fieldCheckbox' || $input->type == 'fieldRadio') && isset($input->label)) {
+                    $class = ($input->type == 'fieldRadio' ? 'radio' : 'checkbox');
+            ?>
+            <div class="<?php (print (isset($class) ? $this->Html->safe($class) : null));?>">
+                <label<?php echo $this->Html->buildAttributes($input->label->params);?>>
+                    <?php
+                    call_user_func_array([$this->Form, $input->type], $input->params);
+                    (print (isset($input->label->params['name']) ? $this->Html->safe($input->label->params['name']) : null));
+                    ?>
+                </label>
+            </div>
+            <?php
+                } else {
+                    // Set form field class
+                    if (isset($input->params['attributes']['class'])) {
+                        if (is_array($input->params['attributes']['class'])) {
+                            $input->params['attributes']['class'][] = 'form-control';
+                        } else {
+                            $input->params['attributes']['class'] .= ' form-control';
+                        }
+                    } else {
+                        $input->params['attributes']['class'] = 'form-control';
+                    }
+
+                    // Draw the form field
+                    call_user_func_array([$this->Form, $input->type], $input->params);
+
+                    // Show form field's secondary label
+                    if (isset($input->label)) {
+                        call_user_func_array([$this->Form, 'label'], $input->label->params);
+                    }
+                }
+            }
+        }
+
+        if ($field->type != 'fieldHidden') {
+        ?>
+        </div>
+    <?php
+        }
+    }
+    ?>
+    <?php echo (isset($html) ? $html : null);?>
+    <div class="clearfix"></div>
+</div>
+<?php
+}

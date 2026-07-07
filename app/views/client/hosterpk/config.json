@@ -1,0 +1,14 @@
+{
+	"version": "0.1.0",
+	"name": "HosterPK",
+	"description": "HosterPK client-area theme. Minimal-override parallel template forked from stock Bootstrap; every un-authored view falls through to stock.",
+	"authors": [
+		{
+			"name": "HosterPK",
+			"url": "https://www.hosterpk.com"
+		}
+	],
+	"require": {
+		"blesta": ">=6.0.0-b1"
+	}
+}

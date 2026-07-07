@@ -1,0 +1,252 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: inverts the two-column "info left / status right" .panel-pad into a status-led surface (DEC-2) — status badge first, then a .hpk-service-detail__meta <dl> of package/term/renewal/price facts, then the config-options .hpk-table, then the action buttons as a .hpk-service-detail__options grid. Preserves the controller->partial data contract, the onetime-vs-term concat, the date_paid_through ?? date_renews precedence, the onetime vs renewal_price branch + CurrencyFormat, the recurring-coupon block, the per-button enable predicates, the cancel_service/renew_service anchor classes, and the trailing blestaModal <script> verbatim (fenced). UX-DR11 badge map adds canceled->neutral + in_review->warning. Stock baseline: bootstrap/client_services_service_infobox.pdt @ 6.0.0-b1 sha256:acd002ffe0886f285ec4fe3b95eff4aba4a6a856a99494bc7d8fc77b671bbef1 */ ?>
+<?php
+/* Partial-level language load: this partial may render before structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+// UX-DR11 badge map (DEC-2): active->success, pending/in_review->warning,
+// suspended->danger, canceled->neutral. text + colour, never colour alone.
+$hpk_status_badges = [
+    'active' => ['success', 'Hosterpk.service.status_active'],
+    'pending' => ['warning', 'Hosterpk.service.status_pending'],
+    'in_review' => ['warning', 'Hosterpk.service.status_in_review'],
+    'suspended' => ['danger', 'Hosterpk.service.status_suspended'],
+    'canceled' => ['neutral', 'Hosterpk.service.status_canceled']
+];
+$hpk_status = (isset($service->status) ? $service->status : null);
+$hpk_badge = isset($hpk_status_badges[$hpk_status]) ? $hpk_status_badges[$hpk_status] : ['neutral', 'Hosterpk.service.status_unknown'];
+
+// Package term (onetime vs term concat — verbatim from stock).
+$hpk_package_term = '';
+if (($service->package_pricing->period ?? null) == 'onetime') {
+    $hpk_package_term = ($periods[$service->package_pricing->period] ?? null);
+} else {
+    $hpk_term = (isset($service->package_pricing->term) ? $this->Html->safe($service->package_pricing->term) : null);
+    $hpk_package_term = $this->Html->concat(' ', $hpk_term, ($hpk_term == 1 ? ($periods[$service->package_pricing->period] ?? null) : ($periods[$service->package_pricing->period . '_plural'] ?? null)));
+}
+
+$hpk_is_onetime = (($service->package_pricing->period ?? null) == 'onetime');
+$hpk_currency = ($service->override_currency ?? ($service->package_pricing->currency ?? null));
+
+// Action buttons — per-button enable predicates lifted verbatim from stock.
+// renew_service / cancel_service keep real hrefs for keyboard/no-JS fallback;
+// the $key is kept as a class so the preserved JS binding still matches.
+$hpk_buttons = [
+    'change_service_package' => [
+        'enabled' => (($client_change_service_package ?? null) && ($service->status ?? null) == 'active' && empty($service->date_canceled) && !($queued_service_change ?? null)),
+        'icon' => 'fas fa-random fa-fw',
+        'variant' => 'hpk-btn-outline',
+        'lang' => 'Hosterpk.service_detail.button_change_service_package',
+        'link' => $this->base_uri . 'services/upgrade/' . ($service->id ?? null)
+    ],
+    'change_service_term' => [
+        'enabled' => (($client_change_service_term ?? null) && !empty($alternate_service_terms) && ($service->status ?? null) == 'active' && empty($service->date_canceled) && !($queued_service_change ?? null)),
+        'icon' => 'fas fa-edit fa-fw',
+        'variant' => 'hpk-btn-outline',
+        'lang' => 'Hosterpk.service_detail.button_change_service_term',
+        'link' => $this->base_uri . 'services/changeterm/' . ($service->id ?? null)
+    ],
+    'renew_service' => [
+        'enabled' => (($client_renew_service ?? null) && ($service->status ?? null) == 'active' && empty($service->date_canceled) && !($queued_service_change ?? null)),
+        'icon' => 'fas fa-retweet fa-fw',
+        'variant' => 'hpk-btn-outline',
+        'lang' => 'Hosterpk.service_detail.button_renew',
+        'link' => $this->base_uri . 'services/renew/' . ($service->id ?? null)
+    ],
+    'cancel_service' => [
+        'enabled' => (($client_cancel_service ?? null) && !in_array(($service->status ?? null), ['canceled', 'suspended']) && !empty($clients_cancel_options)),
+        'icon' => 'fas fa-ban fa-fw',
+        'variant' => 'hpk-btn-danger',
+        'lang' => 'Hosterpk.service_detail.button_cancel',
+        'link' => $this->base_uri . 'services/cancel/' . ($service->id ?? null)
+    ],
+    'change_configurable_options' => [
+        'enabled' => (($available_config_options ?? null) && !($queued_service_change ?? null) && ($service->status ?? null) == 'active'),
+        'icon' => 'fas fa-edit fa-fw',
+        'variant' => 'hpk-btn-outline',
+        'lang' => 'Hosterpk.service_detail.button_config_options',
+        'link' => $this->base_uri . 'services/manageoptions/' . ($service->id ?? null)
+    ],
+    'manage_parent' => [
+        'enabled' => (!empty($service->parent) && ($service->parent->status ?? null) == 'active' && ($service->status ?? null) == 'active'),
+        'icon' => 'fas fa-cog fa-fw',
+        'variant' => 'hpk-btn-outline',
+        'lang' => 'Hosterpk.service_detail.button_manage_parent',
+        'link' => $this->base_uri . 'services/manage/' . ($service->parent->id ?? null)
+    ]
+];
+$hpk_show_options = false;
+foreach ($hpk_buttons as $hpk_button) {
+    if ($hpk_button['enabled']) {
+        $hpk_show_options = true;
+        break;
+    }
+}
+?>
+<div class="hpk-service-detail__status">
+    <span class="hpk-service-detail__status-label"><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_status', true)); ?></span>
+    <span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_badge[0]); ?>"><?php echo $this->Html->safe($this->_($hpk_badge[1], true)); ?></span>
+</div>
+
+<dl class="hpk-service-detail__meta">
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_package', true)); ?></dt>
+        <dd><?php (print (isset($service->package->name) ? $this->Html->safe($service->package->name) : null)); ?></dd>
+    </div>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_service_name', true)); ?></dt>
+        <dd><?php (print (isset($service->name) ? $this->Html->safe($service->name) : null)); ?></dd>
+    </div>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_date_added', true)); ?></dt>
+        <dd><?php echo $this->Date->cast($service->date_added); ?></dd>
+    </div>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_package_term', true)); ?></dt>
+        <dd><?php (print (isset($hpk_package_term) ? $this->Html->safe($hpk_package_term) : null)); ?></dd>
+    </div>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_date_renews', true)); ?></dt>
+        <dd>
+            <?php
+            echo empty($service->date_paid_through)
+                ? (empty($service->date_renews)
+                    ? $this->Html->safe($this->_('Hosterpk.service_detail.text_never', true))
+                    : $this->Date->cast($service->date_renews))
+                : $this->Date->cast($service->date_paid_through);
+            ?>
+        </dd>
+    </div>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_date_next_invoice', true)); ?></dt>
+        <dd>
+            <?php
+            if (($next_invoice_date ?? false)) {
+                echo $this->Date->cast($next_invoice_date);
+            } else {
+                echo $this->Html->safe($this->_('Hosterpk.service_detail.text_never', true));
+            }
+            ?>
+        </dd>
+    </div>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_price' . ($hpk_is_onetime ? '_onetime' : ''), true)); ?></dt>
+        <dd>
+            <?php
+            if ($hpk_is_onetime) {
+                $hpk_price = ($service->override_price ?? ($service->package_pricing->price ?? null));
+                echo $this->CurrencyFormat->format($hpk_price, ($hpk_currency ?? null));
+            } else {
+                echo $this->CurrencyFormat->format(($service->renewal_price ?? null), ($hpk_currency ?? null));
+            }
+            ?>
+        </dd>
+    </div>
+    <?php
+    // Display the coupon that should apply when the service renews.
+    if (($recurring_coupon ?? null)) {
+    ?>
+    <div class="hpk-service-detail__meta-row">
+        <dt><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_recurring_coupon', true)); ?></dt>
+        <dd>
+            <?php
+            if (($recurring_coupon->recurring_amount->type ?? null) == 'percent') {
+                $this->_('Hosterpk.service_detail.text_coupon_percent', false, $this->Html->safe((isset($recurring_coupon->code) ? $recurring_coupon->code : null)), $this->CurrencyFormat->cast((isset($recurring_coupon->recurring_amount->amount) ? $recurring_coupon->recurring_amount->amount : null), (isset($recurring_coupon->recurring_amount->currency) ? $recurring_coupon->recurring_amount->currency : null)));
+            } else {
+                $this->_('Hosterpk.service_detail.text_coupon_amount', false, $this->Html->safe((isset($recurring_coupon->code) ? $recurring_coupon->code : null)), $this->CurrencyFormat->format((isset($recurring_coupon->recurring_amount->amount) ? $recurring_coupon->recurring_amount->amount : null), (isset($recurring_coupon->recurring_amount->currency) ? $recurring_coupon->recurring_amount->currency : null)));
+            }
+            ?>
+        </dd>
+    </div>
+    <?php
+    }
+    ?>
+</dl>
+
+<?php
+// Configurable Options section.
+if (!empty($service->options)) {
+?>
+<div class="hpk-service-detail__section">
+    <h2 class="hpk-service-detail__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_config_options', true)); ?></h2>
+    <table class="hpk-table hpk-service-detail__options-table">
+        <tbody>
+            <?php
+            $hpk_currency_options = [
+                'decimals' => 4,
+                'significant_decimals' => true
+            ];
+            foreach ($service->options as $hpk_option) {
+                $hpk_is_user_defined_value = (in_array(($hpk_option->option_type ?? null), ['text', 'textarea', 'password']));
+                $hpk_display_name = ($hpk_is_user_defined_value ? ($hpk_option->value ?? null) : ($hpk_option->option_value_name ?? null));
+            ?>
+            <tr>
+                <td><strong><?php (print (isset($hpk_option->option_label) ? $this->Html->safe($hpk_option->option_label) : null)); ?></strong></td>
+                <td><?php echo nl2br((isset($hpk_display_name) ? $this->Html->safe($hpk_display_name) : '')); ?></td>
+                <td>
+                    <?php
+                    // Hide pricing if disable_pricing is enabled.
+                    if (!(isset($hpk_option->option_disable_pricing) && $hpk_option->option_disable_pricing == 1)) {
+                        $hpk_formatted_option_price = $this->CurrencyFormat->format(($hpk_option->option_pricing_price_renews ?? $hpk_option->option_pricing_price), ($hpk_option->option_pricing_currency ?? null), $hpk_currency_options);
+                        if (($hpk_option->qty ?? false)) {
+                            $this->_('Hosterpk.service_detail.text_price', false, $this->CurrencyFormat->truncateDecimal(($hpk_option->qty ?? 1), 0), $hpk_formatted_option_price);
+                        } else {
+                            echo $hpk_formatted_option_price;
+                        }
+                    }
+                    ?>
+                </td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+<?php
+}
+
+// Action buttons section.
+if ($hpk_show_options) {
+?>
+<div class="hpk-service-detail__section">
+    <h2 class="hpk-service-detail__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.heading_options', true)); ?></h2>
+    <div class="hpk-service-detail__options">
+        <?php
+        foreach ($hpk_buttons as $hpk_key => $hpk_button) {
+            if (!$hpk_button['enabled']) {
+                continue;
+            }
+        ?>
+        <a href="<?php echo $this->Html->safe($hpk_button['link']); ?>" class="hpk-btn <?php echo $this->Html->safe($hpk_button['variant']); ?> <?php echo $this->Html->safe($hpk_key); ?>">
+            <?php
+            if (!empty($hpk_button['icon'])) {
+            ?>
+            <i class="<?php echo $this->Html->safe($hpk_button['icon']); ?>" aria-hidden="true"></i>
+            <?php
+            }
+            echo $this->Html->safe($this->_($hpk_button['lang'], true));
+            ?>
+        </a>
+        <?php
+        }
+        ?>
+    </div>
+</div>
+<?php
+}
+?>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("a.cancel_service").blestaModal({url: "<?php echo $this->Html->safe($this->base_uri . 'services/cancel/' . ($service->id ?? null));?>"});
+        $("a.renew_service").blestaModal({url: "<?php echo $this->Html->safe($this->base_uri . 'services/renew/' . ($service->id ?? null));?>"});
+    });
+</script>
+<!-- /PRESERVED -->

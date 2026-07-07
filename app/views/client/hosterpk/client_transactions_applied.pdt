@@ -1,0 +1,49 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the Bootstrap .table / .alert fragment with branded .hpk-table / .hpk-alert so the 5.5 list expand-row subtable reads correctly under the dropped application.min.css (DEC-7). Drops the decorative fa-share icon column; preserves the controller data contract ($applied, $transaction; $num_applied stays local view state), the invoice link, the date_time applied-on format, the empty-state branch, and the trailing $transaction->message block. Echoed without layout by client_transactions::applied(), so page copy is loaded here. Stock baseline: bootstrap/client_transactions_applied.pdt @ 6.0.0-b1 sha256:d081adc6715d874f33bc72a1edb458b8abf256feddadc8d62f0d46f5e6e46ce1 */ ?>
+<?php
+/* Blesta echoes this fragment without structure.pdt, so page copy must load here. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+/* $num_applied is local view state, computed exactly as stock does. */
+$num_applied = (isset($applied) ? $applied : false) ? count($applied) : 0;
+
+$hpk_applied_columns = [
+    'invoice' => $this->_('Hosterpk.transaction_applied.heading_invoice', true),
+    'amount' => $this->_('Hosterpk.transaction_applied.heading_amount', true),
+    'appliedon' => $this->_('Hosterpk.transaction_applied.heading_appliedon', true)
+];
+?>
+<?php if ((isset($applied) ? $applied : false) && $num_applied > 0) { ?>
+<table class="hpk-table hpk-transaction-applied">
+    <thead>
+        <tr>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['invoice']); ?></th>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['amount']); ?></th>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['appliedon']); ?></th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php for ($i = 0; $i < $num_applied; $i++) { ?>
+        <tr>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['invoice']); ?>"><a href="<?php echo $this->Html->safe($this->base_uri . 'invoices/view/' . (isset($applied[$i]->invoice_id) ? $applied[$i]->invoice_id : null) . '/'); ?>"><?php echo $this->Html->safe(isset($applied[$i]->invoice_id_code) ? $applied[$i]->invoice_id_code : null); ?></a></td>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['amount']); ?>"><?php echo $this->CurrencyFormat->format((isset($applied[$i]->applied_amount) ? $this->Html->safe($applied[$i]->applied_amount) : null), (isset($applied[$i]->currency) ? $this->Html->safe($applied[$i]->currency) : null), ['html_code' => true]); ?></td>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['appliedon']); ?>"><?php echo $this->Date->cast((isset($applied[$i]->applied_date) ? $this->Html->safe($applied[$i]->applied_date) : null), 'date_time'); ?></td>
+        </tr>
+    <?php } ?>
+    </tbody>
+</table>
+<?php } else { ?>
+<div class="hpk-alert hpk-alert-info hpk-transaction-applied__empty">
+    <p><?php echo $this->Html->safe($this->_('Hosterpk.transaction_applied.no_results', true)); ?></p>
+</div>
+<?php } ?>
+<?php if (!empty($transaction->message)) { ?>
+<div class="hpk-alert hpk-alert-neutral hpk-transaction-applied__message">
+    <p><?php echo $this->Html->safe($transaction->message); ?></p>
+</div>
+<?php } ?>

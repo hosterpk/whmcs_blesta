@@ -1,0 +1,97 @@
+{
+  "_comment": "Pinned library set for the HosterPK template. This file is the FINAL authority for versions/SHA/SRI; docs only point here. Alpine + HTMX are vendored as files under js/vendor/ and their on-disk SHA-256 matches the pin below. Bootstrap is the compatibility target / own-bundle pin (not vendored as a file in the scaffold stub; Story 2.2 owns the BS5 bundle). Bootstrap Icons is the icon SOURCE consumed into the brand sprite. The Story 1.9 theme-guard beacon checks these SHAs for drift.",
+  "core": {
+    "name": "Blesta",
+    "pinned_version": "6.0.0-b1",
+    "_comment": "The core beta tag the template + Story 1.8 stock-view baseline were mirrored against. The Story 1.9 beacon flags drift when live BLESTA_VERSION differs. Bump this (and re-run ./tooling/check.sh baseline <tag>) after a beta re-apply - see FOUNDATION.md section 0. Has no sha256/vendored_file key on purpose: check.sh RULE 4 must not try to hash it."
+  },
+  "libraries": [
+    {
+      "name": "Alpine.js",
+      "version": "3.15.12",
+      "source_url": "https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js",
+      "retrieved": "2026-06-15",
+      "vendored_file": "js/vendor/alpine.3.15.12.min.js",
+      "sha256": "57b37d7cae9a27d965fdae4adcc844245dfdc407e655aee85dcfff3a08036a3f",
+      "sri": "sha384-pb6hrQvo4s23cEUFtj0CZkzGE3jyK3pj26RIupXXxhSrrcUA/Cn0lZgcCrGH0t6L",
+      "license": "MIT"
+    },
+    {
+      "name": "HTMX",
+      "version": "2.0.10",
+      "source_url": "https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js",
+      "retrieved": "2026-06-15",
+      "vendored_file": "js/vendor/htmx.2.0.10.min.js",
+      "sha256": "71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de",
+      "sri": "sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V",
+      "license": "MIT"
+    },
+    {
+      "name": "Bootstrap",
+      "version": "5.3.8",
+      "source_url": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js",
+      "retrieved": "2026-06-15",
+      "vendored_file": null,
+      "role": "compatibility-target / own-bundle pin (NOT vendored as a file — architecture rejects a ~200KB second framework). Story 2.2 dropped stock application.min.css and shipped our own bundle (tokens + base.css frame-tier floor); the shareable BS4->BS5 class surface is re-provided by authored CSS + the 33-class shim (Story 2.9)",
+      "sha256": "e4fd49181388c48ec5040bd3fe66f57c29c8e67fcd8502b3354b96ec7ab47cc7",
+      "sri": "sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI",
+      "license": "MIT"
+    },
+    {
+      "name": "Bootstrap Icons",
+      "version": "1.13.1",
+      "source_url": "https://github.com/twbs/icons/releases/tag/v1.13.1",
+      "retrieved": "2026-06-15",
+      "vendored_file": null,
+      "role": "icon SOURCE consumed into the brand sprite (currentColor only)",
+      "consumed_into": "icons/hpk-sprite.svg",
+      "sha256": "dfca505c26364439d63e89210e96122a909e49731c5ad4f1cfce2a09433d0e89",
+      "sri": "sha384-Ry6VszbIroStatVEkZkOC02iPCbT9dQ42XkCYbNoajjOtc44qZXLFwrMj11Bt7Ji",
+      "consumed_artifact_sha256": "dfca505c26364439d63e89210e96122a909e49731c5ad4f1cfce2a09433d0e89",
+      "license": "MIT"
+    }
+  ],
+  "brand_bundle": {
+    "name": "hpk-brand",
+    "version": "0.5.1",
+    "consumed_dist": "brand/dist/hpk-brand.0.5.1.css",
+    "sha256": "b9b9a022a7c8c234d0ed2660c7dc0bfce775b8fb3683bc0b8e11f73741afed04",
+    "fonts": [
+      {
+        "file": "brand/fonts/hind-siliguri-latin-400-normal.woff2",
+        "sha256": "cdc41415f366ef2966fc77e90d51391dec03657a6ed397fe59efd5ce34cf9549"
+      },
+      {
+        "file": "brand/fonts/hind-siliguri-latin-500-normal.woff2",
+        "sha256": "50c07c577a7c527c2d471089cf3473bb90c7f010f8dfa343a45cf9e81fb4c5e8"
+      },
+      {
+        "file": "brand/fonts/hind-siliguri-latin-600-normal.woff2",
+        "sha256": "c39d0db6f570276765a06728ce87d83be5808ae403475ed6b49a64c02915805c"
+      },
+      {
+        "file": "brand/fonts/hind-siliguri-latin-700-normal.woff2",
+        "sha256": "e8f0fc0cabf50652d414fcb76a02c6a21d6bcfc19adcfd14453088a9dae1d970"
+      },
+      {
+        "file": "brand/fonts/urbanist-latin-500-normal.woff2",
+        "sha256": "c45d13e9c1dc8a1b203dc12e264469ef22385b8448ce2d87c3176a000eefb190"
+      },
+      {
+        "file": "brand/fonts/urbanist-latin-600-normal.woff2",
+        "sha256": "0df215a774fae60c9b0016c24a107a2fd208134e3dcf8876e5f6cddca033e48f"
+      },
+      {
+        "file": "brand/fonts/urbanist-latin-700-normal.woff2",
+        "sha256": "ede48e359fb3f70d13b558e4bf8aea2697e3c86c267cfb4b360fe2d7a621df18"
+      }
+    ],
+    "icons": [
+      {
+        "file": "brand/icons/hpk-sprite.svg",
+        "sha256": "dfca505c26364439d63e89210e96122a909e49731c5ad4f1cfce2a09433d0e89"
+      }
+    ],
+    "_comment": "Cross-app contract: the brand-bundle version + per-asset SHAs this template consumed (dist + fonts[] + icons[] sprite). Must match brand/versions.json. The Story 1.9 beacon re-hashes these served assets for drift."
+  }
+}

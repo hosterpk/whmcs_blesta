@@ -1,0 +1,76 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: restyles the blestaModal-loaded renew-confirmation body on-brand (.hpk-service-modal form scope, HosterPK select / password / buttons, .hpk-alert renew message) while preserving the Form->create(id=renew_service) + CSRF contract, the pricing_id + password field names, the verbatim change-term conditional + hidden-pricing fallback, the primary-styled confirm submit, and the stock div.renew_message json/show-hide jQuery (selectors #renew_service select[name='pricing_id'] + div.renew_message preserved, fenced). The stock inline style="display:none" is replaced by the scoped .hpk-service-modal__message rule (RULE 1). Stock baseline: bootstrap/client_services_renew.pdt @ 6.0.0-b1 sha256:eb97e512bb03e4e03f5445f0aa8b4af6b298c5fc5cc978cdf27e7a2292311f72 */ ?>
+<?php
+/* Partial-level language load: this modal body renders outside structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+$this->Form->create(null, ['id' => 'renew_service', 'class' => 'hpk-service-modal']);
+?>
+        <div class="modal-header hpk-service-modal__header">
+            <h5 class="global_modal_title hpk-service-modal__title"><?php echo $this->Html->safe($this->_('Hosterpk.service_renew.heading_renew', true)); ?></h5>
+            <button type="button" class="close hpk-service-modal__close" data-dismiss="modal" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service_renew.close', true)); ?>">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body hpk-service-modal__body">
+            <div class="renew_message hpk-alert hpk-alert-warning hpk-service-modal__message"></div>
+            <?php
+            if (($client_can_change_term ?? false) == 'true') {
+            ?>
+            <div class="hpk-service-modal__field">
+                <?php
+                $this->Form->label($this->_('Hosterpk.service_renew.field_pricing_id', true), 'pricing_id', ['class' => 'hpk-service-modal__label']);
+                $this->Form->fieldSelect('pricing_id', ($terms ?? []), ($vars->term ?? $service->pricing_id), ['id' => 'pricing_id', 'class' => 'hpk-input hpk-service-modal__control']);
+                ?>
+            </div>
+            <?php
+            } else {
+                $this->Form->fieldHidden('pricing_id', ($service->pricing_id ?? null));
+            }
+            ?>
+            <div class="hpk-service-modal__field">
+                <?php
+                $this->Form->label($this->_('Hosterpk.service_renew.field_password', true), 'password', ['class' => 'hpk-service-modal__label']);
+                $this->Form->fieldPassword('password', ['id' => 'password', 'class' => 'hpk-input hpk-service-modal__control']);
+                ?>
+            </div>
+        </div>
+        <div class="modal-footer hpk-service-modal__footer">
+            <?php
+            $this->Form->fieldButton('cancel', $this->_('Hosterpk.service_renew.field_renew_cancel', true), ['class' => 'hpk-btn hpk-btn-ghost', 'data-dismiss' => 'modal']);
+            $this->Form->fieldButton('submit', $this->_('Hosterpk.service_renew.field_renew_submit', true), ['class' => 'hpk-btn hpk-btn-primary', 'type' => 'submit']);
+            ?>
+        </div>
+    <?php
+    $this->Form->end();
+    ?>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        setRenewMessage();
+
+        $("#renew_service select[name='pricing_id']").change(function() {
+            setRenewMessage();
+        });
+
+        function setRenewMessage() {
+            var messages = <?php echo json_encode($renew_messages ?? []); ?>;
+            var pricing_id = $("#renew_service select[name='pricing_id']").val();
+
+            if (pricing_id == null || pricing_id == '') {
+                $("div.renew_message").hide();
+                return;
+            }
+
+            $("div.renew_message").hide();
+            $("div.renew_message").text(messages[pricing_id]);
+            $("div.renew_message").show();
+        }
+    });
+</script>
+<!-- /PRESERVED -->

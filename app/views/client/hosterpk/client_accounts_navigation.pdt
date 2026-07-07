@@ -1,0 +1,66 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces Bootstrap .list-group sub-nav with a HosterPK side-nav inside a .hpk-card, preserving every href and icon and adding a real active state by matching the current request URI. Stock baseline: bootstrap/client_accounts_navigation.pdt @ 6.0.0-b1 sha256:1f4f1872e17c6abe528c4fe5e97c444d58f649a736fa38b8d1125571395150c2 */ ?>
+<?php
+/* Partial-level language load: this partial may render before structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+// Determine active item from the current request path (stock hardcoded false).
+$hpk_current_path = explode('?', ($_SERVER['REQUEST_URI'] ?? ''))[0];
+
+$navigation = [
+    'accounts/' => [
+        'name' => 'Hosterpk.account_nav.payment_accounts',
+        'icon' => 'fas fa-list'
+    ],
+    'accounts/add/' => [
+        'name' => 'Hosterpk.account_nav.add',
+        'icon' => 'fas fa-plus-square'
+    ],
+    'accounts/credithandling/' => [
+        'name' => 'Hosterpk.account_nav.credit_handling',
+        'icon' => 'fas fa-bell'
+    ],
+    '' => [
+        'name' => 'Hosterpk.account_nav.return',
+        'icon' => 'fas fa-arrow-left'
+    ]
+];
+?>
+<nav class="hpk-accounts-nav" aria-label="<?php $this->_('Hosterpk.account_nav.menu_label');?>">
+    <ul class="hpk-accounts-nav__list">
+        <?php
+        foreach ($navigation as $link => $value) {
+            $hpk_link = (isset($link) ? $link : '');
+            $hpk_prefix = (!str_contains($hpk_link, '://') && isset($this->base_uri)) ? $this->Html->safe($this->base_uri) : '';
+            $hpk_href = $hpk_prefix . $this->Html->safe($hpk_link);
+            $hpk_icon = (isset($value['icon']) ? $value['icon'] : null);
+
+            $hpk_is_active = false;
+            if ($hpk_link === 'accounts/') {
+                // Keep the list item active on the accounts index AND its per-account
+                // children (editcc/editach/verifyach/deletecc/deleteach), but not on the
+                // add or credithandling siblings, which own their own nav items.
+                $hpk_is_active = (bool) preg_match('#/accounts(/|$)#', $hpk_current_path)
+                    && !preg_match('#/accounts/add(/|$)#', $hpk_current_path)
+                    && !preg_match('#/accounts/credithandling(/|$)#', $hpk_current_path);
+            } elseif ($hpk_link !== '') {
+                // Segment-boundary match (avoid loose substring over-matching).
+                $hpk_is_active = (bool) preg_match('#/' . preg_quote(rtrim($hpk_link, '/'), '#') . '(/|$)#', $hpk_current_path);
+            }
+        ?>
+        <li class="hpk-accounts-nav__item">
+            <a href="<?php echo $hpk_href;?>" class="hpk-accounts-nav__link<?php echo $hpk_is_active ? ' hpk-accounts-nav__link--active' : '';?>"<?php echo $hpk_is_active ? ' aria-current="page"' : '';?>>
+                <?php if ($hpk_icon) { ?><i class="<?php echo $this->Html->safe($hpk_icon);?> fa-fw hpk-accounts-nav__icon"></i><?php } ?>
+                <span><?php $this->_($value['name'] ?? null);?></span>
+            </a>
+        </li>
+        <?php
+        }
+        ?>
+    </ul>
+</nav>

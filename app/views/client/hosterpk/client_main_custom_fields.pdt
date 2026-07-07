@@ -1,0 +1,67 @@
+<?php /* HOSTERPK OVERRIDE — restyles the client custom-field rows into HosterPK .hpk-form-group / .hpk-checkbox primitives and adds per-field inline errors (.hpk-invalid/.hpk-field-error) from the model $errors array. The show_client / read-only guards, the field-type switch, and every field name/id are preserved. Rendered in the profile-edit Settings tab. Stock baseline: bootstrap/client_main_custom_fields.pdt @ 6.0.0-b1 sha256:bfc5399ea8e9b08a1ba8ec94560ace3765b4a1cfc3e9d2afcb9721023956f694 */ ?>
+<?php
+/* Per-field inline error helper — $errors is threaded into this partial by the controller. */
+$hpk_errors = (isset($errors) && is_array($errors)) ? $errors : [];
+$hpk_field_error = function ($field) use ($hpk_errors) {
+    if (empty($hpk_errors[$field])) {
+        return '';
+    }
+    $msg = $hpk_errors[$field];
+    while (is_array($msg)) {
+        $msg = reset($msg);
+    }
+    return (string) $msg;
+};
+
+// Display custom client fields
+if (!empty($custom_fields)) {
+    foreach ($custom_fields as $field) {
+        // Only show the field if it is visible to clients
+        if (($field->show_client ?? null) == '1') {
+            // Set a unique field ID
+            $field_id = ($custom_field_prefix ?? null) . ($field->id ?? null);
+            $hpk_err = $hpk_field_error($field_id);
+            $hpk_invalid = ($hpk_err !== '' ? ' hpk-invalid' : '');
+
+            // Show each custom field
+            $disabled = (($field->read_only ?? null) == '1' ? ['disabled' => 'disabled'] : []);
+
+            if ($field->type == 'checkbox') {
+?>
+<div class="hpk-form-group">
+    <label class="hpk-checkbox">
+        <?php $this->Form->fieldCheckbox($field_id, ($field->values ?? null), ($vars->{$field_id} ?? ($field->default ?? null)), array_merge(['id' => $field_id], $disabled));?>
+        <span><?php echo $this->Html->safe($field->real_name ?? null);?></span>
+    </label>
+    <?php if ($hpk_err !== '') { echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>'; } ?>
+</div>
+<?php
+            } else {
+?>
+<div class="hpk-form-group">
+    <?php
+    switch ($field->type) {
+        case 'text':
+            $this->Form->label(($field->real_name ?? null), $field_id, null, true);
+            $this->Form->fieldText($field_id, ($vars->{$field_id} ?? ($field->default ?? null)), array_merge(['id' => $field_id, 'class' => 'form-control' . $hpk_invalid], $disabled));
+            break;
+        case 'select':
+            $this->Form->label(($field->real_name ?? null), $field_id, null, true);
+            $this->Form->fieldSelect($field_id, ($field->values ?? []), ($vars->{$field_id} ?? ($field->default ?? null)), array_merge(['id' => $field_id, 'class' => 'form-control' . $hpk_invalid], $disabled));
+            break;
+        case 'textarea':
+            $this->Form->label(($field->real_name ?? null), $field_id, null, true);
+            $this->Form->fieldTextarea($field_id, ($vars->{$field_id} ?? ($field->default ?? null)), array_merge(['id' => $field_id, 'class' => 'form-control' . $hpk_invalid], $disabled));
+            break;
+    }
+    if ($hpk_err !== '') {
+        echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+    }
+    ?>
+</div>
+<?php
+            }
+        }
+    }
+}
+?>

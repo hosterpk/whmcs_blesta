@@ -1,0 +1,398 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient chrome with HosterPK card, status tabs, table, a net-new Status badge column, empty state, and scoped pagination while preserving the controller->view data contract, filter field names, byte-verbatim widget-mode guard, and the service-info expansion DOM. Stock baseline: bootstrap/client_services.pdt @ 6.0.0-b1 sha256:7c6cc8bbb38d61e9254160509f9063a99fd97bc8ef216686e153acd0cbf73141 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+$hpk_icon_var_names = ['icon', 'icon_class', 'icon_label'];
+$hpk_view_vars_property = null;
+$hpk_get_view_vars_property = function ($view) use (&$hpk_view_vars_property) {
+    if ($hpk_view_vars_property === null) {
+        $hpk_reflection = new ReflectionClass($view);
+        if (!$hpk_reflection->hasProperty('vars')) {
+            $hpk_view_vars_property = false;
+        } else {
+            $hpk_view_vars_property = $hpk_reflection->getProperty('vars');
+            $hpk_view_vars_property->setAccessible(true);
+        }
+    }
+
+    return $hpk_view_vars_property;
+};
+$hpk_snapshot_icon_vars = function ($view) use ($hpk_icon_var_names, $hpk_get_view_vars_property) {
+    $hpk_property = $hpk_get_view_vars_property($view);
+    if ($hpk_property === false) {
+        return null;
+    }
+
+    $hpk_vars = $hpk_property->getValue($view);
+    $hpk_snapshot = [];
+    foreach ($hpk_icon_var_names as $hpk_name) {
+        $hpk_snapshot[$hpk_name] = [
+            'exists' => array_key_exists($hpk_name, $hpk_vars),
+            'value' => array_key_exists($hpk_name, $hpk_vars) ? $hpk_vars[$hpk_name] : null
+        ];
+    }
+
+    return $hpk_snapshot;
+};
+$hpk_restore_icon_vars = function ($view, $hpk_snapshot) use ($hpk_get_view_vars_property) {
+    if ($hpk_snapshot === null) {
+        return;
+    }
+
+    $hpk_property = $hpk_get_view_vars_property($view);
+    if ($hpk_property === false) {
+        return;
+    }
+
+    $hpk_vars = $hpk_property->getValue($view);
+    foreach ($hpk_snapshot as $hpk_name => $hpk_state) {
+        if ($hpk_state['exists']) {
+            $hpk_vars[$hpk_name] = $hpk_state['value'];
+            continue;
+        }
+
+        unset($hpk_vars[$hpk_name]);
+    }
+    $hpk_property->setValue($view, $hpk_vars);
+};
+
+$hpk_is_inner = (isset($render_section) ? $render_section : null) || (isset($is_ajax) ? $is_ajax : null);
+$hpk_status_whitelist = ['active', 'pending', 'suspended', 'canceled'];
+$hpk_status = (isset($status) && in_array($status, $hpk_status_whitelist, true)) ? $status : 'active';
+$hpk_sort = isset($sort) ? $sort : 'date_added';
+$hpk_order = isset($order) ? $order : 'desc';
+$hpk_negate_order = isset($negate_order) ? $negate_order : ($hpk_order == 'asc' ? 'desc' : 'asc');
+$hpk_status_count = (isset($status_count) && is_array($status_count)) ? $status_count : [];
+$hpk_services = (isset($services) && is_array($services)) ? $services : [];
+$hpk_num_services = count($hpk_services);
+
+$hpk_status_badges = [
+    'active' => ['success', 'Hosterpk.service.status_active'],
+    'pending' => ['warning', 'Hosterpk.service.status_pending'],
+    'suspended' => ['danger', 'Hosterpk.service.status_suspended'],
+    'canceled' => ['neutral', 'Hosterpk.service.status_canceled']
+];
+
+$hpk_columns = [
+    'name' => $this->_('Hosterpk.service.heading_package', true),
+    'label' => $this->_('Hosterpk.service.heading_label', true),
+    'term' => $this->_('Hosterpk.service.heading_term', true),
+    'date_added' => $this->_('Hosterpk.service.heading_date_created', true),
+    'date_renews' => $this->_('Hosterpk.service.heading_date_renews', true),
+    'date_suspended' => $this->_('Hosterpk.service.heading_date_suspended', true),
+    'date_canceled' => $this->_('Hosterpk.service.heading_date_canceled', true),
+    'status' => $this->_('Hosterpk.service.heading_status', true),
+    'actions' => $this->_('Hosterpk.service.heading_actions', true)
+];
+
+$hpk_sortable_keys = [
+    'active' => ['name', 'term', 'date_added', 'date_renews'],
+    'pending' => ['name', 'term', 'date_added', 'date_renews'],
+    'suspended' => ['name', 'term', 'date_added', 'date_renews', 'date_suspended'],
+    'canceled' => ['name', 'term', 'date_added', 'date_canceled']
+];
+$hpk_current_sortable = isset($hpk_sortable_keys[$hpk_status]) ? $hpk_sortable_keys[$hpk_status] : [];
+
+$hpk_col_count = in_array($hpk_status, ['active', 'pending'], true) ? 7 : ($hpk_status == 'suspended' ? 8 : 7);
+
+$hpk_build_url = function ($target_status, $target_page = null, $target_sort = null, $target_order = null) {
+    $url = $this->base_uri . 'services/index/' . $target_status . '/';
+    if ($target_page !== null) {
+        $url .= $target_page . '/';
+    }
+
+    $params = [];
+    if ($target_sort !== null) {
+        $params['sort'] = $target_sort;
+        $params['order'] = $target_order;
+    }
+
+    return $url . (!empty($params) ? '?' . http_build_query($params, '', '&') : '');
+};
+
+$hpk_sort_url = function ($target_sort) use ($hpk_build_url, $hpk_status, $hpk_sort, $hpk_order, $hpk_negate_order) {
+    return $hpk_build_url(
+        $hpk_status,
+        null,
+        $target_sort,
+        ($hpk_sort == $target_sort ? $hpk_negate_order : $hpk_order)
+    );
+};
+
+$hpk_tab_url = function ($target_status) use ($hpk_build_url, $hpk_sort, $hpk_order, $hpk_sortable_keys) {
+    $hpk_target_sortable = isset($hpk_sortable_keys[$target_status]) ? $hpk_sortable_keys[$target_status] : [];
+    if (!in_array($hpk_sort, $hpk_target_sortable, true)) {
+        return $hpk_build_url($target_status);
+    }
+
+    return $hpk_build_url($target_status, null, $hpk_sort, $hpk_order);
+};
+
+$hpk_sort_class = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    return 'hpk-services__sort' . ($hpk_sort == $target_sort ? ' ' . $hpk_order : '');
+};
+
+$hpk_aria_sort = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    if ($hpk_sort != $target_sort) {
+        return null;
+    }
+
+    return $hpk_order == 'asc' ? 'ascending' : 'descending';
+};
+
+$hpk_render_header = function ($key) use ($hpk_is_inner, $hpk_columns, $hpk_current_sortable, $hpk_sort_class, $hpk_sort_url, $hpk_aria_sort) {
+    $hpk_label = $hpk_columns[$key];
+    $hpk_is_sortable = in_array($key, $hpk_current_sortable, true);
+    if (!$hpk_is_sortable) {
+?><th scope="col"><?php echo $this->Html->safe($hpk_label); ?></th><?php
+        return;
+    }
+
+    $hpk_aria = $hpk_is_inner ? null : $hpk_aria_sort($key);
+?><th scope="col"<?php if ($hpk_aria !== null) { ?> aria-sort="<?php echo $this->Html->safe($hpk_aria); ?>"<?php } elseif (!$hpk_is_inner) { ?> aria-sort="none"<?php } ?>>
+    <?php if ($hpk_is_inner) { ?>
+        <?php echo $this->Html->safe($hpk_label); ?>
+    <?php } else { ?>
+        <a class="<?php echo $this->Html->safe($hpk_sort_class($key)); ?>" href="<?php echo $this->Html->safe($hpk_sort_url($key)); ?>" data-hpk-filter-link><?php echo $this->Html->safe($hpk_label); ?></a>
+    <?php } ?>
+</th><?php
+};
+
+$hpk_filter_label_keys = [
+    'filters[package_name]' => 'Hosterpk.service.filter_package_name',
+    'filters[service_meta]' => 'Hosterpk.service.filter_service_meta'
+];
+
+$hpk_filter_action = $hpk_build_url($hpk_status, null, $hpk_sort, $hpk_order);
+?>
+<div id="client_services" class="hpk-services<?php echo $this->Html->safe($hpk_is_inner ? ' hpk-services--embedded' : ''); ?>">
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    <section class="hpk-card hpk-services__shell" aria-labelledby="hpk-services-title">
+        <div class="hpk-services__header">
+            <div>
+                <h1 id="hpk-services-title" class="hpk-services__title"><?php echo $this->Html->safe($this->_('Hosterpk.service.page_title', true)); ?></h1>
+            </div>
+            <nav class="hpk-tabs hpk-services__tabs" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service.tabs_label', true)); ?>">
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('active')); ?>"<?php echo ($hpk_status == 'active' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.service.tab_active', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['active']) ? $hpk_status_count['active'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('pending')); ?>"<?php echo ($hpk_status == 'pending' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.service.tab_pending', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['pending']) ? $hpk_status_count['pending'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('suspended')); ?>"<?php echo ($hpk_status == 'suspended' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.service.tab_suspended', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['suspended']) ? $hpk_status_count['suspended'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('canceled')); ?>"<?php echo ($hpk_status == 'canceled' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.service.tab_canceled', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['canceled']) ? $hpk_status_count['canceled'] : 0); ?></span>
+                </a>
+            </nav>
+        </div>
+
+        <?php if (isset($filters)) { ?>
+        <?php $this->Form->create($hpk_filter_action, ['class' => 'hpk-services__filters hpk-services__filter-form', 'method' => 'post']); ?>
+            <?php
+            foreach ($filters->getFields() as $hpk_filter_field) {
+                foreach ($hpk_filter_field->fields as $hpk_filter_input) {
+                    if ($hpk_filter_input->type == 'fieldHidden') {
+                        call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_input->params);
+                        continue;
+                    }
+
+                    $hpk_filter_params = $hpk_filter_input->params;
+                    $hpk_filter_name = isset($hpk_filter_params['name']) ? $hpk_filter_params['name'] : '';
+                    $hpk_filter_attrs = isset($hpk_filter_params['attributes']) ? $hpk_filter_params['attributes'] : [];
+                    $hpk_filter_id = isset($hpk_filter_attrs['id']) ? $hpk_filter_attrs['id'] : preg_replace('/[^A-Za-z0-9_-]+/', '_', $hpk_filter_name);
+                    $hpk_filter_classes = isset($hpk_filter_attrs['class']) ? preg_split('/\s+/', trim($hpk_filter_attrs['class'])) : [];
+                    $hpk_filter_classes = array_diff($hpk_filter_classes, ['form-control', 'stretch', 'input-sm']);
+                    $hpk_filter_classes[] = 'hpk-services__control';
+                    $hpk_filter_attrs['class'] = trim(implode(' ', array_unique(array_filter($hpk_filter_classes))));
+
+                    $hpk_label_key = isset($hpk_filter_label_keys[$hpk_filter_name])
+                        ? $hpk_filter_label_keys[$hpk_filter_name]
+                        : 'Hosterpk.service.filter_generic';
+                    $hpk_filter_attrs['placeholder'] = $this->_($hpk_label_key, true);
+                    $hpk_filter_params['attributes'] = $hpk_filter_attrs;
+            ?>
+            <div class="hpk-services__filter">
+                <?php $this->Form->label($this->_($hpk_label_key, true), $hpk_filter_id, ['class' => 'hpk-services__filter-label']); ?>
+                <?php call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_params); ?>
+            </div>
+            <?php
+                }
+            }
+            ?>
+            <div class="hpk-services__filter-actions">
+                <?php $this->Form->fieldSubmit('submit', $this->_('Hosterpk.service.filter_submit', true), ['class' => 'hpk-btn hpk-btn-outline hpk-btn-sm']); ?>
+            </div>
+        <?php $this->Form->end(); ?>
+        <?php } ?>
+    <?php } ?>
+
+        <div class="hpk-services__results" aria-live="polite">
+            <?php if ($hpk_num_services > 0) { ?>
+            <div class="hpk-services__table">
+                <table class="hpk-table" id="hpk-services-table">
+                    <thead>
+                        <tr>
+                            <?php $hpk_render_header('name'); ?>
+                            <?php $hpk_render_header('label'); ?>
+                            <?php $hpk_render_header('term'); ?>
+                            <?php $hpk_render_header('date_added'); ?>
+                            <?php if ($hpk_status != 'canceled') { ?>
+                            <?php $hpk_render_header('date_renews'); ?>
+                            <?php } ?>
+                            <?php if ($hpk_status == 'suspended') { ?>
+                            <?php $hpk_render_header('date_suspended'); ?>
+                            <?php } elseif ($hpk_status == 'canceled') { ?>
+                            <?php $hpk_render_header('date_canceled'); ?>
+                            <?php } ?>
+                            <?php $hpk_render_header('status'); ?>
+                            <?php $hpk_render_header('actions'); ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php for ($i = 0; $i < $hpk_num_services; $i++) {
+                            $hpk_service = $hpk_services[$i];
+                            $hpk_badge = isset($hpk_status_badges[$hpk_status]) ? $hpk_status_badges[$hpk_status] : ['neutral', 'Hosterpk.service.status_active'];
+                            $hpk_badge_class = $hpk_badge[0];
+                            $hpk_badge_key = $hpk_badge[1];
+                        ?>
+                        <tr class="expand service_info">
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['name']); ?>"><?php (print (isset($hpk_service->package->name) ? $this->Html->safe($hpk_service->package->name) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['label']); ?>"><?php (print (isset($hpk_service->name) ? $this->Html->safe($hpk_service->name) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['term']); ?>">
+                                <?php
+                                if ((isset($hpk_service->package_pricing->period) ? $hpk_service->package_pricing->period : null) == 'onetime') {
+                                    (print (isset($periods[$hpk_service->package_pricing->period]) ? $this->Html->safe($periods[$hpk_service->package_pricing->period]) : null));
+                                } else {
+                                    $hpk_term = (isset($hpk_service->package_pricing->term) ? $this->Html->safe($hpk_service->package_pricing->term) : null);
+                                    $hpk_period = ($hpk_term == 1
+                                        ? (isset($periods[$hpk_service->package_pricing->period]) ? $this->Html->safe($periods[$hpk_service->package_pricing->period]) : null)
+                                        : (isset($periods[$hpk_service->package_pricing->period . '_plural']) ? $this->Html->safe($periods[$hpk_service->package_pricing->period . '_plural']) : null));
+                                    $hpk_renewal_price = $this->CurrencyFormat->format(
+                                        (isset($hpk_service->renewal_price) ? $hpk_service->renewal_price : null),
+                                        (isset($hpk_service->override_currency) ? $hpk_service->override_currency : (isset($hpk_service->package_pricing->currency) ? $hpk_service->package_pricing->currency : null))
+                                    );
+                                    $this->_('Hosterpk.service.recurring_term', false, $this->Html->safe($hpk_term), $this->Html->safe($hpk_period), $this->Html->safe($hpk_renewal_price));
+                                }
+                                ?>
+                            </td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_added']); ?>"><?php echo $this->Date->cast((isset($hpk_service->date_added) ? $this->Html->safe($hpk_service->date_added) : null)); ?></td>
+                            <?php if ($hpk_status != 'canceled') { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_renews']); ?>">
+                                <?php echo (
+                                    empty($hpk_service->date_paid_through)
+                                        ? (empty($hpk_service->date_renews)
+                                            ? $this->Html->safe($this->_('Hosterpk.service.text_never', true))
+                                            : $this->Date->cast($hpk_service->date_renews))
+                                        : $this->Date->cast($hpk_service->date_paid_through)
+                                ); ?>
+                                <?php
+                                if (!empty($hpk_service->date_canceled) && $this->Date->toTime($this->Date->cast($hpk_service->date_canceled)) > $this->Date->toTime($this->Date->cast(date('c')))) {
+                                ?>
+                                <span class="hpk-services__cancel-pending" data-toggle="tooltip" title="<?php $this->_('Hosterpk.service.cancel_pending_tooltip', false, $this->Date->cast($hpk_service->date_canceled)); ?>"><i class="fas fa-clock" aria-hidden="true"></i></span>
+                                <?php
+                                }
+                                ?>
+                            </td>
+                            <?php } ?>
+                            <?php if ($hpk_status == 'suspended') { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_suspended']); ?>"><?php echo (empty($hpk_service->date_suspended) ? $this->Html->safe($this->_('Hosterpk.service.text_never', true)) : $this->Date->cast((isset($hpk_service->date_suspended) ? $this->Html->safe($hpk_service->date_suspended) : null))); ?></td>
+                            <?php } elseif ($hpk_status == 'canceled') { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_canceled']); ?>"><?php echo (empty($hpk_service->date_canceled) ? $this->Html->safe($this->_('Hosterpk.service.text_never', true)) : $this->Date->cast((isset($hpk_service->date_canceled) ? $this->Html->safe($hpk_service->date_canceled) : null))); ?></td>
+                            <?php } ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['status']); ?>"><span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_badge_class); ?>"><?php echo $this->Html->safe($this->_($hpk_badge_key, true)); ?></span></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['actions']); ?>">
+                                <div class="hpk-services__actions">
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'services/manage/' . (isset($hpk_service->id) ? $hpk_service->id : null) . '/'); ?>" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.service.action_manage', true)); ?></a>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="expand_details" id="services_<?php (print (isset($hpk_service->id) ? $this->Html->safe($hpk_service->id) : null)); ?>">
+                            <td colspan="<?php echo $this->Html->safe($hpk_col_count); ?>" class="subtable"></td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php } else { ?>
+            <div class="hpk-empty hpk-empty--services">
+                <?php
+                $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+                try {
+                    $this->set('icon', 'hdd-stack');
+                    $this->set('icon_class', 'hpk-empty__icon');
+                    $this->set('icon_label', null);
+                    view('partials/icon', $this);
+                } finally {
+                    $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+                }
+                ?>
+                <?php
+                $hpk_empty_title_key = 'Hosterpk.service.empty_' . $hpk_status . '_title';
+                $hpk_empty_body_key = 'Hosterpk.service.empty_' . $hpk_status . '_body';
+                ?>
+                <?php if ($hpk_is_inner) { ?>
+                <h3 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h3>
+                <?php } else { ?>
+                <h2 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h2>
+                <?php } ?>
+                <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_($hpk_empty_body_key, true)); ?></p>
+            </div>
+            <?php } ?>
+
+            <?php if (!$hpk_is_inner && $this->Pagination->hasPages()) { ?>
+            <nav class="hpk-services__pagination" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service.pagination_label', true)); ?>">
+                <?php $this->Pagination->build(); ?>
+            </nav>
+            <?php } ?>
+        </div>
+
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    </section>
+    <?php } ?>
+</div>
+
+<!-- HOSTERPK FILTER-BRIDGE PRESERVED: replacement for WidgetClient's filter-link form-action bridge. -->
+<script type="text/javascript">
+    $(document).ready(function () {
+        $(".hpk-services").on("click", "a[data-hpk-filter-link], .hpk-services__pagination a", function(e) {
+            var form = $(this).closest(".hpk-services").find("form.hpk-services__filter-form");
+            if (!form.length) {
+                return;
+            }
+
+            e.preventDefault();
+            $(form).attr("action", $(this).attr("href"));
+            HTMLFormElement.prototype.submit.call(form.get(0));
+            return false;
+        });
+
+        // Make disabled pagination links keyboard-inert regardless of whether the Pagination helper emits <a> or <span>.
+        $(".hpk-services__pagination .disabled a").attr("tabindex", "-1").attr("aria-disabled", "true");
+    });
+</script>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#client_services").on('click', '.service_info a,.service_info input', function(e) {
+        e.stopPropagation();
+    });
+    $("#client_services").on('click', '.service_info', function() {
+        $(this).blestaUpdateRow("<?php echo (isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'services/serviceinfo/'; ?>" + $(this).next("tr").attr("id").split("_")[1], ".subtable");
+    });
+});
+</script>
+<!-- /PRESERVED -->

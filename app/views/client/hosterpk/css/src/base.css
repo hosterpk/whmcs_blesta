@@ -1,0 +1,330 @@
+/*
+ * HosterPK base.css — the frame-tier CSS floor + the cascade tiers.
+ *
+ * This file is the load-bearing CSS foundation (Story 2.2). After
+ * structure.pdt drops the stock application.min.css link, the ONLY framework
+ * CSS the client area has is this bundle — so the frame-tier rules below ARE
+ * the floor that keeps un-ported (fallback) pages legible. There is no vendored
+ * Bootstrap to fall back on (BS5.3.8 is a compatibility TARGET; the shareable
+ * class surface is re-provided by authored CSS + the 33-class shim, Story 2.9).
+ *
+ * Cascade contract (certified Story 1.4 / GATE §6; architecture:427-453):
+ *   - The WINNING tier is `.hpk-client <selector>`, UNLAYERED, in the bundle
+ *     that loads last. Unlayered beats ALL layered declarations regardless of
+ *     specificity — so the floor rules below are deliberately NOT wrapped in a
+ *     layer (layering them would make them lose).
+ *   - `@layer` is internal-only: it pre-orders code we fully control
+ *     (reset/base/utilities, utilities last). It is NEVER the vendor-fight
+ *     mechanism. The layered rules themselves arrive in 2.4-2.9; the skeleton
+ *     is declared here so concat order is irrelevant to layer order.
+ *   - Reach Rule frame tier = inherited/themeable props (typography, color
+ *     tokens, link/button base, table/form resets, spacing rhythm) that ride
+ *     owned AND stock markup on purpose. NO structure-assuming layout here
+ *     (no display:grid on a bare .table, no positional :nth-child, no fixed
+ *     heights). "Not broken" is the bar for fallback pages, not "pretty".
+ *   - The bundle authors ZERO importance-flagged declarations. `.hpk-client`
+ *     wins by scope + source-order alone (check.sh RULE 2 stays green at 0).
+ *     (The literal flag is omitted even from comments: RULE 2 is a naive grep.)
+ */
+
+/* ============================================================================
+ * @font-face — self-hosted (FR11), OFL. Referenced RELATIVE to this stylesheet
+ * (served from css/, fonts live in ../fonts/) so the URLs survive the
+ * /dashboard proxy path-rewrite — never root-absolute (architecture:730).
+ * Only the weights below are shipped (brand/fonts/). Story 2.11 moves the
+ * cross-app seam to font-display: optional + one HS400 preload + metrics-matched
+ * local fallbacks, so a cold miss stays layout-stable instead of swapping later.
+ * ========================================================================== */
+/*
+ * Fallback metrics derived offline with fontTools from real woff2 tables and
+ * macOS Arial (/System/Library/Fonts/Supplemental/Arial.ttf). Source metrics:
+ * Arial upm=2048 xHeight=1062; Urbanist500 upm=2000 xHeight=1000 typoAsc=1900
+ * typoDesc=-500 typoLineGap=0; HindSiliguri400 upm=1000 xHeight=505
+ * typoAsc=1116 typoDesc=-501 typoLineGap=0. size-adjust is target/Arial
+ * x-height ratio; overrides are target typo metrics divided by size-adjust.
+ * The src chain lists only metric-IDENTICAL Arial clones - Liberation Sans (RHEL/
+ * Fedora) and Arimo (ChromeOS/Android) share Arial's exact metrics, so the
+ * Arial-derived size-adjust/overrides stay valid on hosts WITHOUT Arial (Linux/
+ * Android/ChromeOS and the project's Docker runtime, where the macOS-only "Arial"
+ * src would leave the fallback @font-face unavailable and the calibration unused).
+ * Helvetica is deliberately NOT listed: it is a different typeface, not a metric
+ * clone, so the Arial-derived overrides would be slightly off on it (Story 2.11
+ * review R2). font-display: optional already guarantees zero CLS; the chain makes
+ * the metrics-MATCH actually land cross-platform.
+ */
+@font-face {
+  font-family: "Urbanist Fallback";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: optional;
+  src: local("Arial"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 96.42%;
+  ascent-override: 98.53%;
+  descent-override: 25.93%;
+  line-gap-override: 0.00%;
+}
+@font-face {
+  font-family: "Hind Siliguri Fallback";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: optional;
+  src: local("Arial"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 97.39%;
+  ascent-override: 114.60%;
+  descent-override: 51.44%;
+  line-gap-override: 0.00%;
+}
+@font-face {
+  font-family: "Urbanist";
+  font-style: normal;
+  font-weight: 500;
+  font-display: optional;
+  src: url("../fonts/urbanist-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Urbanist";
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+  src: url("../fonts/urbanist-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Urbanist";
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: url("../fonts/urbanist-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 500;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-700-normal.woff2") format("woff2");
+}
+
+/* ============================================================================
+ * Internal-only @layer ordering. The frame/component rules that must WIN stay
+ * UNLAYERED (below); @layer never fights vendor CSS. Only the three layers
+ * declared here are ordered today. NOTE: layer order is fixed by first
+ * occurrence — when Stories 2.4-2.9 add hpk-components / hpk-vendor-compat /
+ * hpk-dark they MUST (re)declare the full intended order at the head of the
+ * concatenated bundle (otherwise a new name appends AFTER hpk-utilities by
+ * first-use and silently demotes it). So this declaration is the seed, not the
+ * final order, and is concat-independent only for these three names.
+ * ========================================================================== */
+@layer hpk-reset, hpk-base, hpk-utilities;
+
+/* ============================================================================
+ * Frame tier — UNLAYERED, .hpk-client-scoped. THE FLOOR.
+ * Inherited/themeable props only; rides owned and stock markup safely.
+ * ========================================================================== */
+
+/* box-sizing reset — universally safe; not structure-assuming. */
+.hpk-client,
+.hpk-client *,
+.hpk-client *::before,
+.hpk-client *::after {
+  box-sizing: border-box;
+}
+
+/* Body typography + themeable surface (the .hpk-client class rides <body>). */
+.hpk-client {
+  margin: 0;
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-body-font-size);
+  font-weight: var(--hpk-body-font-weight);
+  line-height: var(--hpk-body-line-height);
+  color: var(--hpk-text);
+  background-color: var(--hpk-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings — display family + ink; page titles (h1) 700, the rest 600. */
+.hpk-client h1,
+.hpk-client h2,
+.hpk-client h3,
+.hpk-client h4,
+.hpk-client h5,
+.hpk-client h6 {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-2);
+  font-family: var(--hpk-font-display);
+  font-weight: var(--hpk-h2-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+}
+.hpk-client h1 { font-size: var(--hpk-h1-font-size); font-weight: var(--hpk-h1-font-weight); }
+.hpk-client h2 { font-size: var(--hpk-h2-font-size); }
+.hpk-client h3 { font-size: var(--hpk-h3-font-size); }
+.hpk-client h4 { font-size: var(--hpk-h4-font-size); }
+.hpk-client h5 { font-size: var(--hpk-h5-font-size); }
+.hpk-client h6 { font-size: var(--hpk-h6-font-size); }
+
+/* Paragraph / list spacing rhythm. */
+.hpk-client p,
+.hpk-client ul,
+.hpk-client ol {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-3);
+}
+
+.hpk-client small { font-size: var(--hpk-small-font-size); }
+
+/* Link base color (frame tier). Uses --hpk-link, not raw --hpk-primary: the brand
+ * blue is only ~2.2:1 on the dark surface, so the dark token brightens links to AA
+ * (gen-contrast-gated, both themes). */
+.hpk-client a {
+  color: var(--hpk-link);
+  text-decoration: none;
+}
+.hpk-client a:hover {
+  color: var(--hpk-link-hover);
+  text-decoration: underline;
+}
+
+/* Button base — element-level only (the .btn component is 2.6). Keep it to
+   inherited/themeable props so a bare <button> stays legible; do not impose a
+   brand fill on every button (secondary/ghost variants would be wrong). */
+.hpk-client button,
+.hpk-client input[type="button"],
+.hpk-client input[type="submit"],
+.hpk-client input[type="reset"] {
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-button-font-size);
+  font-weight: var(--hpk-button-font-weight);
+  cursor: pointer;
+}
+
+/* Form-control reset — text-like fields get a legible surface/border/radius.
+   Excludes checkbox/radio/range/color/file (UA appearance preserved) AND the
+   button-type inputs submit/button/reset/image — those are handled by the
+   button-base rule above; without the exclusion they'd render as empty white
+   text boxes (and type=image would get a distorting border) now that the stock
+   .btn surface is gone. */
+.hpk-client input,
+.hpk-client select,
+.hpk-client textarea {
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-input-font-size);
+  color: var(--hpk-ink);
+}
+.hpk-client input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
+.hpk-client select,
+.hpk-client textarea {
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  background-color: var(--hpk-surface);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+}
+
+/* Table reset — collapse + a readable header/divider rhythm. Element-level
+   only (no .table component assumptions, no positional selectors). */
+.hpk-client table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.hpk-client th,
+.hpk-client td {
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  text-align: start; /* logical, not physical `left` — survives RTL (rtl.css loads earlier). */
+  border-bottom: 1px solid var(--hpk-g200);
+}
+.hpk-client th {
+  font-weight: var(--hpk-h6-font-weight);
+  color: var(--hpk-muted);
+}
+
+/* Responsive image guardrail + divider — safe resets, keep fallback "not broken". */
+.hpk-client img {
+  max-width: 100%;
+  height: auto;
+}
+.hpk-client hr {
+  margin: var(--hpk-space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--hpk-border);
+}
+
+/* Focus indicator (WCAG 2.2 §2.4.13) — the SOLID ring token. The transparent
+   outline only reserves space and is invisible in normal rendering (the visual
+   is the box-shadow ring). It is NOT the forced-colors fallback: under
+   forced-colors the UA strips box-shadow to none AND does not remap a
+   transparent outline, so the @media block below restores a real system-color
+   outline (otherwise there'd be no focus indicator at all in High Contrast). */
+.hpk-client :focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--hpk-focus);
+}
+@media (forced-colors: active) {
+  .hpk-client :focus-visible {
+    outline: 2px solid CanvasText;
+    box-shadow: none;
+  }
+}
+
+/* ============================================================================
+ * .hpk-raw — the CSS escape fence (architecture:444-448, 633-635; D1/D5).
+ * For gateway/payment-adjacent DOM we must NOT restyle (FR22). `all: revert`
+ * drops every STANDARD property back to the UA default; our custom --hpk-*
+ * properties cross the `all` fence (Story 1.4 confirmed `all` excludes custom
+ * properties). LIGHT-MODE LOCKED: because the dark --hpk-* overrides WOULD be
+ * inherited across the fence, we re-assert the light palette + color-scheme AND
+ * set explicit color/background so the WRAPPER renders in a guaranteed light
+ * context even on a dark page (resolves the D5 dark-vs-fence conflict).
+ *
+ * SCOPE (be precise): this rule reverts the .hpk-raw WRAPPER element only.
+ * `all: revert` is NOT inherited, so it does NOT stop the frame-tier
+ * `.hpk-client input/select/textarea/a/table/th/td/img/:focus-visible`
+ * selectors above from matching same-document descendants INSIDE .hpk-raw.
+ * That is acceptable today because gateway DOM is cross-origin iframe content
+ * (style-immune regardless) — see Spike B. If a future story renders
+ * gateway/payment DOM as same-document descendants, that story owns the
+ * descendant-level fence (e.g. `.hpk-raw, .hpk-raw *`). Never author a rule
+ * selecting INTO .hpk-raw.
+ * ========================================================================== */
+.hpk-raw {
+  all: revert;
+  color-scheme: light;
+  color: var(--hpk-ink);
+  background-color: var(--hpk-surface);
+  --hpk-page: #F4F6FA;
+  --hpk-surface: #FFFFFF;
+  --hpk-ink: #03123E;
+  --hpk-text: #6B6B7E;
+  --hpk-muted: #5F6B82;
+  --hpk-border: #E9E9E9;
+  --hpk-primary-tint: #EAF0FD;
+  --hpk-secondary-tint: #FEF0E4;
+  --hpk-success-tint: #E7FAF0;
+  --hpk-warning-tint: #FEF5E8;
+  --hpk-danger-tint: #FDECEC;
+  --hpk-info-tint: #E8F7FD;
+  --hpk-g100: #F9FAFB;
+  --hpk-g200: #F2F4F5;
+  --hpk-g300: #E6EAEB;
+  --hpk-shadow: 0 3px 10px rgba(0, 0, 0, .08);
+}

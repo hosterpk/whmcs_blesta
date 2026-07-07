@@ -1,0 +1,150 @@
+<?php /* HOSTERPK OVERRIDE — replaces the stock WidgetClient/Bootstrap-table contacts list with a .hpk-card + .hpk-table (with the <=760px reflow). Warms the post-redirect success flash via a view-only value-match classifier (contact_added/updated -> Hosterpk.contacts.*_success); the per-row delete form + the rel-confirm link + the core blestaModalConfirm binding are preserved verbatim (styled by Story 7.3's general .hpk-client .modal.show chrome). The Bootstrap dropdown action group is replaced by direct .hpk-btn buttons. id="client_contacts" is retained for the modal-confirm selector. OQ4: index() redirects to contacts/add/ when empty, so the empty branch is unreachable — no list .hpk-empty by default; contacts.empty is the add-page intro. Stock baseline: bootstrap/client_contacts.pdt @ 6.0.0-b1 sha256:4a9e344bed22a3d82debb1bcdfa22a3bbf84580a21dd13e2fc783a345db7fe3d */ ?>
+<?php
+/* Page-level language load for the Hosterpk.contacts.* keys (Blesta captures content
+   before structure.pdt). */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+// Don't show the page container when only rendering the widget/AJAX section
+$hpk_standalone = !(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null);
+if ($hpk_standalone) {
+?>
+<div class="hpk-contacts">
+    <div class="hpk-contacts__nav">
+        <?php echo ($navigation ?? null); ?>
+    </div>
+    <div class="hpk-contacts__content">
+<?php
+}
+?>
+        <?php
+        /* View-only success/error classifier (Task 6; 3.2/3.3 pattern). Contacts add/edit
+           redirect here on success (UX-DR24), so the success flash is warmed by matching
+           Blesta's own resolved success VALUE; a danger flash (e.g. a delete error) or any
+           other notice is echoed as-is so nothing is suppressed. */
+        $hpk_message = isset($message) ? html_entity_decode($message, ENT_QUOTES, 'UTF-8') : '';
+        $hpk_is_error = (strpos($hpk_message, 'alert-danger') !== false);
+        $hpk_copy_map = [
+            'ClientContacts.!success.contact_added'   => 'Hosterpk.contacts.add_success',
+            'ClientContacts.!success.contact_updated' => 'Hosterpk.contacts.edit_success',
+        ];
+        $hpk_copy_key = null;
+        if ($hpk_message !== '' && !$hpk_is_error) {
+            foreach ($hpk_copy_map as $hpk_k => $hpk_copy) {
+                $hpk_needle = Language::_($hpk_k, true);
+                if ($hpk_needle !== '' && $hpk_needle !== false && strpos($hpk_message, $hpk_needle) !== false) {
+                    $hpk_copy_key = $hpk_copy;
+                    break;
+                }
+            }
+        }
+        if ($hpk_copy_key !== null) {
+        ?>
+        <div class="hpk-alert hpk-alert-success" role="alert">
+            <i class="fas fa-check-circle" aria-hidden="true"></i>
+            <span><?php $this->_($hpk_copy_key);?></span>
+        </div>
+        <?php
+        } elseif (isset($message)) {
+            echo $message;
+        }
+        ?>
+
+        <div class="hpk-card" id="client_contacts">
+            <div class="hpk-contacts__header">
+                <h2 class="hpk-profile__section-title"><?php $this->_('ClientContacts.index.boxtitle_contacts');?></h2>
+                <a href="<?php echo $this->Html->safe($this->base_uri . 'contacts/add/');?>" class="hpk-btn hpk-btn-primary"><i class="fas fa-plus" aria-hidden="true"></i> <?php $this->_('ClientContacts.index.create_contact');?></a>
+            </div>
+
+            <?php
+            if ((isset($contacts) ? $contacts : false) && (($num_contacts = count($contacts)) > 0)) {
+            ?>
+            <table class="hpk-table hpk-contacts__table" id="contacts">
+                <thead>
+                    <tr>
+                        <th><a href="<?php echo $this->Html->safe($this->base_uri . 'contacts/index/?sort=first_name&order=' . ($sort == 'first_name' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'first_name' ? ' ' . $order : '');?>"><?php $this->_('ClientContacts.index.heading_name');?></a></th>
+                        <th><a href="<?php echo $this->Html->safe($this->base_uri . 'contacts/index/?sort=email&order=' . ($sort == 'email' ? $negate_order : $order));?>" class="ajax<?php echo $this->Html->safe($sort == 'email' ? ' ' . $order : '');?>"><?php $this->_('ClientContacts.index.heading_email');?></a></th>
+                        <th><?php $this->_('ClientContacts.index.heading_type');?></th>
+                        <th><?php $this->_('ClientContacts.index.heading_options');?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // Loop through all contacts
+                    for ($i = 0; $i < $num_contacts; $i++) {
+                        // Set the contact type
+                        $contact_type = (isset($contact_types[$contacts[$i]->contact_type]) ? $contact_types[$contacts[$i]->contact_type] : null);
+                        if ((isset($contacts[$i]->contact_type) ? $contacts[$i]->contact_type : null) == 'other') {
+                            $contact_type = (isset($contact_types[$contacts[$i]->contact_type_id]) ? $contact_types[$contacts[$i]->contact_type_id] : null);
+                        }
+                        $hpk_contact_id = (isset($contacts[$i]->id) ? $contacts[$i]->id : null);
+                    ?>
+                    <tr>
+                        <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.index.heading_name', true));?>"><?php echo $this->Html->concat(' ', (isset($contacts[$i]->first_name) ? $this->Html->safe($contacts[$i]->first_name) : null), (isset($contacts[$i]->last_name) ? $this->Html->safe($contacts[$i]->last_name) : null));?></td>
+                        <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.index.heading_email', true));?>"><?php (print (isset($contacts[$i]->email) ? $this->Html->safe($contacts[$i]->email) : null));?></td>
+                        <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.index.heading_type', true));?>"><?php (print (isset($contact_type) ? $this->Html->safe($contact_type) : null));?></td>
+                        <td data-label="<?php echo $this->Html->safe($this->_('ClientContacts.index.heading_options', true));?>">
+                            <?php
+                            $this->Form->create($this->base_uri . 'contacts/delete/');
+                            $this->Form->fieldHidden('id', $hpk_contact_id);
+                            ?>
+                            <div class="hpk-contacts__actions">
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'contacts/edit/' . $hpk_contact_id . '/');?>" class="hpk-btn hpk-btn-sm hpk-btn-outline">
+                                    <i class="fas fa-edit fa-fw" aria-hidden="true"></i> <?php $this->_('ClientContacts.index.option_edit');?>
+                                </a>
+                                <button type="submit" class="hpk-btn hpk-btn-sm hpk-btn-danger" rel="<?php echo $this->Html->safe($this->_('Hosterpk.contacts.delete_confirm', true));?>">
+                                    <i class="fas fa-trash fa-fw" aria-hidden="true"></i> <?php $this->_('ClientContacts.index.option_delete');?>
+                                </button>
+                            </div>
+                            <?php
+                            $this->Form->end();
+                            ?>
+                        </td>
+                    </tr>
+                    <?php
+                    }
+                    ?>
+                </tbody>
+            </table>
+            <?php
+            } else {
+                // OQ4: unreachable under the default (index() redirects to contacts/add/ when
+                // there are no sub-contacts). Kept as a safe, view-only fallback using Blesta's
+                // own string — NOT an authored list empty-state (contacts.empty is the add-page
+                // intro). If the lead overrides OQ4 to suppress the redirect, swap in a .hpk-empty.
+            ?>
+            <div class="hpk-alert hpk-alert-info" role="status">
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                <span><?php $this->_('ClientContacts.index.no_results');?></span>
+            </div>
+            <?php
+            }
+            ?>
+        </div>
+<?php
+if ($hpk_standalone) {
+?>
+    </div>
+</div>
+<?php
+}
+?>
+
+<!-- HOSTERPK STOCK-JS PRESERVED (RULE 6 tier b): core blestaModalConfirm delete binding. Selector updated from stock `a[rel]` to `[rel]` because the delete control is now a submit button (real POST fallback with no JS). Styled by Story 7.3's general .hpk-client .modal.show chrome. -->
+<?php
+$this->Javascript->setInline("
+	$(document).ready(function() {
+		// Handle confirmation on delete action
+		$('#client_contacts [rel]').blestaModalConfirm({
+			base_url: '" . $this->base_uri . "',
+			submit: true
+		});
+	});
+");
+?>
+<!-- /PRESERVED -->

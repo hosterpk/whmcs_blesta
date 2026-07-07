@@ -1,0 +1,466 @@
+<?php /* HOSTERPK OVERRIDE — branded profile-edit card + tabs. Replaces the stock WidgetClient/nav-tabs Bootstrap chrome (left unstyled by the dropped application.min.css) with a .hpk-card + the .hpk-tabs skin driven by the hpkTabs Alpine island (in-page pane switch, degrades to stacked sections with no JS). Echoes the controller-injected $contact_info/$phone_numbers/$custom_fields partials as set. Adds per-field inline errors (.hpk-invalid/.hpk-field-error) sourced from the model $errors array (the Form helper has no error()/setErrors() in this Blesta version) + a warm view-only $message summary classifier (3.2/3.3 pattern). The Authentication tab + marketing checkbox render branded-but-not-deep (9.2/9.3 edit this same file; OQ1). Stock baseline: bootstrap/client_main_edit.pdt @ 6.0.0-b1 sha256:7421c66ee77ac15760b0462548dc5327228e4faa5c68785960699a084fedb861 */ ?>
+<?php
+/* Page-level language load: Blesta captures content before structure.pdt, so load the
+   HosterPK copy table here for the Hosterpk.profile.* keys (mirrors client_accounts.pdt). */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+/* Per-field inline error helper. $errors is the model error array the controller now
+   passes to the view (keyed by Blesta field name); returns the first leaf message for a
+   field, or '' when there is none. Used to add .hpk-invalid to the control + a
+   .hpk-field-error message below it. Server validation stays the source of truth — a
+   no-JS submit re-renders these inline (and the summary) server-side. */
+$hpk_errors = (isset($errors) && is_array($errors)) ? $errors : [];
+$hpk_field_error = function ($field) use ($hpk_errors) {
+    if (empty($hpk_errors[$field])) {
+        return '';
+    }
+    $msg = $hpk_errors[$field];
+    while (is_array($msg)) {
+        $msg = reset($msg);
+    }
+    return (string) $msg;
+};
+?>
+
+<div class="hpk-card hpk-profile" id="hpk-profile-edit">
+    <?php
+    /* View-only success/error summary (Task 6; 3.2/3.3 pattern). message.pdt renders
+       setMessage('error', …) as .alert-danger, so the type is read off the rendered HTML.
+       On error, swap in the warm Hosterpk.profile.error_summary lead; a benign info/notice
+       flash (e.g. unverified-email) is echoed as-is so nothing is suppressed. Profile
+       SUCCESS is post-redirect on the dashboard (UX-DR24), never inline here. */
+    $hpk_message = isset($message) ? html_entity_decode($message, ENT_QUOTES, 'UTF-8') : '';
+    if ($hpk_message !== '') {
+        if (strpos($hpk_message, 'alert-danger') !== false) {
+            /* Pick the summary lead by the SCOPE of the failing fields (9.2). The
+               Authentication tab's security fields take priority when both a profile
+               and a security field fail in the same submit, because that tab is the
+               active recovery path on a password/2FA save. Scope is read off the
+               threaded model $errors ($hpk_errors), not the rendered $message. */
+            $hpk_security_fields = ['current_password', 'new_password', 'confirm_password', 'otp', 'two_factor_mode', 'two_factor_key', 'recovery_email'];
+            $hpk_is_security_error = (count(array_intersect_key((array) $hpk_errors, array_flip($hpk_security_fields))) > 0);
+            $hpk_summary_key = $hpk_is_security_error ? 'Hosterpk.security.error_summary' : 'Hosterpk.profile.error_summary';
+    ?>
+        <div class="hpk-alert hpk-alert-danger" role="alert">
+            <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+            <span><?php $this->_($hpk_summary_key);?></span>
+        </div>
+    <?php
+        } else {
+            echo $message;
+        }
+    }
+
+    $this->Form->create(null, ['enctype' => 'multipart/form-data', 'class' => 'disable-on-submit']);
+    ?>
+
+    <div x-data="hpkTabs('contact')">
+        <nav class="hpk-tabs" aria-label="<?php echo $this->Html->safe($this->_('ClientMain.edit.boxtitle_edit', true));?>">
+            <a href="#hpk-profile-contact" class="hpk-tab" :aria-current="isActive('contact') ? 'page' : false" @click.prevent="select('contact')"><?php $this->_('ClientMain.edit.heading_contact');?></a>
+            <?php
+            if ((isset($is_primary) ? $is_primary : null)) {
+            ?>
+            <a href="#hpk-profile-billing" class="hpk-tab" :aria-current="isActive('billing') ? 'page' : false" @click.prevent="select('billing')"><?php $this->_('ClientMain.edit.heading_billing');?></a>
+            <a href="#hpk-profile-settings" class="hpk-tab" :aria-current="isActive('settings') ? 'page' : false" @click.prevent="select('settings')"><?php $this->_('ClientMain.edit.heading_settings');?></a>
+            <?php
+            }
+            ?>
+            <a href="#hpk-profile-authentication" class="hpk-tab" :aria-current="isActive('authentication') ? 'page' : false" @click.prevent="select('authentication')"><?php $this->_('ClientMain.edit.heading_authentication');?></a>
+        </nav>
+
+        <section id="hpk-profile-contact" class="hpk-tab-panel" data-hpk-tab-panel="contact" x-show="isActive('contact')">
+            <h2 class="hpk-profile__section-title"><?php $this->_('ClientMain.edit.heading_contact');?></h2>
+            <?php
+            echo (isset($contact_info) ? $contact_info : null);
+            echo (isset($phone_numbers) ? $phone_numbers : null);
+            ?>
+        </section>
+
+        <?php
+        if ((isset($is_primary) ? $is_primary : null)) {
+        ?>
+        <section id="hpk-profile-billing" class="hpk-tab-panel" data-hpk-tab-panel="billing" x-show="isActive('billing')">
+            <h2 class="hpk-profile__section-title"><?php $this->_('ClientMain.edit.heading_billing');?></h2>
+            <div class="hpk-form-row">
+                <div class="hpk-form-col">
+                    <?php
+                    // Show the Tax ID field
+                    if ((isset($enabled_fields['tax_id']) ? $enabled_fields['tax_id'] : false)) {
+                        $hpk_err = $hpk_field_error('tax_id');
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php
+                        $this->Form->label($this->_('ClientMain.edit.field_taxid', true), 'tax_id');
+                        $this->Form->fieldText('tax_id', (isset($vars->settings['tax_id']) ? $vars->settings['tax_id'] : null), ['id' => 'tax_id', 'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : ''), 'placeholder' => $this->_('ClientMain.edit.field_taxid', true)]);
+                        if ($hpk_err !== '') {
+                            echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                    <?php
+                    }
+
+                    // Show currency if enabled
+                    if ((isset($enabled_fields['default_currency']) ? $enabled_fields['default_currency'] : false)) {
+                        $hpk_err = $hpk_field_error('default_currency');
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php
+                        $this->Form->label($this->_('ClientMain.edit.field_default_currency', true), 'default_currency');
+                        $this->Form->fieldSelect('default_currency', (isset($currencies) ? $currencies : null), (isset($vars->settings['default_currency']) ? $vars->settings['default_currency'] : null), ['id' => 'default_currency', 'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : '')]);
+                        if ($hpk_err !== '') {
+                            echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                    <?php
+                    }
+                    $hpk_err = $hpk_field_error('inv_address_to');
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php
+                        $this->Form->label($this->_('ClientMain.edit.field_invoiceaddress', true), 'inv_address_to');
+                        $this->Form->fieldSelect('inv_address_to', (isset($contacts) ? $contacts : null), (isset($vars->settings['inv_address_to']) ? $vars->settings['inv_address_to'] : null), ['id' => 'inv_address_to', 'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : '')]);
+                        if ($hpk_err !== '') {
+                            echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="hpk-profile-settings" class="hpk-tab-panel" data-hpk-tab-panel="settings" x-show="isActive('settings')">
+            <h2 class="hpk-profile__section-title"><?php $this->_('ClientMain.edit.heading_settings');?></h2>
+            <?php
+            // Show additional settings, if any
+            if ((isset($show_additional_settings) ? $show_additional_settings : false)) {
+            ?>
+            <div class="hpk-form-row">
+                <div class="hpk-form-col">
+                    <?php
+                    // Show language if enabled
+                    if ((isset($enabled_fields['language']) ? $enabled_fields['language'] : false)) {
+                        $hpk_err = $hpk_field_error('language');
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php
+                        $this->Form->label($this->_('ClientMain.edit.field_language', true), 'language');
+                        $this->Form->fieldSelect('language', (isset($languages) ? $languages : null), (isset($vars->settings['language']) ? $vars->settings['language'] : null), ['id' => 'language', 'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : '')]);
+                        if ($hpk_err !== '') {
+                            echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                    <?php
+                    }
+                    // Custom fields partial (branded in client_main_custom_fields.pdt)
+                    echo (isset($custom_fields) ? $custom_fields : null);
+
+                    // Email & notification preferences (Story 9.3). Stock Blesta exposes one
+                    // client-editable notification control, so keep this group scoped to the
+                    // existing marketing opt-in and its server-side error path.
+                    if ((isset($enabled_fields['receive_email_marketing']) ? $enabled_fields['receive_email_marketing'] : false)) {
+                        $hpk_err = $hpk_field_error('receive_email_marketing');
+                        $hpk_describedby = 'hpk-email-prefs-help';
+                        if ($hpk_err !== '') {
+                            $hpk_describedby .= ' hpk-error-receive_email_marketing';
+                        }
+                        $hpk_checkbox_attrs = [
+                            'id' => 'receive_email_marketing',
+                            'aria-describedby' => $hpk_describedby,
+                        ];
+                        if ($hpk_err !== '') {
+                            $hpk_checkbox_attrs['class'] = 'hpk-invalid';
+                            $hpk_checkbox_attrs['aria-invalid'] = 'true';
+                        }
+                    ?>
+                    <div class="hpk-email-prefs" role="group" aria-labelledby="hpk-email-prefs-title">
+                    <h3 id="hpk-email-prefs-title" class="hpk-profile__subsection-title"><?php $this->_('Hosterpk.email_prefs.section_title');?></h3>
+                    <p id="hpk-email-prefs-help" class="hpk-help-text"><i class="fas fa-info-circle fa-fw" aria-hidden="true"></i> <?php $this->_('Hosterpk.email_prefs.marketing_help');?></p>
+                    <div class="hpk-form-group">
+                        <label class="hpk-checkbox" for="receive_email_marketing">
+                            <?php
+                            $this->Form->fieldCheckbox(
+                                'receive_email_marketing',
+                                'true',
+                                (isset($vars->settings['receive_email_marketing']) ? $vars->settings['receive_email_marketing'] : 'false') == 'true',
+                                $hpk_checkbox_attrs
+                            );
+                            ?>
+                            <span><?php $this->_('ClientMain.edit.field_receive_email_marketing');?></span>
+                        </label>
+                        <?php
+                        if ($hpk_err !== '') {
+                            echo '<span id="hpk-error-receive_email_marketing" class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                    </div>
+                    <?php
+                    }
+                    ?>
+                </div>
+            </div>
+            <?php
+            }
+            ?>
+        </section>
+        <?php
+        }
+        ?>
+
+        <section id="hpk-profile-authentication" class="hpk-tab-panel" data-hpk-tab-panel="authentication" x-show="isActive('authentication')">
+            <h2 class="hpk-profile__section-title"><?php $this->_('ClientMain.edit.heading_authentication');?></h2>
+            <?php
+            /* Story 9.2 password-affordance setup (AC A/B). Shared by all three password
+               fields + the weak-password hint. The toggle labels/button reuse the shipped
+               hpkPasswordToggle factory + Hosterpk.password_toggle.* copy; the strength opts
+               feed the additive hpkPasswordStrength factory (length + mismatch live hint
+               only — format/custom-regex stay server-authoritative, NFR5: no strength lib).
+               Every payload is JSON-encoded with JSON_HEX_* + htmlspecialchars so no copy or
+               policy value is raw-interpolated into an attribute or JavaScript (ENF5). */
+            $hpk_json_flags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
+            $hpk_toggle_labels_json = htmlspecialchars(json_encode([
+                'show' => $this->_('Hosterpk.password_toggle.show', true),
+                'hide' => $this->_('Hosterpk.password_toggle.hide', true),
+            ], $hpk_json_flags), ENT_QUOTES);
+            $hpk_toggle_show = $this->Html->safe($this->_('Hosterpk.password_toggle.show', true));
+            $hpk_toggle_button = '<button type="button" class="hpk-password-toggle" x-cloak x-ref="toggle"'
+                . ' @click="toggle()" :aria-label="ariaLabel" aria-label="' . $hpk_toggle_show . '"'
+                . ' data-fallback-label="' . $hpk_toggle_show . '"'
+                . ' x-text="shown ? labels.hide : labels.show">' . $hpk_toggle_show . '</button>';
+
+            // Active password policy (threaded by the controller, OQ-A; sane fallbacks if absent).
+            // The controller now guarantees a numeric value (falling back to 6 for a non-numeric
+            // DB setting). Cast to int here to match the (int) cast Users::getRules() applies and
+            // clamp negatives to 0 so the visible hint never disagrees with the server rule.
+            $hpk_pw_min = max(0, (int) (isset($password_min_length) ? $password_min_length : 6));
+            $hpk_pw_format = isset($password_format) ? $password_format : 'any';
+            $hpk_policy_keys = [
+                'any' => 'Hosterpk.security.password_requirements_any',
+                'any_no_space' => 'Hosterpk.security.password_requirements_any_no_space',
+                'alpha_num' => 'Hosterpk.security.password_requirements_alpha_num',
+                'alpha' => 'Hosterpk.security.password_requirements_alpha',
+                'num' => 'Hosterpk.security.password_requirements_num',
+                'custom' => 'Hosterpk.security.password_requirements_custom',
+            ];
+            $hpk_policy_key = isset($hpk_policy_keys[$hpk_pw_format]) ? $hpk_policy_keys[$hpk_pw_format] : $hpk_policy_keys['any'];
+
+            // Live client-side hint opts: length + mismatch only; never blocks submit.
+            $hpk_strength_opts = htmlspecialchars(json_encode([
+                'minLength' => (int) $hpk_pw_min,
+                'tooShort' => $this->_('Hosterpk.security.password_too_short', true),
+                'mismatch' => $this->_('Hosterpk.security.password_mismatch', true),
+            ], $hpk_json_flags), ENT_QUOTES);
+            ?>
+            <div class="hpk-form-row">
+                <div class="hpk-form-col" x-data="hpkPasswordStrength(<?php echo $hpk_strength_opts; ?>)">
+                    <div class="hpk-form-group">
+                        <?php $this->Form->label($this->_('ClientMain.edit.field_username', true), 'username');?>
+                        <p class="hpk-profile__static-value"><?php (print (isset($username) ? $this->Html->safe($username) : null));?></p>
+                    </div>
+                    <?php $hpk_err = $hpk_field_error('recovery_email'); ?>
+                    <div class="hpk-form-group">
+                        <?php
+                        $this->Form->label($this->_('ClientMain.edit.field_recovery_email', true), 'recovery_email');
+                        $this->Form->fieldText('recovery_email', (isset($vars->recovery_email) ? $vars->recovery_email : null), ['id' => 'recovery_email', 'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : ''), 'placeholder' => $this->_('ClientMain.edit.field_recovery_email', true)]);
+                        if ($hpk_err !== '') {
+                            echo '<span class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                    <?php
+                    // current_password (AC A): show/hide toggle + inline error wiring.
+                    $hpk_err = $hpk_field_error('current_password');
+                    $hpk_err_id = 'hpk-error-current_password';
+                    $hpk_cur_attrs = [
+                        'id' => 'current_password',
+                        'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : ''),
+                        'autocomplete' => 'current-password',
+                        'x-ref' => 'field',
+                    ];
+                    if ($hpk_err !== '') {
+                        $hpk_cur_attrs['aria-invalid'] = 'true';
+                        $hpk_cur_attrs['aria-describedby'] = $hpk_err_id;
+                    }
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php $this->Form->label($this->_('ClientMain.edit.field_current_password', true), 'current_password'); ?>
+                        <div class="hpk-input-group" x-data="hpkPasswordToggle(<?php echo $hpk_toggle_labels_json; ?>)" x-init="init()">
+                            <?php
+                            $this->Form->fieldPassword('current_password', $hpk_cur_attrs);
+                            echo $hpk_toggle_button;
+                            ?>
+                        </div>
+                        <?php
+                        if ($hpk_err !== '') {
+                            echo '<span id="' . $this->Html->safe($hpk_err_id) . '" class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                    </div>
+                    <?php
+                    // new_password (AC A/B): show/hide toggle + visible policy hint + live
+                    // (JS) length/mismatch hint. This field OWNS #hpk-password-live-hint;
+                    // its aria-describedby (de-duplicated, ordered) = the server error (when
+                    // present) + the always-present policy hint + the live-hint region.
+                    $hpk_err = $hpk_field_error('new_password');
+                    $hpk_err_id = 'hpk-error-new_password';
+                    $hpk_new_desc = [];
+                    if ($hpk_err !== '') {
+                        $hpk_new_desc[] = $hpk_err_id;
+                    }
+                    $hpk_new_desc[] = 'hpk-password-policy';
+                    $hpk_new_desc[] = 'hpk-password-live-hint';
+                    $hpk_new_attrs = [
+                        'id' => 'new_password',
+                        'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : ''),
+                        'autocomplete' => 'new-password',
+                        'x-ref' => 'field',
+                        'aria-describedby' => implode(' ', $hpk_new_desc),
+                    ];
+                    if ($hpk_err !== '') {
+                        $hpk_new_attrs['aria-invalid'] = 'true';
+                    }
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php $this->Form->label($this->_('ClientMain.edit.field_new_password', true), 'new_password'); ?>
+                        <div class="hpk-input-group" x-data="hpkPasswordToggle(<?php echo $hpk_toggle_labels_json; ?>)" x-init="init()">
+                            <?php
+                            $this->Form->fieldPassword('new_password', $hpk_new_attrs);
+                            echo $hpk_toggle_button;
+                            ?>
+                        </div>
+                        <?php
+                        if ($hpk_err !== '') {
+                            echo '<span id="' . $this->Html->safe($hpk_err_id) . '" class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                        <p id="hpk-password-policy" class="hpk-help-text"><i class="fas fa-shield-alt fa-fw" aria-hidden="true"></i> <?php $this->_($hpk_policy_key, false, $hpk_pw_min); ?></p>
+                        <span id="hpk-password-live-hint" class="hpk-field-error" data-hpk-live-hint aria-live="polite" x-cloak x-show="hint !== ''" x-text="hint"></span>
+                    </div>
+
+                    <?php
+                    /* 2FA reveal scope (Story 9.2, AC C). ONE local Alpine scope wraps the
+                       two_factor_mode checkbox + the enrolment block, mirroring 9.1's
+                       optional-login reveal. two_factor_mode is a tri-state string
+                       ('none'|'totp'|'motp'), so seed the boolean from "!= none" and bind the
+                       checkbox (value 'totp') with x-model. No-JS: the block stays in-flow
+                       visible (no x-cloak) and the checkbox still drives enablement on submit. */
+                    ?>
+                    <div class="hpk-profile__twofactor-wrap" x-data="{ twofa: <?php echo (($vars->two_factor_mode ?? 'none') !== 'none') ? 'true' : 'false'; ?> }">
+                        <div class="hpk-form-group">
+                            <label class="hpk-checkbox">
+                                <?php
+                                $this->Form->fieldCheckbox('two_factor_mode', 'totp', (isset($vars->two_factor_mode) ? $vars->two_factor_mode : null) != 'none', ['id' => 'two_factor_mode', 'x-model' => 'twofa']);
+                                $this->Form->fieldHidden('two_factor_key', (isset($vars->two_factor_key) ? $vars->two_factor_key : null));
+                                ?>
+                                <span><?php $this->_('ClientMain.edit.field_two_factor_mode');?></span>
+                            </label>
+                        </div>
+
+                        <div id="hpk-profile-2fa" class="hpk-profile__twofactor" x-show="twofa">
+                            <h4 class="hpk-profile__subsection-title"><?php $this->_('ClientMain.edit.heading_two_factor_authentication');?></h4>
+                            <p><?php $this->_('ClientMain.edit.two_factor_desc');?></p>
+                            <p><?php $this->_('ClientMain.edit.two_factor_instructions');?></p>
+                            <ol>
+                                <li>
+                                    <?php $this->_('ClientMain.edit.two_factor_step1');?>
+                                    <ul>
+                                        <li><a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=en" target="_blank" rel="noopener"><?php $this->_('ClientMain.edit.text_android');?></a></li>
+                                        <li><a href="https://itunes.apple.com/us/app/google-authenticator/id388497605?mt=8" target="_blank" rel="noopener"><?php $this->_('ClientMain.edit.text_ios');?></a></li>
+                                        <li><a href="http://www.windowsphone.com/en-us/store/app/authenticator/e7994dbc-2336-4950-91ba-ca22d653759b" target="_blank" rel="noopener"><?php $this->_('ClientMain.edit.text_windows');?></a></li>
+                                    </ul>
+                                </li>
+                                <li><?php $this->_('ClientMain.edit.two_factor_step2', false, (isset($vars->two_factor_key) ? $vars->two_factor_key : null), (isset($vars->two_factor_key_base32) ? $vars->two_factor_key_base32 : null));?></li>
+                                <li><?php $this->_('ClientMain.edit.two_factor_step3');?></li>
+                            </ol>
+                            <?php
+                            /* QR otpauth:// URI (Story 9.2, AC C). Encode label + issuer EXACTLY
+                               ONCE here (the controller now passes the RAW company name, so the
+                               prior controller-rawurlencode + view-encode double pass that yielded
+                               %2520 is gone). rawurlencode gives RFC-3986 percent-encoding (a space
+                               becomes %20, not urlencode's '+'), so "Hoster PK" -> "Hoster%20PK".
+                               The raw URI string is passed straight to QRCode::render(); only the
+                               rendered data-URI is Html->safe()'d for the <img src> (re-introducing
+                               Html->safe() on the URI itself was the 9.1 round-2 defect). */
+                            $hpk_qr_label = rawurlencode($vars->username ?? '');
+                            $hpk_qr_issuer = rawurlencode($two_factor_issuer ?? '');
+                            $hpk_qr_uri = 'otpauth://totp/' . $hpk_qr_label . '?secret=' . ($vars->two_factor_key_base32 ?? '') . '&issuer=' . $hpk_qr_issuer;
+                            ?>
+                            <img id="two_factor_qr" src="<?php echo $this->Html->safe((new chillerlan\QRCode\QRCode)->render($hpk_qr_uri));?>" alt="" />
+                            <?php $hpk_err = $hpk_field_error('otp'); ?>
+                            <div class="hpk-form-group">
+                                <?php
+                                $this->Form->label($this->_('ClientMain.edit.field_otp', true), 'otp');
+                                $hpk_otp_attrs = ['id' => 'otp', 'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : '')];
+                                if ($hpk_err !== '') {
+                                    $hpk_otp_attrs['aria-invalid'] = 'true';
+                                    $hpk_otp_attrs['aria-describedby'] = 'hpk-error-otp';
+                                }
+                                $this->Form->fieldText('otp', null, $hpk_otp_attrs);
+                                if ($hpk_err !== '') {
+                                    echo '<span id="hpk-error-otp" class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php
+                    // confirm_password (AC A): show/hide toggle + inline error wiring. Its
+                    // aria-describedby = the server error (when present) + its own help-text;
+                    // it deliberately does NOT point at the shared #hpk-password-live-hint
+                    // region (one field per aria-live node — new_password owns it).
+                    $hpk_err = $hpk_field_error('confirm_password');
+                    $hpk_err_id = 'hpk-error-confirm_password';
+                    $hpk_confirm_desc = [];
+                    if ($hpk_err !== '') {
+                        $hpk_confirm_desc[] = $hpk_err_id;
+                    }
+                    $hpk_confirm_desc[] = 'hpk-confirm-password-tooltip';
+                    $hpk_confirm_attrs = [
+                        'id' => 'confirm_password',
+                        'class' => 'form-control' . ($hpk_err !== '' ? ' hpk-invalid' : ''),
+                        'autocomplete' => 'new-password',
+                        'x-ref' => 'field',
+                        'aria-describedby' => implode(' ', $hpk_confirm_desc),
+                    ];
+                    if ($hpk_err !== '') {
+                        $hpk_confirm_attrs['aria-invalid'] = 'true';
+                    }
+                    ?>
+                    <div class="hpk-form-group">
+                        <?php $this->Form->label($this->_('ClientMain.edit.field_confirm_password', true), 'confirm_password'); ?>
+                        <div class="hpk-input-group" x-data="hpkPasswordToggle(<?php echo $hpk_toggle_labels_json; ?>)" x-init="init()">
+                            <?php
+                            $this->Form->fieldPassword('confirm_password', $hpk_confirm_attrs);
+                            echo $hpk_toggle_button;
+                            ?>
+                        </div>
+                        <?php
+                        if ($hpk_err !== '') {
+                            echo '<span id="' . $this->Html->safe($hpk_err_id) . '" class="hpk-field-error">' . $this->Html->safe($hpk_err) . '</span>';
+                        }
+                        ?>
+                        <p id="hpk-confirm-password-tooltip" class="hpk-help-text"><i class="fas fa-lightbulb fa-fw" aria-hidden="true"></i> <?php $this->_('ClientMain.edit.tooltip_confirm_password');?></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="hpk-profile__actions">
+        <button type="submit" class="hpk-btn hpk-btn-primary"><i class="fas fa-edit" aria-hidden="true"></i> <?php $this->_('ClientMain.edit.field_editsubmit');?></button>
+    </div>
+
+    <?php
+    $this->Form->end();
+    ?>
+</div>

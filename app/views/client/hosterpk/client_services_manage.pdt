@@ -1,0 +1,112 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the bare col-md-3/col-md-9 + WidgetClient chrome with a .hpk-card/.hpk-service-detail two-zone layout (tab rail + main column), leads the surface with the controller $message styled on-brand via the DEC-1 scoped .hpk-service-detail .alert-* mapping, and frames raw module output ($tab_view / $partial_tab_view) in an on-brand .hpk-service-detail__module region WITHOUT styling into vendor DOM (AR-D4/DEC-3). Preserves the controller->view contract (tabs/tab_view/partial_tab_view/service_infobox/service/package/message/render_section/is_ajax) and the byte-verbatim widget/ajax render-mode guard so an .ajax tab click emits only inner content (no card/rail/title). Story 7-2 (first HTMX island): the always-rendered region-(ii) conditional (module frame OR infobox+partial) is now wrapped in the swap target #hpk-service-tabpanel → #hpk-service-tabpanel-inner that eligible rail tabs hx-select from the full page (DEC-2/DEC-7); a skeleton (#hpk-service-tabpanel-skeleton) + a concise aria-live status region (#hpk-service-tabpanel-status) sit as SIBLINGS OUTSIDE the swap target so the innerHTML swap never deletes them. Persistent chrome (rail/card shell/$message/<h1>) is untouched by the swap; the infobox is INSIDE the swapped region (a module-tab click replaces it — stock behavior). The $hpk_is_inner widget/ajax guard + #client_services_manage.content_section are preserved verbatim. Stock baseline: bootstrap/client_services_manage.pdt @ 6.0.0-b1 sha256:cc1a6d9129c707965b9bb0c04948226dad77ce2a0821a3c5d5bb46fee7ccf00c */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+$hpk_is_inner = (isset($render_section) ? $render_section : null) || (isset($is_ajax) ? $is_ajax : null);
+
+// hpk-is-inner-guard: the $hpk_is_inner branches emit the persistent chrome (card shell,
+// rail, $message, <h1>) ONLY on a full render; on the widget/ajax inner render the page
+// emits region (ii) alone. The 7-2 swap target lives in region (ii), so it exists in BOTH paths.
+if (!$hpk_is_inner) {
+?>
+<div id="client_services_manage" class="content_section hpk-service-detail">
+    <section id="hpk-service-detail" class="hpk-card hpk-service-detail__shell" aria-labelledby="hpk-service-detail-title">
+        <div class="hpk-service-detail__layout">
+            <?php echo ($tabs ?? null); ?>
+            <div class="hpk-service-detail__main card-body">
+                <?php /* The controller $message (incl. module validation errors) lives OUTSIDE
+                   #hpk-service-tabpanel, so the mutation island's hx-select would drop it. Wrap it
+                   in a stable id the boosted POST OOB-swaps (hx-select-oob), so a server-side
+                   validation error always surfaces on the inline re-render (AC4 — server is the
+                   source of truth). On a redirect-on-save the page fullNavigates, so this is moot. */ ?>
+                <div id="hpk-service-detail-message"><?php echo ($message ?? null); ?></div>
+                <h1 id="hpk-service-detail-title" class="hpk-service-detail__title"><?php echo $this->_('Hosterpk.service_detail.page_title', true, (isset($package->name) ? $this->Html->safe($package->name) : null), (isset($service->name) ? $this->Html->safe($service->name) : null)); ?></h1>
+<?php
+}
+?>
+
+                <?php /* DEC-7: skeleton + status are SIBLINGS OUTSIDE #hpk-service-tabpanel (but inside
+                   region (ii), so they ship on the first load) — an innerHTML swap of #hpk-service-tabpanel
+                   never deletes them, so hx-indicator keeps firing on the 2nd/3rd click. The status region
+                   is a dedicated CONCISE aria-live="polite" node (NOT aria-live on the whole panel, which
+                   would announce the entire swapped module table). The skeleton is purely visual
+                   (aria-hidden); JS sets the status text on beforeRequest / clears on afterRequest. */ ?>
+                <div id="hpk-service-tabpanel-status" class="sr-only" aria-live="polite" data-hpk-announce="<?php echo $this->Html->safe($this->_('Hosterpk.service_detail.loading_announce', true)); ?>"></div>
+                <div id="hpk-service-tabpanel-skeleton" class="hpk-skeleton--tabpanel htmx-indicator">
+                    <span class="hpk-skeleton hpk-skeleton__bar hpk-skeleton__bar--title" aria-hidden="true"></span>
+                    <span class="hpk-skeleton hpk-skeleton__bar" aria-hidden="true"></span>
+                    <span class="hpk-skeleton hpk-skeleton__bar" aria-hidden="true"></span>
+                    <span class="hpk-skeleton hpk-skeleton__bar hpk-skeleton__bar--short" aria-hidden="true"></span>
+                    <span class="sr-only"><?php echo $this->Html->safe($this->_('Hosterpk.service_detail.loading_label', true)); ?></span>
+                </div>
+                <?php /* Confirm-modal copy island (Story 7.3) — the marker-scoped confirm executor
+                   (js/bootstrap.js) reads these server-escaped CHROME labels by id, so no English
+                   string lives in JS (ENF5). SIBLING OUTSIDE #hpk-service-tabpanel so it survives the
+                   panel innerHTML swap; the consequence sentence + confirm verb come from the module
+                   trigger (data-confirm-message + the trigger's own text), never from here. */ ?>
+                <div id="hpk-confirm-copy" hidden
+                     data-title="<?php echo $this->Html->safe($this->_('Hosterpk.service_confirm.title', true)); ?>"
+                     data-cancel="<?php echo $this->Html->safe($this->_('Hosterpk.service_confirm.cancel', true)); ?>"
+                     data-close="<?php echo $this->Html->safe($this->_('Hosterpk.service_confirm.close', true)); ?>"
+                     data-confirm-fallback="<?php echo $this->Html->safe($this->_('Hosterpk.service_confirm.confirm_fallback', true)); ?>"
+                     data-success-announce="<?php echo $this->Html->safe($this->_('Hosterpk.service_mutation.success_announce', true)); ?>"></div>
+                <?php /* #hpk-service-tabpanel: the swap target. tabindex="-1" so a post-swap .focus() lands
+                   (a no-op on a plain div otherwise); data-hpk-aria-busy = the aria-busy/announce toggle hook;
+                   data-hpk-focus-after-swap = the opt-in focus selector (DEC-11). #hpk-service-tabpanel-inner
+                   wraps the ENTIRE region-(ii) conditional verbatim, so the marker exists on the initial
+                   Service-Information load (the else branch) AND on a module-tab load ($tab_view set). */ ?>
+                <div id="hpk-service-tabpanel" class="hpk-service-detail__panel" aria-busy="false" tabindex="-1" data-hpk-aria-busy data-hpk-focus-after-swap="#hpk-service-tabpanel">
+                  <div id="hpk-service-tabpanel-inner">
+                <?php
+                if (($tab_view ?? null)) {
+                ?>
+                <?php /* Mutation island frame (Story 7.3, OQ2): the OWNED module wrapper carries the
+                   island target/select/swap/select-oob/indicator attributes; bootstrap.js applies
+                   hx-boost="true" hx-push-url="false" to POST forms inside this frame at runtime,
+                   so only form POSTs route through the Story 2.8 D2 island. GET links keep normal
+                   navigation (no inherited no-history behavior). htmx:configRequest injects _csrf_token,
+                   htmx:beforeSwap runs CSRF retry-with-payload + redirect handling, and the response's
+                   #hpk-service-tabpanel-inner swaps back into the panel. AR-D4/DEC-3 holds (no
+                   selector/attribute into $tab_view). With JS off the module form POSTs full-page and
+                   Blesta validates server-side (FR36 no-JS baseline). */ ?>
+                <section class="hpk-service-detail__module" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service_detail.module_frame_label', true)); ?>"
+                         hx-target="#hpk-service-tabpanel"
+                         hx-select="#hpk-service-tabpanel-inner"
+                         hx-swap="innerHTML"
+                         hx-select-oob="#hpk-service-detail-message"
+                         hx-indicator="#hpk-service-tabpanel-skeleton">
+                    <?php echo $tab_view; ?>
+                </section>
+                <?php
+                } else {
+                    echo ($service_infobox ?? null);
+
+                    if (isset($partial_tab_view) && $partial_tab_view !== null && $partial_tab_view !== '') {
+                ?>
+                <hr class="hpk-service-detail__divider">
+                <section class="hpk-service-detail__module hpk-service-detail__module--partial" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service_detail.module_frame_label', true)); ?>">
+                    <?php echo $partial_tab_view; ?>
+                </section>
+                <?php
+                    }
+                }
+                ?>
+                  </div>
+                </div>
+
+<?php
+if (!$hpk_is_inner) {
+?>
+            </div>
+        </div>
+    </section>
+</div>
+<?php
+}

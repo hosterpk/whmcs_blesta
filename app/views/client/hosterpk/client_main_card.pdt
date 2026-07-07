@@ -1,0 +1,25 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: removes the Bootstrap .col-md-* grid wrapper and the inline background/text_color !important styles; frames each plugin dashboard card in a consistent .hpk-card.hpk-card--plugin surface. Preserves the controller->view contract, callback types, and link reachability. Stock baseline: bootstrap/client_main_card.pdt @ 6.0.0-b1 sha256:6e159660f1b59da2e6a139e5074f190e23725862f29df2f3cb1b79b6ee7c729e */ ?>
+<?php
+$hpk_card_url = !empty($card->uri) ? $card->uri : null;
+$hpk_card_linked = $hpk_card_url !== null;
+$hpk_card_tag = $hpk_card_linked ? 'a' : 'div';
+$hpk_card_href = $hpk_card_linked ? ' href="' . $this->Html->safe($hpk_card_url) . '"' : '';
+$hpk_card_is_html = (isset($card->callback_type) ? $card->callback_type : null) == 'html';
+
+if ($hpk_card_is_html) {
+?>
+<<?php echo $hpk_card_tag; ?> class="hpk-card hpk-card--plugin hpk-card--plugin-html"<?php echo $hpk_card_href; ?> id="<?php (print (isset($card->card_id) ? $this->Html->safe($card->card_id) : null)); ?>" data-hpk-card-id="<?php (print (isset($card->card_id) ? $this->Html->safe($card->card_id) : null)); ?>" data-hpk-callback="<?php (print (isset($card->callback_type) ? $this->Html->safe($card->callback_type) : null)); ?>">
+    <?php echo (isset($card->value) ? $card->value : null); ?>
+</<?php echo $hpk_card_tag; ?>>
+<?php
+} else {
+?>
+<<?php echo $hpk_card_tag; ?> class="hpk-card hpk-card--plugin"<?php echo $hpk_card_href; ?> id="<?php (print (isset($card->card_id) ? $this->Html->safe($card->card_id) : null)); ?>" data-hpk-card-id="<?php (print (isset($card->card_id) ? $this->Html->safe($card->card_id) : null)); ?>" data-hpk-callback="<?php (print (isset($card->callback_type) ? $this->Html->safe($card->callback_type) : null)); ?>">
+    <div class="hpk-card--plugin__content">
+        <div class="hpk-card--plugin__value"><?php (print (isset($card->value) ? $this->Html->safe($card->value) : null)); ?></div>
+        <div class="hpk-card--plugin__label"><?php (print (isset($card->label) ? $this->Html->safe($card->label) : null)); ?></div>
+    </div>
+</<?php echo $hpk_card_tag; ?>>
+<?php
+}
+?>

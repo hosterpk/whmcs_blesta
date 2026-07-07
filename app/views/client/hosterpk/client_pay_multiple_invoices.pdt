@@ -1,0 +1,78 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces Bootstrap table chrome with .hpk-table responsive reflow while preserving invoice_id[], applyamount[], edit_amounts toggle, and stock jQuery behavior. Stock baseline: bootstrap/client_pay_multiple_invoices.pdt @ 6.0.0-b1 sha256:4eab1de114666a94f1f128e440ff4533d32e3d084e6ff33092aa610cdf5d1c38 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<?php
+// Create input field for each invoice
+if ((isset($invoices) ? $invoices : false) && ($num_invoices = count($invoices)) > 0) {
+?>
+<div class="hpk-pay-invoices__edit">
+    <a id="edit_amounts" class="hpk-btn hpk-btn-outline hpk-btn-sm" href="#">
+        <?php $this->_('ClientPay.multipleinvoices.text_edit_amounts');?>
+    </a>
+</div>
+<div class="hpk-table-wrap">
+    <table class="hpk-table">
+        <thead>
+            <tr>
+                <th scope="col"><?php $this->Form->fieldCheckbox('invoice_id[]', 'all', in_array('all', (isset($vars->invoice_id) ? $vars->invoice_id : [])), ['aria-label' => $this->_('Hosterpk.payment.select_all_invoices', true)]);?></th>
+                <th scope="col" class="edit_amounts" style="display:none;" data-label="<?php $this->_('ClientPay.multipleinvoices.text_amount');?>"><?php $this->_('ClientPay.multipleinvoices.text_amount');?></th>
+                <th scope="col" data-label="<?php $this->_('ClientPay.multipleinvoices.text_due');?>"><?php $this->_('ClientPay.multipleinvoices.text_due');?></th>
+                <th scope="col" data-label="<?php $this->_('ClientPay.multipleinvoices.text_invoice');?>"><?php $this->_('ClientPay.multipleinvoices.text_invoice');?></th>
+                <th scope="col" data-label="<?php $this->_('ClientPay.multipleinvoices.text_datedue');?>"><?php $this->_('ClientPay.multipleinvoices.text_datedue');?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Display each invoice
+            for ($i = 0; $i < $num_invoices; $i++) {
+            ?>
+            <tr>
+                <td><?php $this->Form->fieldCheckbox('invoice_id[]', (isset($invoices[$i]->id) ? $invoices[$i]->id : null), in_array($invoices[$i]->id, (isset($vars->invoice_id) ? $vars->invoice_id : [])), ['aria-label' => $this->_('Hosterpk.payment.select_invoice', true, (isset($invoices[$i]->id_code) ? $invoices[$i]->id_code : ''))]);?></td>
+                <td class="edit_amounts" style="display:none;" data-label="<?php $this->_('ClientPay.multipleinvoices.text_amount');?>"><?php $this->Form->fieldText('applyamount[' . (isset($invoices[$i]->id) ? $invoices[$i]->id : null) . ']', (isset($vars->applyamount[$invoices[$i]->id]) ? $vars->applyamount[$invoices[$i]->id] : $this->CurrencyFormat->format((isset($vars->applyamount[$invoices[$i]->id]) ? $vars->applyamount[$invoices[$i]->id] : $invoices[$i]->due), $invoices[$i]->currency, ['prefix' => false,'suffix' => false,'with_separator' => false,'code' => false])), ['id' => 'invoice-' . (isset($invoices[$i]->id) ? $invoices[$i]->id : null)]);?></td>
+                <td data-label="<?php $this->_('ClientPay.multipleinvoices.text_due');?>"><?php echo $this->CurrencyFormat->format((isset($invoices[$i]->due) ? $this->Html->safe($invoices[$i]->due) : null), (isset($invoices[$i]->currency) ? $this->Html->safe($invoices[$i]->currency) : null), ['html_code' => true]);?></td>
+                <td data-label="<?php $this->_('ClientPay.multipleinvoices.text_invoice');?>"><a href="<?php echo $this->Html->safe($this->base_uri . 'invoices/view/' . $invoices[$i]->id . '/');?>" target="_blank"><?php (print (isset($invoices[$i]->id_code) ? $this->Html->safe($invoices[$i]->id_code) : null));?></a></td>
+                <td data-label="<?php $this->_('ClientPay.multipleinvoices.text_datedue');?>"><?php echo $this->Date->cast((isset($invoices[$i]->date_due) ? $invoices[$i]->date_due : null));?></td>
+            </tr>
+            <?php
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+<?php
+} else {
+?>
+<div class="hpk-alert hpk-alert-info">
+    <p><?php $this->_('ClientPay.multipleinvoices.no_results');?></p>
+</div>
+<?php
+}
+?>
+
+<?php
+// Show amounts if amounts to pay differ from total
+if (!(isset($toggle_amounts) ? $toggle_amounts : true)) {
+    $this->Javascript->setInline("
+        $(document).ready(function() {
+            $('.edit_amounts').toggle();
+        });
+    ");
+}
+
+$this->Javascript->setInline("
+$(document).ready(function() {
+    $('#edit_amounts').click(function() {
+        $('.edit_amounts').toggle();
+        return false;
+    });
+});
+");
+?>

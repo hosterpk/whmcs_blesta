@@ -1,0 +1,70 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the Bootstrap .list-group tab list with an on-brand vertical .hpk-service-detail__rail nav while preserving the controller->view $tabs contract (name/attributes incl. href+.ajax class/current/icon), the verbatim Html->buildAttributes() attribute pass-through, and the escaped FA <i> icon output (NOT routed through partials/icon.pdt). Marks the current tab with aria-current="page". Story 7-2 (first HTMX island): ELIGIBLE registrar-module manage tabs — those whose final href has the one-action-segment shape services/manage/{id}/{action}/ (DEC-2) — are upgraded into the Story 2.8 D2 island: hx-get the real URL, hx-select #hpk-service-tabpanel-inner from the FULL page (HTMX sends HX-Request, not X-Requested-With, so isAjax() is false → full page), hx-swap into #hpk-service-tabpanel, OOB-swap #hpk-service-detail-rail for active-tab sync, proxy-safe hx-push-url (reuse the base_uri-relative href), hx-indicator the skeleton. The stock .ajax token is stripped ONLY on those eligible tabs so the jQuery loader does not double-fire; the literal href stays as the no-JS full-navigation fallback. Non-eligible tabs (Service Info / Addons / plugin tabs / Return) keep their stock class incl. .ajax untouched. Stock baseline: bootstrap/client_services_tabs.pdt @ 6.0.0-b1 sha256:f0dd321ee8fe83c200a80389fddf2711c95e4617093c23162feddf52245833e2 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<nav id="hpk-service-detail-rail" class="hpk-service-detail__rail" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service_detail.rail_label', true)); ?>">
+    <!-- hpk-rail-tab-loop -->
+    <?php
+    foreach ($tabs as $tab) {
+        $attributes = (isset($tab['attributes']) ? $tab['attributes'] : []);
+        // DEC-2 eligibility (the load-bearing discriminator). Decided from the FINAL href shape ONLY
+        // — a .pdt cannot inspect another route's response body:
+        //   module tab   = services/manage/{id}/{action}/             → exactly ONE segment after the id → ELIGIBLE
+        //   plugin tab   = services/manage/{id}/{plugin_id}/{action}/ → TWO segments after the id        → excluded
+        //   Service Info = services/manage/{id}/                      → no action segment                → excluded
+        //   Addons       = services/addons/{id}/                      → different path                   → excluded
+        //   Return       = base_uri only                             → no services/manage path          → excluded
+        $hpk_tab_href = null;
+        if (isset($attributes['href']) && is_string($attributes['href'])) {
+            $hpk_tab_href = $attributes['href'];
+        } elseif (isset($attributes['href'])) {
+            unset($attributes['href']);
+        }
+        $hpk_tab_is_eligible = $hpk_tab_href !== null
+            && strpos($hpk_tab_href, '://') === false                        // not an absolute external URL
+            && substr($hpk_tab_href, 0, 2) !== '//'                          // not protocol-relative (//host/…)
+            && substr($hpk_tab_href, 0, 1) === '/'                            // root-absolute so history is proxy-prefix safe
+            && preg_match('#/services/manage/\d+/[^/]+/?$#', $hpk_tab_href);  // exactly one action segment after the id
+
+        // Base class is added to EVERY rail link; stock classes (incl. the .ajax loader hook) are preserved by default.
+        $attributes['class'] = 'hpk-service-detail__rail-link' . (isset($attributes['class']) ? ' ' . $attributes['class'] : '');
+        if ((isset($tab['current']) ? $tab['current'] : null)) {
+            $attributes['class'] .= ' is-active';
+            $attributes['aria-current'] = 'page';
+        }
+
+        if ($hpk_tab_is_eligible) {
+            // Strip the stock .ajax token ONLY on eligible module tabs so HTMX owns the click and the jQuery loader does
+            // not also fire. (Non-eligible Service Info / Addons / plugin / Return tabs KEEP .ajax → stock behavior is unchanged.)
+            // Use a class-token match so hyphenated names like "ajax-tab" are preserved.
+            $hpk_tab_classes = preg_split('/\s+/', trim($attributes['class']));
+            $hpk_tab_classes = array_values(array_filter($hpk_tab_classes, function ($c) { return $c !== '' && $c !== 'ajax'; }));
+            $attributes['class'] = implode(' ', $hpk_tab_classes);
+            // The controller href is root-absolute ($this->base_uri = WEBDIR, e.g. /dashboard/client/), so HTMX's
+            // history.pushState resolves it correctly under the proxy. Reuse the SAME value for hx-get and hx-push-url.
+            $attributes['hx-get'] = $hpk_tab_href;
+            $attributes['hx-target'] = '#hpk-service-tabpanel';
+            $attributes['hx-select'] = '#hpk-service-tabpanel-inner';   // the framed content fragment of the full-page response
+            $attributes['hx-swap'] = 'innerHTML';
+            $attributes['hx-push-url'] = $hpk_tab_href;
+            $attributes['hx-indicator'] = '#hpk-service-tabpanel-skeleton'; // sibling OUTSIDE the swap target (DEC-7) so it survives innerHTML swaps
+            // OOB-swap the rail so the active tab / aria-current follows the panel. The full-page response marks the
+            // requested action's tab current (formatExtensionTabs compares $method to the action) → server is source of truth.
+            $attributes['hx-select-oob'] = '#hpk-service-detail-rail';
+        }
+    ?>
+    <a<?php echo $this->Html->buildAttributes($attributes);?>>
+        <i class="<?php (print (isset($tab['icon']) ? $this->Html->safe($tab['icon']) : null));?> fa-fw" aria-hidden="true"></i>
+        <span class="hpk-service-detail__rail-text"><?php (print (isset($tab['name']) ? $this->Html->safe($tab['name']) : null));?></span>
+    </a>
+    <?php
+    }
+    ?>
+</nav>

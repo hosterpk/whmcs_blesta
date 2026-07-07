@@ -1,0 +1,193 @@
+<?php /** @var View $this **/ ?>
+<?php /* HosterPK grouped sidebar (Story 2.10, AC B). A COMPONENT partial (check.sh
+       partials/ carve-out; counts toward structure.pdt's scoped RULE 8 aggregate).
+       Rendered via view('partials/sidebar_nav', $this) INSIDE the .hpk-shell x-data
+       scope. Buckets Blesta's FLAT, URL-keyed $nav by URI PREFIX (stable) - NOT by the
+       localized label - into the authored IA groups, preserves Blesta's `active` flag
+       verbatim (never recomputed), keeps every sub/secondary link reachable, and routes
+       an UNMAPPED link to a bottom "More" section (fail-graceful) + a dev-visible HTML
+       comment (fail-loud, AR-D6) - never a silent drop. Every label + URL keeps
+       Html escaping (FR10). No inline-style attributes (RULE 1). */ ?>
+<?php
+// The authored group IA (render order) + their copy-key labels. The IA is authored
+// HERE, not derived from $nav's localized labels.
+$hpk_group_order = ['dashboard', 'services', 'domains', 'billing', 'support', 'resources', 'account'];
+$hpk_group_labels = [
+    'dashboard' => 'Hosterpk.nav.group.dashboard',
+    'services'  => 'Hosterpk.nav.group.services',
+    'domains'   => 'Hosterpk.nav.group.domains',
+    'billing'   => 'Hosterpk.nav.group.billing',
+    'support'   => 'Hosterpk.nav.group.support',
+    'resources' => 'Hosterpk.nav.group.resources',
+    'account'   => 'Hosterpk.nav.group.account',
+];
+// URI-prefix → group (client-base-relative action paths; verified against the live
+// enabled nav 2026-06-18: services/, plugin/domains/, plugin/support_manager/,
+// order/*). Longest-prefix wins so main/edit ≠ main. Anything unmatched → "More".
+$hpk_prefix_map = [
+    'main/edit'               => 'account',
+    'plugin/support_manager'  => 'support',
+    'plugin/cms'              => 'resources',
+    'plugin/download_manager' => 'resources',
+    'plugin/feed_reader'      => 'resources',
+    'plugin/knowledgebase'    => 'resources',
+    'plugin/domains'          => 'domains',
+    'knowledgebase'           => 'resources',
+    'main'                    => 'dashboard',
+    'services'                => 'services',
+    'domains'                 => 'domains',
+    'invoices'                => 'billing',
+    'transactions'            => 'billing',
+    'accounts'                => 'billing',
+    'contacts'                => 'account',
+    'managers'                => 'account',
+    'emails'                  => 'account',
+];
+
+$hpk_base = isset($this->base_uri) ? (string) $this->base_uri : '';
+
+// Bucket the flat $nav. Preserve insertion order within each bucket; record unmapped.
+$hpk_buckets = [];
+$hpk_unmapped = [];
+foreach ((isset($nav) ? $nav : []) as $hpk_link => $hpk_value) {
+    $hpk_path = parse_url((string) $hpk_link, PHP_URL_PATH);
+    if ($hpk_path === false || $hpk_path === null) {
+        $hpk_path = (string) $hpk_link;
+    }
+    if ($hpk_base !== '' && strpos($hpk_path, $hpk_base) === 0) {
+        $hpk_path = substr($hpk_path, strlen($hpk_base));
+    }
+    $hpk_rel = strtolower(ltrim($hpk_path, '/'));
+
+    $hpk_grp = null;
+    $hpk_grp_len = -1;
+    if ($hpk_rel === '' || $hpk_rel === 'index/') {
+        // The client-area ROOT (base_uri stripped to nothing, e.g. /client/) IS the
+        // dashboard home - it carries no `main` path segment to prefix-match, so map
+        // it explicitly rather than letting it fall to "More".
+        $hpk_grp = 'dashboard';
+    } else {
+        foreach ($hpk_prefix_map as $hpk_prefix => $hpk_g) {
+            if (
+                ($hpk_rel === $hpk_prefix || strpos($hpk_rel, $hpk_prefix . '/') === 0)
+                && strlen($hpk_prefix) > $hpk_grp_len
+            ) {
+                $hpk_grp = $hpk_g;
+                $hpk_grp_len = strlen($hpk_prefix);
+            }
+        }
+    }
+    if ($hpk_grp === null) {
+        $hpk_grp = 'more';
+        $hpk_unmapped[] = $hpk_rel;
+    }
+    $hpk_buckets[$hpk_grp][] = ['link' => $hpk_link, 'value' => $hpk_value];
+}
+
+$hpk_render_order = $hpk_group_order;
+$hpk_render_order[] = 'more';
+?>
+<nav id="hpk-structure-sidebar"
+     class="hpk-sidebar"
+     :class="{ 'is-open': open }"
+     x-ref="drawer"
+     aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.nav.primary_label', true)); ?>">
+    <?php
+    foreach ($hpk_render_order as $hpk_grp_key) {
+        if (empty($hpk_buckets[$hpk_grp_key])) {
+            continue;
+        }
+        $hpk_label_key = ($hpk_grp_key === 'more') ? 'Hosterpk.nav.more' : $hpk_group_labels[$hpk_grp_key];
+    ?>
+    <div class="hpk-nav-group">
+        <div class="hpk-nav-group-label"><?php echo $this->Html->safe($this->_($hpk_label_key, true)); ?></div>
+        <ul class="hpk-nav-list">
+            <?php
+            foreach ($hpk_buckets[$hpk_grp_key] as $hpk_item) {
+                $hpk_il = $hpk_item['link'];
+                $hpk_iv = $hpk_item['value'];
+                $hpk_direct = !empty($hpk_iv['active']);
+                $hpk_sub = (isset($hpk_iv['sub']) && is_array($hpk_iv['sub'])) ? $hpk_iv['sub'] : [];
+                $hpk_secondary_all = (isset($hpk_iv['secondary']) && is_array($hpk_iv['secondary'])) ? $hpk_iv['secondary'] : [];
+                // Stock parity: parent gets the active styling when Blesta marks one
+                // of its children active. This consumes child active flags; it never
+                // recomputes activity from URLs.
+                $hpk_child_active = false;
+                foreach ($hpk_sub as $hpk_sv) {
+                    if (!empty($hpk_sv['active'])) {
+                        $hpk_child_active = true;
+                        break;
+                    }
+                }
+                $hpk_secondary_active = false;
+                foreach ($hpk_secondary_all as $hpk_cv) {
+                    if (!empty($hpk_cv['active'])) {
+                        $hpk_secondary_active = true;
+                        break;
+                    }
+                }
+                $hpk_active = ($hpk_direct || $hpk_child_active || $hpk_secondary_active);
+                $hpk_parent_current = ($hpk_direct && !$hpk_child_active && !$hpk_secondary_active);
+                $hpk_secondary = ($hpk_active ? $hpk_secondary_all : []);
+                // Stock duplicate guard: if the only sub entry is the parent URL,
+                // do not render it as an adjacent nested duplicate.
+                $hpk_visible_sub = $hpk_sub;
+                if (count($hpk_visible_sub) === 1 && array_key_exists($hpk_il, $hpk_visible_sub)) {
+                    $hpk_visible_sub = [];
+                }
+            ?>
+            <li>
+                <a href="<?php echo $this->Html->safe($hpk_il);?>" class="hpk-nav-link<?php echo ($hpk_active ? ' is-active' : '');?>"<?php echo ($hpk_parent_current ? ' aria-current="page"' : '');?>>
+                    <?php if (!empty($hpk_iv['icon'])) { ?><i class="<?php echo $this->Html->safe($hpk_iv['icon']);?> hpk-nav-icon" aria-hidden="true"></i><?php } ?>
+                    <span><?php echo (isset($hpk_iv['name']) ? $this->Html->safe($hpk_iv['name']) : '');?></span>
+                </a>
+                <?php
+                // Nested sub children + the active item's secondary sub-nav - both kept
+                // REACHABLE (UX-DR7 "sub-page-heavy groups expand inline"), deduped by URL.
+                if (!empty($hpk_visible_sub) || !empty($hpk_secondary)) {
+                    $hpk_shown = [];
+                ?>
+                <ul class="hpk-nav-sublist">
+                    <?php
+                    foreach ($hpk_visible_sub as $hpk_sl => $hpk_sv) {
+                        $hpk_shown[$hpk_sl] = true;
+                    ?>
+                    <li><a href="<?php echo $this->Html->safe((string) $hpk_sl);?>" class="hpk-nav-sublink<?php echo (!empty($hpk_sv['active']) ? ' is-active' : '');?>"<?php echo (!empty($hpk_sv['active']) ? ' aria-current="page"' : '');?>><?php echo (isset($hpk_sv['name']) ? $this->Html->safe($hpk_sv['name']) : '');?></a></li>
+                    <?php
+                    }
+                    foreach ($hpk_secondary as $hpk_cl => $hpk_cv) {
+                        if (isset($hpk_shown[$hpk_cl])) {
+                            continue;
+                        }
+                        // secondary links are relative; prepend base_uri unless absolute (stock parity).
+                        $hpk_cl_safe = $this->Html->safe((string) $hpk_cl);
+                        $hpk_cl_prefix = (
+                            strpos((string) $hpk_cl, '://') === false
+                            && strpos((string) $hpk_cl, '//') !== 0
+                            && $hpk_base !== ''
+                        ) ? $this->Html->safe($hpk_base) : '';
+                    ?>
+                    <li><a href="<?php echo $hpk_cl_prefix . $hpk_cl_safe;?>" class="hpk-nav-sublink<?php echo (!empty($hpk_cv['active']) ? ' is-active' : '');?>"<?php echo (!empty($hpk_cv['active']) ? ' aria-current="page"' : '');?>><?php echo (isset($hpk_cv['name']) ? $this->Html->safe($hpk_cv['name']) : '');?></a></li>
+                    <?php
+                    }
+                    ?>
+                </ul>
+                <?php
+                }
+                ?>
+            </li>
+            <?php
+            }
+            ?>
+        </ul>
+    </div>
+    <?php
+    }
+    // Fail-LOUD dev signal (AR-D6): a view-source/DevTools-visible HTML comment per
+    // unmapped link (the house pattern from structure.pdt's sprite-miss marker). The
+    // fail-GRACEFUL half already happened above (routed to "More", never dropped).
+    foreach ($hpk_unmapped as $hpk_u) {
+        echo '<!-- hpk-nav: unmapped link ' . $this->Html->safe($hpk_u) . ' routed to More -->' . "\n";
+    }
+    ?>
+</nav>

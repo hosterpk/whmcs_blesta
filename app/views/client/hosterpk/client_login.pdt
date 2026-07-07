@@ -1,0 +1,152 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: renders only the form card inside the slim auth shell (structure.pdt owns the brand panel and headline). Preserves the controller→view contract and Blesta's Form/CSRF flow (AR-D8). Stock baseline: bootstrap/client_login.pdt @ 6.0.0-b1 sha256:4f8ddd9af4f53f68f15436d23caf8232ca5c6a8a9bbad947fa20fc69506a8dd9 */ ?>
+<?php
+/* Load the HosterPK copy table BEFORE this page content is captured into $content;
+   Blesta renders the content view before the layout (structure.pdt), so the layout's
+   language load happens too late for keys used here (login.secure_line + the password
+   toggle labels). Re-loading is a no-op once the static Language class has the file. */
+$hpk_login_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_login_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_login_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_login_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-login-card">
+    <?php
+    /* Story 3.2 (FR14 / UX-DR22-23): replace Blesta's raw auth error with warm,
+       migration-aware copy. VIEW-ONLY classification (AR-D8 preserved - no controller /
+       auth-POST / CSRF re-wire):
+         - Classify the rendered $message HTML by matching Blesta's OWN language values
+           (not hardcoded English) for each known failure cause. Decode entities first so
+           future apostrophe/quote wording changes don't break strpos, and skip an empty/
+           false needle (strpos($msg, '') === 0 would otherwise match everything).
+             attempts (rate-limit) + company (wrong location) => locked
+             captcha.invalid (failed human-verification)       => captcha
+             auth ("no matches")                               => invalid
+         - isset($vars): the controller sets vars ONLY in an error branch of the POST
+           (index/otp), so it is the authoritative "this login POST just failed" flag.
+           On a failed POST always show the warm alert, defaulting to invalid when nothing
+           matched (e.g. an unmapped future error).
+         - A $message WITHOUT $vars is a redirect flash. forwardPostAuth() flashes the raw
+           "no matches" auth string then redirects to /login on a missing client row - that
+           is a real auth failure and must get warm copy too (AC A's "raw string not shown"
+           guarantee). So a flash that MATCHES a known cause is warmed; an unmatched flash
+           (logged-out / session-expired) is echoed as-is (preserves 3.1 behaviour). */
+    $hpk_message = isset($message) ? html_entity_decode($message, ENT_QUOTES, 'UTF-8') : '';
+    $hpk_state_map = [
+        'Users.!error.username.attempts'     => 'error_locked',
+        'Users.!error.username.company'      => 'error_locked',
+        'ClientLogin.!error.captcha.invalid' => 'error_captcha',
+        'Users.!error.username.auth'         => 'error_invalid',
+    ];
+    $hpk_matched_state = null;
+    if ($hpk_message !== '') {
+        foreach ($hpk_state_map as $hpk_k => $hpk_state) {
+            $hpk_needle = Language::_($hpk_k, true);
+            if ($hpk_needle !== '' && $hpk_needle !== false && strpos($hpk_message, $hpk_needle) !== false) {
+                $hpk_matched_state = $hpk_state;
+                break;
+            }
+        }
+    }
+    if (isset($vars)) {
+        $hpk_login_state = ($hpk_matched_state !== null) ? $hpk_matched_state : 'error_invalid';
+    } else {
+        $hpk_login_state = $hpk_matched_state; // null for a benign (unmatched) flash
+    }
+    if ($hpk_login_state !== null) {
+        ?>
+        <div class="hpk-alert hpk-alert-danger hpk-login-alert" role="alert">
+            <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+            <span><?php $this->_('Hosterpk.login.' . $hpk_login_state);?></span>
+        </div>
+        <?php
+    } elseif (isset($message)) {
+        echo $message;
+    }
+    ?>
+
+    <?php
+    $this->Form->create(null, ['class' => 'disable-on-submit']);
+    if ((isset($vars->forward_to) ? $vars->forward_to : null)) {
+        $this->Form->fieldHidden('forward_to', $vars->forward_to);
+    }
+    ?>
+
+    <div class="hpk-login-field">
+        <?php
+        $this->Form->label($this->_('ClientLogin.index.field_username', true), 'login_username');
+        $this->Form->fieldText('username', (isset($vars->username) ? $vars->username : null), ['id' => 'login_username', 'class' => 'form-control', 'placeholder' => $this->_('ClientLogin.index.field_username', true)]);
+        ?>
+    </div>
+
+    <div class="hpk-login-field">
+        <?php
+        $this->Form->label($this->_('ClientLogin.index.field_password', true), 'login_password');
+        ?>
+        <div class="hpk-input-group"
+             x-data="hpkPasswordToggle(<?php echo htmlspecialchars(json_encode(['show' => $this->_('Hosterpk.password_toggle.show', true), 'hide' => $this->_('Hosterpk.password_toggle.hide', true)], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES); ?>)"
+             x-init="init()">
+            <?php
+            $this->Form->fieldPassword('password', [
+                'id' => 'login_password',
+                'class' => 'form-control',
+                'placeholder' => $this->_('ClientLogin.index.field_password', true),
+                'x-ref' => 'field',
+            ]);
+            ?>
+            <button type="button"
+                    class="hpk-password-toggle"
+                    x-cloak
+                    x-ref="toggle"
+                    @click="toggle()"
+                    :aria-label="ariaLabel"
+                    aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.password_toggle.show', true)); ?>"
+                    data-fallback-label="<?php echo $this->Html->safe($this->_('Hosterpk.password_toggle.show', true)); ?>"
+                    x-text="shown ? labels.hide : labels.show"><?php echo $this->Html->safe($this->_('Hosterpk.password_toggle.show', true)); ?></button>
+        </div>
+    </div>
+
+    <div class="hpk-login-remember">
+        <label for="login_remember_me" class="hpk-checkbox-label">
+            <?php
+            $this->Form->fieldCheckbox('remember_me', 'true', (isset($vars->remember_me) ? $vars->remember_me : false), ['id' => 'login_remember_me']);
+            $this->_('ClientLogin.index.field_rememberme');
+            ?>
+        </label>
+    </div>
+
+    <?php
+    if ((isset($captcha) ? $captcha : null)) {
+    ?>
+    <div class="hpk-login-field hpk-login-captcha">
+        <?php echo $captcha;?>
+    </div>
+    <?php
+    }
+    ?>
+
+    <button type="submit" class="hpk-btn hpk-btn-primary"><i class="fas fa-sign-in-alt"></i> <?php $this->_('ClientLogin.index.field_loginsubmit');?></button>
+    <?php
+    $this->Form->fieldSubmit('login', '', ['class' => 'hidden', 'hidefocus' => 'true']);
+    $this->Form->end();
+    ?>
+
+    <div class="hpk-login-links">
+        <a href="<?php echo $this->Html->safe($this->base_uri . 'login/reset/');?>"><?php $this->_('ClientLogin.index.link_resetpassword');?></a>
+        <a href="<?php echo $this->Html->safe($this->base_uri . 'login/forgot/');?>"><?php $this->_('ClientLogin.index.link_forgotusername');?></a>
+    </div>
+
+    <p class="hpk-login-secure"><i class="fas fa-lock"></i> <?php $this->_('Hosterpk.login.secure_line');?></p>
+</div>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<?php
+$this->Javascript->setInline('
+    $(document).ready(function() {
+        $("#login_username").focus();
+    });
+');
+?>
+<!-- /PRESERVED -->

@@ -1,0 +1,75 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient/Bootstrap chrome with HosterPK card and alert/summary components while preserving trans_data rendering and escaping the transaction_id. Stock baseline: bootstrap/client_pay_received.pdt @ 6.0.0-b1 sha256:9e738f4e3fc99298607e511afe7f69a02de14fb0e40f341f647ff74de95c0f36 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-card hpk-payment-flow" id="hpk-pay-received">
+    <?php
+    echo (isset($message) ? $message : null);
+
+    if (!empty($trans_data)) {
+    ?>
+    <div class="hpk-payment-flow__received">
+        <h4 class="hpk-payment-flow__section-title"><?php $this->_('ClientPay.received.boxtitle_received');?></h4>
+
+        <?php
+        if ((isset($trans_data) ? $trans_data : null)) {
+        ?>
+        <p class="hpk-payment-flow__received-statement"><?php $this->_('ClientPay.received.statement');?></p>
+        <?php
+        }
+        if ((isset($trans_data['transaction_id']) ? $trans_data['transaction_id'] : null)) {
+        ?>
+        <div class="hpk-payment-flow__received-item">
+            <label><?php $this->_('ClientPay.received.transaction_id', false);?></label>
+            <strong><?php echo $this->Html->safe($trans_data['transaction_id']);?></strong>
+        </div>
+        <?php
+        }
+        if (isset($trans_data['amount'])) {
+        ?>
+        <div class="hpk-payment-flow__received-item">
+            <label><?php echo $this->_('ClientPay.received.amount', true);?></label>
+            <strong><?php echo $this->CurrencyFormat->format($trans_data['amount'], (isset($trans_data['currency']) ? $trans_data['currency'] : null));?></strong>
+        </div>
+        <?php
+        }
+        if ((isset($trans_data['invoices']) ? $trans_data['invoices'] : null)) {
+        ?>
+        <div class="hpk-payment-flow__received-item">
+            <label><?php $this->_('ClientPay.received.invoices');?></label>
+            <strong>
+                <?php
+                $num_invoices = count($trans_data['invoices']);
+                for ($i = 0; $i < $num_invoices; $i++) {
+                    echo ($i > 0 ? ', ' : '') . (isset($trans_data['invoices'][$i]->id_code) ? $this->Html->safe($trans_data['invoices'][$i]->id_code) : null);
+                }
+                ?>
+            </strong>
+        </div>
+        <?php
+        }
+        ?>
+    </div>
+    <?php
+    } else {
+    ?>
+    <div class="hpk-empty">
+        <h5 class="hpk-empty__title"><?php $this->_('Hosterpk.payment.received_empty_title');?></h5>
+        <p class="hpk-empty__body"><?php $this->_('Hosterpk.payment.received_empty_body');?></p>
+        <div class="hpk-empty__action">
+            <a href="<?php echo $this->Html->safe($this->base_uri . 'pay/');?>" class="hpk-btn hpk-btn-outline">
+                <i class="fas fa-arrow-left"></i> <?php $this->_('ClientPay.received.text_try_again');?>
+            </a>
+        </div>
+    </div>
+    <?php
+    }
+    ?>
+</div>

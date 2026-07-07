@@ -1,0 +1,410 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: renders a single triage surface (action-needed, at-a-glance, quick actions, recent activity, summary cards, compact account summary) and drops the preserved stock client-home block ($myinfo, legacy overview, widget/card loaders). This is a conscious override of a deliberate preserve from Stories 4.1-4.3; the stock block is relocated to the Account surface (E9). Stock baseline: bootstrap/client_main.pdt @ 6.0.0-b1 sha256:a7c0c63beb31fcbed39f3e75322d1dd5fc5fa8cb8c2aa580eaddd3177190351e */ ?>
+<?php
+$hpk_action_items = (isset($action_items) && is_array($action_items)) ? $action_items : [];
+$hpk_dashboard_stats = (isset($dashboard_stats) && is_array($dashboard_stats)) ? $dashboard_stats : [];
+$hpk_recent_activity = (isset($recent_activity) && is_array($recent_activity)) ? $recent_activity : [];
+$hpk_quick_actions = (isset($quick_actions) && is_array($quick_actions)) ? $quick_actions : [];
+$hpk_latest_invoice = (isset($latest_invoice) && is_array($latest_invoice)) ? $latest_invoice : null;
+$hpk_next_domain_renewal = (isset($next_domain_renewal) && is_array($next_domain_renewal)) ? $next_domain_renewal : null;
+$hpk_hero_state = (isset($dashboard_hero_state) && is_string($dashboard_hero_state)) ? $dashboard_hero_state : 'healthy';
+
+$hpk_band_titles = [
+    'action_needed' => 'Hosterpk.dashboard.action_needed_title',
+    'in_progress' => 'Hosterpk.dashboard.in_progress_title',
+    'settled' => 'Hosterpk.dashboard.settled_title'
+];
+$hpk_status_labels = [
+    'danger' => 'Hosterpk.status.overdue',
+    'warning' => 'Hosterpk.status.due',
+    'info' => 'Hosterpk.status.in_review',
+    'success' => 'Hosterpk.status.settled'
+];
+$hpk_sections = [];
+$hpk_has_action_needed = false;
+foreach ($hpk_action_items as $hpk_item) {
+    if (!is_array($hpk_item)) {
+        continue;
+    }
+    $hpk_band = (isset($hpk_item['band']) && isset($hpk_band_titles[$hpk_item['band']])) ? $hpk_item['band'] : 'settled';
+    if ($hpk_band === 'action_needed') {
+        $hpk_has_action_needed = true;
+    }
+
+    $hpk_section_index = count($hpk_sections) - 1;
+    if ($hpk_section_index < 0 || $hpk_sections[$hpk_section_index]['band'] !== $hpk_band) {
+        $hpk_sections[] = [
+            'band' => $hpk_band,
+            'items' => []
+        ];
+        $hpk_section_index = count($hpk_sections) - 1;
+    }
+
+    $hpk_sections[$hpk_section_index]['items'][] = $hpk_item;
+    if (!empty($hpk_item['overflow']) && !empty($hpk_item['overflow_url'])) {
+        $hpk_sections[$hpk_section_index]['overflow'] = [
+            'count' => $hpk_item['overflow'],
+            'url' => $hpk_item['overflow_url']
+        ];
+    }
+}
+$hpk_section_title_key = $hpk_has_action_needed
+    ? 'Hosterpk.dashboard.action_needed_title'
+    : 'Hosterpk.dashboard.summary_title';
+$hpk_primary_used = false;
+$hpk_icon_var_names = ['icon', 'icon_class', 'icon_label'];
+$hpk_view_vars_property = null;
+$hpk_get_view_vars_property = function ($view) use (&$hpk_view_vars_property) {
+    if ($hpk_view_vars_property === null) {
+        $hpk_reflection = new ReflectionClass($view);
+        $hpk_view_vars_property = $hpk_reflection->getProperty('vars');
+        $hpk_view_vars_property->setAccessible(true);
+    }
+
+    return $hpk_view_vars_property;
+};
+$hpk_snapshot_icon_vars = function ($view) use ($hpk_icon_var_names, $hpk_get_view_vars_property) {
+    $hpk_vars = $hpk_get_view_vars_property($view)->getValue($view);
+    $hpk_snapshot = [];
+    foreach ($hpk_icon_var_names as $hpk_name) {
+        $hpk_snapshot[$hpk_name] = [
+            'exists' => array_key_exists($hpk_name, $hpk_vars),
+            'value' => array_key_exists($hpk_name, $hpk_vars) ? $hpk_vars[$hpk_name] : null
+        ];
+    }
+
+    return $hpk_snapshot;
+};
+$hpk_restore_icon_vars = function ($view, $hpk_snapshot) use ($hpk_get_view_vars_property) {
+    $hpk_property = $hpk_get_view_vars_property($view);
+    $hpk_vars = $hpk_property->getValue($view);
+    foreach ($hpk_snapshot as $hpk_name => $hpk_state) {
+        if ($hpk_state['exists']) {
+            $hpk_vars[$hpk_name] = $hpk_state['value'];
+            continue;
+        }
+
+        unset($hpk_vars[$hpk_name]);
+    }
+    $hpk_property->setValue($view, $hpk_vars);
+};
+
+// Account-summary composition (read-only; editing lives on main/edit/)
+$hpk_account_name = '';
+if (isset($client->first_name) || isset($client->last_name)) {
+    $hpk_account_name = trim((isset($client->first_name) ? (string)$client->first_name : '') . ' ' . (isset($client->last_name) ? (string)$client->last_name : ''));
+}
+if ($hpk_account_name === '' && isset($client->email)) {
+    $hpk_account_name = (string)$client->email;
+}
+$hpk_account_status_parts = [];
+if (isset($client->settings['autodebit']) && $client->settings['autodebit'] == 'true') {
+    $hpk_account_status_parts[] = $this->_('Hosterpk.dashboard.account.autopay_on', true);
+} elseif (isset($client->settings['autodebit'])) {
+    $hpk_account_status_parts[] = $this->_('Hosterpk.dashboard.account.autopay_off', true);
+}
+$hpk_credit_value = null;
+foreach ($hpk_dashboard_stats as $hpk_stat) {
+    if (isset($hpk_stat['key']) && $hpk_stat['key'] === 'credit' && empty($hpk_stat['is_empty'])) {
+        $hpk_credit_value = isset($hpk_stat['value']) ? (string)$hpk_stat['value'] : null;
+        break;
+    }
+}
+if ($hpk_credit_value !== null) {
+    $hpk_account_status_parts[] = Language::_('Hosterpk.dashboard.account.credit', true, $hpk_credit_value);
+}
+// Status text is the composed auto-pay / credit fragments (OQ-3); the raw
+// clients.status enum (active/inactive/fraud) is intentionally not surfaced.
+$hpk_account_status = implode(' · ', $hpk_account_status_parts);
+?>
+<div class="hpk-clientmain">
+    <?php if (isset($message) && $message !== '') { ?>
+    <div class="hpk-clientmain__flash" role="region" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.dashboard.flash_label', true)); ?>">
+        <?php echo $message; ?>
+    </div>
+    <?php } ?>
+
+    <div class="hpk-clientmain__hero">
+        <?php if ($hpk_hero_state === 'attention') { ?>
+        <p class="hpk-clientmain__hero-subtitle hpk-clientmain__hero-subtitle--attention"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.hero.attention', true)); ?></p>
+        <?php } elseif ($hpk_hero_state === 'healthy') { ?>
+        <p class="hpk-clientmain__hero-subtitle"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.hero.healthy', true)); ?></p>
+        <?php } elseif ($hpk_hero_state === 'empty') { ?>
+        <div class="hpk-empty hpk-empty--dashboard">
+            <?php
+            $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+            $this->set('icon', 'check-circle-fill');
+            $this->set('icon_class', 'hpk-empty__icon');
+            $this->set('icon_label', null);
+            view('partials/icon', $this);
+            $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+            ?>
+            <h2 class="hpk-empty__title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.hero.empty.title', true)); ?></h2>
+            <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.hero.empty.body', true)); ?></p>
+            <div class="hpk-empty__action">
+                <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($this->base_uri . 'services/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.hero.empty.view_services', true)); ?></a>
+            </div>
+        </div>
+        <?php } ?>
+    </div>
+
+    <?php if ($hpk_hero_state !== 'empty') { /* empty-account hero already carries the welcome/empty messaging; avoid a second all-clear panel */ ?>
+    <section id="hpk-clientmain-actions" class="hpk-clientmain__actions" aria-labelledby="hpk-clientmain-actions-title">
+        <h2 id="hpk-clientmain-actions-title" class="hpk-clientmain__section-title"><?php echo $this->Html->safe($this->_($hpk_section_title_key, true)); ?></h2>
+        <?php if (empty($hpk_sections)) { ?>
+        <div class="hpk-empty hpk-empty--dashboard">
+            <?php
+            $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+            $this->set('icon', 'check-circle-fill');
+            $this->set('icon_class', 'hpk-empty__icon');
+            $this->set('icon_label', null);
+            view('partials/icon', $this);
+            $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+            ?>
+            <h3 class="hpk-empty__title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.all_clear_title', true)); ?></h3>
+            <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.all_clear_body', true)); ?></p>
+            <div class="hpk-empty__action">
+                <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($this->base_uri . 'services/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.action.manage_service', true)); ?></a>
+            </div>
+        </div>
+        <?php } ?>
+        <?php foreach ($hpk_sections as $hpk_section) {
+            $hpk_band_key = $hpk_section['band'];
+            if (empty($hpk_section['items'])) {
+                continue;
+            }
+        ?>
+        <div class="hpk-clientmain__band hpk-clientmain__band--<?php echo $this->Html->safe($hpk_band_key); ?>">
+            <?php if ($hpk_band_key !== 'action_needed' || !$hpk_has_action_needed) { ?>
+            <h2 class="hpk-clientmain__band-title"><?php echo $this->Html->safe($this->_($hpk_band_titles[$hpk_band_key], true)); ?></h2>
+            <?php } ?>
+            <div class="hpk-clientmain__grid">
+                <?php
+                foreach ($hpk_section['items'] as $hpk_item) {
+                    $hpk_severity = (isset($hpk_item['severity']) && isset($hpk_status_labels[$hpk_item['severity']])) ? $hpk_item['severity'] : 'info';
+                    $hpk_status_key = (
+                        isset($hpk_item['status_label'])
+                        && is_string($hpk_item['status_label'])
+                        && strpos($hpk_item['status_label'], 'Hosterpk.status.') === 0
+                    ) ? $hpk_item['status_label'] : $hpk_status_labels[$hpk_severity];
+                    $hpk_action = (isset($hpk_item['action']) && is_array($hpk_item['action'])) ? $hpk_item['action'] : null;
+                    $hpk_button_class = 'hpk-btn hpk-btn-outline hpk-btn-sm';
+                    if (!$hpk_primary_used && $hpk_band_key === 'action_needed' && $hpk_action !== null) {
+                        $hpk_button_class = 'hpk-btn hpk-btn-primary';
+                        $hpk_primary_used = true;
+                    }
+                ?>
+                <article class="hpk-card hpk-clientmain-action hpk-action-<?php echo $this->Html->safe($hpk_severity); ?>" data-hpk-id="<?php echo $this->Html->safe(isset($hpk_item['key']) ? $hpk_item['key'] : 'dashboard-action'); ?>">
+                    <div class="hpk-clientmain-action__icon">
+                        <?php
+                        $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+                        $this->set('icon', (isset($hpk_item['icon']) ? $hpk_item['icon'] : 'info-circle-fill'));
+                        $this->set('icon_class', null);
+                        $this->set('icon_label', null);
+                        view('partials/icon', $this);
+                        $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+                        ?>
+                    </div>
+                    <div class="hpk-clientmain-action__body">
+                        <div class="hpk-clientmain-action__topline">
+                            <h3 class="hpk-clientmain-action__title"><?php echo $this->Html->safe(isset($hpk_item['title']) ? $hpk_item['title'] : $this->_('Hosterpk.dashboard.action_needed_title', true)); ?></h3>
+                            <span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_severity); ?>"><?php echo $this->Html->safe($this->_($hpk_status_key, true)); ?></span>
+                        </div>
+                        <p class="hpk-clientmain-action__detail"><?php echo $this->Html->safe(isset($hpk_item['detail']) ? $hpk_item['detail'] : ''); ?></p>
+                    </div>
+                    <?php if ($hpk_action !== null && isset($hpk_action['url'], $hpk_action['label'])) { ?>
+                    <div class="hpk-clientmain-action__action">
+                        <a class="<?php echo $this->Html->safe($hpk_button_class); ?>" href="<?php echo $this->Html->safe($hpk_action['url']); ?>"><?php echo $this->Html->safe($hpk_action['label']); ?></a>
+                    </div>
+                    <?php } ?>
+                </article>
+                <?php } ?>
+            </div>
+            <?php if (isset($hpk_section['overflow'])) { ?>
+            <p class="hpk-clientmain__overflow">
+                <a href="<?php echo $this->Html->safe($hpk_section['overflow']['url']); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.more_link', true, $hpk_section['overflow']['count'])); ?></a>
+            </p>
+            <?php } ?>
+        </div>
+        <?php } ?>
+    </section>
+    <?php } ?>
+
+    <?php if (!empty($hpk_dashboard_stats)) { ?>
+    <section id="hpk-clientmain-stats" class="hpk-clientmain__stats" aria-labelledby="hpk-clientmain-stats-title">
+        <h2 id="hpk-clientmain-stats-title" class="hpk-clientmain__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.stats_title', true)); ?></h2>
+        <div class="hpk-stat-grid">
+            <?php
+            foreach ($hpk_dashboard_stats as $hpk_stat) {
+                $hpk_stat_value = isset($hpk_stat['value']) ? $hpk_stat['value'] : null;
+                $hpk_stat_is_empty = !empty($hpk_stat['is_empty']);
+                if (!$hpk_stat_is_empty) {
+                    $hpk_stat_is_empty = (
+                        $hpk_stat_value === 0
+                        || $hpk_stat_value === '0'
+                        || $hpk_stat_value === ''
+                        || $hpk_stat_value === null
+                    );
+                }
+                $hpk_stat_severity = (
+                    isset($hpk_stat['severity']) && is_string($hpk_stat['severity'])
+                ) ? $hpk_stat['severity'] : 'info';
+                $hpk_stat_key = isset($hpk_stat['key']) ? $hpk_stat['key'] : 'stat';
+                $hpk_stat_has_url = !empty($hpk_stat['url']);
+            ?>
+            <?php if ($hpk_stat_has_url) { ?>
+            <a class="hpk-card hpk-stat" href="<?php echo $this->Html->safe($hpk_stat['url']); ?>" data-hpk-id="<?php echo $this->Html->safe($hpk_stat_key); ?>">
+            <?php } else { ?>
+            <article class="hpk-card hpk-stat" data-hpk-id="<?php echo $this->Html->safe($hpk_stat_key); ?>">
+            <?php } ?>
+                <div class="hpk-stat__chip hpk-stat__chip--<?php echo $this->Html->safe($hpk_stat_severity); ?>">
+                    <?php
+                    $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+                    $this->set('icon', (isset($hpk_stat['icon']) ? $hpk_stat['icon'] : 'info-circle-fill'));
+                    $this->set('icon_class', 'hpk-stat__chip-icon');
+                    $this->set('icon_label', null);
+                    view('partials/icon', $this);
+                    $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+                    ?>
+                </div>
+                <?php if ($hpk_stat_is_empty) { ?>
+                <div class="hpk-stat__value hpk-stat__value--empty"><?php echo $this->Html->safe($this->_(isset($hpk_stat['empty_copy']) ? $hpk_stat['empty_copy'] : 'Hosterpk.state.empty_generic', true)); ?></div>
+                <?php } else { ?>
+                <div class="hpk-stat__value"><?php echo $this->Html->safe($hpk_stat_value); ?></div>
+                <?php } ?>
+                <div class="hpk-stat__label"><?php echo $this->Html->safe($this->_(isset($hpk_stat['label']) ? $hpk_stat['label'] : '', true)); ?></div>
+            <?php if ($hpk_stat_has_url) { ?>
+            </a>
+            <?php } else { ?>
+            </article>
+            <?php } ?>
+            <?php } ?>
+        </div>
+    </section>
+    <?php } ?>
+
+    <?php if (!empty($hpk_quick_actions)) { ?>
+    <section id="hpk-clientmain-quick" class="hpk-clientmain__quick" aria-labelledby="hpk-clientmain-quick-title">
+        <h2 id="hpk-clientmain-quick-title" class="hpk-clientmain__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.quick_actions_title', true)); ?></h2>
+        <div class="hpk-quick-actions">
+            <?php foreach ($hpk_quick_actions as $hpk_action) { ?>
+            <a class="hpk-btn hpk-btn-outline hpk-btn-sm hpk-quick-actions__action" href="<?php echo $this->Html->safe(isset($hpk_action['url']) ? $hpk_action['url'] : '#'); ?>">
+                <?php
+                $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+                $this->set('icon', (isset($hpk_action['icon']) ? $hpk_action['icon'] : 'box-arrow-right'));
+                $this->set('icon_class', 'hpk-quick-actions__icon');
+                $this->set('icon_label', null);
+                view('partials/icon', $this);
+                $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+                ?>
+                <?php echo $this->Html->safe($this->_(isset($hpk_action['label']) ? $hpk_action['label'] : '', true)); ?>
+            </a>
+            <?php } ?>
+        </div>
+    </section>
+    <?php } ?>
+
+    <section id="hpk-clientmain-activity" class="hpk-clientmain__activity" aria-labelledby="hpk-clientmain-activity-title">
+        <h2 id="hpk-clientmain-activity-title" class="hpk-clientmain__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.activity_title', true)); ?></h2>
+        <?php if (!empty($hpk_recent_activity)) { ?>
+        <div class="hpk-card hpk-activity">
+            <?php foreach ($hpk_recent_activity as $hpk_activity) { ?>
+            <div class="hpk-list-item hpk-activity__item" data-hpk-id="activity-item">
+                <div class="hpk-list-item__main">
+                    <div class="hpk-list-item__name"><?php echo $this->Html->safe(isset($hpk_activity['text']) ? $hpk_activity['text'] : ''); ?></div>
+                </div>
+            </div>
+            <?php } ?>
+        </div>
+        <?php } else { ?>
+        <div class="hpk-empty hpk-empty--dashboard">
+            <?php
+            $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+            $this->set('icon', 'info-circle-fill');
+            $this->set('icon_class', 'hpk-empty__icon');
+            $this->set('icon_label', null);
+            view('partials/icon', $this);
+            $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+            ?>
+            <h3 class="hpk-empty__title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.activity_empty_title', true)); ?></h3>
+            <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.activity_empty_body', true)); ?></p>
+        </div>
+        <?php } ?>
+    </section>
+
+    <section id="hpk-clientmain-summaries" class="hpk-clientmain__summaries" aria-labelledby="hpk-clientmain-summaries-title">
+        <h2 id="hpk-clientmain-summaries-title" class="hpk-clientmain__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.summaries_title', true)); ?></h2>
+        <div class="hpk-summary-grid">
+            <article class="hpk-card hpk-summary-card" data-hpk-id="latest-invoice">
+                <h3 class="hpk-summary-card__title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.latest_invoice.title', true)); ?></h3>
+                <?php if ($hpk_latest_invoice !== null) { ?>
+                <?php
+                $hpk_invoice_paid = !empty($hpk_latest_invoice['date_closed']);
+                $hpk_invoice_payable = !$hpk_invoice_paid && (float)$hpk_latest_invoice['due'] > 0;
+                $hpk_invoice_amount = $hpk_invoice_paid ? $hpk_latest_invoice['total'] : $hpk_latest_invoice['due'];
+                ?>
+                <div class="hpk-summary-card__body">
+                    <div class="hpk-summary-card__primary">
+                        <span class="hpk-summary-card__amount"><?php echo $this->Html->safe($this->CurrencyFormat->format($hpk_invoice_amount, $hpk_latest_invoice['currency'], ['suffix' => false, 'code' => false])); ?></span>
+                        <?php
+                        $hpk_invoice_status_key = 'Hosterpk.status.paid';
+                        $hpk_invoice_status_severity = 'success';
+                        if (empty($hpk_latest_invoice['date_closed'])) {
+                            if ($hpk_latest_invoice['is_past_due']) {
+                                $hpk_invoice_status_key = 'Hosterpk.dashboard.latest_invoice.past_due';
+                                $hpk_invoice_status_severity = 'danger';
+                            } else {
+                                $hpk_invoice_status_key = 'Hosterpk.status.due';
+                                $hpk_invoice_status_severity = 'warning';
+                            }
+                        }
+                        ?>
+                        <span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_invoice_status_severity); ?>"><?php echo $this->Html->safe($this->_($hpk_invoice_status_key, true)); ?></span>
+                    </div>
+                    <?php if (!empty($hpk_latest_invoice['date_due_formatted'])) { ?>
+                    <p class="hpk-summary-card__meta"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.latest_invoice.due', true, $hpk_latest_invoice['date_due_formatted'])); ?></p>
+                    <?php } ?>
+                    <div class="hpk-summary-card__actions">
+                        <?php if ($hpk_invoice_payable) { ?>
+                        <a class="hpk-btn hpk-btn-primary hpk-btn-sm" href="<?php echo $this->Html->safe($hpk_latest_invoice['pay_url']); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.action.pay', true)); ?></a>
+                        <?php } ?>
+                        <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($hpk_latest_invoice['view_url']); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.action.view', true)); ?></a>
+                    </div>
+                </div>
+                <?php } else { ?>
+                <div class="hpk-summary-card__body">
+                    <p class="hpk-summary-card__empty"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.latest_invoice.empty', true)); ?></p>
+                </div>
+                <?php } ?>
+            </article>
+
+            <?php if ($hpk_next_domain_renewal !== null) { ?>
+            <article class="hpk-card hpk-summary-card" data-hpk-id="domain-renewal">
+                <h3 class="hpk-summary-card__title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.domain.title', true)); ?></h3>
+                <div class="hpk-summary-card__body">
+                    <p class="hpk-summary-card__name"><?php echo $this->Html->safe($hpk_next_domain_renewal['name']); ?></p>
+                    <?php if (!empty($hpk_next_domain_renewal['date_renews_formatted'])) { ?>
+                    <p class="hpk-summary-card__meta"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.domain.renews', true, $hpk_next_domain_renewal['date_renews_formatted'])); ?></p>
+                    <?php } ?>
+                    <div class="hpk-summary-card__actions">
+                        <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($hpk_next_domain_renewal['manage_url']); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.action.manage', true)); ?></a>
+                    </div>
+                </div>
+            </article>
+            <?php } ?>
+        </div>
+    </section>
+
+    <section id="hpk-clientmain-account" class="hpk-clientmain__account" aria-labelledby="hpk-clientmain-account-title">
+        <h2 id="hpk-clientmain-account-title" class="hpk-clientmain__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.account.title', true)); ?></h2>
+        <div class="hpk-card hpk-account-summary">
+            <p class="hpk-account-summary__text">
+                <?php if ($hpk_account_status !== '') { ?>
+                <?php echo $this->Html->safe($this->_('Hosterpk.dashboard.account.status', true, $hpk_account_name, $hpk_account_status)); ?>
+                <?php } else { ?>
+                <?php echo $this->Html->safe($hpk_account_name); ?>
+                <?php } ?>
+            </p>
+            <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($this->base_uri . 'main/edit/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.dashboard.account.update', true)); ?></a>
+        </div>
+    </section>
+</div>

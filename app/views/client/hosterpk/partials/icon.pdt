@@ -1,0 +1,32 @@
+<?php /** @var View $this **/ ?>
+<?php /* HosterPK icon helper (Story 2.5, UX-DR5). A COMPONENT partial (NOT a stock
+       fork - see the check.sh partials/ carve-out), rendered via
+       view('partials/icon', $this). Emits an inline-SVG <use> of the brand sprite
+       that structure.pdt inlines once per page. Caller-set vars (the Blesta var-bag
+       convention - set via $this->set(...) before the call, proven by stock
+       partials/sidebar.pdt reading $system_companies): $icon = glyph name
+       (-> #hpk-icon-<name>); $icon_label = accessible name for icon-only controls
+       (when set + non-empty -> role="img" aria-label, else decorative aria-hidden);
+       $icon_class = extra classes. currentColor only - the base .hpk-icon CSS carries
+       fill; a call site passes a NAME, never raw SVG, so it cannot inject a fill. All
+       dynamic values pass through $this->Html->safe(). */ ?>
+<?php
+$hpk_icon = isset($icon) ? (string) $icon : '';
+// Fail closed on an empty/missing glyph name: emitting <use href="#hpk-icon-">
+// renders a silent empty box with no build or runtime signal. A caller that
+// forgot $icon (or typo'd it to '') gets nothing rather than a broken ref.
+if ($hpk_icon === '') {
+    return;
+}
+// Require a non-empty STRING: a whitespace-only label ('   ') would emit
+// aria-label="   " (neither decorative nor named), and a non-string (array/object)
+// would raise a PHP warning and emit invalid HTML. trim() collapses the former to
+// decorative; is_string() blocks the latter.
+$hpk_icon_label = (isset($icon_label) && is_string($icon_label) && trim($icon_label) !== '') ? $icon_label : null;
+$hpk_icon_class = 'hpk-icon' . (isset($icon_class) && is_string($icon_class) && $icon_class !== '' ? ' ' . $icon_class : '');
+?>
+<svg class="<?php echo $this->Html->safe($hpk_icon_class); ?>"<?php
+echo ($hpk_icon_label !== null
+    ? ' role="img" aria-label="' . $this->Html->safe($hpk_icon_label) . '"'
+    : ' aria-hidden="true" focusable="false"');
+?>><use href="#hpk-icon-<?php echo $this->Html->safe($hpk_icon); ?>"></use></svg>

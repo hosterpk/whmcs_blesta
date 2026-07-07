@@ -1,0 +1,57 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the Bootstrap .table / .alert-info fragment with branded .hpk-table / .hpk-alert-info so the 5.1 list expand-row subtable reads correctly under the dropped application.min.css (DEC-6). Preserves the exact controller data contract ($applied, $transaction_types; $num_applied stays local view state), the other/nonmerchant gateway-name resolution, the date_time applied-on format, and the empty-state branch. Echoed without layout by client_invoices::applied(), so page copy is loaded here. Stock baseline: bootstrap/client_invoices_applied.pdt @ 6.0.0-b1 sha256:da20574f31db4ba26666522e33064b0659a5141f8276739e1472ef6544dd42cd */ ?>
+<?php
+/* Blesta echoes this fragment without structure.pdt, so page copy must load here. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+/* $num_applied is local view state, computed exactly as stock does. */
+$num_applied = (isset($applied) ? $applied : false) ? count($applied) : 0;
+
+$hpk_applied_columns = [
+    'paymenttype' => $this->_('Hosterpk.invoice_applied.heading_paymenttype', true),
+    'amount' => $this->_('Hosterpk.invoice_applied.heading_amount', true),
+    'applied' => $this->_('Hosterpk.invoice_applied.heading_applied', true),
+    'appliedon' => $this->_('Hosterpk.invoice_applied.heading_appliedon', true)
+];
+?>
+<?php if ((isset($applied) ? $applied : false) && $num_applied > 0) { ?>
+<table class="hpk-table hpk-invoice-applied">
+    <thead>
+        <tr>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['paymenttype']); ?></th>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['amount']); ?></th>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['applied']); ?></th>
+            <th scope="col"><?php echo $this->Html->safe($hpk_applied_columns['appliedon']); ?></th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php for ($i = 0; $i < $num_applied; $i++) { ?>
+        <tr>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['paymenttype']); ?>">
+                <?php
+                if ((isset($applied[$i]->type) ? $applied[$i]->type : null) == 'other' && (isset($applied[$i]->gateway_type) ? $applied[$i]->gateway_type : null) == 'nonmerchant') {
+                    $hpk_trans_type = $applied[$i]->gateway_name;
+                } else {
+                    $hpk_trans_type = (isset($transaction_types[($applied[$i]->type_name != '' ? $applied[$i]->type_name : $applied[$i]->type)]) ? $transaction_types[($applied[$i]->type_name != '' ? $applied[$i]->type_name : $applied[$i]->type)] : null);
+                }
+
+                (print (isset($hpk_trans_type) ? $this->Html->safe($hpk_trans_type) : null));
+                ?>
+            </td>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['amount']); ?>"><?php echo $this->CurrencyFormat->format($applied[$i]->amount, $applied[$i]->currency, ['html_code' => true]); ?></td>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['applied']); ?>"><?php echo $this->CurrencyFormat->format($applied[$i]->applied_amount, $applied[$i]->currency, ['html_code' => true]); ?></td>
+            <td data-label="<?php echo $this->Html->safe($hpk_applied_columns['appliedon']); ?>"><?php echo $this->Date->cast((isset($applied[$i]->applied_date) ? $this->Html->safe($applied[$i]->applied_date) : null), 'date_time'); ?></td>
+        </tr>
+    <?php } ?>
+    </tbody>
+</table>
+<?php } else { ?>
+<div class="hpk-alert hpk-alert-info hpk-invoice-applied__empty">
+    <p><?php echo $this->Html->safe($this->_('Hosterpk.invoice_applied.no_results', true)); ?></p>
+</div>
+<?php } ?>

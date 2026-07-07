@@ -1,0 +1,49 @@
+<?php /* HOSTERPK OVERRIDE — replaces the Bootstrap .list-group sub-nav with the shared HosterPK Account-group side-nav (.hpk-accounts-nav, mirroring client_accounts_navigation.pdt for visual parity) and adds a real active state by matching the current request URI. Reuses Blesta's own ClientContacts.navigation.* labels. NOTE: per PAGES.md §8a this *_navigation partial is visually superseded by the authored grouped sidebar (UX-DR7) — branded for fallback/parity, not as a primary nav surface. Stock baseline: bootstrap/client_contacts_navigation.pdt @ 6.0.0-b1 sha256:39122bb0f2e7262b46b2b236bf95abaeea65ab61140ae4ed0d3e04cb632ec5e3 */ ?>
+<?php
+// Determine active item from the current request path (stock hardcoded false).
+$hpk_current_path = explode('?', ($_SERVER['REQUEST_URI'] ?? ''))[0];
+
+$navigation = [
+    'contacts/' => [
+        'name' => 'ClientContacts.navigation.nav_contacts',
+        'icon' => 'fas fa-list'
+    ],
+    'contacts/add/' => [
+        'name' => 'ClientContacts.navigation.nav_contacts_add',
+        'icon' => 'fas fa-plus-square'
+    ],
+    '' => [
+        'name' => 'ClientContacts.navigation.nav_return',
+        'icon' => 'fas fa-arrow-left'
+    ]
+];
+?>
+<nav class="hpk-accounts-nav" aria-label="<?php echo $this->Html->safe($this->_('ClientContacts.index.boxtitle_contacts', true));?>">
+    <ul class="hpk-accounts-nav__list">
+        <?php
+        foreach ($navigation as $link => $value) {
+            $hpk_link = (isset($link) ? $link : '');
+            $hpk_prefix = (!str_contains($hpk_link, '://') && isset($this->base_uri)) ? $this->Html->safe($this->base_uri) : '';
+            $hpk_href = $hpk_prefix . $this->Html->safe($hpk_link);
+            $hpk_icon = (isset($value['icon']) ? $value['icon'] : null);
+
+            $hpk_is_active = false;
+            if ($hpk_link === 'contacts/') {
+                // Active on the contacts index AND its per-contact children (edit/delete),
+                // but not on the add sibling, which owns its own nav item.
+                $hpk_is_active = (bool) preg_match('#/contacts/(?!add/)#', $hpk_current_path);
+            } elseif ($hpk_link !== '') {
+                $hpk_is_active = (bool) preg_match('#/' . preg_quote(rtrim($hpk_link, '/'), '#') . '(/|$)#', $hpk_current_path);
+            }
+        ?>
+        <li class="hpk-accounts-nav__item">
+            <a href="<?php echo $hpk_href;?>" class="hpk-accounts-nav__link<?php echo $hpk_is_active ? ' hpk-accounts-nav__link--active' : '';?>"<?php echo $hpk_is_active ? ' aria-current="page"' : '';?>>
+                <?php if ($hpk_icon) { ?><i class="<?php echo $this->Html->safe($hpk_icon);?> fa-fw hpk-accounts-nav__icon"></i><?php } ?>
+                <span><?php $this->_($value['name'] ?? null);?></span>
+            </a>
+        </li>
+        <?php
+        }
+        ?>
+    </ul>
+</nav>

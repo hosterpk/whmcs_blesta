@@ -1,0 +1,37 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces Bootstrap WidgetClient wrapper with HosterPK .hpk-card while preserving the embedded contact_info and cc_info partials. Stock baseline: bootstrap/client_accounts_editcc.pdt @ 6.0.0-b1 sha256:cc8924bc1f7d99d706e4e440d641f9f41ae12b2ea9083b3df94bd0521c7d2602 */ ?>
+<?php
+/* Page-level language load: Blesta captures content before structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-accounts">
+    <div class="hpk-accounts__nav">
+        <?php echo ($navigation ?? null); ?>
+    </div>
+    <div class="hpk-accounts__content">
+        <?php echo (isset($message) ? $message : null); ?>
+        <div class="hpk-card" id="hpk-account-editcc">
+            <h1 class="hpk-accounts__title"><?php $this->_('Hosterpk.account_edit.cc_page_title');?></h1>
+            <p class="hpk-accounts__intro"><?php $this->_('Hosterpk.account_edit.cc_intro');?></p>
+
+            <?php
+            $this->Form->create(null, ['class' => 'disable-on-submit']);
+            echo (isset($contact_info) ? $contact_info : null);
+            ?>
+            <hr />
+            <?php echo (isset($cc_info) ? $cc_info : null); ?>
+
+            <div class="hpk-accounts__form-actions hpk-accounts__form-actions--right">
+                <button type="submit" class="hpk-btn hpk-btn-primary"><?php $this->_('Hosterpk.account_edit.action_update_cc');?></button>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+    </div>
+</div>

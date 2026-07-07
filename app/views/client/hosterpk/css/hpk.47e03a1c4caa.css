@@ -1,0 +1,4803 @@
+/*
+ * HosterPK design tokens — cross-app source of truth.
+ * Seeded from the sealed UX design (UX-DR1 light / UX-DR2 dark; values from
+ * planning-artifacts/ux-designs/.../DESIGN.md, mirrored in mockups/app.css).
+ *
+ * These are INERT custom-property DECLARATIONS only. Nothing here consumes a
+ * token, so on its own this file changes no rendering (assertion-free; AC2).
+ * The component/Reach rules that USE these tokens arrive in Epic 2.
+ *
+ * Naming: every property is `--hpk-*` and lives in :root (D1 keystone — tokens
+ * resolve at use-site; layering buys them nothing). Dark overrides ride
+ * [data-theme="dark"]; the 5 semantic states keep EXPLICIT per-theme pairs so
+ * global inversion never turns a light tint into a near-white "broken" block.
+ *
+ * This file is copied verbatim into app/views/client/hosterpk/css/src/tokens.css
+ * on build (brand/ WINS on drift). check.sh is the only writer of the bundle.
+ */
+
+:root {
+  /* Brand */
+  --hpk-primary: #1457E6;
+  --hpk-primary-hover: #0F49C4;
+  --hpk-primary-tint: #EAF0FD;
+  /* Content-link colour. Brand blue on white is AA (5.94:1); the dark block
+     brightens it because raw #1457E6 is only ~2.2:1 on surface-dark.
+     gen-contrast.sh gates both themes. */
+  --hpk-link: #1457E6;
+  --hpk-link-hover: #0F49C4;
+  --hpk-secondary: #F78326;
+  --hpk-secondary-tint: #FEF0E4;
+
+  /* Semantic states (light) */
+  --hpk-success: #17CA68;
+  --hpk-success-tint: #E7FAF0;
+  --hpk-warning: #F5B14B;
+  --hpk-warning-tint: #FEF5E8;
+  --hpk-danger: #EC5F67;
+  --hpk-danger-tint: #FDECEC;
+  --hpk-info: #4EC2F0;
+  --hpk-info-tint: #E8F7FD;
+
+  /* 5-state TEXT floor (Story 2.4 — the state-color floor 2.2/2.3 deferred here).
+     The darkened-hue text drawn on each pale *-tint for badges + alerts (one set
+     for both, per OQ2). These were COMPUTED to clear WCAG 2.2 AA 4.5:1 on their
+     tint, not assumed — gen-contrast.sh (wired into check.sh build) RE-VERIFIES
+     all 20 cells and FAILS the build on any sub-AA cell, so the gate (not this
+     hex) is the source of truth: if a cell fails, darken/brighten the token here.
+     Light ratios: success 5.86 · warning 5.74 · danger 5.33 · info 6.29 ·
+     neutral 6.41 (neutral text = g700 on g200). The [data-theme="dark"] block
+     carries the theme switch (brightened pairs) so components need NO dark rule. */
+  --hpk-success-text: #0A6E37;
+  --hpk-warning-text: #8A5512;
+  --hpk-danger-text: #B5303A;
+  --hpk-info-text: #0E6088;
+  --hpk-neutral-text: #4D5875;
+
+  /* Ink / text / surfaces */
+  --hpk-ink: #03123E;
+  --hpk-text: #6B6B7E;
+  --hpk-muted: #5F6B82;
+  --hpk-border: #E9E9E9;
+  --hpk-page: #F4F6FA;
+  --hpk-surface: #FFFFFF;
+
+  /* Neutral greys — full 9-step ramp (DESIGN.md §colors).
+     NOTE: g600 #7987A1 (and dark .40) are DECORATIVE-only — rest-state icons,
+     dividers. They fail AA for essential text; use --hpk-muted for real
+     secondary text (table headers, timestamps, helper copy). */
+  --hpk-g100: #F9FAFB;
+  --hpk-g200: #F2F4F5;
+  --hpk-g300: #E6EAEB;
+  --hpk-g400: #DBDFE1;
+  --hpk-g500: #949EB7;
+  --hpk-g600: #7987A1;
+  --hpk-g700: #4D5875;
+  --hpk-g800: #383853;
+  --hpk-g900: #323251;
+
+  /* Radii */
+  --hpk-r-sm: .3125rem;
+  --hpk-r-md: .3rem;
+  --hpk-r-lg: .625rem;
+  --hpk-r-pill: 50rem;
+
+  /* Elevation + focus */
+  --hpk-shadow: 0 3px 10px rgba(0, 0, 0, .08);
+  --hpk-topbar-shadow: 0 2px 12px rgba(3, 18, 62, .18);
+  --hpk-focus: 0 0 0 2px var(--hpk-surface), 0 0 0 4px var(--hpk-primary);
+
+  /* Type families (self-hosted, OFL — see brand/fonts/) */
+  --hpk-font-display: "Urbanist", "Urbanist Fallback", system-ui, sans-serif;
+  --hpk-font-body: "Hind Siliguri", "Hind Siliguri Fallback", system-ui, sans-serif;
+
+  /* Type ramp (UX-DR3; DESIGN.md §typography). Headings inherit 1.2;
+     body 1.5. Page titles use the 700 (display) weight; all other headings 600.
+     Eyebrow/section labels = Urbanist 600 + letter-spacing ~.08–.09em, applied
+     by the chrome/component rules (Story 2.10), not base.css — letter-spacing is
+     element-application, not a token. */
+  --hpk-h1-font-size: 2.5rem;   --hpk-h1-font-weight: 700;
+  --hpk-h2-font-size: 2rem;     --hpk-h2-font-weight: 600;
+  --hpk-h3-font-size: 1.5rem;   --hpk-h3-font-weight: 600;
+  --hpk-h4-font-size: 1.25rem;  --hpk-h4-font-weight: 600;
+  --hpk-h5-font-size: 1.05rem;  --hpk-h5-font-weight: 600;
+  --hpk-h6-font-size: 0.95rem;  --hpk-h6-font-weight: 600;
+  --hpk-heading-line-height: 1.2;
+  --hpk-body-font-size: 1rem;   --hpk-body-font-weight: 400;  --hpk-body-line-height: 1.5;
+  --hpk-small-font-size: 0.8125rem;
+  --hpk-button-font-size: 0.85rem;    --hpk-button-font-weight: 500;
+  --hpk-input-font-size: 0.875rem;
+  --hpk-nav-link-font-size: 0.92rem;  --hpk-nav-link-font-weight: 500;
+
+  /* Spacing scale (DESIGN.md §spacing; Bootstrap-5 base 1rem $spacer) */
+  --hpk-space-1: .25rem;
+  --hpk-space-2: .5rem;
+  --hpk-space-3: 1rem;
+  --hpk-space-4: 1.5rem;
+  --hpk-space-5: 3rem;
+  --hpk-space-gutter: 1.5rem;
+  --hpk-space-container-xl: 1140px;
+  --hpk-space-container-xxl: 1320px;
+  --hpk-space-topbar-height: 64px;
+  --hpk-space-sidebar-width: 248px;
+  --hpk-space-card-padding: 1.25rem;
+  --hpk-space-button-padding: .5rem 1rem;
+}
+
+[data-theme="dark"] {
+  /* Tints become translucent so they read on the navy surface */
+  --hpk-primary-tint: rgba(20, 87, 230, .18);
+  --hpk-secondary-tint: rgba(247, 131, 38, .18);
+  --hpk-success-tint: rgba(23, 202, 104, .18);
+  --hpk-warning-tint: rgba(245, 177, 75, .18);
+  --hpk-danger-tint: rgba(236, 95, 103, .18);
+  --hpk-info-tint: rgba(78, 194, 240, .18);
+
+  /* Content links (dark): raw brand #1457E6 is only ~2.2:1 on surface-dark, so
+     links brighten to a blue that clears AA on #1E3150 (gen-contrast-gated). */
+  --hpk-link: #8AB4F8;
+  --hpk-link-hover: #B9D2FB;
+
+  /* 5-state TEXT floor (dark) — brightened text on the composited rgba(hue,.18)
+     tints over surface-dark #1E3150. Brightened hexes from the sealed mock
+     (mockups/app.css:58). Computed AA: success 5.45 · warning 5.73 · danger 4.57
+     (tight — keep) · info 5.46. NEUTRAL is the documented trap: bare --hpk-muted
+     (55% white) on the dark neutral badge bg = 4.12:1 → FAILS 4.5:1, so dark
+     neutral text MUST be --hpk-text (70% white = 5.86:1), NOT --hpk-muted.
+     gen-contrast.sh exists to catch exactly this — wiring muted (correctly) fails
+     the build. */
+  --hpk-success-text: #3CE08A;
+  --hpk-warning-text: #F5C578;
+  --hpk-danger-text: #F58A90;
+  --hpk-info-text: #7FD4F5;
+  --hpk-neutral-text: var(--hpk-text);
+
+  /* Ink / text / surfaces (dark) */
+  --hpk-ink: #FFFFFF;
+  --hpk-text: rgba(255, 255, 255, .70);
+  --hpk-muted: rgba(255, 255, 255, .55);
+  --hpk-border: rgba(255, 255, 255, .10);
+  --hpk-page: #17263A;
+  --hpk-surface: #1E3150;
+
+  /* Neutral greys (dark) */
+  --hpk-g100: rgba(255, 255, 255, .04);
+  --hpk-g200: rgba(255, 255, 255, .07);
+  --hpk-g300: rgba(255, 255, 255, .10);
+
+  /* Elevation + focus (dark) */
+  --hpk-shadow: 0 3px 10px rgba(0, 0, 0, .35);
+  /* Focus ring (dark): the :root ring draws its outer band from --hpk-primary
+     (raw brand #1457E6), which is only ~2.2:1 on surface-dark #1E3150 — a real
+     WCAG 2.2 SC 1.4.11 (non-text contrast) / 2.4.13 (focus appearance) fail on
+     every focusable element in dark mode. Retarget the dark ring to the
+     brightened content link --hpk-link (#8AB4F8), which clears AA on the dark
+     surface (gen-contrast link-dark cell = 6.19:1). */
+  --hpk-focus: 0 0 0 2px var(--hpk-surface), 0 0 0 4px var(--hpk-link);
+}
+
+/*
+ * HosterPK base.css — the frame-tier CSS floor + the cascade tiers.
+ *
+ * This file is the load-bearing CSS foundation (Story 2.2). After
+ * structure.pdt drops the stock application.min.css link, the ONLY framework
+ * CSS the client area has is this bundle — so the frame-tier rules below ARE
+ * the floor that keeps un-ported (fallback) pages legible. There is no vendored
+ * Bootstrap to fall back on (BS5.3.8 is a compatibility TARGET; the shareable
+ * class surface is re-provided by authored CSS + the 33-class shim, Story 2.9).
+ *
+ * Cascade contract (certified Story 1.4 / GATE §6; architecture:427-453):
+ *   - The WINNING tier is `.hpk-client <selector>`, UNLAYERED, in the bundle
+ *     that loads last. Unlayered beats ALL layered declarations regardless of
+ *     specificity — so the floor rules below are deliberately NOT wrapped in a
+ *     layer (layering them would make them lose).
+ *   - `@layer` is internal-only: it pre-orders code we fully control
+ *     (reset/base/utilities, utilities last). It is NEVER the vendor-fight
+ *     mechanism. The layered rules themselves arrive in 2.4-2.9; the skeleton
+ *     is declared here so concat order is irrelevant to layer order.
+ *   - Reach Rule frame tier = inherited/themeable props (typography, color
+ *     tokens, link/button base, table/form resets, spacing rhythm) that ride
+ *     owned AND stock markup on purpose. NO structure-assuming layout here
+ *     (no display:grid on a bare .table, no positional :nth-child, no fixed
+ *     heights). "Not broken" is the bar for fallback pages, not "pretty".
+ *   - The bundle authors ZERO importance-flagged declarations. `.hpk-client`
+ *     wins by scope + source-order alone (check.sh RULE 2 stays green at 0).
+ *     (The literal flag is omitted even from comments: RULE 2 is a naive grep.)
+ */
+
+/* ============================================================================
+ * @font-face — self-hosted (FR11), OFL. Referenced RELATIVE to this stylesheet
+ * (served from css/, fonts live in ../fonts/) so the URLs survive the
+ * /dashboard proxy path-rewrite — never root-absolute (architecture:730).
+ * Only the weights below are shipped (brand/fonts/). Story 2.11 moves the
+ * cross-app seam to font-display: optional + one HS400 preload + metrics-matched
+ * local fallbacks, so a cold miss stays layout-stable instead of swapping later.
+ * ========================================================================== */
+/*
+ * Fallback metrics derived offline with fontTools from real woff2 tables and
+ * macOS Arial (/System/Library/Fonts/Supplemental/Arial.ttf). Source metrics:
+ * Arial upm=2048 xHeight=1062; Urbanist500 upm=2000 xHeight=1000 typoAsc=1900
+ * typoDesc=-500 typoLineGap=0; HindSiliguri400 upm=1000 xHeight=505
+ * typoAsc=1116 typoDesc=-501 typoLineGap=0. size-adjust is target/Arial
+ * x-height ratio; overrides are target typo metrics divided by size-adjust.
+ * The src chain lists only metric-IDENTICAL Arial clones - Liberation Sans (RHEL/
+ * Fedora) and Arimo (ChromeOS/Android) share Arial's exact metrics, so the
+ * Arial-derived size-adjust/overrides stay valid on hosts WITHOUT Arial (Linux/
+ * Android/ChromeOS and the project's Docker runtime, where the macOS-only "Arial"
+ * src would leave the fallback @font-face unavailable and the calibration unused).
+ * Helvetica is deliberately NOT listed: it is a different typeface, not a metric
+ * clone, so the Arial-derived overrides would be slightly off on it (Story 2.11
+ * review R2). font-display: optional already guarantees zero CLS; the chain makes
+ * the metrics-MATCH actually land cross-platform.
+ */
+@font-face {
+  font-family: "Urbanist Fallback";
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: optional;
+  src: local("Arial"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 96.42%;
+  ascent-override: 98.53%;
+  descent-override: 25.93%;
+  line-gap-override: 0.00%;
+}
+@font-face {
+  font-family: "Hind Siliguri Fallback";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: optional;
+  src: local("Arial"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 97.39%;
+  ascent-override: 114.60%;
+  descent-override: 51.44%;
+  line-gap-override: 0.00%;
+}
+@font-face {
+  font-family: "Urbanist";
+  font-style: normal;
+  font-weight: 500;
+  font-display: optional;
+  src: url("../fonts/urbanist-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Urbanist";
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+  src: url("../fonts/urbanist-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Urbanist";
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: url("../fonts/urbanist-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 500;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hind Siliguri";
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: url("../fonts/hind-siliguri-latin-700-normal.woff2") format("woff2");
+}
+
+/* ============================================================================
+ * Internal-only @layer ordering. The frame/component rules that must WIN stay
+ * UNLAYERED (below); @layer never fights vendor CSS. Only the three layers
+ * declared here are ordered today. NOTE: layer order is fixed by first
+ * occurrence — when Stories 2.4-2.9 add hpk-components / hpk-vendor-compat /
+ * hpk-dark they MUST (re)declare the full intended order at the head of the
+ * concatenated bundle (otherwise a new name appends AFTER hpk-utilities by
+ * first-use and silently demotes it). So this declaration is the seed, not the
+ * final order, and is concat-independent only for these three names.
+ * ========================================================================== */
+@layer hpk-reset, hpk-base, hpk-utilities;
+
+/* ============================================================================
+ * Frame tier — UNLAYERED, .hpk-client-scoped. THE FLOOR.
+ * Inherited/themeable props only; rides owned and stock markup safely.
+ * ========================================================================== */
+
+/* box-sizing reset — universally safe; not structure-assuming. */
+.hpk-client,
+.hpk-client *,
+.hpk-client *::before,
+.hpk-client *::after {
+  box-sizing: border-box;
+}
+
+/* Body typography + themeable surface (the .hpk-client class rides <body>). */
+.hpk-client {
+  margin: 0;
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-body-font-size);
+  font-weight: var(--hpk-body-font-weight);
+  line-height: var(--hpk-body-line-height);
+  color: var(--hpk-text);
+  background-color: var(--hpk-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings — display family + ink; page titles (h1) 700, the rest 600. */
+.hpk-client h1,
+.hpk-client h2,
+.hpk-client h3,
+.hpk-client h4,
+.hpk-client h5,
+.hpk-client h6 {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-2);
+  font-family: var(--hpk-font-display);
+  font-weight: var(--hpk-h2-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+}
+.hpk-client h1 { font-size: var(--hpk-h1-font-size); font-weight: var(--hpk-h1-font-weight); }
+.hpk-client h2 { font-size: var(--hpk-h2-font-size); }
+.hpk-client h3 { font-size: var(--hpk-h3-font-size); }
+.hpk-client h4 { font-size: var(--hpk-h4-font-size); }
+.hpk-client h5 { font-size: var(--hpk-h5-font-size); }
+.hpk-client h6 { font-size: var(--hpk-h6-font-size); }
+
+/* Paragraph / list spacing rhythm. */
+.hpk-client p,
+.hpk-client ul,
+.hpk-client ol {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-3);
+}
+
+.hpk-client small { font-size: var(--hpk-small-font-size); }
+
+/* Link base color (frame tier). Uses --hpk-link, not raw --hpk-primary: the brand
+ * blue is only ~2.2:1 on the dark surface, so the dark token brightens links to AA
+ * (gen-contrast-gated, both themes). */
+.hpk-client a {
+  color: var(--hpk-link);
+  text-decoration: none;
+}
+.hpk-client a:hover {
+  color: var(--hpk-link-hover);
+  text-decoration: underline;
+}
+
+/* Button base — element-level only (the .btn component is 2.6). Keep it to
+   inherited/themeable props so a bare <button> stays legible; do not impose a
+   brand fill on every button (secondary/ghost variants would be wrong). */
+.hpk-client button,
+.hpk-client input[type="button"],
+.hpk-client input[type="submit"],
+.hpk-client input[type="reset"] {
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-button-font-size);
+  font-weight: var(--hpk-button-font-weight);
+  cursor: pointer;
+}
+
+/* Form-control reset — text-like fields get a legible surface/border/radius.
+   Excludes checkbox/radio/range/color/file (UA appearance preserved) AND the
+   button-type inputs submit/button/reset/image — those are handled by the
+   button-base rule above; without the exclusion they'd render as empty white
+   text boxes (and type=image would get a distorting border) now that the stock
+   .btn surface is gone. */
+.hpk-client input,
+.hpk-client select,
+.hpk-client textarea {
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-input-font-size);
+  color: var(--hpk-ink);
+}
+.hpk-client input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
+.hpk-client select,
+.hpk-client textarea {
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  background-color: var(--hpk-surface);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+}
+
+/* Table reset — collapse + a readable header/divider rhythm. Element-level
+   only (no .table component assumptions, no positional selectors). */
+.hpk-client table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.hpk-client th,
+.hpk-client td {
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  text-align: start; /* logical, not physical `left` — survives RTL (rtl.css loads earlier). */
+  border-bottom: 1px solid var(--hpk-g200);
+}
+.hpk-client th {
+  font-weight: var(--hpk-h6-font-weight);
+  color: var(--hpk-muted);
+}
+
+/* Responsive image guardrail + divider — safe resets, keep fallback "not broken". */
+.hpk-client img {
+  max-width: 100%;
+  height: auto;
+}
+.hpk-client hr {
+  margin: var(--hpk-space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--hpk-border);
+}
+
+/* Focus indicator (WCAG 2.2 §2.4.13) — the SOLID ring token. The transparent
+   outline only reserves space and is invisible in normal rendering (the visual
+   is the box-shadow ring). It is NOT the forced-colors fallback: under
+   forced-colors the UA strips box-shadow to none AND does not remap a
+   transparent outline, so the @media block below restores a real system-color
+   outline (otherwise there'd be no focus indicator at all in High Contrast). */
+.hpk-client :focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--hpk-focus);
+}
+@media (forced-colors: active) {
+  .hpk-client :focus-visible {
+    outline: 2px solid CanvasText;
+    box-shadow: none;
+  }
+}
+
+/* ============================================================================
+ * .hpk-raw — the CSS escape fence (architecture:444-448, 633-635; D1/D5).
+ * For gateway/payment-adjacent DOM we must NOT restyle (FR22). `all: revert`
+ * drops every STANDARD property back to the UA default; our custom --hpk-*
+ * properties cross the `all` fence (Story 1.4 confirmed `all` excludes custom
+ * properties). LIGHT-MODE LOCKED: because the dark --hpk-* overrides WOULD be
+ * inherited across the fence, we re-assert the light palette + color-scheme AND
+ * set explicit color/background so the WRAPPER renders in a guaranteed light
+ * context even on a dark page (resolves the D5 dark-vs-fence conflict).
+ *
+ * SCOPE (be precise): this rule reverts the .hpk-raw WRAPPER element only.
+ * `all: revert` is NOT inherited, so it does NOT stop the frame-tier
+ * `.hpk-client input/select/textarea/a/table/th/td/img/:focus-visible`
+ * selectors above from matching same-document descendants INSIDE .hpk-raw.
+ * That is acceptable today because gateway DOM is cross-origin iframe content
+ * (style-immune regardless) — see Spike B. If a future story renders
+ * gateway/payment DOM as same-document descendants, that story owns the
+ * descendant-level fence (e.g. `.hpk-raw, .hpk-raw *`). Never author a rule
+ * selecting INTO .hpk-raw.
+ * ========================================================================== */
+.hpk-raw {
+  all: revert;
+  color-scheme: light;
+  color: var(--hpk-ink);
+  background-color: var(--hpk-surface);
+  --hpk-page: #F4F6FA;
+  --hpk-surface: #FFFFFF;
+  --hpk-ink: #03123E;
+  --hpk-text: #6B6B7E;
+  --hpk-muted: #5F6B82;
+  --hpk-border: #E9E9E9;
+  --hpk-primary-tint: #EAF0FD;
+  --hpk-secondary-tint: #FEF0E4;
+  --hpk-success-tint: #E7FAF0;
+  --hpk-warning-tint: #FEF5E8;
+  --hpk-danger-tint: #FDECEC;
+  --hpk-info-tint: #E8F7FD;
+  --hpk-g100: #F9FAFB;
+  --hpk-g200: #F2F4F5;
+  --hpk-g300: #E6EAEB;
+  --hpk-shadow: 0 3px 10px rgba(0, 0, 0, .08);
+}
+
+/*
+ * HosterPK components layer. Filled incrementally across Epic 2 (states/copy =
+ * 2.4, icons = 2.5, forms = 2.6, content = 2.7, chrome = 2.10). Concatenated
+ * after base.css, before dark.css, by tooling/check.sh.
+ */
+
+/* theme logo swap (Story 2.3) - the bundled-logo fallback renders both variants;
+ * pick by [data-theme]. FOUC-safe (the guard sets data-theme before paint) and
+ * no-JS-safe (no attribute -> light -> colour logo). The toggle drives it
+ * indirectly via the attribute (no JS needed here). Zero override flags. */
+.hpk-logo-dark {
+  display: none;
+}
+[data-theme="dark"] .hpk-logo-light {
+  display: none;
+}
+[data-theme="dark"] .hpk-logo-dark {
+  display: inline;
+}
+
+/* theme toggle button (Story 2.3) - color:inherit so the currentColor icon flips
+ * with the theme (in the brand bar it inherits the bar's white foreground); >=44px
+ * touch target (WCAG 2.5.8); the focus ring is the base.css :focus-visible token
+ * (dark gap resolves to surface-dark). Story 2.10 relocated the toggle into the flex
+ * brand bar and DROPPED the interim `float:right` (the bar is a flex row, so the
+ * float was dead — alignment is the topbar flex now). Zero override flags. */
+.hpk-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--hpk-space-2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--hpk-r-md);
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Base icon (Story 2.5, UX-DR5) - the single carrier of `fill: currentColor` for
+ * every <use>'d sprite glyph. A <symbol>'s <path> has no fill, so a <use> instance
+ * renders SVG-default BLACK unless the consuming <svg class="hpk-icon"> resolves
+ * fill to currentColor HERE (the sprite root's fill is on the hidden width=0
+ * container and does not propagate to a separate <use> consumer). This is what makes
+ * icons (a) visible and (b) flip with the theme: currentColor follows the `color`
+ * property, and the toggle button is color:inherit so each glyph takes the
+ * surrounding ink per theme. The 1em box tracks the surrounding text size;
+ * vertical-align nudges the glyph onto the text baseline. Zero override flags. */
+.hpk-icon {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+}
+.hpk-theme-toggle .hpk-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Icon visibility is driven entirely by [data-theme] (like the logo swap), NOT by
+ * x-show: data-theme is set synchronously by toggle() and pre-paint by the FOUC
+ * guard, so the correct single icon paints on the first frame (no flash of both,
+ * no x-show timing flicker, no-JS-safe). Light (no attribute) shows the moon
+ * (switch-to-dark); dark shows the sun. The Alpine `dark` state stays only for the
+ * reactive aria-label. */
+.hpk-theme-toggle .hpk-icon-sun {
+  display: none;
+}
+[data-theme="dark"] .hpk-theme-toggle .hpk-icon-moon {
+  display: none;
+}
+[data-theme="dark"] .hpk-theme-toggle .hpk-icon-sun {
+  display: inline;
+}
+
+/* ============================================================================
+ * Form + action primitives (Story 2.6 — FR37; UX-DR9/DR13/DR25). Buttons
+ * (.hpk-btn + 4 variants + -sm + disabled), the input FOCUS + ERROR states, and
+ * the password-toggle button. THEME-AGNOSTIC: every value is a token, so the
+ * [data-theme="dark"] token overrides (tokens.css) carry the whole light<->dark
+ * switch — NO per-component dark rule (the 2.2/2.3/2.4 pattern). The two
+ * exceptions are the literal `#fff` filled-button text (var(--hpk-surface) would
+ * flip to navy in dark and paint the label dark-on-blue; brand hues are
+ * theme-agnostic, tokens.css note) and the DESIGN-fixed -sm / opacity literals.
+ * Dark mode consumes only the dark-DEFINED tokens (brand + semantic + g100-g300
+ * + --hpk-ink/text/muted/border); no g400-g900 (Story 2.9 defer). The bespoke
+ * .hpk-btn family, .hpk-invalid, and .hpk-field-error need no .hpk-client scope vs
+ * VENDOR (vendor never targets them) and stay UNLAYERED (the 2.4 precedent) —
+ * see the two documented exceptions where a FRAME-TIER element rule (our own
+ * base.css) outranks an unscoped bespoke class and forces a scoped reconcile
+ * (the anchor-button block + the .hpk-invalid input arm + the input focus
+ * state). The stock .btn/.form-control/.alert-* bridge is Story 2.9's
+ * closed-enumeration shim, NOT here. Zero override flags.
+ * ========================================================================== */
+
+/* Button base (DESIGN.md:142-162,336; UX-DR9). One filled-primary per region is
+ * a per-page usage CONTRACT (architecture:708-709), not a CSS rule — 2.6 ships
+ * the primitive and introduces no construct that emits two primaries. Verb-first
+ * labels ride from the copy table (Hosterpk.action.*, seeded 2.4); 2.6 authors
+ * no inline button text and no new action.* keys (pages pull them in E3-E10). */
+.hpk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hpk-space-2);
+  font-family: var(--hpk-font-body);
+  font-size: var(--hpk-button-font-size);
+  font-weight: var(--hpk-button-font-weight);
+  padding: var(--hpk-space-button-padding);
+  border: 0;
+  border-radius: var(--hpk-r-md);
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* The 4 variants (DESIGN.md:142-162). Filled primary/secondary carry literal
+ * `#fff`/ink text (see the section note); outline/ghost ride tokens. Hover only
+ * restated where it changes. */
+.hpk-btn-primary {
+  background: var(--hpk-primary);
+  color: #fff;
+}
+.hpk-btn-primary:hover {
+  background: var(--hpk-primary-hover);
+}
+/* Secondary foreground = a LITERAL dark ink #03123E, NOT white and NOT
+ * var(--hpk-ink) (OQ1 + the AA-resolution finding). White-on-#F78326 = 2.55:1
+ * FAILS the binding AA DoD (4.5:1). OQ1 baked ink-on-secondary — but the fill
+ * --hpk-secondary (#F78326) is a theme-AGNOSTIC brand hue (no dark override),
+ * while var(--hpk-ink) FLIPS to #FFFFFF in dark → white-on-orange = 2.55:1, which
+ * would RE-FAIL AA in dark. So the text must be a theme-agnostic dark literal,
+ * exactly as the section note freezes primary text to literal #fff: both fills
+ * are brand hues, so both texts are literals that hold in BOTH themes. #03123E on
+ * #F78326 = 7.09:1 PASS in light AND dark. (Minting --hpk-on-secondary would need
+ * a brand re-pin — forbidden here.) Escalated to Israr as the brand/NFR7 owner. */
+.hpk-btn-secondary {
+  background: var(--hpk-secondary);
+  color: #03123E;
+}
+.hpk-btn-outline {
+  background: var(--hpk-surface);
+  border: 1px solid var(--hpk-border);
+  color: var(--hpk-ink);
+}
+.hpk-btn-outline:hover {
+  border-color: var(--hpk-primary);
+  color: var(--hpk-primary);
+  background: var(--hpk-primary-tint);
+}
+/* Outline-hover in DARK — the one sanctioned per-component dark rule. The
+ * light-mode hover text (--hpk-primary, blue) sits on --hpk-primary-tint; in dark
+ * the tint composites to a faint blue wash over the navy surface and blue-on-blue
+ * is illegible (~1.94:1) — the SAME failure DESIGN.md:201 documents for the
+ * nav-item primary-tint-dark wash, where it prescribes a light text instead. No
+ * surface-flipping token pair can fix a same-hue-on-its-own-tint case, so a dark
+ * override is required (the deferred-work "rule that must work in dark" guidance).
+ * --hpk-ink resolves to #FFFFFF in dark → white-on-tint = 11.5:1 PASS. */
+[data-theme="dark"] .hpk-btn-outline:hover {
+  color: var(--hpk-ink);
+}
+.hpk-btn-ghost {
+  background: transparent;
+  color: var(--hpk-text);
+}
+.hpk-btn-ghost:hover {
+  background: var(--hpk-g200);
+}
+/* Danger (Story 6.2 — AC11 "cancel = danger"; UX-DR9). The destructive confirm
+ * affordance the service-detail cancel action + cancel-modal submit need. Mirrors
+ * the .hpk-btn-secondary pattern: --hpk-danger (#EC5F67) is a theme-AGNOSTIC hue
+ * (no dark override), so the text is a LITERAL dark ink #03123E that holds AA in
+ * BOTH themes — #03123E on #EC5F67 = 5.52:1 (the gen-contrast danger-fill cell).
+ * White would be 3.3:1 (sub-AA) and a darker fill would need a forbidden brand
+ * re-pin. No hover restate (secondary precedent). */
+.hpk-btn-danger {
+  background: var(--hpk-danger);
+  color: #03123E;
+}
+
+/* Small size (DESIGN.md:163-165) — the sanctioned -sm padding/font literals. */
+.hpk-btn-sm {
+  padding: .35rem .75rem;
+  font-size: .8rem;
+}
+
+/* Disabled (DESIGN.md:336) — 50% opacity + not-allowed. CONTRACT (review P2):
+ * CSS styles the disabled LOOK but cannot make a focusable control inert —
+ * pointer-events:none blocks the mouse only, never keyboard activation (Enter).
+ * So consumers must enforce inertness in MARKUP:
+ *   - native <button>: use the real `disabled` attribute (the only fully-inert
+ *     form; :disabled then carries the look). Do NOT rely on .hpk-btn.disabled /
+ *     [aria-disabled="true"] alone to disable a <button> — it stays operable.
+ *   - <a class="hpk-btn"> (a link takes no :disabled): carry .disabled /
+ *     aria-disabled for the look AND drop `href` (or set tabindex="-1" + prevent
+ *     default) so it leaves the tab order — the pointer-events:none rule below
+ *     covers the mouse only.
+ * The base .hpk-client :focus-visible ring still lands on every button
+ * (base.css:228) — verified blue-on-blue with the surface gap on
+ * .hpk-btn-primary in AC11. */
+.hpk-btn:disabled,
+.hpk-btn.disabled,
+.hpk-btn[aria-disabled="true"] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+a.hpk-btn.disabled,
+a.hpk-btn[aria-disabled="true"] {
+  pointer-events: none;
+}
+
+/* Anchor-button cascade reconcile. <a class="hpk-btn"> is a SUPPORTED consumer
+ * (the disabled-link case above), but the frame-tier link rules in base.css:150-
+ * 157 — .hpk-client a { color: var(--hpk-primary); text-decoration: none } (0,1,1)
+ * and .hpk-client a:hover { color: var(--hpk-primary-hover); text-decoration:
+ * underline } (0,2,1) — OUTRANK an unscoped .hpk-btn-* variant (0,1,0). Without
+ * this block an anchor primary button renders blue-on-blue at rest and underlined
+ * on hover. These rules are element-qualified + .hpk-client-scoped so they tie/
+ * beat the frame-tier link rules (later source order wins the tie); a single rest
+ * rule per variant also governs hover because it keeps matching while hovered.
+ * <button>/<input> need none of this (no .hpk-client a rule competes), so the
+ * core classes above stay UNSCOPED per AC1; this is the minimal reconcile. */
+.hpk-client a.hpk-btn { text-decoration: none; }
+.hpk-client a.hpk-btn-primary { color: #fff; }
+.hpk-client a.hpk-btn-secondary { color: #03123E; }
+.hpk-client a.hpk-btn-outline { color: var(--hpk-ink); }
+.hpk-client a.hpk-btn-outline:hover { color: var(--hpk-primary); }
+.hpk-client a.hpk-btn-ghost { color: var(--hpk-text); }
+.hpk-client a.hpk-btn-danger { color: #03123E; }
+/* Anchor twin of the dark outline-hover override above — the anchor light rule
+ * .hpk-client a.hpk-btn-outline:hover (0,3,1) outranks the generic
+ * [data-theme="dark"] .hpk-btn-outline:hover (0,3,0), so the anchor needs its own
+ * higher-specificity dark rule to win. */
+[data-theme="dark"] .hpk-client a.hpk-btn-outline:hover { color: var(--hpk-ink); }
+
+/* Input FOCUS state (UX-DR13; DESIGN.md:189-195). The RESTING field appearance
+ * (surface bg, 1px border, --hpk-r-sm, ink text) is already the base.css
+ * frame-tier element floor (base.css:178-192, Story 2.2) and rides owned AND
+ * stock .form-control — NOT re-authored here. 2.6 adds only the focus border:
+ * a focused text-like field gets border-color var(--hpk-primary) (the base
+ * .hpk-client :focus-visible box-shadow ring, base.css:228, composes on top).
+ * FRAME TIER — element-level under .hpk-client so it reaches stock .form-control
+ * too — and it MUST: the base resting rule (base.css:185) is inflated to
+ * specificity (0,10,1) by its 9-term :not() exclusion chain, so the focus border
+ * mirrors that exact chain + :focus-visible to win at (0,11,1). The exclusion
+ * keeps the focus border off button-type/checkbox/radio/range/color/file/image
+ * inputs (they are not text fields). Zero override flags. */
+.hpk-client input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):focus-visible,
+.hpk-client select:focus-visible,
+.hpk-client textarea:focus-visible {
+  border-color: var(--hpk-primary);
+}
+
+/* Input ERROR state (FR37; DESIGN.md:196; UX-DR24). An .hpk-`-native error
+ * modifier the OWNED views apply. Blesta emits NO per-field error class (errors
+ * are top-of-form only via bootstrap/message.pdt .alert-danger), so the
+ * per-field inline pattern is OUR addition. OWNED-VIEW WIRING CONTRACT (E3+ wires
+ * real forms; server validation stays the source of truth — a no-JS submit
+ * re-renders with errors): after rendering a field, the view checks
+ * `$this->Form->error('field')` and, only when non-empty, adds `hpk-invalid` to
+ * the field + renders the message text inside a `.hpk-field-error` element below
+ * it. 2.6 ships the CSS + the contract; no partials/field.pdt yet (no live
+ * consumer, Blesta-Form integration not runtime-proven — defer to E3).
+ *
+ * Like the focus border, the input arm of .hpk-invalid must out-specify the base
+ * (0,10,1) text-input border or the danger border never shows — so it mirrors the
+ * same :not() chain + the class (0,11,1). select/textarea need only the
+ * .hpk-client scope ((0,2,1) > base (0,1,1)). The MESSAGE element .hpk-field-error
+ * is bespoke (no frame-tier rule competes for its colour) and stays UNSCOPED.
+ * Authored AFTER the focus rule so an invalid+focused field keeps the danger
+ * border (the blue focus ring still shows it is active). The message colour
+ * reuses --hpk-danger-text (gate-tracked, a-fortiori AA-safe on the surface/page),
+ * NOT DESIGN's un-gated #CF4148. Zero override flags. */
+.hpk-client input.hpk-invalid:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
+.hpk-client select.hpk-invalid,
+.hpk-client textarea.hpk-invalid {
+  border-color: var(--hpk-danger);
+}
+.hpk-field-error {
+  display: block;
+  margin-top: var(--hpk-space-1);
+  color: var(--hpk-danger-text);
+  font-size: var(--hpk-small-font-size);
+}
+
+/* Password show/hide toggle (UX-DR25; EXPERIENCE.md:101,131). A ghost-like text
+ * button that sits inside the input group; the input-group LAYOUT markup is the
+ * consumer's (E3) — 2.6 ships the button styling + the hpkPasswordToggle factory.
+ * >=44px touch target (WCAG 2.5.8); color:inherit so it tracks the field ink (a
+ * bare <button> would otherwise paint UA buttontext, not the themed ink); the
+ * base .hpk-client :focus-visible ring applies (no own box-shadow). Text-based —
+ * no eye glyph in the sprite, so no Bootstrap-Icons re-pin (OQ3). The button font
+ * comes from the base button rule (base.css:162). Zero override flags. */
+.hpk-password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--hpk-space-2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--hpk-r-md);
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ============================================================================
+ * The 5 base-state components (Story 2.4 — FR6). Badge, alert, skeleton, empty.
+ * Ported from the sealed mock (mockups/app.css:54-73) to .hpk- names + --hpk-*
+ * tokens; DESIGN.md wins on conflict (badge/alert 172-188, empty/skeleton
+ * 222-230). THEME-AGNOSTIC: every value is a token, so the [data-theme="dark"]
+ * token overrides (tokens.css) carry the entire light<->dark switch — NO
+ * per-component dark rule (the 2.2/2.3 pattern). Dark mode only consumes the
+ * dark-DEFINED grays (g100-g300, --hpk-muted, --hpk-text, --hpk-border); g400+
+ * have no dark override (Story 2.9). Bespoke .hpk-* classes: vendor never
+ * targets them, so they need no .hpk-client scope and stay UNLAYERED (the
+ * winning tier). Zero override flags. gen-contrast.sh gates the 20 badge/alert
+ * contrast cells; a sub-AA cell fails the build.
+ * ========================================================================== */
+
+/* Badge / status pill (UX-DR11; DESIGN.md:172-181). Pale semantic tint bg +
+ * darkened-hue text + a leading dot via ::before. Status is ALWAYS text+color
+ * (a translated label rides in the markup) — the dot never carries meaning
+ * alone. */
+.hpk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-family: var(--hpk-font-body);
+  font-size: .72rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: .4rem .65rem;
+  border-radius: var(--hpk-r-pill);
+}
+.hpk-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+.hpk-badge-success { background: var(--hpk-success-tint); color: var(--hpk-success-text); }
+.hpk-badge-warning { background: var(--hpk-warning-tint); color: var(--hpk-warning-text); }
+.hpk-badge-danger  { background: var(--hpk-danger-tint);  color: var(--hpk-danger-text); }
+.hpk-badge-info    { background: var(--hpk-info-tint);    color: var(--hpk-info-text); }
+.hpk-badge-neutral { background: var(--hpk-g200);         color: var(--hpk-neutral-text); }
+
+/* Alert (UX-DR12; DESIGN.md:182-188,339). Rounded, pale semantic-tint bg, a 3px
+ * semantic-hue left accent, darkened-hue text, optional leading-icon slot. The
+ * 5 states carry loading/empty/error/success/warning state language at the page
+ * level. (Session-only dismiss is a consumer/Story 2.8 affordance, not here.)
+ *
+ * Accent contrast (review 2.4-R1 D2, RATIFIED by Israr): the 3px hue accent on
+ * its pale tint is ~1.8-2.4:1, below WCAG 2.2 SC 1.4.11 (3:1 non-text). It is
+ * DECORATIVE / exempt: the alert's meaning is carried by the darkened-hue text
+ * (--hpk-{state}-text, gated >=4.5:1) plus the tint + an icon slot, so the bar is
+ * reinforcement, not the sole status indicator. Keep the vivid sealed-mock hue. */
+.hpk-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .85rem 1rem;
+  font-size: .9rem;
+  border-radius: var(--hpk-r-sm);
+  border-left: 3px solid;
+}
+.hpk-alert-success { background: var(--hpk-success-tint); border-color: var(--hpk-success); color: var(--hpk-success-text); }
+.hpk-alert-warning { background: var(--hpk-warning-tint); border-color: var(--hpk-warning); color: var(--hpk-warning-text); }
+.hpk-alert-danger  { background: var(--hpk-danger-tint);  border-color: var(--hpk-danger);  color: var(--hpk-danger-text); }
+.hpk-alert-info    { background: var(--hpk-info-tint);    border-color: var(--hpk-info);    color: var(--hpk-info-text); }
+.hpk-alert-neutral { background: var(--hpk-g200);         border-color: var(--hpk-muted);   color: var(--hpk-neutral-text); }
+
+/* Loading skeleton (UX-DR19; DESIGN.md:228-230,348). A shimmer gradient over the
+ * g200/g300 range, 6px radius, masking the eventual content shape (no spinner-
+ * only blank screen). The animation is gated behind prefers-reduced-motion:
+ * no-preference so a reduce preference gets a static placeholder (no strobe).
+ * Swap-level affordance only — the aria-busy / HTMX delay wiring is Story 2.8. */
+.hpk-skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--hpk-g200) 25%, var(--hpk-g300) 37%, var(--hpk-g200) 63%);
+  background-size: 400% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hpk-skeleton {
+    animation: hpk-shimmer 1.4s ease infinite;
+  }
+}
+@keyframes hpk-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* Empty state (UX-DR18; DESIGN.md:222-227). Centered: large low-opacity muted
+ * icon slot, h5 ink title, small muted body, an action slot. Warm one-liner copy
+ * comes from the copy table (language file), never inline. The action renders as
+ * `outline button-sm` once the real .btn-outline/.btn-sm land in Story 2.6 — here
+ * __action is a lightly-styled slot (spacing only). */
+.hpk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--hpk-space-2);
+  padding: var(--hpk-space-5) var(--hpk-space-3);
+}
+.hpk-empty__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  opacity: .35;
+  color: var(--hpk-muted);
+  margin-bottom: var(--hpk-space-1);
+}
+.hpk-empty__title {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+.hpk-empty__body {
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+.hpk-empty__action {
+  margin-top: var(--hpk-space-2);
+}
+
+/* ============================================================================
+ * Content components (Story 2.7 — FR35; UX-DR10/DR14/DR16/DR17). The NET-NEW
+ * kit the page + resource stories compose from: .hpk-card, .hpk-table (+ the
+ * <=760px card reflow), .hpk-tabs/.hpk-tab, .hpk-modal, and the shared
+ * .hpk-list-item "thing-I-own" row. THEME-AGNOSTIC: every value is a token, so
+ * the [data-theme="dark"] token overrides (tokens.css) carry the whole
+ * light<->dark switch — NO per-component dark rule (the 2.2/2.3/2.4 pattern).
+ * The one sanctioned dark exception is the active-tab AA override below (the 2.6
+ * F3 pattern). The only literals are the modal scrim rgba(0,0,0,.5) and DESIGN
+ * geometry (the 2px tab indicator) — neither needs a token (no brand re-pin).
+ *
+ * Badge / alert / empty-state / loading-skeleton are NOT re-authored here: they
+ * shipped in Story 2.4 (above) and 2.7 CONSUMES + composes them (the status-chip
+ * in a list-item/table cell is the existing .hpk-badge — no new chip class).
+ *
+ * Cascade: .hpk-card and .hpk-modal sit on <div>/<dialog>, which base.css styles
+ * no bare element of, so they stay UNSCOPED + UNLAYERED (the 2.4 .hpk-badge
+ * precedent, collision-free). .hpk-tab (an <a>) and .hpk-table (a <table>) DO
+ * meet a base.css frame-tier element rule, so they carry the scoped/qualified
+ * reconcile the 2.6 F-series taught (see C1/C2 at each block). Zero override
+ * flags.
+ * ========================================================================== */
+
+/* Card (UX-DR10; DESIGN.md:166-171). The HARD brand rule: borderless,
+ * shadow-only — the shadow-only lift is what separates the card from the tinted
+ * page; a bordered or shadowless card violates the brand. The dark .35 shadow
+ * rides the [data-theme="dark"] --hpk-shadow override (tokens.css) — there is no
+ * --hpk-shadow-dark token and no per-component dark rule here. A <div>, so
+ * collision-free: unscoped, unlayered. (The reflow mini-card of AC6 below DOES
+ * carry a 1px border — that is a different component per UX-DR14; do not "fix"
+ * either toward the other.) Zero override flags. */
+.hpk-card {
+  background: var(--hpk-surface);
+  border-radius: var(--hpk-r-lg);
+  padding: var(--hpk-space-card-padding);
+  box-shadow: var(--hpk-shadow);
+}
+/* [AC9 / C4] Whole-card links or other focusable card surfaces keep elevation
+ * when the base focus ring lands on the same element. */
+.hpk-card:focus-visible {
+  box-shadow: var(--hpk-shadow), var(--hpk-focus);
+}
+
+/* Data table — desktop (UX-DR14; DESIGN.md:210-214). Borderless outer frame
+ * (the base.css .hpk-client table reset already gives width:100% + collapse and
+ * no frame border — nothing to add), small-uppercase-muted head with a
+ * --hpk-border bottom rule, --hpk-ink cells, --hpk-g200 row dividers (the latter
+ * is already the base th/td border-bottom, so it is inherited, not restated).
+ *
+ * [CASCADE — C2 + Reach Rule] a <table> meets the base frame-tier floor
+ * .hpk-client table (0,1,1) / .hpk-client th,td (0,1,1) (base.css:196-209), so a
+ * bare .hpk-table (0,1,0) loses for any shared property. The whole component is
+ * therefore GATED behind the .hpk-table marker and its descendants scoped as
+ * .hpk-client .hpk-table th/td ((0,2,1) > the base (0,1,1)). This also satisfies
+ * the Reach Rule (architecture.md:610-626): the table treatment + the reflow
+ * below are STRUCTURE-ASSUMING, so they are component-tier (marker-gated) and are
+ * NEVER applied to a bare .hpk-client table — a stock plugin table with no
+ * .hpk-table class and no data-label cells keeps the plain base floor and does
+ * not reflow.
+ *
+ * In-cell composition: a status cell hosts a .hpk-badge (never a raw colour) and
+ * a row-action cell hosts a .hpk-btn-sm — both are existing primitives, no table
+ * rule needed. Zero override flags. */
+.hpk-client .hpk-table th {
+  font-size: var(--hpk-small-font-size);
+  text-transform: uppercase;
+  color: var(--hpk-muted);
+  border-bottom: 1px solid var(--hpk-border);
+}
+.hpk-client .hpk-table td {
+  color: var(--hpk-ink);
+}
+
+/* Data table -> card reflow at <=760px (FR35; UX-DR14/DR29). Each row becomes a
+ * mini-card. CSS-ONLY (no JS): the whole table switches to block flow so the
+ * table formatting context cannot compute an over-wide min-width — this is what
+ * guarantees NO HORIZONTAL SCROLL (FR35/UX-DR29, hard requirement). The <thead>
+ * is visually hidden (its column names are re-emitted per cell via the data-label
+ * contract below), so it is not announced twice but stays in the accessibility
+ * tree off-screen.
+ *
+ * OWNED-VIEW MARKUP CONTRACT — `data-label`: the per-cell column label is read
+   * from a `data-label` attribute the OWNED page markup emits on each <td> or
+   * owned row header (`<td data-label="Status">...`). 2.7 ships the CSS + this
+   * contract ONLY; the consuming page (E5 invoices / E6 services / E7 domains)
+   * wires the attributed markup, exactly as 2.6 shipped the .hpk-invalid CSS + its
+   * owned-view wiring contract. A cell with no data-label (e.g. the row-action
+   * cell) emits no label pseudo. Mirrors the .hpk-list-item below (the same visual
+   * two ways).
+ *
+ * NOTE the mini-card carries a 1px --hpk-border + --hpk-r-sm — UX-DR14's spec for
+ * the reflowed row, DELIBERATELY different from the borderless .hpk-card above
+ * (see the "two different borders" Dev Note). Zero override flags. */
+@media (max-width: 760px) {
+  .hpk-client .hpk-table,
+  .hpk-client .hpk-table tbody,
+  .hpk-client .hpk-table tr,
+  .hpk-client .hpk-table td,
+  .hpk-client .hpk-table tbody th {
+    display: block;
+  }
+  .hpk-client .hpk-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .hpk-client .hpk-table tr {
+    margin-bottom: var(--hpk-space-3);
+    padding: var(--hpk-space-2) var(--hpk-space-3);
+    border: 1px solid var(--hpk-border);
+    border-radius: var(--hpk-r-sm);
+  }
+  .hpk-client .hpk-table td,
+  .hpk-client .hpk-table tbody th {
+    border-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    overflow-wrap: anywhere;
+  }
+  .hpk-client .hpk-table tbody th {
+    font-size: inherit;
+    text-transform: none;
+    color: var(--hpk-ink);
+  }
+  .hpk-client .hpk-table td[data-label]::before,
+  .hpk-client .hpk-table tbody th[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: var(--hpk-space-1);
+    font-size: var(--hpk-small-font-size);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--hpk-muted);
+  }
+}
+
+/* Tabs (UX-DR17; DESIGN.md:219-221). Each tab is a real <a href> to a real URL:
+ * works with NO JS, the active tab is server-determined, the panel is
+ * server-rendered (EXPERIENCE.md:103). The HTMX panel-swap (hx-select /
+ * hx-push-url) is EXPLICITLY OUT OF SCOPE here — it is the first real island in
+ * Epic 7, consuming the Story 2.8 D2 init/CSRF contract (architecture.md:381,
+ * 472-493). 2.7 ships the skin + the no-JS real-URL contract only.
+ *
+ * The strip + tab layout sit on bare classes (no base element rule competes for
+ * display/padding/border geometry). The active indicator is a 2px bottom BORDER
+ * (not a box-shadow) so the base .hpk-client :focus-visible ring composes on top
+   * of it without replacing it — no C4 composite-shadow needed for a focused tab.
+   * Narrow strips scroll horizontally instead of wrapping, preserving the single-row
+   * indicator model and long-label focus visibility. Zero override flags. */
+.hpk-tabs {
+  display: flex;
+  gap: var(--hpk-space-3);
+  padding: 2px 2px 0;
+  border-bottom: 1px solid var(--hpk-border);
+  overflow-x: auto;
+  scroll-padding-inline: var(--hpk-space-2);
+}
+.hpk-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: var(--hpk-space-2) var(--hpk-space-1);
+  margin-bottom: -1px; /* overlap the strip's 1px rule so the indicator replaces it */
+  border-bottom: 2px solid transparent; /* reserves the indicator space at rest (no shift) */
+  font-weight: var(--hpk-nav-link-font-weight);
+}
+.hpk-tab-panel {
+  padding-top: var(--hpk-space-3);
+}
+
+/* [CASCADE — C1] tabs are <a href>, so the base frame-tier link rules
+ * .hpk-client a (0,1,1) / a:hover (0,2,1) (base.css:150-157) outrank a bare
+ * .hpk-tab (0,1,0) — without this an inactive tab renders base-link blue and
+ * underlines on hover. Element-qualify under .hpk-client so this rest rule
+ * ties/beats them at (0,2,1) and wins on source order, exactly the 2.6
+ * anchor-button reconcile (components.css:206-227). A single rest rule also
+ * governs hover (it keeps matching while hovered → no underline, no blue). */
+.hpk-client a.hpk-tab {
+  color: var(--hpk-text);
+  text-decoration: none;
+}
+/* Active tab — the consuming page sets aria-current="page" on the active <a>;
+ * that attribute is BOTH the a11y current-page signal AND the active-style hook
+ * (no separate class to drift). primary text + the 2px primary bottom indicator.
+ * At (0,3,1) it beats the inactive rest rule (0,2,1) and base a:hover (0,2,1).
+ * (The dark-mode AA override for this rule is the one sanctioned [data-theme]
+ * exception, added in the dark-AA block below — primary text is sub-AA on the
+ * navy surface, so dark flips the TEXT to --hpk-ink while the indicator stays
+ * primary.) */
+.hpk-client a.hpk-tab[aria-current="page"] {
+  color: var(--hpk-primary);
+  border-bottom-color: var(--hpk-primary);
+}
+/* Active-tab dark-mode AA override (OQ-B; the one sanctioned [data-theme="dark"]
+ * exception in 2.7, the 2.6 F3 pattern). --hpk-primary #1457E6 on the dark navy
+ * --hpk-surface #1E3150 measures 2.20:1 — FAILS AA 4.5:1. A surface-flipping
+ * token pair cannot fix a brand-hue-on-navy case, so dark flips the active-tab
+ * TEXT to --hpk-ink (#FFFFFF, ~13.6:1 on navy) while the 2px --hpk-primary
+ * indicator STAYS (it carries the "active" signal in brand colour; the border is
+ * decorative reinforcement, not the sole indicator). At (0,4,1) it beats the
+ * light active rule (0,3,1) and only overrides the colour. */
+[data-theme="dark"] .hpk-client a.hpk-tab[aria-current="page"] {
+  color: var(--hpk-ink);
+}
+
+/* Modal (UX-DR16; DESIGN.md:215-218). The .hpk-modal class rides a native
+ * <dialog>: .showModal() gives focus-trap + Esc-to-close + return-focus-to-the-
+ * trigger NATIVELY (UX-DR16), so the JS initializer (js/bootstrap.js) only wires
+ * open/close + the 1-deep guard — NO Alpine factory (OQ-A). One level deep ever
+ * (no modal-on-modal, UX-DR25). Without JS the <dialog> is inert and the confirm
+ * action degrades to its normal link/form (the modal is pure enhancement). A
+ * closed <dialog> is display:none by the UA, so visibility needs no CSS.
+ *
+ * surface bg + r-lg + shadow, content-sized and capped so it never exceeds the
+ * viewport; the UA <dialog> border is cleared (the elevation is the shadow — the
+ * kit's surface language) and the UA 1em padding is replaced with the card
+ * padding token; the UA Canvas/CanvasText defaults are overridden to the themed
+ * surface/text. A <dialog>, so collision-free (base styles no bare <dialog>):
+ * unscoped, unlayered (C3). Zero override flags. */
+.hpk-modal {
+  max-width: min(90vw, 32rem);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--hpk-space-card-padding);
+  border: 0;
+  border-radius: var(--hpk-r-lg);
+  background: var(--hpk-surface);
+  color: var(--hpk-text);
+  box-shadow: var(--hpk-shadow);
+}
+/* Backdrop scrim — NO token (minting --hpk-scrim would force a brand re-pin); a
+ * dark overlay reads correctly in BOTH themes (the page behind it dims), so a
+ * single theme-agnostic literal holds — the sanctioned modal-backdrop literal,
+ * the same call 2.6 made for the literal #fff filled-button text. */
+.hpk-modal::backdrop {
+  background: rgba(0, 0, 0, .5);
+}
+/* [AC9 / C4] composite focus-shadow. If the <dialog> ITSELF is the focus target
+ * (showModal moved focus to it for want of an autofocus/focusable child), the
+ * base .hpk-client :focus-visible ring (base.css:228) would REPLACE the modal's
+ * own --hpk-shadow. Compose both so the elevation survives the ring. Ties the
+ * base (0,2,0) and wins on source order (components concatenates after base).
+ * Prefer focusing an interactive child (a .hpk-btn inside already rings
+ * correctly); this rule only covers the dialog-as-focus-target case. */
+.hpk-modal:focus-visible {
+  box-shadow: var(--hpk-shadow), var(--hpk-focus);
+}
+
+/* The shared "thing-I-own" list-item (UX-DR14; DESIGN.md:210-214;
+ * EXPERIENCE.md:96) — the one-component-set deliverable (epics.md:50,277,567).
+ * The canonical owned-resource row: name (ink) + a status-chip slot + meta
+ * slot(s) (muted small) + a .hpk-btn-sm action. Authored ONCE here and consumed
+ * verbatim by Services (E6) and Domains (E7) so they read as siblings.
+ *
+ * It is the same visual as the AC6 table reflow expressed standalone: a
+ * reflowing .hpk-table row ~= a standalone .hpk-list-item, so they share the
+ * token palette (ink name / muted-small meta / .hpk-badge chip / .hpk-btn-sm
+ * action / --hpk-space-3 rhythm). Wrap a .hpk-list-item in a .hpk-card for the
+ * standalone-card form (surface + shadow); a list of them stacks inside one card
+   * with dividers supplied by the consumer. The __main slot grows and pushes the
+   * status + action to the trailing edge; long names wrap, with break protection
+   * for unbroken identifiers, instead of forcing horizontal overflow. All bespoke
+   * classes on <div>/<span> (base styles no bare div/span), so unscoped + unlayered
+   * (the .hpk-badge/.hpk-empty precedent).
+ * Zero override flags. */
+.hpk-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-3);
+}
+.hpk-list-item__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.hpk-list-item__name {
+  font-weight: 600;
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+.hpk-list-item__meta {
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+/* Status + action slots — LAYOUT-ONLY positioning wrappers (flex-shrink:0 so
+ * neither collapses), NOT re-skinned components. The status-chip placed inside
+ * __status is the EXISTING .hpk-badge (Story 2.4) — there is NO .hpk-status-chip
+ * class (AC8). The action inside __action is the existing .hpk-btn-sm. */
+.hpk-list-item__status {
+  flex-shrink: 0;
+}
+.hpk-list-item__action {
+  flex-shrink: 0;
+}
+
+/* Dashboard action cards (Story 4.1). The stock dashboard widget/card contract
+ * stays below this region; these rules only style the owned action-needed cards.
+ * They compose .hpk-card/.hpk-badge/.hpk-btn primitives and add the story-owned
+ * bordered card + semantic left accent. */
+.hpk-clientmain {
+  display: flow-root;
+}
+.hpk-clientmain__actions {
+  margin-bottom: var(--hpk-space-4);
+}
+.hpk-clientmain__section-title,
+.hpk-clientmain__band-title {
+  margin: 0 0 var(--hpk-space-3);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h4-font-size);
+  font-weight: var(--hpk-h4-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+}
+.hpk-clientmain__band + .hpk-clientmain__band {
+  margin-top: var(--hpk-space-4);
+}
+.hpk-clientmain__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--hpk-space-3);
+}
+.hpk-card.hpk-clientmain-action {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-left-width: 3px;
+}
+.hpk-card.hpk-action-danger {
+  border-left-color: var(--hpk-danger);
+}
+.hpk-card.hpk-action-warning {
+  border-left-color: var(--hpk-warning);
+}
+.hpk-card.hpk-action-info {
+  border-left-color: var(--hpk-info);
+}
+.hpk-card.hpk-action-success {
+  border-left-color: var(--hpk-success);
+}
+.hpk-clientmain-action__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--hpk-r-pill);
+  color: var(--hpk-ink);
+  background: var(--hpk-g200);
+}
+.hpk-clientmain-action__topline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+.hpk-clientmain-action__body {
+  min-width: 0;
+}
+.hpk-clientmain-action__title {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+.hpk-clientmain-action__detail {
+  margin: var(--hpk-space-1) 0 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+  overflow-wrap: anywhere;
+}
+.hpk-clientmain-action__action {
+  justify-self: end;
+}
+.hpk-clientmain-action__action .hpk-btn {
+  min-height: 44px;
+}
+.hpk-clientmain__overflow {
+  margin: var(--hpk-space-2) 0 0;
+  font-size: var(--hpk-small-font-size);
+}
+.hpk-empty--dashboard {
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-lg);
+  background: var(--hpk-surface);
+}
+.hpk-empty--dashboard .hpk-btn {
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .hpk-card.hpk-clientmain-action {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .hpk-clientmain-action__icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  .hpk-clientmain-action__action,
+  .hpk-clientmain-action__action .hpk-btn {
+    width: 100%;
+  }
+}
+
+/* Dashboard at-a-glance summary (Story 4.2 — stat tiles, recent activity feed,
+ * and quick-action links). Composes existing .hpk-card/.hpk-empty/.hpk-list-item
+ * primitives and adds the new .hpk-stat component. All colour is token-driven;
+ * no per-component [data-theme="dark"] block and no override flags. */
+.hpk-clientmain__stats,
+.hpk-clientmain__activity,
+.hpk-clientmain__quick {
+  margin-bottom: var(--hpk-space-4);
+}
+
+/* Stat grid: auto-fits 3 or 4 tiles on desktop, single column on phone. */
+.hpk-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--hpk-space-3);
+}
+
+.hpk-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-2);
+  text-decoration: none;
+  color: inherit;
+}
+.hpk-client a.hpk-stat,
+.hpk-client a.hpk-stat:hover,
+.hpk-client a.hpk-stat:focus-visible {
+  color: inherit;
+  text-decoration: none;
+}
+.hpk-stat:focus-visible {
+  box-shadow: var(--hpk-shadow), var(--hpk-focus);
+}
+
+.hpk-stat__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+}
+.hpk-stat__chip-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.hpk-stat__chip--primary {
+  background: var(--hpk-primary-tint);
+  color: var(--hpk-link);
+}
+.hpk-stat__chip--info {
+  background: var(--hpk-info-tint);
+  color: var(--hpk-info-text);
+}
+.hpk-stat__chip--warning {
+  background: var(--hpk-warning-tint);
+  color: var(--hpk-warning-text);
+}
+.hpk-stat__chip--danger {
+  background: var(--hpk-danger-tint);
+  color: var(--hpk-danger-text);
+}
+.hpk-stat__chip--success {
+  background: var(--hpk-success-tint);
+  color: var(--hpk-success-text);
+}
+
+.hpk-stat__value {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+.hpk-stat__value--empty {
+  font-size: var(--hpk-body-font-size);
+  font-weight: var(--hpk-body-font-weight);
+  color: var(--hpk-muted);
+}
+
+.hpk-stat__label {
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+/* Recent activity list */
+.hpk-activity {
+  padding: 0;
+}
+.hpk-activity__item {
+  padding: var(--hpk-space-3) var(--hpk-space-card-padding);
+}
+.hpk-activity__item + .hpk-activity__item {
+  border-top: 1px solid var(--hpk-border);
+}
+
+/* Quick actions */
+.hpk-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+.hpk-quick-actions__action {
+  min-height: 44px;
+}
+.hpk-quick-actions__icon {
+  width: 1em;
+  height: 1em;
+}
+
+@media (max-width: 760px) {
+  .hpk-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dashboard single-triage-surface additions (Story 4.4 — FR17/19; UJ-8).
+ * Flash region, state-aware hero, lower-page summary cards, and compact
+ * account-summary line. All additive to Story 4.1/4.2; no override flags. */
+.hpk-clientmain__flash {
+  margin-bottom: var(--hpk-space-4);
+}
+.hpk-clientmain__flash > * {
+  margin-bottom: 0;
+}
+.hpk-clientmain__hero {
+  margin-bottom: var(--hpk-space-4);
+}
+.hpk-clientmain__hero-subtitle {
+  margin: 0;
+  color: var(--hpk-muted);
+  font-size: var(--hpk-body-font-size);
+}
+.hpk-clientmain__hero-subtitle--attention {
+  color: var(--hpk-warning-text);
+}
+.hpk-clientmain__summaries,
+.hpk-clientmain__account {
+  margin-bottom: var(--hpk-space-4);
+}
+.hpk-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--hpk-space-3);
+}
+.hpk-summary-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--hpk-space-card-padding);
+}
+.hpk-summary-card__title {
+  margin: 0 0 var(--hpk-space-3);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-body-font-size);
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+.hpk-summary-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-2);
+  flex: 1 1 auto;
+}
+.hpk-summary-card__primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-2);
+  flex-wrap: wrap;
+}
+.hpk-summary-card__amount {
+  font-family: var(--hpk-font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+.hpk-summary-card__name {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-body-font-size);
+  font-weight: 600;
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+.hpk-summary-card__meta {
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+.hpk-summary-card__empty {
+  margin: 0;
+  color: var(--hpk-muted);
+}
+.hpk-summary-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  margin-top: auto;
+  padding-top: var(--hpk-space-2);
+}
+.hpk-account-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-3) var(--hpk-space-card-padding);
+  flex-wrap: wrap;
+}
+.hpk-account-summary__text {
+  margin: 0;
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .hpk-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .hpk-account-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hpk-account-summary .hpk-btn {
+    width: 100%;
+  }
+}
+
+/* Data lists (Story 5.1 invoices — FR20; Story 5.5 transactions — FR23;
+ * Story 6.1 services — FR25; Story 7.1 domains; Story 8.1 tickets — FR29;
+ * UX-DR14). .hpk-invoices, .hpk-transactions, .hpk-services, .hpk-domains, and
+ * .hpk-tickets share these rules by grouped selector to avoid drift.
+ * Transactions-specific divergence: no actions column.
+ * The first-line text below is preserved for the original 5.1 provenance.
+ * Invoices list (Story 5.1 — FR20; UX-DR14). First owned billing list/table
+ * override. All structure-assuming rules are gated by
+ * .hpk-invoices/.hpk-transactions/.hpk-services; the table itself reuses
+ * .hpk-table's existing <=760px card reflow, so there is no new breakpoint
+ * and no global pagination reach. Token-driven in both themes. */
+.hpk-invoices,
+.hpk-transactions,
+.hpk-services,
+.hpk-domains,
+.hpk-tickets {
+  min-width: 0;
+}
+.hpk-invoices__shell,
+.hpk-transactions__shell,
+.hpk-services__shell,
+.hpk-domains__shell,
+.hpk-tickets__shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+}
+.hpk-invoices__header,
+.hpk-transactions__header,
+.hpk-services__header,
+.hpk-domains__header,
+.hpk-tickets__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hpk-space-4);
+  min-width: 0;
+}
+.hpk-invoices__title,
+.hpk-transactions__title,
+.hpk-services__title,
+.hpk-domains__title,
+.hpk-tickets__title {
+  margin: 0;
+  font-size: var(--hpk-h2-font-size);
+}
+.hpk-invoices__tabs,
+.hpk-transactions__tabs,
+.hpk-services__tabs,
+.hpk-domains__tabs,
+.hpk-tickets__tabs {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.hpk-invoices .hpk-tab__count,
+.hpk-transactions .hpk-tab__count,
+.hpk-services .hpk-tab__count,
+.hpk-domains .hpk-tab__count,
+.hpk-tickets .hpk-tab__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0 var(--hpk-space-1);
+  border-radius: var(--hpk-r-pill);
+  background: var(--hpk-g200);
+  color: var(--hpk-muted);
+  font-size: var(--hpk-small-font-size);
+}
+.hpk-invoices__filters,
+.hpk-transactions__filters,
+.hpk-services__filters,
+.hpk-domains__filters,
+.hpk-tickets__filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(min(100%, 12rem), 1fr)) auto;
+  gap: var(--hpk-space-3);
+  align-items: end;
+  padding: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-g100);
+}
+.hpk-invoices__filter,
+.hpk-transactions__filter,
+.hpk-services__filter,
+.hpk-domains__filter,
+.hpk-tickets__filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+  min-width: 0;
+}
+.hpk-invoices__filter-label,
+.hpk-transactions__filter-label,
+.hpk-services__filter-label,
+.hpk-domains__filter-label,
+.hpk-tickets__filter-label {
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  color: var(--hpk-muted);
+}
+.hpk-invoices__control,
+.hpk-transactions__control,
+.hpk-services__control,
+.hpk-domains__control,
+.hpk-tickets__control {
+  width: 100%;
+  min-height: 44px;
+}
+.hpk-invoices__filter-actions,
+.hpk-transactions__filter-actions,
+.hpk-services__filter-actions,
+.hpk-domains__filter-actions,
+.hpk-tickets__filter-actions {
+  display: flex;
+}
+.hpk-invoices__filter-actions .hpk-btn,
+.hpk-transactions__filter-actions .hpk-btn,
+.hpk-services__filter-actions .hpk-btn,
+.hpk-domains__filter-actions .hpk-btn,
+.hpk-tickets__filter-actions .hpk-btn {
+  min-height: 44px;
+  white-space: nowrap;
+}
+.hpk-invoices__results,
+.hpk-transactions__results,
+.hpk-services__results,
+.hpk-domains__results,
+.hpk-tickets__results {
+  min-width: 0;
+}
+.hpk-invoices__table,
+.hpk-transactions__table,
+.hpk-services__table,
+.hpk-domains__table,
+.hpk-tickets__table {
+  min-width: 0;
+}
+.hpk-client .hpk-invoices .expand_details,
+.hpk-client .hpk-transactions .expand_details,
+.hpk-client .hpk-services .expand_details,
+.hpk-client .hpk-domains .expand_details,
+.hpk-client .hpk-tickets .expand_details {
+  display: none;
+}
+.hpk-invoices .subtable,
+.hpk-transactions .subtable,
+.hpk-services .subtable,
+.hpk-domains .subtable,
+.hpk-tickets .subtable {
+  overflow-x: auto;
+}
+.hpk-client .hpk-invoices__sort,
+.hpk-client .hpk-transactions__sort,
+.hpk-client .hpk-services__sort,
+.hpk-client .hpk-domains__sort,
+.hpk-client .hpk-tickets__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-1);
+  color: inherit;
+  text-decoration: none;
+}
+.hpk-client .hpk-invoices__sort:hover,
+.hpk-client .hpk-transactions__sort:hover,
+.hpk-client .hpk-services__sort:hover,
+.hpk-client .hpk-domains__sort:hover,
+.hpk-client .hpk-tickets__sort:hover {
+  color: var(--hpk-link-hover);
+  text-decoration: underline;
+}
+.hpk-client .hpk-invoices__sort.asc::after,
+.hpk-client .hpk-transactions__sort.asc::after,
+.hpk-client .hpk-services__sort.asc::after,
+.hpk-client .hpk-domains__sort.asc::after,
+.hpk-client .hpk-tickets__sort.asc::after,
+.hpk-client .hpk-invoices__sort.desc::after,
+.hpk-client .hpk-transactions__sort.desc::after,
+.hpk-client .hpk-services__sort.desc::after,
+.hpk-client .hpk-domains__sort.desc::after,
+.hpk-client .hpk-tickets__sort.desc::after {
+  color: var(--hpk-muted);
+  font-size: var(--hpk-small-font-size);
+}
+.hpk-client .hpk-invoices__sort.asc::after,
+.hpk-client .hpk-transactions__sort.asc::after,
+.hpk-client .hpk-services__sort.asc::after,
+.hpk-client .hpk-domains__sort.asc::after,
+.hpk-client .hpk-tickets__sort.asc::after {
+  content: "↑";
+}
+.hpk-client .hpk-invoices__sort.desc::after,
+.hpk-client .hpk-transactions__sort.desc::after,
+.hpk-client .hpk-services__sort.desc::after,
+.hpk-client .hpk-domains__sort.desc::after,
+.hpk-client .hpk-tickets__sort.desc::after {
+  content: "↓";
+}
+.hpk-invoices__actions,
+.hpk-transactions__actions,
+.hpk-services__actions,
+.hpk-domains__actions,
+.hpk-tickets__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+.hpk-invoices__actions .hpk-btn,
+.hpk-transactions__actions .hpk-btn,
+.hpk-services__actions .hpk-btn,
+.hpk-domains__actions .hpk-btn,
+.hpk-tickets__actions .hpk-btn {
+  min-height: 44px;
+}
+.hpk-empty--invoices,
+.hpk-empty--transactions,
+.hpk-empty--services,
+.hpk-empty--domains,
+.hpk-empty--tickets {
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-g100);
+}
+.hpk-invoices__pagination,
+.hpk-transactions__pagination,
+.hpk-services__pagination,
+.hpk-domains__pagination,
+.hpk-tickets__pagination {
+  margin-top: var(--hpk-space-4);
+}
+.hpk-invoices__pagination .pagination,
+.hpk-transactions__pagination .pagination,
+.hpk-services__pagination .pagination,
+.hpk-domains__pagination .pagination,
+.hpk-tickets__pagination .pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-1);
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.hpk-invoices__pagination .page-link,
+.hpk-transactions__pagination .page-link,
+.hpk-services__pagination .page-link,
+.hpk-domains__pagination .page-link,
+.hpk-tickets__pagination .page-link,
+.hpk-invoices__pagination .pagination a,
+.hpk-transactions__pagination .pagination a,
+.hpk-services__pagination .pagination a,
+.hpk-domains__pagination .pagination a,
+.hpk-tickets__pagination .pagination a,
+.hpk-invoices__pagination .pagination span,
+.hpk-transactions__pagination .pagination span,
+.hpk-services__pagination .pagination span,
+.hpk-domains__pagination .pagination span,
+.hpk-tickets__pagination .pagination span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+  background: var(--hpk-surface);
+  color: var(--hpk-ink);
+  text-decoration: none;
+}
+.hpk-invoices__pagination .active .page-link,
+.hpk-transactions__pagination .active .page-link,
+.hpk-services__pagination .active .page-link,
+.hpk-domains__pagination .active .page-link,
+.hpk-tickets__pagination .active .page-link,
+.hpk-invoices__pagination .pagination .active a,
+.hpk-transactions__pagination .pagination .active a,
+.hpk-services__pagination .pagination .active a,
+.hpk-domains__pagination .pagination .active a,
+.hpk-tickets__pagination .pagination .active a,
+.hpk-invoices__pagination .pagination .active span,
+.hpk-transactions__pagination .pagination .active span,
+.hpk-services__pagination .pagination .active span,
+.hpk-domains__pagination .pagination .active span,
+.hpk-tickets__pagination .pagination .active span {
+  border-color: var(--hpk-primary);
+  background: var(--hpk-primary-tint);
+  color: var(--hpk-link);
+}
+.hpk-invoices__pagination .disabled .page-link,
+.hpk-transactions__pagination .disabled .page-link,
+.hpk-services__pagination .disabled .page-link,
+.hpk-domains__pagination .disabled .page-link,
+.hpk-tickets__pagination .disabled .page-link,
+.hpk-invoices__pagination .pagination .disabled a,
+.hpk-transactions__pagination .pagination .disabled a,
+.hpk-services__pagination .pagination .disabled a,
+.hpk-domains__pagination .pagination .disabled a,
+.hpk-tickets__pagination .pagination .disabled a,
+.hpk-invoices__pagination .pagination .disabled span,
+.hpk-transactions__pagination .pagination .disabled span,
+.hpk-services__pagination .pagination .disabled span,
+.hpk-domains__pagination .pagination .disabled span,
+.hpk-tickets__pagination .pagination .disabled span {
+  opacity: .55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .hpk-client .hpk-invoices .expand_details,
+.hpk-client .hpk-transactions .expand_details,
+.hpk-client .hpk-services .expand_details,
+.hpk-client .hpk-domains .expand_details,
+.hpk-client .hpk-tickets .expand_details {
+    display: none;
+  }
+  .hpk-invoices__header,
+.hpk-transactions__header,
+.hpk-services__header,
+.hpk-domains__header,
+.hpk-tickets__header,
+  .hpk-invoices__filters,
+  .hpk-transactions__filters,
+  .hpk-services__filters,
+  .hpk-domains__filters,
+  .hpk-tickets__filters {
+    grid-template-columns: 1fr;
+  }
+  .hpk-invoices__header,
+.hpk-transactions__header,
+.hpk-services__header,
+.hpk-domains__header,
+.hpk-tickets__header {
+    display: grid;
+  }
+  .hpk-invoices__filter-actions,
+.hpk-transactions__filter-actions,
+.hpk-services__filter-actions,
+.hpk-domains__filter-actions,
+.hpk-tickets__filter-actions,
+  .hpk-invoices__filter-actions .hpk-btn,
+  .hpk-transactions__filter-actions .hpk-btn,
+  .hpk-services__filter-actions .hpk-btn,
+  .hpk-domains__filter-actions .hpk-btn,
+  .hpk-tickets__filter-actions .hpk-btn,
+  .hpk-invoices__actions,
+  .hpk-transactions__actions,
+  .hpk-services__actions,
+  .hpk-domains__actions,
+  .hpk-tickets__actions,
+  .hpk-invoices__actions .hpk-btn,
+  .hpk-transactions__actions .hpk-btn,
+  .hpk-services__actions .hpk-btn,
+  .hpk-domains__actions .hpk-btn,
+  .hpk-tickets__actions .hpk-btn {
+    width: 100%;
+  }
+}
+
+/* ============================================================================
+ * Ticket detail / reply (Story 8.2 — FR30; UJ-5; the SECOND HTMX island). The
+ * read+reply surface the ticket list links into: summary card, the conversation
+ * thread (the .hpk-ticket-thread island target), the reply box (textarea +
+ * always-present file input with a filename/remove list + native <details>
+ * recipients), and the delayed thread skeleton. COMPONENT-TIER: every rule is
+ * gated by an .hpk-ticket-* class (Reach Rule #2); heading/paragraph overrides
+ * carry the .hpk-client prefix so they beat the base.css frame-tier element rules
+ * ((0,1,1)). Reuses .hpk-card/.hpk-alert/.hpk-badge/.hpk-btn/.hpk-skeleton —
+ * none re-authored. THEME-AGNOSTIC: all values are tokens, so the dark switch
+ * rides tokens.css — no per-component dark block. Zero override flags. */
+.hpk-ticket-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+  min-width: 0;
+}
+
+/* Summary card */
+.hpk-ticket-summary__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hpk-space-3);
+  flex-wrap: wrap;
+}
+.hpk-client .hpk-ticket-summary__title {
+  margin: 0;
+  font-size: var(--hpk-h2-font-size);
+}
+.hpk-client .hpk-ticket-summary__subject {
+  margin: var(--hpk-space-2) 0 0;
+  color: var(--hpk-muted);
+}
+.hpk-ticket-summary__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--hpk-space-3);
+  margin: var(--hpk-space-4) 0 0;
+}
+.hpk-ticket-summary__cell {
+  min-width: 0;
+}
+.hpk-ticket-summary__cell dt {
+  margin: 0 0 var(--hpk-space-1);
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  color: var(--hpk-muted);
+}
+.hpk-ticket-summary__cell dd {
+  margin: 0;
+  color: var(--hpk-ink);
+}
+
+/* Thread shell + the delayed skeleton */
+.hpk-client .hpk-ticket-thread-shell__heading {
+  margin: 0 0 var(--hpk-space-3);
+  font-size: var(--hpk-h5-font-size);
+}
+.hpk-skeleton--thread {
+  display: none;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  margin-bottom: var(--hpk-space-3);
+  padding: var(--hpk-space-card-padding);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-surface);
+}
+.hpk-skeleton--thread.htmx-request {
+  display: flex;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Delay the skeleton ~150ms so a fast reply never flashes it (UX-DR26). */
+  .hpk-skeleton--thread.htmx-request {
+    animation: hpk-skel-fade 0.2s linear 0.15s both;
+  }
+}
+@keyframes hpk-skel-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.hpk-skeleton--thread .hpk-skeleton__bar {
+  display: block;
+  height: 0.85rem;
+  width: 100%;
+}
+.hpk-skeleton--thread .hpk-skeleton__bar--title {
+  height: 1.4rem;
+  width: 40%;
+}
+.hpk-skeleton--thread .hpk-skeleton__bar--short {
+  width: 60%;
+}
+
+/* Conversation thread + replies */
+.hpk-ticket-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  min-width: 0;
+  scroll-margin-top: var(--hpk-space-4);
+}
+.hpk-ticket-thread:focus-visible {
+  outline: 0;
+  box-shadow: var(--hpk-focus);
+  border-radius: var(--hpk-r-sm);
+}
+.hpk-ticket-thread #hpk-ticket-thread-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  min-width: 0;
+  transition: opacity var(--hpk-transition-fast);
+}
+.hpk-ticket-thread[aria-busy="true"] #hpk-ticket-thread-inner {
+  opacity: 0.55;
+}
+.hpk-client .hpk-ticket-thread__empty {
+  margin: 0;
+  color: var(--hpk-muted);
+}
+.hpk-ticket-reply {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-left: 3px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-g100);
+  min-width: 0;
+}
+.hpk-ticket-reply__avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.hpk-ticket-reply__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--hpk-border);
+  border-radius: 999px;
+  object-fit: cover;
+  background: var(--hpk-surface);
+}
+.hpk-ticket-reply__content {
+  min-width: 0;
+}
+.hpk-ticket-reply--staff,
+.hpk-ticket-reply--ai {
+  border-left-color: var(--hpk-primary);
+  background: var(--hpk-primary-tint);
+}
+.hpk-ticket-reply--client {
+  border-left-color: var(--hpk-muted);
+}
+.hpk-ticket-reply__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  margin-bottom: var(--hpk-space-2);
+}
+.hpk-ticket-reply__author {
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+.hpk-ticket-reply__role {
+  padding: 0 var(--hpk-space-1);
+  border-radius: var(--hpk-r-pill);
+  background: var(--hpk-g200);
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+.hpk-ticket-reply__date {
+  margin-left: auto;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+.hpk-ticket-reply__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  margin: 0 0 var(--hpk-space-2);
+  padding: 0;
+  list-style: none;
+}
+.hpk-ticket-reply__attachments li {
+  margin: 0;
+}
+.hpk-client .hpk-ticket-reply__body {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.hpk-client .hpk-ticket-reply__body :last-child {
+  margin-bottom: 0;
+}
+.hpk-ticket-reply__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  margin-top: var(--hpk-space-3);
+}
+.hpk-ticket-reply__thumb {
+  display: inline-flex;
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+  overflow: hidden;
+}
+.hpk-ticket-reply__thumb img {
+  display: block;
+  width: 5rem;
+  height: 5rem;
+  object-fit: cover;
+}
+@media (max-width: 36rem) {
+  .hpk-ticket-reply {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    gap: var(--hpk-space-2);
+  }
+  .hpk-ticket-reply__avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+/* Log entries (ride .hpk-alert-info) */
+.hpk-ticket-log {
+  flex-wrap: wrap;
+  gap: var(--hpk-space-1) var(--hpk-space-2);
+}
+.hpk-ticket-log__label {
+  font-weight: 600;
+}
+.hpk-ticket-log__meta {
+  margin-left: auto;
+  font-size: var(--hpk-small-font-size);
+  opacity: .85;
+}
+
+/* Reply box */
+.hpk-client .hpk-ticket-reply-box__heading {
+  margin: 0 0 var(--hpk-space-3);
+  font-size: var(--hpk-h5-font-size);
+}
+.hpk-ticket-reply-box__field {
+  margin-bottom: var(--hpk-space-3);
+}
+.hpk-ticket-reply-box__textarea {
+  width: 100%;
+  min-height: 8rem;
+  resize: vertical;
+}
+.hpk-ticket-reply-box__custom {
+  min-width: 0;
+}
+.hpk-ticket-reply-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+.hpk-ticket-reply-box__actions .hpk-btn {
+  min-height: 44px;
+}
+
+/* Attachment UI */
+.hpk-ticket-attach__input {
+  width: 100%;
+}
+.hpk-ticket-attach.is-dragover {
+  outline: 2px dashed var(--hpk-primary);
+  outline-offset: 4px;
+  border-radius: var(--hpk-r-sm);
+}
+.hpk-client .hpk-ticket-attach__hint {
+  margin: var(--hpk-space-1) 0 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+.hpk-ticket-attach__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+  margin: var(--hpk-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hpk-ticket-attach__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-2);
+  padding: var(--hpk-space-1) var(--hpk-space-2);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+  background: var(--hpk-g100);
+}
+.hpk-ticket-attach__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hpk-ticket-attach__remove {
+  flex: 0 0 auto;
+}
+
+/* Recipients (native <details>) */
+.hpk-ticket-recipients {
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  margin-bottom: var(--hpk-space-3);
+}
+.hpk-ticket-recipients__toggle {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+.hpk-ticket-recipients__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  margin-top: var(--hpk-space-3);
+}
+.hpk-ticket-recipients__contacts {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.hpk-ticket-recipients__label {
+  display: block;
+  margin-bottom: var(--hpk-space-1);
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  color: var(--hpk-muted);
+}
+.hpk-ticket-recipients__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-2);
+  margin-bottom: var(--hpk-space-2);
+}
+.hpk-ticket-recipients__row {
+  display: flex;
+  gap: var(--hpk-space-2);
+  align-items: center;
+}
+.hpk-ticket-recipients__row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Ticket create form (Story 8.3 — client_tickets::add). Composes .hpk-card + the shared
+ * .hpk-ticket-attach / .hpk-ticket-recipients / .hpk-invalid / .hpk-field-error primitives
+ * above; only the form frame, full-width fields, and textarea sizing are new. Scoped under
+ * the create body marker (per Task 6), token-only, no override flag, no dark-mode block
+ * (the reused input/error/alert tokens are already AA in both themes). */
+.hpk-ticket-form .hpk-ticket-form__title {
+  margin: 0 0 var(--hpk-space-3);
+  font-size: var(--hpk-h4-font-size);
+}
+.hpk-ticket-form .hpk-ticket-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+}
+.hpk-ticket-form .hpk-ticket-form__form .hpk-input {
+  width: 100%;
+}
+.hpk-ticket-form .hpk-ticket-form__textarea {
+  min-height: 9rem;
+  resize: vertical;
+}
+.hpk-ticket-form .hpk-ticket-form__custom,
+.hpk-ticket-form .hpk-ticket-form__captcha {
+  min-width: 0;
+}
+.hpk-ticket-form .hpk-ticket-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+.hpk-ticket-form .hpk-ticket-form__actions .hpk-btn {
+  min-height: 44px;
+}
+
+/* Domains list warnings (Story 7.1 — UJ-4; AC3/AC8). Expiry-soon and scheduled-
+ * cancel cues that ride INSIDE the renewal/expiration cells (no extra column, per
+ * DEC-9). The badge carries text + a warning token (never colour alone); the detail
+ * line names the next action. COMPONENT-TIER (gated by .hpk-domains), token-driven
+ * so the dark switch rides tokens.css — no per-component dark block, no override flag. */
+.hpk-domains__warning {
+  margin-left: var(--hpk-space-2);
+  vertical-align: middle;
+}
+.hpk-domains__warning-detail {
+  display: block;
+  margin-top: var(--hpk-space-1);
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+/* ============================================================================
+ * Invoice detail (Story 5.2 — FR21; UJ-2). Layout for the read surface the
+ * invoices list links into: parties grid, line-items table (reuses .hpk-table +
+ * its <=760px card reflow), right-aligned totals summary, payments-applied
+ * table, terms panel, and the single-primary action row. COMPONENT-TIER: every
+ * rule is gated by .hpk-invoice-detail (or the #hpk-invoice marker) — no bare
+ * .hpk-client <element> global reach. Heading/paragraph overrides carry the
+ * .hpk-client prefix so they beat the base.css frame-tier element rules
+ * (.hpk-client h1..h6 / p are (0,1,1); a bare .hpk-* class is (0,1,0) and would
+ * lose for margin/size). Reuses .hpk-card/.hpk-alert/.hpk-badge/.hpk-btn/.hpk-table
+ * — none re-authored. THEME-AGNOSTIC: all values are tokens, so the dark switch
+ * rides tokens.css — NO per-component dark block. Zero override flags. */
+.hpk-invoice-detail__shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+}
+
+.hpk-invoice-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-3);
+}
+.hpk-client .hpk-invoice-detail__title {
+  margin: 0;
+}
+
+/* Overdue banner — .hpk-alert already gives the flex row + tint; add the
+ * space-between so the Pay recovery link sits at the end and wraps on phone. */
+.hpk-invoice-detail__overdue {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.hpk-invoice-detail__overdue-text {
+  flex: 1 1 16rem;
+}
+
+/* Parties: a 2-col grid that stacks at the shared 760px breakpoint. */
+.hpk-invoice-detail__parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hpk-space-4);
+}
+.hpk-client .hpk-invoice-detail__party-title,
+.hpk-client .hpk-invoice-detail__section-title {
+  margin: 0 0 var(--hpk-space-2);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+.hpk-client .hpk-invoice-detail__party-name {
+  margin: 0 0 var(--hpk-space-1);
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+.hpk-client .hpk-invoice-detail__party-line {
+  margin: 0 0 var(--hpk-space-1);
+  color: var(--hpk-muted);
+}
+.hpk-invoice-detail__meta {
+  margin: var(--hpk-space-2) 0 0;
+}
+.hpk-invoice-detail__meta-row {
+  display: flex;
+  gap: var(--hpk-space-2);
+  padding: var(--hpk-space-1) 0;
+}
+.hpk-invoice-detail__meta-row dt {
+  margin: 0;
+  min-width: 7rem;
+  color: var(--hpk-muted);
+}
+.hpk-invoice-detail__meta-row dd {
+  margin: 0;
+  color: var(--hpk-ink);
+}
+
+/* Totals: a compact summary aligned to the trailing edge on desktop, full-width
+ * on phone (drops the stock float layout). */
+.hpk-invoice-detail__summary {
+  display: flex;
+  justify-content: flex-end;
+}
+.hpk-invoice-detail__totals {
+  width: 100%;
+  max-width: 24rem;
+  margin: 0;
+}
+.hpk-invoice-detail__totals--balance {
+  margin-top: var(--hpk-space-3);
+  margin-left: auto;
+}
+.hpk-invoice-detail__totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-1) 0;
+}
+.hpk-invoice-detail__totals-row dt,
+.hpk-invoice-detail__totals-row dd {
+  margin: 0;
+  color: var(--hpk-ink);
+}
+.hpk-invoice-detail__totals-row--grand {
+  margin-top: var(--hpk-space-1);
+  padding-top: var(--hpk-space-2);
+  border-top: 1px solid var(--hpk-border);
+  font-weight: 600;
+}
+
+/* Terms: a subtle inset panel on the surface card (uses --hpk-page so it flips
+ * with the theme tokens). */
+.hpk-invoice-detail__terms {
+  padding: var(--hpk-space-3);
+  border-radius: var(--hpk-r-sm);
+  background: var(--hpk-page);
+  color: var(--hpk-muted);
+  font-size: var(--hpk-small-font-size);
+}
+
+.hpk-invoice-detail__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+
+@media (max-width: 760px) {
+  .hpk-invoice-detail__parties {
+    grid-template-columns: 1fr;
+  }
+  .hpk-invoice-detail__totals {
+    max-width: none;
+  }
+  .hpk-invoice-detail__actions,
+  .hpk-invoice-detail__actions .hpk-btn {
+    width: 100%;
+  }
+}
+
+/* ============================================================================
+ * Service detail (Story 6.2 — FR26; UJ-3). The status-led read surface the
+ * services list links into: a two-zone layout (tab rail + main column) inside
+ * one .hpk-card, a status-FIRST header (DEC-2), a .hpk-service-detail__meta <dl>
+ * of package/term/renewal facts, the config-options .hpk-table, the action-
+ * button grid, and an on-brand .hpk-service-detail__module frame around raw
+ * module output (the frame is styled, the vendor INTERIOR is left to the frame
+ * tier + the 33-class shim — AR-D4/DEC-3, no rule selects into module DOM).
+ * Mirrors .hpk-invoice-detail (Story 5.2). COMPONENT-TIER: every rule is gated
+ * by .hpk-service-detail (or the #hpk-service-detail marker) — no bare
+ * .hpk-client <element> reach. Heading/link overrides carry .hpk-client so they
+ * beat the base.css frame-tier element rules. THEME-AGNOSTIC: all values are
+ * tokens, so the dark switch rides tokens.css — NO per-component dark block.
+ * Zero override flags. */
+.hpk-service-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+}
+.hpk-service-detail__shell {
+  display: flex;
+  flex-direction: column;
+}
+/* Two-zone: a sidebar rail + a fluid main column; stacks at the shared 760px. */
+.hpk-service-detail__layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) 1fr;
+  gap: var(--hpk-space-4);
+}
+.hpk-service-detail__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+  /* let a wide un-owned module table scroll INSIDE its frame, not blow out the
+   * grid column into a page-wide scrollbar. */
+  min-width: 0;
+}
+.hpk-client .hpk-service-detail__title {
+  margin: 0;
+}
+
+/* Tab rail — replaces the un-shimmed .list-group. Vertical link list with a
+ * brand active state; the .ajax class + real href stay on each anchor (markup),
+ * so stock AJAX tab loading + the no-JS full-navigation fallback both work. */
+.hpk-service-detail__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+}
+.hpk-client .hpk-service-detail__rail-link {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 2.75rem;
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  border-radius: var(--hpk-r-sm);
+  color: var(--hpk-text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.hpk-client .hpk-service-detail__rail-link:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client .hpk-service-detail__rail-link.is-active {
+  background: var(--hpk-primary);
+  color: #fff;
+}
+.hpk-service-detail__rail-link i {
+  width: 1.1rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+.hpk-service-detail__rail-text {
+  min-width: 0;
+}
+
+/* Status-led header (DEC-2): the status label + badge lead the main column. */
+.hpk-service-detail__status {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  flex-wrap: wrap;
+}
+.hpk-service-detail__status-label {
+  font-family: var(--hpk-font-display);
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+
+/* Key/value facts (mirror .hpk-invoice-detail__meta). */
+.hpk-service-detail__meta {
+  margin: 0;
+}
+.hpk-service-detail__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  padding: var(--hpk-space-1) 0;
+}
+.hpk-service-detail__meta-row dt {
+  margin: 0;
+  min-width: 9rem;
+  color: var(--hpk-muted);
+}
+.hpk-service-detail__meta-row dd {
+  margin: 0;
+  color: var(--hpk-ink);
+}
+
+/* Sections (config options, actions) — a titled stack. */
+.hpk-service-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-2);
+}
+.hpk-client .hpk-service-detail__section-title {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+
+/* Action-button grid — buttons flow and wrap; full-width on phone. */
+.hpk-service-detail__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+
+/* Module frame (DEC-3): an on-brand card-like surface around raw module output.
+ * overflow-x:auto keeps a wide un-owned table scrolling INSIDE the frame (never
+ * a page-wide scrollbar); NO overflow-x:hidden. No rule selects into the
+ * interior — the frame tier + the 33-class shim carry the vendor look. */
+.hpk-service-detail__module {
+  padding: var(--hpk-space-card-padding);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-surface);
+  overflow-x: auto;
+}
+
+/* Divider between the service infobox and a following module default panel
+ * (stock renders <hr> between them; keep it on-brand and token-driven). */
+.hpk-service-detail__divider {
+  border: 0;
+  border-top: 1px solid var(--hpk-border);
+  margin: var(--hpk-space-3) 0;
+}
+
+/* DEC-1: on-brand mapping for the leading controller $message (the suspended/
+ * canceled/queued notice) and any .alert a framed module fragment emits. Scoped
+ * to .hpk-service-detail so it is component-tier (NOT a theme-wide .hpk-client
+ * .alert) — (0,2,0) beats the generated theme.css .alert-* (0,1,0) with no
+ * any override flag. Reuses the .hpk-alert-* tokens so it flips with the theme. */
+.hpk-service-detail .alert {
+  position: relative;
+  padding: .85rem 2.25rem .85rem 1rem;
+  border-radius: var(--hpk-r-sm);
+  border-left: 3px solid transparent;
+  font-size: .9rem;
+}
+.hpk-service-detail .alert.alert-success { background: var(--hpk-success-tint); border-color: var(--hpk-success); color: var(--hpk-success-text); }
+.hpk-service-detail .alert.alert-warning { background: var(--hpk-warning-tint); border-color: var(--hpk-warning); color: var(--hpk-warning-text); }
+.hpk-service-detail .alert.alert-danger  { background: var(--hpk-danger-tint);  border-color: var(--hpk-danger);  color: var(--hpk-danger-text); }
+.hpk-service-detail .alert.alert-info     { background: var(--hpk-info-tint);    border-color: var(--hpk-info);    color: var(--hpk-info-text); }
+.hpk-service-detail .alert .close {
+  position: absolute;
+  top: var(--hpk-space-2);
+  right: var(--hpk-space-2);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .hpk-service-detail__layout {
+    grid-template-columns: 1fr;
+  }
+  .hpk-service-detail__options .hpk-btn {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+}
+
+/* HTMX tab island (Story 7.2 — FR28/UX-DR26). COMPONENT-TIER: gated by
+ * .hpk-service-detail; zero override flags; THEME-AGNOSTIC (token-driven, no
+ * per-component dark block). The skeleton is a sibling LOADING INDICATOR, not a panel replacement:
+ * the swap target keeps its content + stays focusable for the opt-in post-swap focus,
+ * so its height is modest by design (the panel never collapses → no jump from the
+ * panel side). Shimmer is inherited from the .hpk-skeleton primitive, which already
+ * gates its animation behind prefers-reduced-motion: no-preference. */
+.hpk-service-detail__panel {
+  min-width: 0;
+}
+/* Programmatic .focus() (tabindex="-1") stays quiet; a keyboard Tab onto the panel
+ * shows this ring (AC6 — focus is visible without shouting on every swap). */
+.hpk-service-detail__panel:focus-visible {
+  outline: 2px solid var(--hpk-link);
+  outline-offset: 4px;
+  border-radius: var(--hpk-r-sm);
+}
+/* Skeleton container: HIDDEN until HTMX flags the in-flight request on the
+ * hx-indicator target — authored here, NOT left to htmx's injected opacity rule. */
+.hpk-service-detail .hpk-skeleton--tabpanel {
+  display: none;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  min-height: 8rem;
+  padding: var(--hpk-space-card-padding);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-surface);
+}
+.hpk-service-detail .hpk-skeleton--tabpanel.htmx-request {
+  display: flex;
+}
+.hpk-service-detail .hpk-skeleton__bar {
+  display: block;
+  height: 0.85rem;
+  width: 100%;
+}
+.hpk-service-detail .hpk-skeleton__bar--title {
+  height: 1.4rem;
+  width: 40%;
+}
+.hpk-service-detail .hpk-skeleton__bar--short {
+  width: 60%;
+}
+
+/* ============================================================================
+ * Service confirm modals (Story 6.2 — UX-DR9; FR26). The blestaModal-loaded
+ * renew/cancel bodies render inside #global_modal (OUTSIDE #hpk-service-detail),
+ * so this block is scoped to the .hpk-service-modal class on the form — it
+ * cannot lean on the DEC-1 .hpk-service-detail .alert-* mapping. The cancel/
+ * renew messages carry .hpk-alert-* for their look; the renew message starts
+ * hidden via .hpk-service-modal__message (the preserved jQuery .show()/.hide()
+ * still wins by setting inline display). THEME-AGNOSTIC tokens — no dark block.
+ * Zero override flags. */
+.hpk-service-modal {
+  display: flex;
+  flex-direction: column;
+}
+.hpk-service-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-2);
+  padding-bottom: var(--hpk-space-3);
+  margin-bottom: var(--hpk-space-3);
+  border-bottom: 1px solid var(--hpk-border);
+}
+.hpk-client .hpk-service-modal__title {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+.hpk-service-modal__close {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+  color: var(--hpk-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.hpk-service-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+}
+.hpk-service-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+}
+.hpk-client .hpk-service-modal__label {
+  margin: 0;
+  font-weight: 600;
+  color: var(--hpk-ink);
+}
+.hpk-service-modal__control {
+  width: 100%;
+}
+.hpk-service-modal__radio {
+  margin: 0;
+}
+.hpk-service-modal__radio label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hpk-space-2);
+  margin: 0;
+  cursor: pointer;
+}
+/* Renew message: hidden until the preserved jQuery selects a term and .show()s
+ * it (replaces the stock inline style="display:none" — RULE 1). */
+.hpk-service-modal__message {
+  display: none;
+}
+.hpk-service-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  padding-top: var(--hpk-space-3);
+  margin-top: var(--hpk-space-3);
+  border-top: 1px solid var(--hpk-border);
+}
+
+/* ----------------------------------------------------------------------------
+ * Centralized blestaModal overlay chrome (Story 7.3 — the Epic-6 "centralize the
+ * modal before 7.3" entry gate). GENERALIZES Story 6.2's :has(.hpk-service-modal)
+ * carve-out into a single marker-agnostic component. Story 2.2 dropped Bootstrap's
+ * application.min.css (which carried .modal positioning), so any .modal in the DOM
+ * has NO overlay and renders inline at the page bottom — AND the always-present
+ * cloned-source #global_modal leaks its fa-spinner body onto every page
+ * (structure.pdt:307). This block re-provides the overlay for EVERY .hpk-client
+ * .modal, keyed off Bootstrap's SHOWN state (the .show class + the inline
+ * display:block the BS4 jQuery $.fn.modal sets on the cloned modal at open) rather
+ * than a per-story :has() marker, so it is component-agnostic yet only paints an
+ * OPEN modal. Consumers: 6.2's blestaModal renew/cancel (clone of #global_modal,
+ * .modal('show') adds .show) AND the Story 7.3 marker-scoped confirm executor
+ * (bootstrap.js), which builds the same .modal > .modal-dialog > .modal-content >
+ * .hpk-service-modal chrome and toggles .show itself. Token-driven, flag-free. */
+
+/* Spinner-leak fix (deferred-work.md:138): the always-present cloned-source
+ * #global_modal leaks its fa-spinner body onto every page (structure.pdt:307).
+ * Scope the default-hide rule to that specific source node instead of all .modal
+ * elements, satisfying the Reach Rule's frame-tier restriction. The BS4 inline
+ * display:block on show — and the executor's own inline display:block — beat this
+ * (inline wins), so #global_modal's fa-spinner no longer shows on unmodified pages.
+ * Other .modal elements rely on the .show state below to become visible. */
+.hpk-client #global_modal {
+  display: none;
+}
+.hpk-client .modal.show {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  overflow-y: auto;
+}
+.hpk-client .modal.show .modal-dialog {
+  max-width: min(92vw, 32rem);
+  margin: var(--hpk-space-5) auto;
+}
+.hpk-client .modal.show .modal-content {
+  background: var(--hpk-surface);
+  color: var(--hpk-text);
+  border: 0;
+  border-radius: var(--hpk-r-lg);
+  box-shadow: var(--hpk-shadow);
+  padding: var(--hpk-space-card-padding);
+}
+/* Backdrop scrim — folded into this component (no longer a standalone 6.2 reach).
+ * Bootstrap injects .modal-backdrop on <body>; the executor appends the same node.
+ * Only present while a modal is open; the sanctioned modal-backdrop literal (the
+ * same rgba(0,0,0,.5) the native .hpk-modal::backdrop uses). */
+.hpk-client .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+  background: rgba(0, 0, 0, .5);
+}
+/* Confirm-executor message paragraph (Story 7.3). The consequence copy comes from
+ * the module's data-confirm-message; this only sets readable rhythm. */
+.hpk-client .hpk-confirm-modal__message {
+  margin: 0;
+  color: var(--hpk-text);
+}
+
+/* ============================================================================
+ * Plugin card + widget frame (Story 4.3 — FR18; UX-DR32). The dashboard loads
+ * plugin cards into #hpk-clientmain-cards and plugin widgets into
+ * #hpk-clientmain-vendor. We own the FRAME; plugin internals stay vendor-owned.
+ * Both regions ride the [data-theme="dark"] token overrides — NO per-component
+ * dark block. Zero override flags.
+ * ========================================================================== */
+
+/* Plugin card grid: 1–N cards reflow without media-query magic. */
+.hpk-client #hpk-clientmain-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--hpk-space-3);
+  margin-bottom: var(--hpk-space-4);
+}
+
+/* Plugin card frame: composes on .hpk-card, keeps the whole surface clickable
+ * when the plugin supplied a uri/link. */
+.hpk-card.hpk-card--plugin {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 120px;
+  text-decoration: none;
+}
+.hpk-client a.hpk-card--plugin,
+.hpk-client a.hpk-card--plugin:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hpk-card--plugin__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+}
+
+.hpk-card--plugin__value {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+
+.hpk-card--plugin__label {
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+  overflow-wrap: anywhere;
+}
+
+/* HTML-slot variant: transparent padding, no assumed internal structure. */
+.hpk-card.hpk-card--plugin-html {
+  min-height: auto;
+}
+
+/* Vendor widget region: the section/landmark wrapper and the .card-blesta shell. */
+.hpk-client .hpk-clientmain__overview,
+.hpk-client #hpk-clientmain-vendor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  width: 100%;
+}
+
+.hpk-client #hpk-clientmain-vendor > .card-blesta {
+  min-width: 0;
+  background: var(--hpk-surface);
+  border: 0;
+  border-radius: var(--hpk-r-lg);
+  color: var(--hpk-text);
+  box-shadow: var(--hpk-shadow);
+}
+
+.hpk-client #hpk-clientmain-vendor > .card-blesta > .card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-2);
+  min-width: 0;
+  padding: var(--hpk-space-card-padding);
+  padding-bottom: var(--hpk-space-3);
+  background: transparent;
+  border-bottom: 1px solid var(--hpk-border);
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+
+.hpk-client #hpk-clientmain-vendor > .card-blesta > .card-content {
+  min-width: 0;
+  padding: var(--hpk-space-card-padding);
+  color: var(--hpk-text);
+  overflow-x: auto;
+}
+
+@media (max-width: 760px) {
+  .hpk-client #hpk-clientmain-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* status-chip = .hpk-badge, applied in situ. Status is ALWAYS text + colour (the
+ * badge carries its translated label + the ::before dot) — never colour alone.
+ * The status -> badge-variant map E6/E7 wire consistently (EXPERIENCE.md:93-95):
+ *   active, paid                  -> .hpk-badge-success
+ *   pending, unpaid               -> .hpk-badge-warning
+ *   overdue, suspended, failed    -> .hpk-badge-danger
+ *   processing                    -> .hpk-badge-info
+ *   cancelled                     -> .hpk-badge-neutral
+ * The same map applies to a status cell in a .hpk-table. */
+
+/* ============================================================================
+ * Render-boundary components (Story 2.11 — FR8; UX-DR30/31). These are opt-in
+ * mechanisms for E3-E10 pages that intentionally carry stock/plugin/vendor
+ * fragments inside the 2.10 shell. They do NOT auto-wrap $content in
+ * structure.pdt, and they do NOT style vendor internals.
+ *
+ * Canonical markup (E3+ consumers apply per-page). <surface> is the page's unique
+ * key (e.g. "domain-detail") so the title id is instance-unique — >1 frame on a
+ * page must not collide on a hardcoded id or yield ambiguous aria:
+ *   <section class="hpk-vendor-frame" aria-labelledby="hpk-<surface>-vendor-frame-title">
+ *     <div class="hpk-vendor-frame__head">
+ *       <h2 class="hpk-vendor-frame__title" id="hpk-<surface>-vendor-frame-title">
+ *         <?php echo $this->Html->safe($feature_label); ?>
+ *       </h2>
+ *     </div>
+ *     <div class="hpk-vendor-frame__body" data-hpk-fallback>
+ *       <!-- stock/plugin/vendor fragment; the body is a transparent slot, its
+ *            contained surface owned by data-hpk-fallback (see __body below) -->
+ *     </div>
+ *   </section>
+ *
+ * The feature label MUST be non-empty and Html->safe-escaped (AR-ENF3 — pull it
+ * from the copy table / pass it in; never ship a literal placeholder string). An
+ * empty aria-labelledby target is a broken accessible name: if a page cannot supply
+ * a label, drop __head and put aria-label="<escaped label>" on the <section>.
+ *
+ * .hpk-vendor-frame = CONTAIN: branded outer chrome around an interior slot.
+ * data-hpk-fallback = MARK + NEUTRALIZE: governance marker for deliberately
+ * stock content; in LIGHT mode its diff vs stock is the wrapper only, and in DARK
+ * mode it adds BOUNDED leak neutralization (forced ink/link + descendant bg/shadow
+ * reset — never a restyle; see the rule comment below). Payment DOM remains
+ * .hpk-raw (the NUKE), never this frame.
+ * ========================================================================== */
+.hpk-vendor-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  min-width: 0;
+  padding: var(--hpk-space-card-padding);
+  background: var(--hpk-surface);
+  border-radius: var(--hpk-r-lg);
+  color: var(--hpk-text);
+  box-shadow: var(--hpk-shadow);
+}
+.hpk-vendor-frame__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-3);
+  min-width: 0;
+}
+.hpk-vendor-frame__title {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+/* The body is a transparent padded slot (it shows the frame's --hpk-surface). It
+ * carries NO background of its own: the canonical skeleton co-locates
+ * data-hpk-fallback on this element, and `.hpk-client [data-hpk-fallback]` (0,2,0)
+ * out-ranks `.hpk-vendor-frame__body` (0,1,0) — a competing __body background here
+ * would either be defeated by the fallback surface (white-on-white / navy-on-navy)
+ * or, if it won, hide the fallback's contained surface. So the contained-region
+ * surface is fallback-OWNED when the marker is present; an un-marked body is a clean
+ * transparent slot on the frame surface (Story 2.11 review, finding #5). */
+.hpk-vendor-frame__body {
+  min-width: 0;
+  overflow-x: auto;
+  padding: var(--hpk-space-3);
+  border-radius: var(--hpk-r-md);
+  color: var(--hpk-text);
+}
+
+.hpk-client [data-hpk-fallback] {
+  padding: var(--hpk-space-3);
+  background: var(--hpk-surface);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  color: var(--hpk-text);
+}
+/* Bounded descendant neutralization (Story 2.11 review D1 + R2; architecture:
+ * 533-536). The base rule above already gives the wrapper a dark surface + hairline
+ * border in dark via [data-theme="dark"] token redefinition (the old dark wrapper
+ * rule restating that + a near-invisible g200 inset ring was dead/redundant and was
+ * removed). LIGHT mode stays WRAPPER-ONLY (no descendant rules; the fragment renders
+ * as stock). DARK mode kills the "searchlight": it zeroes EVERY descendant
+ * background-color and forces plain ink to inherit the dark surface so a light/white
+ * vendor card and dark-on-light vendor text both read on dark — HONEST SCOPE: this
+ * is a functional reset of plain descendants, not "light-only." It deliberately
+ * EXCLUDES, so dark-mode state colour + focus + affordance survive: links (given our
+ * AA --hpk-link below), semantic state carriers (badge/alert), affordances (buttons +
+ * form controls), and replaced elements (svg/img/video/picture). box-shadow is NOT
+ * reset — Bootstrap + our --hpk-focus render focus rings as box-shadow, so a blanket
+ * box-shadow:none would strip focus indicators (WCAG 2.4.7); a residual light
+ * drop-shadow on a now-transparent element is a negligible dark-on-dark leak.
+ * Best-effort limit (architecture:200): an id-level or inline style= background still
+ * out-ranks these (0,4,0) rules and stays light. */
+[data-theme="dark"] .hpk-client [data-hpk-fallback] *:not(a, .hpk-badge, [class*="badge"], [class*="alert"], .hpk-btn, [class*="btn"], button, input, select, textarea, svg, img, video, picture) {
+  background-color: transparent;
+  color: inherit;
+}
+/* Force our AA link colour over a vendor link colour (plain links only — a
+ * button-styled link keeps its affordance). */
+[data-theme="dark"] .hpk-client [data-hpk-fallback] a:not([class*="btn"]) {
+  background-color: transparent;
+  color: var(--hpk-link);
+}
+
+@media (max-width: 760px) {
+  .hpk-vendor-frame {
+    padding: var(--hpk-space-3);
+  }
+  .hpk-vendor-frame__body,
+  .hpk-client [data-hpk-fallback] {
+    padding: var(--hpk-space-2);
+  }
+}
+
+/* ============================================================================
+ * Payment flow (Story 5.3 — FR22; UX-DR21). Scoped component-tier rules gated
+ * by .hpk-payment-flow / .hpk-payment-method so they never reach stock/plugin
+ * markup. The .hpk-raw descendant reset is the ONLY selector allowed to reach
+ * inside gateway-injected DOM. Zero override flags.
+ * ========================================================================== */
+
+/* Hide the canonical stock selects/radios that the display radio-card group
+ * mirrors. display:none removes them from layout and AT, which is safe because
+ * the visible radio-card group is the accessible control. The inputs remain
+ * form-submittable. */
+.hpk-visually-hidden {
+  display: none;
+}
+
+/* Payment-flow page wrapper. */
+.hpk-payment-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+}
+
+.hpk-payment-flow__section-title {
+  margin: 0;
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h4-font-size);
+  font-weight: var(--hpk-h4-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+}
+
+.hpk-payment-flow__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--hpk-space-3);
+}
+
+.hpk-payment-flow__actions--split {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.hpk-divider {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--hpk-border);
+}
+
+/* Invoice selection / summary tables inside the payment flow. */
+.hpk-pay-invoices__edit {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--hpk-space-3);
+}
+
+.hpk-payment-flow__credit {
+  padding: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+  background: var(--hpk-page);
+}
+
+.hpk-payment-flow__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+  background: var(--hpk-page);
+}
+
+.hpk-payment-flow__total-label {
+  color: var(--hpk-text);
+}
+
+.hpk-payment-flow__total-value {
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h4-font-size);
+  color: var(--hpk-ink);
+}
+
+.hpk-payment-flow__invoice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+}
+
+.hpk-payment-flow__totals {
+  max-width: 24rem;
+  margin-left: auto;
+}
+
+/* Method radio-card list (UX-DR21). */
+.hpk-payment-method-list {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.hpk-payment-method-list__legend {
+  margin: 0 0 var(--hpk-space-3);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+
+.hpk-payment-method {
+  display: block;
+  margin-bottom: var(--hpk-space-3);
+  cursor: pointer;
+}
+
+.hpk-payment-method__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.hpk-payment-method__content {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  background: var(--hpk-surface);
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+/* Selected state (AC8): primary border + tint + a PERSISTENT solid ring (not
+   only on focus). The focus-visible rule follows so the focus ring still wins
+   when a card is both selected and keyboard-focused (equal specificity, later
+   source). */
+.hpk-payment-method__input:checked + .hpk-payment-method__content {
+  border-color: var(--hpk-primary);
+  background: var(--hpk-primary-tint);
+  box-shadow: 0 0 0 2px var(--hpk-primary);
+}
+
+.hpk-payment-method__input:focus-visible + .hpk-payment-method__content {
+  box-shadow: var(--hpk-focus);
+}
+
+.hpk-payment-method__radio {
+  position: relative;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--hpk-border);
+  border-radius: 50%;
+  background: var(--hpk-surface);
+}
+
+.hpk-payment-method__input:checked + .hpk-payment-method__content .hpk-payment-method__radio {
+  border-color: var(--hpk-primary);
+}
+
+.hpk-payment-method__radio::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: .625rem;
+  height: .625rem;
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  background: var(--hpk-primary);
+  transition: transform .15s ease;
+}
+
+.hpk-payment-method__input:checked + .hpk-payment-method__content .hpk-payment-method__radio::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.hpk-payment-method__label {
+  min-width: 0;
+  font-weight: 600;
+  color: var(--hpk-ink);
+  overflow-wrap: anywhere;
+}
+
+.hpk-payment-method__meta {
+  display: block;
+  min-width: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Payment details blocks. */
+.hpk-payment-flow__gateway {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-2);
+}
+
+.hpk-payment-secure-note {
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+.hpk-payment-flow__gateway-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--hpk-space-3);
+  margin-top: var(--hpk-space-4);
+}
+
+/* Confirm summary. */
+.hpk-payment-flow__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  color: var(--hpk-text);
+}
+
+.hpk-payment-flow__summary p {
+  margin: 0;
+}
+
+/* Received state. */
+.hpk-payment-flow__received {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-4);
+}
+
+.hpk-payment-flow__received-statement {
+  color: var(--hpk-text);
+}
+
+.hpk-payment-flow__received-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+  padding: var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-sm);
+  background: var(--hpk-page);
+}
+
+.hpk-payment-flow__received-item label {
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+.hpk-payment-flow__received-item strong {
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+
+/* Form helpers used in payment flow. */
+.hpk-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-2);
+}
+
+.hpk-input-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.hpk-input-group input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.hpk-input-group__suffix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--hpk-space-3);
+  border: 1px solid var(--hpk-border);
+  border-left: 0;
+  border-top-right-radius: var(--hpk-r-sm);
+  border-bottom-right-radius: var(--hpk-r-sm);
+  background: var(--hpk-g200);
+  color: var(--hpk-text);
+}
+
+.hpk-help-text {
+  margin: var(--hpk-space-1) 0 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+.hpk-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  cursor: pointer;
+}
+
+/* ============================================================================
+ * Account-management cluster (Story 5.6 — FR24 / UX-DR21). Composes
+ * .hpk-card/.hpk-payment-method/.hpk-table/.hpk-form-group and adds the
+ * two-column shell, side-nav, billing-contact form-row grid, and action layouts.
+ * Component-tier-gated behind .hpk-accounts; no frame-tier reach. Token-only;
+ * no per-component [data-theme="dark"] rule and zero override flags.
+ * ========================================================================== */
+.hpk-accounts {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--hpk-space-4);
+  align-items: start;
+}
+
+.hpk-accounts__title {
+  margin: 0 0 var(--hpk-space-2);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h4-font-size);
+  font-weight: var(--hpk-h4-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  color: var(--hpk-ink);
+}
+
+.hpk-accounts__intro,
+.hpk-accounts__notice {
+  margin: 0 0 var(--hpk-space-3);
+  color: var(--hpk-text);
+}
+
+.hpk-accounts__section-title {
+  margin: var(--hpk-space-4) 0 var(--hpk-space-3);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-h5-font-size);
+  font-weight: var(--hpk-h5-font-weight);
+  color: var(--hpk-ink);
+}
+
+/* Side nav inside the accounts cluster. */
+.hpk-accounts-nav {
+  background: var(--hpk-surface);
+  border-radius: var(--hpk-r-lg);
+  box-shadow: var(--hpk-shadow);
+  padding: var(--hpk-space-2);
+}
+
+.hpk-accounts-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hpk-accounts-nav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  border-radius: var(--hpk-r-md);
+  color: var(--hpk-text);
+  text-decoration: none;
+}
+
+.hpk-accounts-nav__link:hover {
+  background: var(--hpk-g200);
+  color: var(--hpk-ink);
+  text-decoration: none;
+}
+
+.hpk-accounts-nav__link--active {
+  background: var(--hpk-primary-tint);
+  color: var(--hpk-primary);
+}
+
+.hpk-accounts-nav__icon {
+  width: 1.25em;
+  text-align: center;
+}
+
+/* Stored-method row: the selectable <label> and the per-row actions are
+   SIBLINGS (not nested) so the action anchors stay out of the radio's
+   accessible name and an action click never toggles the auto-debit radio. */
+.hpk-accounts .hpk-payment-method-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  margin-bottom: var(--hpk-space-3);
+}
+
+.hpk-accounts .hpk-payment-method-row .hpk-payment-method {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+/* Non-active method state chip (text + color, AA). */
+.hpk-accounts .hpk-payment-method__status {
+  display: inline-block;
+  margin-top: var(--hpk-space-1);
+}
+
+/* Per-row actions on the stored-method radio-card. */
+.hpk-accounts .hpk-payment-method__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  flex-shrink: 0;
+}
+
+.hpk-accounts .hpk-payment-method__actions .hpk-btn-sm {
+  min-height: 44px;
+}
+
+/* Form action bar (one filled-primary per region). */
+.hpk-accounts__form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  margin-top: var(--hpk-space-4);
+}
+
+.hpk-accounts__form-actions--right {
+  justify-content: flex-end;
+}
+
+.hpk-accounts__form-actions .hpk-btn {
+  min-height: 44px;
+}
+
+/* Two-column form grid for billing contact (scoped: the contact partial always
+   renders inside a .hpk-accounts add/edit shell). */
+.hpk-accounts .hpk-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 var(--hpk-space-4);
+}
+
+.hpk-accounts .hpk-form-col {
+  min-width: 0;
+}
+
+.hpk-accounts .hpk-form-group + .hpk-form-group {
+  margin-top: var(--hpk-space-3);
+}
+
+/* Table horizontal-scroll affordance — shared by the accounts credit table and
+   the 5.3 pay tables. Self-gated by its own .hpk- class (component-tier), NOT
+   accounts-scoped, so every consumer gets the affordance. */
+.hpk-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+
+/* Compact table cell spacing — a reusable .hpk-table variant shared by the
+   accounts credit table and the 5.3 pay summary table; keep it self-gated
+   (re-scoping it to .hpk-accounts orphaned the 5.3 pay table — round-2 regression). */
+.hpk-table--compact td,
+.hpk-table--compact th {
+  padding-top: var(--hpk-space-2);
+  padding-bottom: var(--hpk-space-2);
+}
+
+/* Responsive reflow: stack shell + cards + form grid at <=760px. */
+@media (max-width: 760px) {
+  .hpk-accounts {
+    grid-template-columns: 1fr;
+  }
+
+  .hpk-accounts__nav {
+    order: -1;
+  }
+
+  .hpk-accounts-nav__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--hpk-space-2);
+  }
+
+  .hpk-accounts-nav__item {
+    flex: 1 1 auto;
+  }
+
+  .hpk-accounts .hpk-payment-method-row {
+    flex-wrap: wrap;
+  }
+
+  .hpk-accounts .hpk-payment-method-row .hpk-payment-method {
+    flex-basis: 100%;
+  }
+
+  .hpk-accounts .hpk-payment-method__actions {
+    width: 100%;
+  }
+
+  .hpk-accounts .hpk-payment-method__actions .hpk-btn-sm {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .hpk-accounts .hpk-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hpk-accounts__form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hpk-accounts__form-actions .hpk-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Responsive payment flow. */
+@media (max-width: 760px) {
+  .hpk-payment-flow__actions,
+  .hpk-payment-flow__actions--split {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hpk-payment-flow__actions .hpk-btn,
+  .hpk-payment-flow__actions--split .hpk-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hpk-payment-flow__totals {
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .hpk-payment-flow__gateway-buttons {
+    align-items: stretch;
+  }
+}
+
+/* ============================================================================
+ * Gateway / payment raw fence (Story 5.3 — FR22). This is the ONLY intentional
+ * selector that reaches inside .hpk-raw. It reverts all inherited HosterPK
+ * styling and locks the region to light mode so gateway-injected DOM (Stripe
+ * Elements, Authorize.Net Accept.js, etc.) renders in its native environment.
+ * No visual styling rule may target .hpk-raw * beyond this reset.
+ *
+ * The descendant reset must OUT-RANK the frame-tier base.css rules that also
+ * match same-document gateway fields — notably `.hpk-client input:not()...`,
+ * whose nine :not([type=…]) clauses give it specificity (0,10,1). A bare
+ * `.hpk-raw *` is only (0,1,0) and would lose, leaking HosterPK border /
+ * background / focus onto same-document gateway inputs. The never-matching
+ * `:not(#_hpk_raw_fence_)` clause raises the descendant reset to (1,1,0) — above
+ * every frame-tier rule — without any override-priority flag, while still
+ * matching every descendant element. Review R1 (KIMI), FR22.
+ *
+ * SCOPE: descendants ONLY. The .hpk-raw WRAPPER itself is light-locked by
+ * base.css (`all: revert; color-scheme: light` PLUS explicit light color /
+ * background-color / light --hpk-* token re-assertion). Re-declaring the
+ * wrapper here with a bare `all: revert` would load later at equal specificity
+ * (0,1,0) and clobber base.css's color/background re-assertion, leaving the
+ * fence box transparent with inherited dark text on a dark page. So this rule
+ * deliberately targets descendants only; the wrapper's light tokens then flow
+ * into descendants by inheritance (custom properties survive `all: revert`).
+ * Review R2 (KIMI).
+ * ========================================================================== */
+.hpk-raw :not(#_hpk_raw_fence_) {
+  all: revert;
+  color-scheme: light;
+}
+
+/* ==========================================================================
+ * Profile & contacts (Story 9.1, FR32). The avatar thumbnail replaces the
+ * stock inline-style attribute on the contact-info <img> (RULE 1) — bespoke
+ * class, so no .hpk-client scope is needed. The remaining hooks are small
+ * profile/contacts layout primitives the page composes that have no existing
+ * kit equivalent (section/sub-section heading rhythm, the read-only username
+ * static value, the 2FA block + submit-row spacing, and the phone-row action
+ * cluster). All inherited/spacing-only and flag-free (frame-tier-safe).
+ * ========================================================================== */
+.hpk-avatar-thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+}
+.hpk-profile__section-title {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-3);
+}
+.hpk-profile__subsection-title {
+  margin-top: var(--hpk-space-4);
+  margin-bottom: var(--hpk-space-2);
+}
+.hpk-profile__static-value {
+  margin: 0;
+  font-weight: 600;
+}
+.hpk-profile__twofactor {
+  margin-bottom: var(--hpk-space-3);
+}
+.hpk-profile__actions {
+  margin-top: var(--hpk-space-4);
+}
+.hpk-phone-numbers__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+
+/* Contacts cluster — mirrors the .hpk-accounts nav+content grid (Account-group
+ * sibling) so the contacts list/add/edit pages match. Component-tier (bespoke
+ * .hpk-contacts class), flag-free. */
+.hpk-contacts {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--hpk-space-4);
+  align-items: start;
+}
+.hpk-contacts__nav,
+.hpk-contacts__content,
+.hpk-contacts .hpk-card,
+.hpk-contacts .hpk-form-row,
+.hpk-contacts .hpk-form-col,
+.hpk-contacts .hpk-tabs {
+  min-width: 0;
+}
+.hpk-contacts__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--hpk-space-3);
+}
+.hpk-contacts__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hpk-space-2);
+}
+/* Sub-contact permission matrix — responsive checkbox grid (3-col → reflow). */
+.hpk-perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--hpk-space-2) var(--hpk-space-3);
+}
+@media (max-width: 760px) {
+  .hpk-contacts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hpk-contacts .hpk-accounts-nav__item {
+    min-width: 0;
+  }
+  .hpk-contacts .hpk-accounts-nav__link {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ==========================================================================
+ * Story 10.1 (Epic 10 — E10 Resources cluster): Fallback empty/error state floor
+ * --------------------------------------------------------------------------
+ * The Resources plugin pages (Knowledgebase, Downloads, Announcements/CMS,
+ * Client documents) render stock markup inside our .hpk-client shell (the
+ * controllers force the content view='default' but restore chrome to APPDIR).
+ * Their empty/error notices are
+ * stock `.alert.alert-*`, which the generated theme.css styles light-only — a
+ * dark-mode searchlight (runtime-proven: the KB empty-state .alert-info computes
+ * bg rgb(209,236,241) UNCHANGED in dark on the local stack). This extends the D5
+ * state-color floor (Reach Rule 3; the same tint/text tokens as the
+ * .hpk-service-detail .alert mapping at the top of this file) to those pages so
+ * empty/error/success reads consistently in BOTH themes.
+ *
+ * Gated to the per-route plugin body markers ($css_route_class = "plugin-<dir>...";
+ * KB scoped to ...knowledgebase so E8 support/ticket pages are NOT swept) + the
+ * semantic state class. Specificity (0,4,0) beats theme.css's .alert-* (0,1,0)
+ * with NO override flag — theme.css's .alert-* carry no hard flag (proven by
+ * computed style on the local stack), so RULE 2 stays at the audited 6 badges.
+ * Downloads / client_documents markers are authored-forward off the verified KB/CMS
+ * body-class pattern (both plugins absent on the local stack) — runtime-confirm on
+ * beta. NOT covered here (named residuals, see story Completion Notes): the KB
+ * .card-kb.bg-light search card + populated-state .bg-light category cards, which
+ * theme.css forces to #fff with a hard flag (unfixable without one), and the cms
+ * .portal-box default-portal cards (CMS-authored internals; own the container, not
+ * the internals — UX-DR31).
+ * ========================================================================== */
+.hpk-client[class*="plugin-support_managerclient-knowledgebase"] .alert.alert-success,
+.hpk-client[class*="plugin-download_manager"] .alert.alert-success,
+.hpk-client[class*="plugin-client_documents"] .alert.alert-success,
+.hpk-client[class*="plugin-cmsclient-main"] .alert.alert-success {
+  background: var(--hpk-success-tint);
+  border-color: var(--hpk-success);
+  color: var(--hpk-success-text);
+}
+.hpk-client[class*="plugin-support_managerclient-knowledgebase"] .alert.alert-warning,
+.hpk-client[class*="plugin-download_manager"] .alert.alert-warning,
+.hpk-client[class*="plugin-client_documents"] .alert.alert-warning,
+.hpk-client[class*="plugin-cmsclient-main"] .alert.alert-warning {
+  background: var(--hpk-warning-tint);
+  border-color: var(--hpk-warning);
+  color: var(--hpk-warning-text);
+}
+.hpk-client[class*="plugin-support_managerclient-knowledgebase"] .alert.alert-danger,
+.hpk-client[class*="plugin-download_manager"] .alert.alert-danger,
+.hpk-client[class*="plugin-client_documents"] .alert.alert-danger,
+.hpk-client[class*="plugin-cmsclient-main"] .alert.alert-danger {
+  background: var(--hpk-danger-tint);
+  border-color: var(--hpk-danger);
+  color: var(--hpk-danger-text);
+}
+.hpk-client[class*="plugin-support_managerclient-knowledgebase"] .alert.alert-info,
+.hpk-client[class*="plugin-download_manager"] .alert.alert-info,
+.hpk-client[class*="plugin-client_documents"] .alert.alert-info,
+.hpk-client[class*="plugin-cmsclient-main"] .alert.alert-info {
+  background: var(--hpk-info-tint);
+  border-color: var(--hpk-info);
+  color: var(--hpk-info-text);
+}
+
+/* CMS default-portal placeholder: contain the plugin sheet's light-only cards. */
+.hpk-client[class*="plugin-cmsclient-main"] .portal-box .card {
+  background: var(--hpk-surface);
+  border: 1px solid var(--hpk-border);
+  color: var(--hpk-text);
+  box-shadow: var(--hpk-shadow);
+}
+.hpk-client[class*="plugin-cmsclient-main"] .portal-box .card:hover {
+  background: var(--hpk-g100);
+}
+.hpk-client[class*="plugin-cmsclient-main"] .portal-box a {
+  color: var(--hpk-link);
+}
+
+/*
+ * HosterPK chrome layer (Story 2.10 — FR9/FR13; UX-DR6/DR7/DR8). The brand SHELL:
+ * the 64px top brand bar, the 248px grouped sidebar, the tinted content area, the
+ * compact footer, and the mobile ☰ drawer. Concatenated after components.css, before
+ * dark.css, by tooling/check.sh.
+ *
+ * REACH RULE — COMPONENT TIER (architecture:608-626; project-context rule 1-2). Every
+ * rule here assumes DOM the shell AUTHORS, so each is gated behind an `.hpk-`-prefixed
+ * class (never a bare stock selector); no display:grid / :nth-child / fixed heights
+ * ride un-classed stock markup. Fixed heights (the 64px bar) sit only on authored
+ * `.hpk-*` classes. Where an authored control is an <a>, the rule is element-qualified
+ * + `.hpk-client`-scoped so it ties/beats the base.css frame-tier link rules
+ * (.hpk-client a (0,1,1) / a:hover (0,2,1)) on source order — the 2.6 anchor-button /
+ * 2.7 tab reconcile. Bespoke layout/colour on non-link elements rides bare `.hpk-*`
+ * (the components.css precedent).
+ *
+ * THEME. The bar + footer are brand-blue in BOTH themes (the brand strip never
+ * inverts), so their white foreground is a theme-agnostic literal `#fff` — the same
+ * sanctioned call .hpk-btn-primary / vendor-compat's filled badge make (white on
+ * --hpk-primary is the gate-verified AA pair). The surface/page/sidebar zones flip via
+ * the tokens (no per-zone dark rule). The ONE sanctioned [data-theme="dark"] exception
+ * is the active nav item: --hpk-primary text on its tint is ~2:1 on the navy sidebar
+ * (illegible), so dark flips it to the light-blue #A9C5FF on a stronger wash — a pair
+ * computed AA (see that block). Dark consumes only dark-DEFINED tokens (brand/semantic
+ * + g100-g300 + ink/text/muted/border); no g400-g900 (deferred-work.md:17). Zero
+ * override flags (RULE 2): the bundle stays flag-free; this layer adds none.
+ */
+
+/* ============================================================================
+ * Shell scaffold — a flex column: sticky topbar, the sidebar+main row, the footer.
+ * ========================================================================== */
+.hpk-client .hpk-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.hpk-client .hpk-shell-body {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: stretch;
+}
+
+/* Skip-to-main link (WCAG 2.4.1) — the FIRST focusable element; off-screen until
+   focused, then a brand chip at the top inline-start. An <a>, so .hpk-client-scoped
+   to out-rank the base link colour. */
+.hpk-client .hpk-skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+  top: 0;
+  z-index: 200;
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  background: var(--hpk-primary);
+  color: #fff;
+  text-decoration: none;
+  border-end-end-radius: var(--hpk-r-sm);
+}
+.hpk-client .hpk-skip-link:focus {
+  inset-inline-start: 0;
+}
+
+/* ============================================================================
+ * Top brand bar — 64px, --hpk-primary in BOTH themes, --hpk-topbar-shadow, sticky.
+ * ========================================================================== */
+.hpk-client .hpk-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  height: var(--hpk-space-topbar-height);
+  padding: 0 var(--hpk-space-3);
+  background: var(--hpk-primary);
+  box-shadow: var(--hpk-topbar-shadow);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+/* Keep the white logo legible if the user forces system colours: opt the brand
+   strip out of forced-colors remapping (else the white logo can land on a white
+   Canvas — deferred-work.md:24). The blue focus-ring box-shadow then still composes
+   for the bar's controls (it is not stripped under forced-color-adjust:none). */
+@media (forced-colors: active) {
+  .hpk-client .hpk-topbar,
+  .hpk-client .hpk-footer { forced-color-adjust: none; }
+}
+
+/* Every direct topbar link is white, no underline (the bar is brand-blue). Element-
+   level under .hpk-topbar (0,2,1) so it ties/beats base .hpk-client a / a:hover on
+   source order. The account/language MENU links live inside the bar too but flip back
+   to ink via the same-specificity .hpk-disclosure-menu a rule LATER in this file
+   (source-order tiebreak) — they sit on a white surface popover. */
+.hpk-client .hpk-topbar a {
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Logo — the bar is brand-blue in both themes, so always show the WHITE variant
+   (.hpk-logo-dark = images/logo.svg) and hide the colour one, overriding the
+   components.css [data-theme] swap inside the bar only. The brand bar sizes the logo
+   here (the stock per-logo inline height style is dropped — RULE 1 keeps partials
+   inline-style-free). */
+.hpk-client .hpk-topbar-logo {
+  display: inline-flex;
+  align-items: center;
+}
+.hpk-client .hpk-topbar-logo img {
+  max-height: 36px;
+  width: auto;
+  display: block;
+}
+.hpk-client .hpk-topbar .hpk-logo-light { display: none; }
+.hpk-client .hpk-topbar .hpk-logo-dark { display: inline; }
+.hpk-client .hpk-brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: #fff;
+  font-family: var(--hpk-font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+/* Text login link (shown when not authed) + the account chip name. */
+.hpk-client .hpk-topbar-login {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--hpk-space-2);
+}
+.hpk-client .hpk-account-name {
+  font-weight: var(--hpk-nav-link-font-weight);
+}
+@media (max-width: 479.98px) {
+  .hpk-client .hpk-account-name { display: none; }
+}
+
+/* The trailing control cluster sits at the inline-end edge. */
+.hpk-client .hpk-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-1);
+  margin-inline-start: auto;
+}
+
+/* Topbar icon controls (notifications) + the lifted theme toggle share the 44px
+   transparent-on-blue chip look; color:#fff drives the currentColor glyphs white. */
+.hpk-client .hpk-topbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--hpk-space-2);
+  border-radius: var(--hpk-r-md);
+  background: transparent;
+  border: 0;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hpk-client .hpk-topbar-icon:hover {
+  background: rgba(255, 255, 255, .14);
+}
+.hpk-client .hpk-topbar-icon .hpk-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* ── Account chip + language switcher — native <details>/<summary> disclosures
+ * (no Bootstrap-dropdown / Popper dependency; the 2.7 native-<dialog> precedent).
+ * The summary is the on-bar chip; the menu is an absolutely-positioned surface
+ * popover so opening overlays rather than pushing the bar. No-JS reachable
+ * (native disclosure), keyboard-operable by default. ----------------------- */
+.hpk-client .hpk-disclosure {
+  position: relative;
+}
+.hpk-client .hpk-disclosure-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 44px;
+  padding: var(--hpk-space-1) var(--hpk-space-2);
+  border-radius: var(--hpk-r-md);
+  color: #fff;
+  cursor: pointer;
+  list-style: none;          /* drop the Firefox disclosure triangle */
+  white-space: nowrap;
+}
+.hpk-client .hpk-disclosure-summary::-webkit-details-marker { display: none; }
+.hpk-client .hpk-disclosure-summary:hover {
+  background: rgba(255, 255, 255, .14);
+}
+.hpk-client .hpk-disclosure[open] > .hpk-disclosure-summary {
+  background: rgba(255, 255, 255, .18);
+}
+/* The chevron rotates to point up while open (decorative reinforcement). */
+.hpk-client .hpk-disclosure[open] > .hpk-disclosure-summary .hpk-disclosure-caret {
+  transform: rotate(180deg);
+}
+.hpk-client .hpk-disclosure-caret {
+  width: .8rem;
+  height: .8rem;
+  transition: transform .15s ease;
+}
+.hpk-client .hpk-disclosure-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + var(--hpk-space-1));
+  min-width: 220px;
+  padding: var(--hpk-space-1);
+  background: var(--hpk-surface);
+  color: var(--hpk-text);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  box-shadow: var(--hpk-shadow);
+  z-index: 110;
+}
+.hpk-client .hpk-disclosure-menu a,
+.hpk-client .hpk-disclosure-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--hpk-space-2);
+  border-radius: var(--hpk-r-sm);
+  background: transparent;
+  border: 0;
+  color: var(--hpk-text);
+  font-size: var(--hpk-nav-link-font-size);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hpk-client .hpk-disclosure-menu a:hover,
+.hpk-client .hpk-disclosure-menu button:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client .hpk-disclosure-menu .hpk-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--hpk-muted);
+}
+.hpk-client .hpk-disclosure-divider {
+  height: 1px;
+  margin: var(--hpk-space-1) 0;
+  background: var(--hpk-border);
+}
+/* The language switcher reuses Blesta's stock submit-on-click list (app.min.js
+   keys on .language_code[language_code] + the hidden #language_selector form), so
+   its <ul>/<li> stay; reset the base list rhythm inside the menu. */
+.hpk-client .hpk-disclosure-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The staff-as-client "logged in as client" indicator (kept from stock). */
+.hpk-client .hpk-staff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-1);
+  padding: var(--hpk-space-1) var(--hpk-space-2);
+  border-radius: var(--hpk-r-pill);
+  background: rgba(255, 255, 255, .16);
+  font-size: var(--hpk-small-font-size);
+}
+
+/* ── Mobile ☰ drawer trigger — a real in-page <a href="#hpk-structure-sidebar">
+ * (CSS hamburger; the sprite has no list/menu glyph). Hidden ≥md, shown <md. --- */
+.hpk-client .hpk-drawer-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--hpk-r-md);
+  background: transparent;
+  border: 0;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hpk-client .hpk-drawer-toggle:hover {
+  background: rgba(255, 255, 255, .14);
+}
+.hpk-client .hpk-hamburger,
+.hpk-client .hpk-hamburger::before,
+.hpk-client .hpk-hamburger::after {
+  width: 20px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+.hpk-client .hpk-hamburger {
+  position: relative;
+  display: block;
+}
+.hpk-client .hpk-hamburger::before,
+.hpk-client .hpk-hamburger::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+}
+.hpk-client .hpk-hamburger::before { top: -6px; }
+.hpk-client .hpk-hamburger::after { top: 6px; }
+
+/* The drawer backdrop is inert until the drawer opens (mobile only). */
+.hpk-client .hpk-drawer-backdrop { display: none; }
+
+/* ============================================================================
+ * Sidebar — 248px surface column, border inline-end, sticky below the bar.
+ * ========================================================================== */
+.hpk-client .hpk-sidebar {
+  flex: 0 0 var(--hpk-space-sidebar-width);
+  width: var(--hpk-space-sidebar-width);
+  align-self: flex-start;
+  position: sticky;
+  top: var(--hpk-space-topbar-height);
+  height: calc(100vh - var(--hpk-space-topbar-height));
+  overflow-y: auto;
+  padding: var(--hpk-space-3) var(--hpk-space-2);
+  background: var(--hpk-surface);
+  border-inline-end: 1px solid var(--hpk-border);
+}
+
+/* Group section label — Urbanist-600 uppercase eyebrow (tokens.css applies the
+   letter-spacing at the chrome tier, not base.css). */
+.hpk-client .hpk-nav-group-label {
+  margin: var(--hpk-space-3) var(--hpk-space-2) var(--hpk-space-1);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--hpk-muted);
+}
+.hpk-client .hpk-nav-list {
+  list-style: none;
+  margin: 0 0 var(--hpk-space-2);
+  padding: 0;
+}
+
+/* Nav link — element-qualified so it beats the base link rules at rest AND on hover
+   (source-order tie, the 2.7 tab reconcile). The 4px inline-start accent is reserved
+   transparent at rest so the active state causes no shift. */
+.hpk-client a.hpk-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 44px;
+  padding: var(--hpk-space-2) var(--hpk-space-2);
+  border-inline-start: 4px solid transparent;
+  border-radius: var(--hpk-r-sm);
+  color: var(--hpk-text);
+  font-size: var(--hpk-nav-link-font-size);
+  font-weight: var(--hpk-nav-link-font-weight);
+  line-height: 1.2;
+  text-decoration: none;
+}
+.hpk-client a.hpk-nav-link:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client a.hpk-nav-link .hpk-nav-icon {
+  width: 1.1rem;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--hpk-muted);
+}
+/* Active item (light): primary-tint bg + primary text + the 4px accent. Primary on
+   --hpk-primary-tint measures 5.24:1 (AA). Radius --hpk-r-sm (inherited above). */
+.hpk-client a.hpk-nav-link.is-active {
+  background: var(--hpk-primary-tint);
+  color: var(--hpk-primary);
+  border-inline-start-color: var(--hpk-primary);
+}
+.hpk-client a.hpk-nav-link.is-active .hpk-nav-icon {
+  color: var(--hpk-primary);
+}
+/* Active item (dark) — the one sanctioned [data-theme="dark"] chrome exception.
+   --hpk-primary on its tint is ~2:1 on the navy sidebar (illegible), so dark flips
+   to the light-blue #A9C5FF text on a stronger rgba(20,87,230,.28) wash; that pair
+   composites to 6.14:1 (AA) over --hpk-surface dark. The literals are story-
+   prescribed (AC B), the same sanctioned-literal call as the 2.7 modal scrim. */
+[data-theme="dark"] .hpk-client a.hpk-nav-link.is-active {
+  background: rgba(20, 87, 230, .28);
+  color: #A9C5FF;
+  border-inline-start-color: #A9C5FF;
+}
+[data-theme="dark"] .hpk-client a.hpk-nav-link.is-active .hpk-nav-icon {
+  color: #A9C5FF;
+}
+
+/* Nested children (a parent's `sub` set + the active item's `secondary` set) render
+   inline under their parent, slightly indented + smaller, never dropped (UX-DR7). */
+.hpk-client .hpk-nav-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.hpk-client a.hpk-nav-sublink {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 44px;
+  padding: var(--hpk-space-1) var(--hpk-space-2) var(--hpk-space-1) var(--hpk-space-5);
+  border-radius: var(--hpk-r-sm);
+  color: var(--hpk-muted);
+  font-size: var(--hpk-small-font-size);
+  text-decoration: none;
+}
+.hpk-client a.hpk-nav-sublink:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client a.hpk-nav-sublink.is-active {
+  color: var(--hpk-primary);
+  font-weight: 600;
+}
+[data-theme="dark"] .hpk-client a.hpk-nav-sublink.is-active {
+  color: #A9C5FF;
+}
+
+/* The "More" catch-all section label reads like any other group (no special chrome,
+   never a junk-drawer styling). */
+
+/* ============================================================================
+ * Main content region — the tinted page area; echoes $content unchanged.
+ * ========================================================================== */
+.hpk-client .hpk-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  scroll-margin-top: var(--hpk-space-topbar-height);
+  padding: var(--hpk-space-4);
+  background: var(--hpk-page);
+}
+.hpk-client .hpk-page-title {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-4);
+}
+
+/* ============================================================================
+ * Footer — compact brand-blue strip (replaces "Powered by Blesta"). White on
+ * --hpk-primary (the AA bar pair), both themes.
+ * ========================================================================== */
+.hpk-client .hpk-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hpk-space-2) var(--hpk-space-4);
+  padding: var(--hpk-space-3) var(--hpk-space-4);
+  background: var(--hpk-primary);
+  color: #fff;
+  font-size: var(--hpk-small-font-size);
+}
+.hpk-client .hpk-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #fff;
+  text-decoration: none;
+}
+.hpk-client .hpk-footer a:hover {
+  text-decoration: underline;
+}
+.hpk-client .hpk-footer-copyright {
+  margin-inline-start: auto;
+}
+
+/* ============================================================================
+ * Responsive — <md (~760px): the sidebar becomes the off-canvas ☰ drawer; the
+ * brand bar persists; single column. Touch targets are already ≥44px above.
+ * ========================================================================== */
+@media (max-width: 759.98px) {
+  .hpk-client .hpk-drawer-toggle { display: inline-flex; }
+  .hpk-client .hpk-sidebar {
+    position: fixed;
+    top: var(--hpk-space-topbar-height);
+    bottom: 0;
+    inset-inline-start: 0;
+    height: auto;
+    width: min(82vw, 300px);
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .2s ease;
+    z-index: 210;
+    box-shadow: var(--hpk-shadow);
+  }
+  /* Reveal via the Alpine `is-open` class OR the no-JS CSS :target fallback (the ☰
+     is a real in-page anchor) — reaching the nav links is never JS-gated (AC C). */
+  .hpk-client .hpk-sidebar.is-open,
+  .hpk-client .hpk-sidebar:target {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .hpk-client .hpk-drawer-backdrop.is-open {
+    display: block;
+    position: fixed;
+    inset: var(--hpk-space-topbar-height) 0 0 0;
+    background: rgba(0, 0, 0, .4);
+    z-index: 205;
+  }
+  .hpk-client .hpk-main {
+    padding: var(--hpk-space-3);
+  }
+}
+
+/* Honour reduced-motion: drop the drawer slide transition (no essential motion). */
+@media (prefers-reduced-motion: reduce) {
+  .hpk-client .hpk-sidebar { transition: none; }
+}
+
+/* ============================================================================
+ * Slim auth shell (Story 3.1 — FR14/FR16; UX-DR27). The login/account-entry
+ * layout used when Blesta suppresses the full chrome ($show_header=false). A
+ * brand-blue panel beside (or above) a centered form card. Component-tier rules
+ * gated behind .hpk-auth-* / .hpk-login-* classes; the panel stays brand-blue in
+ * both themes. Zero override flags.
+ * ========================================================================== */
+
+/* Strip the default page padding from the slim main; the auth shell owns all
+   layout + spacing so the brand panel can fill the viewport edge-to-edge. */
+.hpk-client .hpk-main-slim {
+  display: flex;
+  min-height: 100vh;
+  padding: 0;
+}
+
+/* Mobile-first: stacked column, full viewport height, brand panel auto-sized
+   on top, form card scrolls below if the viewport is short. */
+.hpk-client .hpk-auth-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  width: 100%;
+  min-height: 100vh;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Brand panel — the trust beacon. Brand-blue in BOTH themes; white foreground. */
+.hpk-client .hpk-auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-5) var(--hpk-space-4);
+  background: var(--hpk-primary);
+  color: #fff;
+  text-align: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.hpk-client .hpk-auth-logo {
+  display: inline-flex;
+}
+
+.hpk-client .hpk-auth-logo img {
+  max-height: 48px;
+  width: auto;
+  display: block;
+}
+.hpk-client .hpk-auth-logo .hpk-brand-wordmark {
+  min-height: 48px;
+  font-size: 1.5rem;
+}
+
+.hpk-client .hpk-auth-headline {
+  margin: 0;
+  width: 100%;
+  max-width: 30ch;
+  color: #fff;
+  font-size: var(--hpk-h3-font-size);
+  font-weight: var(--hpk-h3-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  overflow-wrap: break-word;
+}
+
+.hpk-client .hpk-auth-trust {
+  margin: 0;
+  width: 100%;
+  max-width: 36ch;
+  color: rgba(255, 255, 255, .85);
+  font-size: var(--hpk-body-font-size);
+  overflow-wrap: break-word;
+}
+
+/* Form area — centers the card horizontally and vertically on the page tint. */
+.hpk-client .hpk-auth-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1 1 auto;
+  padding: var(--hpk-space-4);
+  background: var(--hpk-page);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Login card — surface background, shadow lift, capped width. The internal stack
+   uses a flex gap so fields/buttons/links stay evenly spaced without wrapper
+   margin micro-management. */
+.hpk-client .hpk-login-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-card-padding);
+  background: var(--hpk-surface);
+  border-radius: var(--hpk-r-lg);
+  box-shadow: var(--hpk-shadow);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Full-width primary submit button inside the login card. */
+.hpk-client .hpk-login-card .hpk-btn-primary {
+  width: 100%;
+  justify-content: center;
+}
+
+/* The stock hidden fieldSubmit input is a layout/CSRF helper, not visible UI.
+   Bootstrap 4's .hidden utility is gone (Story 2.2 dropped application.min.css),
+   so scope the hide to the login card. */
+.hpk-client .hpk-login-card input.hidden {
+  display: none;
+}
+
+/* Field stack: label sits directly above the input with a small gap. */
+.hpk-client .hpk-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+}
+
+/* Password toggle input group — relative wrapper so the toggle button can be
+   absolutely positioned at the inline end of the input. */
+.hpk-client .hpk-input-group {
+  --hpk-password-toggle-width: min(48%, 9rem);
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.hpk-client .hpk-input-group .form-control {
+  flex: 1 1 auto;
+  padding-inline-end: calc(var(--hpk-password-toggle-width) + var(--hpk-space-2));
+}
+
+.hpk-client .hpk-input-group .hpk-password-toggle {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--hpk-password-toggle-width);
+  max-width: 48%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hpk-client [x-cloak] {
+  display: none;
+}
+
+.hpk-client .hpk-login-captcha {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.hpk-client .hpk-login-captcha > *,
+.hpk-client .hpk-login-captcha iframe,
+.hpk-client .hpk-login-captcha img {
+  max-width: 100%;
+}
+
+/* Remember-me checkbox aligns label + control as one clickable row. */
+.hpk-client .hpk-login-remember {
+  display: flex;
+  align-items: center;
+}
+
+.hpk-client .hpk-login-remember .hpk-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  cursor: pointer;
+}
+
+/* Forgot-password / forgot-username links sit on one row with space-between. */
+.hpk-client .hpk-login-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--hpk-space-2);
+  font-size: var(--hpk-small-font-size);
+}
+
+/* Secure-login reassurance line — centred, muted, with a lock glyph. */
+.hpk-client .hpk-login-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hpk-space-2);
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+/* Desktop: side-by-side split. The brand panel locks to ~45% width and full
+   viewport height; the form area fills the remainder and keeps the card centred. */
+@media (min-width: 760px) {
+  .hpk-client .hpk-auth-shell {
+    flex-direction: row;
+  }
+  .hpk-client .hpk-auth-brand {
+    flex: 0 0 45%;
+    min-height: 100vh;
+    padding: var(--hpk-space-5);
+  }
+  .hpk-client .hpk-auth-content {
+    flex: 1 1 auto;
+    padding: var(--hpk-space-5);
+  }
+}
+
+/* Honour reduced-motion: no transition on the auth shell (none authored). */
+@media (prefers-reduced-motion: reduce) {
+  .hpk-client .hpk-auth-shell { transition: none; }
+}
+
+/*
+ * HosterPK vendor-compat shim — the CLOSED 33-class legacy/BS4 bridge.
+ * Story 2.9 (AR-ENF1; architecture D1). UNLAYERED, .hpk-client-scoped frame tier.
+ *
+ * WHAT THIS IS. Story 2.2 dropped the stock application.min.css link, so un-owned
+ * markup — fallback stock .pdt pages (Blesta per-file View::fetch() fallback) and
+ * enabled plugin/module fragments — keeps emitting BS4.6 + Blesta-legacy class
+ * names that now have NO stylesheet at all. This file re-provides working CSS for
+ * EXACTLY the legacy vocabulary those surfaces emit, bounded to a CLOSED
+ * ENUMERATION (never a sample — else it is an unbounded second framework, D1).
+ *
+ * SOURCE OF TRUTH. _bmad-output/uiux/implementation-artifacts/spikes/
+ * G4-class-enumeration.csv (Story 1.7 / Spike F): the rows whose `shim_disposition`
+ * contains "SHIM MAP" — exactly 33 of 338 audited tokens. Reproduce/verify the set
+ * with `python3 classify-g4.py` (same dir) and diff. If the authored set and the
+ * CSV disagree, THE CSV WINS. The other 305 tokens are BS5-stable (owned bundle),
+ * icon-font (Story 2.5), or bespoke (FR34 per-page deferral) — NOT this shim's job.
+ *
+ * RE-DECLARATION, NOT ALIAS. CSS cannot alias one class onto another, so each
+ * legacy class is re-declared with the CSS that reproduces the behaviour its
+ * disposition describes (e.g. float-right becomes float:right; sr-only becomes the
+ * visually-hidden recipe). The disposition's "BS5 idiom" names the INTENT.
+ *
+ * REACH RULE — FRAME TIER (architecture:608-626). Every rule is .hpk-client-scoped:
+ * intentional global reach over owned + stock + plugin fallback markup INSIDE the
+ * client area, never leaking to admin/other contexts. No component-tier assumption
+ * of authored DOM, no structure beyond what the legacy class itself means.
+ *
+ * THEME + BRAND. Visual classes (the badge-* family) reuse the --hpk-* state tokens
+ * the .hpk-badge-* look already uses (components.css), so a fallback .badge-danger
+ * reads on-brand in BOTH themes via the [data-theme="dark"] token overrides — no
+ * per-component dark rule, never a raw hex. The one sanctioned literal is the #fff
+ * filled-badge text on the theme-agnostic --hpk-primary fill (mirrors .hpk-btn-
+ * primary's documented #fff). Structural/util classes are plain functional decls.
+ *
+ * RULE 2 override flags: the bundle is flag-free EXCEPT the 6 SEMANTIC badge colour
+ * declarations below (the audited RULE 2 allowlist — see project-context.md's
+ * override-flag policy + FOUNDATION.md). Those must out-rank Blesta's GENERATED
+ * /client/theme/theme.css, which flags .badge-{danger,info,success,warning,primary,
+ * secondary} background+color and is linked (via structure.pdt's $theme_css) BEFORE
+ * our bundle — so .hpk-client specificity alone cannot win, and theme.css's
+ * white-on-fill is several sub-AA. badge-default has NO theme.css competitor, so it
+ * stays flag-free. Everything else wins by .hpk-client scope + source-order (this
+ * layer concatenates AFTER base/components, and application.min.css is gone).
+ * UNLAYERED is the winning tier (base.css cascade contract) — do NOT wrap in @layer.
+ *
+ * The BS .badge / .btn / .table / .input-group BASE classes are NOT in the closed
+ * set (BS5-stable, owned-bundle scope), so the badge/button shims below carry their
+ * own self-contained look rather than leaning on an unstyled base.
+ */
+
+/* ── Badges (7) — BS4 .badge-* -> the BS5 .text-bg-* idiom, rendered on-brand as
+ * the .hpk-badge-* tint look. No ::before dot (that is a bespoke .hpk-badge
+ * flourish, not BS badge behaviour). */
+.hpk-client .badge-danger,
+.hpk-client .badge-info,
+.hpk-client .badge-success,
+.hpk-client .badge-warning,
+.hpk-client .badge-default,
+.hpk-client .badge-primary,
+.hpk-client .badge-secondary {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  line-height: 1;
+  padding: .4rem .65rem;
+  border-radius: var(--hpk-r-pill);
+}
+/* The 6 SEMANTIC badge colours carry the audited RULE 2 override flag (header note):
+ * they must beat the generated theme.css's flagged .badge-* (background+color), which
+ * loads first; a plain rule loses regardless of specificity. Single-line so the gate
+ * can allowlist each flag by its on-line selector. danger/info/success/warning reuse
+ * the gate-verified --hpk-{state}-tint/-text pairs (the .hpk-badge-* look, AA in both
+ * themes). secondary -> BS .text-bg-secondary = NEUTRAL/grey (BS "secondary" is grey,
+ * not brand orange): the .hpk-badge-neutral recipe. primary -> BS .text-bg-primary =
+ * SOLID --hpk-primary + literal #fff (the shipped .hpk-btn-primary contrast; the tint
+ * recipe has no gate-verified --hpk-primary-text and fails AA in dark). */
+.hpk-client .badge-success   { background: var(--hpk-success-tint) !important; color: var(--hpk-success-text) !important; }
+.hpk-client .badge-info      { background: var(--hpk-info-tint) !important;    color: var(--hpk-info-text) !important; }
+.hpk-client .badge-danger    { background: var(--hpk-danger-tint) !important;  color: var(--hpk-danger-text) !important; }
+.hpk-client .badge-warning   { background: var(--hpk-warning-tint) !important; color: var(--hpk-warning-text) !important; }
+.hpk-client .badge-secondary { background: var(--hpk-g200) !important;         color: var(--hpk-neutral-text) !important; }
+.hpk-client .badge-primary   { background: var(--hpk-primary) !important;      color: #fff !important; }
+/* badge-default: BS3 fallback badge, NO theme.css competitor -> stays flag-free
+ * (the .hpk-badge-neutral recipe wins by scope + source-order). */
+.hpk-client .badge-default { background: var(--hpk-g200); color: var(--hpk-neutral-text); }
+
+/* ── Buttons (3). The BS .btn base is NOT in the closed set, so btn-block/btn-xs are
+ * sizing/layout MODIFIERS (they pair with a colour class) and btn-default carries a
+ * self-contained neutral look. base.css already gives <button> its font + cursor. */
+.hpk-client .btn-block { display: block; width: 100%; }   /* BS4 -> .d-grid / .w-100 */
+.hpk-client .btn-xs {                                      /* bundle-custom -> .btn-sm, smaller */
+  padding: .2rem .5rem;
+  font-size: var(--hpk-small-font-size);
+  border-radius: var(--hpk-r-sm);
+}
+.hpk-client .btn-default {                                 /* BS3 -> .btn-secondary: a neutral default button */
+  display: inline-block;
+  padding: var(--hpk-space-button-padding);
+  background: var(--hpk-surface);
+  color: var(--hpk-ink);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  text-decoration: none;
+}
+
+/* ── Floats (3). BS4 .float-left / .float-right + BS3 .pull-right. */
+.hpk-client .float-left { float: left; }    /* -> .float-start */
+.hpk-client .float-right,
+.hpk-client .pull-right { float: right; }   /* -> .float-end */
+
+/* ── Sort indicators (2). Blesta th>a.asc / th>a.desc pseudo-icon: preserve the
+ * sort-direction affordance with a currentColor arrow via ::after (no icon font). */
+.hpk-client .asc::after  { content: "\2191"; }   /* up   = ascending  */
+.hpk-client .desc::after { content: "\2193"; }   /* down = descending */
+.hpk-client .asc::after,
+.hpk-client .desc::after { margin-inline-start: .25em; font-size: .85em; }
+
+/* ── Visibility (1). Blesta legacy .hide (BS5 uses .d-none). */
+.hpk-client .hide { display: none; }
+
+/* ── Spacing (4). Blesta legacy margin utils + BS4 .form-group + panel padding. */
+.hpk-client .marbot10   { margin-bottom: 10px; }
+.hpk-client .martop10   { margin-top: 10px; }
+.hpk-client .form-group { margin-bottom: var(--hpk-space-3); }   /* BS4 -> .mb-3 (1rem) */
+.hpk-client .panel-pad  { padding: var(--hpk-space-card-padding); }
+
+/* ── Typography (2). BS4 .font-weight-bold / .font-italic. */
+.hpk-client .font-weight-bold { font-weight: 700; }     /* -> .fw-bold   */
+.hpk-client .font-italic      { font-style: italic; }   /* -> .fst-italic */
+
+/* ── Screen-reader-only (1). BS4 .sr-only -> BS5 .visually-hidden: the standard
+ * off-screen-but-in-the-a11y-tree recipe. */
+.hpk-client .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Close control (1). BS4 .close (the × dismiss) -> BS5 .btn-close. The × glyph
+ * rides in the markup (&times;); style the floated dismiss affordance on-brand. */
+.hpk-client .close {
+  float: right;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--hpk-muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+.hpk-client .close:hover { color: var(--hpk-ink); }
+
+/* ── Input group (1). BS4 .input-group-append wrapper -> BS5 flattened (the addon is
+ * a direct child of .input-group). Keep the addon inline with the field. */
+.hpk-client .input-group-append { display: flex; align-items: center; }
+
+/* ── Grid vestiges (2). BS3/4 .col-xs-* (the always-on smallest breakpoint, no media
+ * query). They carry their OWN column behaviour — base.css ships no grid, so do NOT
+ * defer to a .col-12 / .col-4 that does not exist. col-xs-4 floats to sit 3-across
+ * (the BS3 xs idiom); col-xs-12 is a full-width block. */
+.hpk-client .col-xs-12 { width: 100%; }
+.hpk-client .col-xs-4  { float: left; width: 33.3333%; }
+
+/* ── Custom controls (4). BS4 .custom-control / -input / -label / .custom-switch map
+ * to the BS5 .form-check family. Render a usable NATIVE checkbox + label (NOT the
+ * BS4 opacity:0 input + drawn visual, which without the redraw would be invisible —
+ * "not broken" is the bar). base.css excludes checkbox/radio from the field reset,
+ * so the box keeps its UA paint. */
+.hpk-client .custom-control {
+  position: relative;
+  display: block;
+  min-height: 1.5rem;
+  padding-left: 1.5em;
+}
+.hpk-client .custom-switch { padding-left: 2.5em; }
+.hpk-client .custom-control-input {
+  width: 1em;
+  height: 1em;
+  margin-left: -1.5em;
+  vertical-align: top;
+}
+.hpk-client .custom-control-label { position: relative; vertical-align: top; }
+
+/* ── Tables (2). Blesta .table-curved (rounded wrapper) + .table-striped-alt
+ * (alternate striping). table-curved flips border-collapse so the radius clips;
+ * .hpk-client .table-curved (0,2,0) out-specifies base .hpk-client table (0,1,1).
+ * Striping is the class's OWN meaning, so :nth-child is in-bounds (not a bare
+ * frame-tier positional selector). */
+.hpk-client .table-curved {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--hpk-r-lg);
+  overflow: hidden;
+}
+.hpk-client .table-striped-alt tbody tr:nth-child(odd) {
+  background-color: var(--hpk-g100);
+}
+
+/*
+ * HosterPK utilities layer - intentionally EMPTY for the assertion-free scaffold.
+ * No Reach Rules, no .hpk-raw fence, no component rules (AC2). Filled in Epic 2.
+ */
+
+/*
+ * HosterPK dark layer - intentionally EMPTY for the assertion-free scaffold.
+ * No Reach Rules, no .hpk-raw fence, no component rules (AC2). Filled in Epic 2.
+ */

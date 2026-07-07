@@ -1,0 +1,190 @@
+<?php /** @var View $this **/ ?>
+<?php /* HosterPK brand bar (Story 2.10, AC A). A COMPONENT partial (check.sh
+       partials/ carve-out: no HOSTERPK OVERRIDE header, NOT in OVERRIDES.manifest);
+       its escaping counts toward structure.pdt's scoped RULE 8 aggregate via the
+       named 4-file set. Rendered via view('partials/brand_bar', $this) from
+       structure.pdt INSIDE the .hpk-shell x-data="hpkNavDrawer" scope (so the ☰
+       trigger's @click/x-ref resolve against that island). Holds: the mobile ☰
+       trigger, the white logo (the bar is brand-blue in BOTH themes), the lifted
+       Story 2.3 theme toggle, the link-only notifications affordance, and the account
+       chip + language selector as native <details> disclosures (no Bootstrap-dropdown
+       / Popper dependency - the 2.7 native-element precedent). Every dynamic value
+       keeps the stock Html escaping (FR10). No new inline-style attributes here
+       (RULE 1): the stock per-logo height inline-style is dropped - the bar sizes the
+       logo via .hpk-topbar-logo img in chrome.css. */ ?>
+<header id="hpk-structure-topbar" class="hpk-topbar">
+    <?php /* ☰ drawer trigger: a REAL in-page anchor so the nav is reachable with JS
+           off (the sidebar reveals via the CSS :target fallback); Alpine progressively
+           enhances it into the animated drawer. Static aria-label/aria-expanded are
+           the no-JS values; the :bindings + data-*-label are the JS-enhanced ones (the
+           2.6 data-fallback-label pattern). Hidden ≥md (chrome.css). */ ?>
+    <a href="#hpk-structure-sidebar"
+       class="hpk-drawer-toggle"
+       x-ref="trigger"
+       @click.prevent="toggle()"
+       aria-controls="hpk-structure-sidebar"
+       aria-expanded="false"
+       :aria-expanded="open ? 'true' : 'false'"
+       aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.nav.open_menu', true)); ?>"
+       :aria-label="triggerLabel"
+       data-open-label="<?php echo $this->Html->safe($this->_('Hosterpk.nav.open_menu', true)); ?>"
+       data-close-label="<?php echo $this->Html->safe($this->_('Hosterpk.nav.close_menu', true)); ?>">
+        <span class="hpk-hamburger" aria-hidden="true"></span>
+    </a>
+
+    <a href="<?php echo $this->Html->safe($this->base_uri);?>" class="hpk-topbar-logo">
+        <?php
+        if (!empty($theme_logo)) {
+        ?>
+            <img src="<?php (print (isset($theme_logo) ? $this->Html->safe($theme_logo) : null));?>" alt="<?php echo $this->Html->safe(isset($system_company->name) ? $system_company->name : ''); ?>" />
+        <?php
+        } else {
+        ?>
+            <?php /* No admin-configured company logo ($theme_logo empty): render the
+                   bundled OFFICIAL HosterPK white wordmark. The brand bar is brand-blue
+                   in BOTH light and dark themes, so the white logo is always correct (no
+                   [data-theme] swap needed here). This replaces the prior text-wordmark
+                   placeholder now that the real brand asset is bundled at
+                   images/hpk-logo-white.svg. NOTE: the stock Blesta logos still sitting
+                   in images/logo.svg + images/logo-color.svg are NOT HosterPK and remain
+                   unused. If the asset is ever missing, the <img> alt surfaces the brand
+                   name as a graceful text fallback. */ ?>
+            <img src="<?php echo $this->Html->safe($this->view_dir);?>images/hpk-logo-white.svg" alt="<?php echo $this->Html->safe($this->_('Hosterpk.brand.logo_alt', true)); ?>" />
+        <?php
+        }
+        ?>
+    </a>
+
+    <div class="hpk-topbar-actions">
+        <?php /* Notifications - link-only entry point to the dashboard action-needed
+               region (Israr decision #2: NO feed/count/dot/polling/prefs in 2.10). The
+               bell glyph is decorative; the link's accessible name is the copy key. A
+               deep-link/anchor lands when E4 defines the action-needed region; today it
+               targets the client dashboard home. */ ?>
+        <a href="<?php echo $this->Html->safe($this->client_uri);?>" class="hpk-topbar-icon" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.notifications.label', true)); ?>">
+            <?php $this->set('icon', 'bell'); $this->set('icon_class', null); $this->set('icon_label', null); view('partials/icon', $this); ?>
+        </a>
+
+        <?php /* HOSTERPK theme toggle (Story 2.3) - lifted VERBATIM from the interim
+               stock header into the brand bar (the 2.3 forward-promise fulfilled).
+               a11y decision (deferred-work.md:25, RESOLVED here): KEEP the
+               name-reflects-action pattern; do NOT add aria-pressed / role="switch"
+               (adding it to a name-reflecting control risks a double-announce). Carries
+               only x-data + bindings - no inline JS logic (AR-ENF4). */ ?>
+        <button type="button"
+                class="hpk-theme-toggle"
+                x-data="hpkThemeToggle(<?php echo htmlspecialchars(json_encode(['toDark' => $this->_('Hosterpk.theme_toggle.to_dark', true), 'toLight' => $this->_('Hosterpk.theme_toggle.to_light', true)], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES); ?>)"
+                @click="toggle()"
+                :aria-label="ariaLabel"
+                aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.theme_toggle.to_dark', true)); ?>">
+            <?php /* Two sprite <use>s; [data-theme]-CSS drives which shows (NOT x-show -
+                   the 2.3 flicker fix). Set all three icon vars per call + reset after
+                   (the "callers pass all three" convention this story owns). */ ?>
+            <?php $this->set('icon_label', null); ?>
+            <?php $this->set('icon', 'moon'); $this->set('icon_class', 'hpk-icon-moon'); view('partials/icon', $this); ?>
+            <?php $this->set('icon', 'sun'); $this->set('icon_class', 'hpk-icon-sun'); view('partials/icon', $this); ?>
+            <?php $this->set('icon', null); $this->set('icon_class', null); $this->set('icon_label', null); ?>
+        </button>
+
+        <?php
+        if ((isset($staff_as_client) ? $staff_as_client : null)) {
+        ?>
+        <span class="hpk-staff-badge"><a href="<?php echo $this->Html->safe($this->admin_uri . 'clients/logoutasclient/');?>"><span class="fas fa-info-circle"></span> <?php $this->_('AppController.client_structure.staff_as_client_note');?></a></span>
+        <?php
+        } elseif ((isset($show_language) ? $show_language : null) && count((isset($languages) ? $languages : [])) > 1) {
+        ?>
+        <?php /* Language selector - the disclosure is a native <details>; the INNER
+               submit-on-click mechanism stays stock (app.min.js keys on
+               .language_code[language_code] + the hidden #language_selector form), so
+               the form + the #language_switcher <ul> are preserved verbatim. Carries
+               the ONE Form-create call in the chrome (RULE 8 CSRF floor). */ ?>
+        <details class="hpk-disclosure hpk-lang"
+                 x-data="hpkDisclosure"
+                 @toggle="syncOpenState()"
+                 @click.outside="close()"
+                 @keydown.escape.window="close(true)">
+            <summary class="hpk-disclosure-summary">
+                <?php echo (isset($languages[Configure::get('Blesta.language')]) ? $this->Html->safe($languages[Configure::get('Blesta.language')]) : null); ?>
+                <?php $this->set('icon', 'chevron-down'); $this->set('icon_class', 'hpk-disclosure-caret'); $this->set('icon_label', null); view('partials/icon', $this); ?>
+            </summary>
+            <?php
+            $this->Form->create($this->client_uri . 'main/setlanguage/', ['id' => 'language_selector']);
+            $this->Form->fieldHidden('redirect_uri', (isset($request_uri) ? $request_uri : null));
+            $this->Form->fieldHidden('language_code', Configure::get('Blesta.language'), ['id' => 'language_code']);
+            $this->Form->end();
+            ?>
+            <div class="hpk-disclosure-menu">
+                <ul id="language_switcher">
+                    <?php
+                    foreach ($languages as $code => $language) {
+                    ?>
+                    <li class="language_code" language_code="<?php echo $this->Html->safe($code);?>"><a href="#"><?php echo $this->Html->safe($language);?></a></li>
+                    <?php
+                    }
+                    ?>
+                </ul>
+            </div>
+        </details>
+        <?php
+        }
+        ?>
+
+        <?php
+        if ((isset($logged_in) ? $logged_in : null)) {
+        ?>
+        <?php /* Account chip - native <details> disclosure. EVERY stock conditional
+               link + its guard is preserved: edit account, payment accounts, contacts,
+               managers (only when !$is_manager), emails (only when
+               $has_email_permission), return-to-portal (only when $portal_installed),
+               divider, logout. The stock FA item icons stay (the sprite lacks
+               users/inbox/user-secret glyphs); the chip uses sprite person-circle +
+               chevron-down. */ ?>
+        <details class="hpk-disclosure hpk-account"
+                 x-data="hpkDisclosure"
+                 @toggle="syncOpenState()"
+                 @click.outside="close()"
+                 @keydown.escape.window="close(true)">
+            <summary class="hpk-disclosure-summary" aria-labelledby="hpk-account-name hpk-account-action">
+                <?php $this->set('icon', 'person-circle'); $this->set('icon_class', null); $this->set('icon_label', null); view('partials/icon', $this); ?>
+                <span id="hpk-account-name" class="hpk-account-name"><?php (print (isset($contact->first_name) ? $this->Html->safe($contact->first_name) : null));?> <?php (print (isset($contact->last_name) ? $this->Html->safe($contact->last_name) : null));?></span>
+                <span id="hpk-account-action" class="sr-only"><?php $this->_('Hosterpk.account.menu_label');?></span>
+                <?php $this->set('icon', 'chevron-down'); $this->set('icon_class', 'hpk-disclosure-caret'); $this->set('icon_label', null); view('partials/icon', $this); ?>
+            </summary>
+            <div class="hpk-disclosure-menu">
+                <a href="<?php echo $this->Html->safe($this->client_uri . 'main/edit/');?>"><i class="fas fa-edit fa-fw"></i> <?php $this->_('AppController.client_structure.text_update_account');?></a>
+                <a href="<?php echo $this->Html->safe($this->client_uri . 'accounts/');?>"><i class="fas fa-credit-card fa-fw"></i> <?php $this->_('AppController.client_structure.text_accounts');?></a>
+                <a href="<?php echo $this->Html->safe($this->client_uri . 'contacts/');?>"><i class="fas fa-users fa-fw"></i> <?php $this->_('AppController.client_structure.text_contacts');?></a>
+                <?php
+                if (!(isset($is_manager) ? $is_manager : null)) {
+                ?>
+                <a href="<?php echo $this->Html->safe($this->client_uri . 'managers/');?>"><i class="fas fa-user-secret fa-fw"></i> <?php $this->_('AppController.client_structure.text_managers');?></a>
+                <?php
+                }
+
+                if ((isset($has_email_permission) ? $has_email_permission : null)) {
+                ?>
+                <a href="<?php echo $this->Html->safe($this->client_uri . 'emails/');?>"><i class="fas fa-inbox fa-fw"></i> <?php $this->_('AppController.client_structure.text_emails');?></a>
+                <?php
+                }
+
+                if ((isset($portal_installed) ? $portal_installed : false)) {
+                ?>
+                <a href="<?php echo $this->Html->safe(WEBDIR);?>"><i class="far fa-circle fa-fw"></i> <?php $this->_('AppController.client_structure.text_return_to_portal');?></a>
+                <?php
+                }
+                ?>
+                <div class="hpk-disclosure-divider"></div>
+                <a href="<?php echo $this->Html->safe($this->client_uri . 'logout/');?>"><i class="fas fa-sign-out-alt fa-fw"></i> <?php $this->_('AppController.client_structure.text_logout');?></a>
+            </div>
+        </details>
+        <?php
+        } else {
+        ?>
+        <a class="hpk-topbar-login" href="<?php echo $this->Html->safe($this->client_uri . 'login/');?>">
+            <?php $this->_('AppController.client_structure.text_login');?>
+        </a>
+        <?php
+        }
+        ?>
+    </div>
+</header>

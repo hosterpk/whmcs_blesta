@@ -1,0 +1,355 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient chrome with HosterPK card, tabs, table, badges, empty state, and actions while preserving the controller->view data contract, filter field names, widget-mode guard, and applied-transactions expansion DOM. Stock baseline: bootstrap/client_invoices.pdt @ 6.0.0-b1 sha256:d60f89dc9a84f96a7cdfb785ec050b3b76e3135d3bcc0aa88af14d96627e7cf0 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+$hpk_icon_var_names = ['icon', 'icon_class', 'icon_label'];
+$hpk_view_vars_property = null;
+$hpk_get_view_vars_property = function ($view) use (&$hpk_view_vars_property) {
+    if ($hpk_view_vars_property === null) {
+        $hpk_reflection = new ReflectionClass($view);
+        if (!$hpk_reflection->hasProperty('vars')) {
+            $hpk_view_vars_property = false;
+        } else {
+            $hpk_view_vars_property = $hpk_reflection->getProperty('vars');
+            $hpk_view_vars_property->setAccessible(true);
+        }
+    }
+
+    return $hpk_view_vars_property;
+};
+$hpk_snapshot_icon_vars = function ($view) use ($hpk_icon_var_names, $hpk_get_view_vars_property) {
+    $hpk_property = $hpk_get_view_vars_property($view);
+    if ($hpk_property === false) {
+        return null;
+    }
+
+    $hpk_vars = $hpk_property->getValue($view);
+    $hpk_snapshot = [];
+    foreach ($hpk_icon_var_names as $hpk_name) {
+        $hpk_snapshot[$hpk_name] = [
+            'exists' => array_key_exists($hpk_name, $hpk_vars),
+            'value' => array_key_exists($hpk_name, $hpk_vars) ? $hpk_vars[$hpk_name] : null
+        ];
+    }
+
+    return $hpk_snapshot;
+};
+$hpk_restore_icon_vars = function ($view, $hpk_snapshot) use ($hpk_get_view_vars_property) {
+    if ($hpk_snapshot === null) {
+        return;
+    }
+
+    $hpk_property = $hpk_get_view_vars_property($view);
+    if ($hpk_property === false) {
+        return;
+    }
+
+    $hpk_vars = $hpk_property->getValue($view);
+    foreach ($hpk_snapshot as $hpk_name => $hpk_state) {
+        if ($hpk_state['exists']) {
+            $hpk_vars[$hpk_name] = $hpk_state['value'];
+            continue;
+        }
+
+        unset($hpk_vars[$hpk_name]);
+    }
+    $hpk_property->setValue($view, $hpk_vars);
+};
+
+$hpk_is_inner = (isset($render_section) ? $render_section : null) || (isset($is_ajax) ? $is_ajax : null);
+$hpk_status = ((isset($status) ? $status : null) == 'closed') ? 'closed' : 'open';
+$hpk_sort = isset($sort) ? $sort : 'date_due';
+$hpk_order = isset($order) ? $order : 'desc';
+$hpk_negate_order = isset($negate_order) ? $negate_order : ($hpk_order == 'asc' ? 'desc' : 'asc');
+$hpk_status_count = (isset($status_count) && is_array($status_count)) ? $status_count : [];
+$hpk_invoices = (isset($invoices) && is_array($invoices)) ? $invoices : [];
+$hpk_num_invoices = count($hpk_invoices);
+$hpk_status_is_closed = $hpk_status == 'closed';
+$hpk_date_label_key = $hpk_status_is_closed ? 'Hosterpk.invoice.heading_date_closed' : 'Hosterpk.invoice.heading_due';
+$hpk_date_sort = $hpk_status_is_closed ? 'date_closed' : 'due';
+
+$hpk_columns = [
+    'invoice' => $this->_('Hosterpk.invoice.heading_invoice', true),
+    'amount' => $this->_('Hosterpk.invoice.heading_amount', true),
+    'paid' => $this->_('Hosterpk.invoice.heading_paid', true),
+    'due' => $this->_($hpk_date_label_key, true),
+    'date_billed' => $this->_('Hosterpk.invoice.heading_date_billed', true),
+    'date_due' => $this->_('Hosterpk.invoice.heading_date_due', true),
+    'status' => $this->_('Hosterpk.invoice.heading_status', true),
+    'actions' => $this->_('Hosterpk.invoice.heading_actions', true)
+];
+
+$hpk_build_url = function ($target_status, $target_page = null, $target_sort = null, $target_order = null) {
+    $url = $this->base_uri . 'invoices/index/' . $target_status . '/';
+    if ($target_page !== null) {
+        $url .= $target_page . '/';
+    }
+
+    $params = [];
+    if ($target_sort !== null) {
+        $params['sort'] = $target_sort;
+        $params['order'] = $target_order;
+    }
+
+    return $url . (!empty($params) ? '?' . http_build_query($params, '', '&') : '');
+};
+
+$hpk_sort_url = function ($target_sort) use ($hpk_build_url, $hpk_status, $hpk_sort, $hpk_order, $hpk_negate_order) {
+    return $hpk_build_url(
+        $hpk_status,
+        null,
+        $target_sort,
+        ($hpk_sort == $target_sort ? $hpk_negate_order : $hpk_order)
+    );
+};
+
+$hpk_sort_class = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    return 'hpk-invoices__sort' . ($hpk_sort == $target_sort ? ' ' . $hpk_order : '');
+};
+
+$hpk_aria_sort = function ($target_sort) use ($hpk_sort, $hpk_order) {
+    if ($hpk_sort != $target_sort) {
+        return null;
+    }
+
+    return $hpk_order == 'asc' ? 'ascending' : 'descending';
+};
+
+$hpk_render_sort_header = function ($key, $label) use ($hpk_is_inner, $hpk_sort_class, $hpk_sort_url, $hpk_aria_sort) {
+    $hpk_aria = $hpk_is_inner ? null : $hpk_aria_sort($key);
+?><th scope="col"<?php if ($hpk_aria !== null) { ?> aria-sort="<?php echo $this->Html->safe($hpk_aria); ?>"<?php } elseif (!$hpk_is_inner) { ?> aria-sort="none"<?php } ?>>
+    <?php if ($hpk_is_inner) { ?>
+        <?php echo $this->Html->safe($label); ?>
+    <?php } else { ?>
+        <a class="<?php echo $this->Html->safe($hpk_sort_class($key)); ?>" href="<?php echo $this->Html->safe($hpk_sort_url($key)); ?>" data-hpk-filter-link><?php echo $this->Html->safe($label); ?></a>
+    <?php } ?>
+</th><?php
+};
+
+$hpk_due_is_settled = function ($amount) {
+    if ($amount === null || $amount === '') {
+        return false; // unknown due = not settled (money-safe default)
+    }
+
+    $normalized = preg_replace('/[,\s]/', '', (string)$amount);
+    if (!preg_match('/^-?\d+(?:\.\d+)?$/', $normalized)) {
+        return false; // unparseable due = not settled (money-safe default)
+    }
+
+    $abs_amount = ltrim($normalized, '-');
+    $is_zero = trim(str_replace('.', '', $abs_amount), '0') === '';
+
+    return $is_zero || $normalized[0] === '-';
+};
+
+$hpk_filter_label_keys = [
+    'filters[invoice_number]' => 'Hosterpk.invoice.filter_invoice_number',
+    'filters[currency]' => 'Hosterpk.invoice.filter_currency',
+    'filters[invoice_line]' => 'Hosterpk.invoice.filter_invoice_line'
+];
+
+$hpk_filter_action = $hpk_build_url($hpk_status, null, $hpk_sort, $hpk_order);
+?>
+<div id="hpk-invoices" class="hpk-invoices<?php echo $this->Html->safe($hpk_is_inner ? ' hpk-invoices--embedded' : ''); ?>">
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    <section class="hpk-card hpk-invoices__shell" aria-labelledby="hpk-invoices-title">
+        <div class="hpk-invoices__header">
+            <div>
+                <h1 id="hpk-invoices-title" class="hpk-invoices__title"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.page_title', true)); ?></h1>
+            </div>
+            <nav class="hpk-tabs hpk-invoices__tabs" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.invoice.tabs_label', true)); ?>">
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_build_url('open', null, $hpk_sort, $hpk_order)); ?>"<?php echo ($hpk_status == 'open' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.invoice.tab_open', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['open']) ? $hpk_status_count['open'] : 0); ?></span>
+                </a>
+                <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_build_url('closed', null, $hpk_sort, $hpk_order)); ?>"<?php echo ($hpk_status == 'closed' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                    <?php echo $this->Html->safe($this->_('Hosterpk.invoice.tab_closed', true)); ?>
+                    <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['closed']) ? $hpk_status_count['closed'] : 0); ?></span>
+                </a>
+            </nav>
+        </div>
+
+        <?php if (isset($filters)) { ?>
+        <?php $this->Form->create($hpk_filter_action, ['class' => 'hpk-invoices__filters hpk-invoices__filter-form']); ?>
+            <?php
+            foreach ($filters->getFields() as $hpk_filter_field) {
+                foreach ($hpk_filter_field->fields as $hpk_filter_input) {
+                    if ($hpk_filter_input->type == 'fieldHidden') {
+                        call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_input->params);
+                        continue;
+                    }
+
+                    $hpk_filter_params = $hpk_filter_input->params;
+                    $hpk_filter_name = isset($hpk_filter_params['name']) ? $hpk_filter_params['name'] : '';
+                    $hpk_filter_attrs = isset($hpk_filter_params['attributes']) ? $hpk_filter_params['attributes'] : [];
+                    $hpk_filter_id = isset($hpk_filter_attrs['id']) ? $hpk_filter_attrs['id'] : preg_replace('/[^A-Za-z0-9_-]+/', '_', $hpk_filter_name);
+                    $hpk_filter_classes = isset($hpk_filter_attrs['class']) ? preg_split('/\s+/', trim($hpk_filter_attrs['class'])) : [];
+                    $hpk_filter_classes = array_diff($hpk_filter_classes, ['form-control', 'stretch', 'input-sm']);
+                    $hpk_filter_classes[] = 'hpk-invoices__control';
+                    $hpk_filter_attrs['class'] = trim(implode(' ', array_unique(array_filter($hpk_filter_classes))));
+                    $hpk_filter_params['attributes'] = $hpk_filter_attrs;
+                    $hpk_label_key = isset($hpk_filter_label_keys[$hpk_filter_name])
+                        ? $hpk_filter_label_keys[$hpk_filter_name]
+                        : 'Hosterpk.invoice.filter_generic';
+            ?>
+            <div class="hpk-invoices__filter">
+                <?php $this->Form->label($this->_($hpk_label_key, true), $hpk_filter_id, ['class' => 'hpk-invoices__filter-label']); ?>
+                <?php call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_params); ?>
+            </div>
+            <?php
+                }
+            }
+            ?>
+            <div class="hpk-invoices__filter-actions">
+                <?php $this->Form->fieldSubmit('submit', $this->_('Hosterpk.invoice.filter_submit', true), ['class' => 'hpk-btn hpk-btn-outline hpk-btn-sm']); ?>
+            </div>
+        <?php $this->Form->end(); ?>
+        <?php } ?>
+    <?php } ?>
+
+        <div class="hpk-invoices__results" aria-live="polite">
+            <?php if ($hpk_num_invoices > 0) { ?>
+            <div class="hpk-invoices__table">
+                <table class="hpk-table" id="hpk-invoices-table">
+                    <thead>
+                        <tr>
+                            <?php $hpk_render_sort_header('id_code', $hpk_columns['invoice']); ?>
+                            <?php $hpk_render_sort_header('total', $hpk_columns['amount']); ?>
+                            <?php $hpk_render_sort_header('paid', $hpk_columns['paid']); ?>
+                            <?php $hpk_render_sort_header($hpk_date_sort, $hpk_columns['due']); ?>
+                            <?php $hpk_render_sort_header('date_billed', $hpk_columns['date_billed']); ?>
+                            <?php $hpk_render_sort_header('date_due', $hpk_columns['date_due']); ?>
+                            <th scope="col"><?php echo $this->Html->safe($hpk_columns['status']); ?></th>
+                            <th scope="col"><?php echo $this->Html->safe($hpk_columns['actions']); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($hpk_invoices as $hpk_invoice) {
+                            $past_due = ((isset($status) ? $status : null) == 'open'
+                                && empty($hpk_invoice->date_closed)
+                                && $this->Date->toTime($this->Date->cast($hpk_invoice->date_due)) < $this->Date->toTime(date('c'))
+                            );
+                            $hpk_due_settled = $hpk_due_is_settled(isset($hpk_invoice->due) ? $hpk_invoice->due : null);
+                            if ($hpk_status_is_closed || $hpk_due_settled) {
+                                $hpk_badge_class = 'success';
+                                $hpk_badge_key = 'Hosterpk.status.paid';
+                            } elseif ($past_due) {
+                                $hpk_badge_class = 'danger';
+                                $hpk_badge_key = 'Hosterpk.status.overdue';
+                            } else {
+                                $hpk_badge_class = 'warning';
+                                $hpk_badge_key = 'Hosterpk.status.unpaid';
+                            }
+                        ?>
+                        <tr class="expand invoice_applied">
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['invoice']); ?>"><?php (print (isset($hpk_invoice->id_code) ? $this->Html->safe($hpk_invoice->id_code) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['amount']); ?>"><?php echo $this->CurrencyFormat->format((isset($hpk_invoice->total) ? $this->Html->safe($hpk_invoice->total) : null), (isset($hpk_invoice->currency) ? $this->Html->safe($hpk_invoice->currency) : null), ['html_code' => true]); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['paid']); ?>"><?php echo $this->CurrencyFormat->format((isset($hpk_invoice->paid) ? $this->Html->safe($hpk_invoice->paid) : null), (isset($hpk_invoice->currency) ? $this->Html->safe($hpk_invoice->currency) : null), ['html_code' => true]); ?></td>
+                            <?php if ($hpk_status_is_closed) { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['due']); ?>"><?php echo $this->Date->cast((isset($hpk_invoice->date_closed) ? $this->Html->safe($hpk_invoice->date_closed) : null)); ?></td>
+                            <?php } else { ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['due']); ?>"><?php echo $this->CurrencyFormat->format((isset($hpk_invoice->due) ? $this->Html->safe($hpk_invoice->due) : null), (isset($hpk_invoice->currency) ? $this->Html->safe($hpk_invoice->currency) : null), ['html_code' => true]); ?></td>
+                            <?php } ?>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_billed']); ?>"><?php echo $this->Date->cast((isset($hpk_invoice->date_billed) ? $this->Html->safe($hpk_invoice->date_billed) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['date_due']); ?>"><?php echo $this->Date->cast((isset($hpk_invoice->date_due) ? $this->Html->safe($hpk_invoice->date_due) : null)); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['status']); ?>"><span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_badge_class); ?>"><?php echo $this->Html->safe($this->_($hpk_badge_key, true)); ?></span></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['actions']); ?>">
+                                <div class="hpk-invoices__actions">
+                                    <?php if ($hpk_status == 'open' && !$hpk_due_settled) { ?>
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'pay/method/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/'); ?>" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_pay', true)); ?></a>
+                                    <?php } ?>
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'invoices/view/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/'); ?>" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_view', true)); ?></a>
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'invoices/download/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/'); ?>" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_download', true)); ?></a>
+                                    <?php
+                                    if (!empty($electronic_formats)) {
+                                        foreach ($electronic_formats as $hpk_format_key => $hpk_format_name) {
+                                    ?>
+                                    <a href="<?php echo $this->Html->safe($this->base_uri . 'invoices/downloadelectronic/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/' . $this->Html->safe($hpk_format_key) . '/'); ?>" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_download_electronic', true, $hpk_format_name)); ?></a>
+                                    <?php
+                                        }
+                                    }
+                                    ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="expand_details" id="invoices_<?php (print (isset($hpk_invoice->id) ? $this->Html->safe($hpk_invoice->id) : null)); ?>">
+                            <td colspan="8" class="subtable"></td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php } else { ?>
+            <div class="hpk-empty hpk-empty--invoices">
+                <?php
+                $hpk_previous_icon_vars = $hpk_snapshot_icon_vars($this);
+                try {
+                    $this->set('icon', 'check-circle-fill');
+                    $this->set('icon_class', 'hpk-empty__icon');
+                    $this->set('icon_label', null);
+                    view('partials/icon', $this);
+                } finally {
+                    $hpk_restore_icon_vars($this, $hpk_previous_icon_vars);
+                }
+                ?>
+                <?php
+                $hpk_empty_title_key = $hpk_status == 'closed' ? 'Hosterpk.invoice.empty_closed_title' : 'Hosterpk.invoice.empty_open_title';
+                $hpk_empty_body_key = $hpk_status == 'closed' ? 'Hosterpk.invoice.empty_closed_body' : 'Hosterpk.invoice.empty_open_body';
+                ?>
+                <?php if ($hpk_is_inner) { ?>
+                <h3 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h3>
+                <?php } else { ?>
+                <h2 class="hpk-empty__title"><?php echo $this->Html->safe($this->_($hpk_empty_title_key, true)); ?></h2>
+                <?php } ?>
+                <p class="hpk-empty__body"><?php echo $this->Html->safe($this->_($hpk_empty_body_key, true)); ?></p>
+            </div>
+            <?php } ?>
+
+            <?php if (!$hpk_is_inner && $this->Pagination->hasPages()) { ?>
+            <nav class="hpk-invoices__pagination" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.invoice.pagination_label', true)); ?>">
+                <?php $this->Pagination->build(); ?>
+            </nav>
+            <?php } ?>
+        </div>
+
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    </section>
+    <?php } ?>
+</div>
+
+<!-- HOSTERPK FILTER-BRIDGE PRESERVED: replacement for WidgetClient's filter-link form-action bridge. -->
+<script type="text/javascript">
+    $(document).ready(function () {
+        $(".hpk-invoices").on("click", "a[data-hpk-filter-link], .hpk-invoices__pagination a", function(e) {
+            var form = $(this).closest(".hpk-invoices").find("form.hpk-invoices__filter-form");
+            if (!form.length) {
+                return;
+            }
+
+            e.preventDefault();
+            $(form).attr("action", $(this).attr("href"));
+            HTMLFormElement.prototype.submit.call(form.get(0));
+            return false;
+        });
+
+        // Make disabled pagination links keyboard-inert regardless of whether the Pagination helper emits <a> or <span>.
+        $(".hpk-invoices__pagination .disabled a").attr("tabindex", "-1").attr("aria-disabled", "true");
+    });
+</script>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        // Fetch all transactions applied to the given invoices
+        $(".invoice_applied").click(function() {
+            $(this).blestaUpdateRow("<?php echo $this->Html->safe((isset($this->base_uri) ? $this->Html->safe($this->base_uri) : null) . 'invoices/applied/'); ?>" + $(this).next("tr").attr("id").split("_")[1], ".subtable");
+        });
+    });
+</script>

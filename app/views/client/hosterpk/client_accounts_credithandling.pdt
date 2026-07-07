@@ -1,0 +1,66 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces Bootstrap WidgetClient/table chrome with HosterPK .hpk-card + .hpk-table for per-currency credit-threshold settings. Preserves the exact POST contract (credit_thresholds[<code>]) and the CurrencyFormat placeholder. Stock baseline: bootstrap/client_accounts_credithandling.pdt @ 6.0.0-b1 sha256:5fba000326b9e29c91b083c15c11c69573c40057722afd4558b0177f97d4c93d */ ?>
+<?php
+/* Page-level language load: Blesta captures content before structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-accounts">
+    <div class="hpk-accounts__nav">
+        <?php echo ($navigation ?? null); ?>
+    </div>
+    <div class="hpk-accounts__content">
+        <?php echo ($message ?? null); ?>
+        <div class="hpk-card" id="hpk-account-credit">
+            <h1 class="hpk-accounts__title"><?php $this->_('Hosterpk.account_credit.page_title');?></h1>
+            <p class="hpk-accounts__intro"><?php $this->_('Hosterpk.account_credit.explainer');?></p>
+            <p class="hpk-accounts__notice"><?php $this->_('Hosterpk.account_credit.pay_flow_pointer');?></p>
+
+            <?php
+            $this->Form->create(null, ['class' => 'disable-on-submit']);
+            ?>
+            <div class="hpk-table-wrap">
+                <table class="hpk-table hpk-table--compact">
+                    <thead>
+                        <tr>
+                            <th scope="col" data-label="<?php $this->_('Hosterpk.account_credit.heading_currency');?>"><?php $this->_('Hosterpk.account_credit.heading_currency');?></th>
+                            <th scope="col" data-label="<?php $this->_('Hosterpk.account_credit.heading_threshold');?>"><?php $this->_('Hosterpk.account_credit.heading_threshold');?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        foreach ($currencies ?? [] as $currency) {
+                            $hpk_code = (isset($currency->code) ? $currency->code : null);
+                            $threshold_value = isset($vars->credit_thresholds[$hpk_code])
+                                ? $this->CurrencyFormat->format($vars->credit_thresholds[$hpk_code], $hpk_code, ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false])
+                                : null;
+                            $placeholder = $this->CurrencyFormat->format(0, $hpk_code, ['prefix' => false, 'suffix' => false, 'with_separator' => false, 'code' => false]);
+                        ?>
+                        <tr>
+                            <td data-label="<?php $this->_('Hosterpk.account_credit.heading_currency');?>">
+                                <strong><?php echo $this->Html->safe($hpk_code);?></strong>
+                            </td>
+                            <td data-label="<?php $this->_('Hosterpk.account_credit.heading_threshold');?>">
+                                <?php $this->Form->fieldText('credit_thresholds[' . $this->Html->safe($hpk_code) . ']', $threshold_value, ['class' => 'form-control', 'placeholder' => $placeholder]);?>
+                            </td>
+                        </tr>
+                        <?php
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="hpk-accounts__form-actions hpk-accounts__form-actions--right">
+                <button type="submit" class="hpk-btn hpk-btn-primary" value="save"><?php $this->_('Hosterpk.account_credit.save');?></button>
+            </div>
+            <?php
+            $this->Form->end();
+            ?>
+        </div>
+    </div>
+</div>

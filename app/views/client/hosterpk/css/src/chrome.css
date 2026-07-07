@@ -1,0 +1,741 @@
+/*
+ * HosterPK chrome layer (Story 2.10 — FR9/FR13; UX-DR6/DR7/DR8). The brand SHELL:
+ * the 64px top brand bar, the 248px grouped sidebar, the tinted content area, the
+ * compact footer, and the mobile ☰ drawer. Concatenated after components.css, before
+ * dark.css, by tooling/check.sh.
+ *
+ * REACH RULE — COMPONENT TIER (architecture:608-626; project-context rule 1-2). Every
+ * rule here assumes DOM the shell AUTHORS, so each is gated behind an `.hpk-`-prefixed
+ * class (never a bare stock selector); no display:grid / :nth-child / fixed heights
+ * ride un-classed stock markup. Fixed heights (the 64px bar) sit only on authored
+ * `.hpk-*` classes. Where an authored control is an <a>, the rule is element-qualified
+ * + `.hpk-client`-scoped so it ties/beats the base.css frame-tier link rules
+ * (.hpk-client a (0,1,1) / a:hover (0,2,1)) on source order — the 2.6 anchor-button /
+ * 2.7 tab reconcile. Bespoke layout/colour on non-link elements rides bare `.hpk-*`
+ * (the components.css precedent).
+ *
+ * THEME. The bar + footer are brand-blue in BOTH themes (the brand strip never
+ * inverts), so their white foreground is a theme-agnostic literal `#fff` — the same
+ * sanctioned call .hpk-btn-primary / vendor-compat's filled badge make (white on
+ * --hpk-primary is the gate-verified AA pair). The surface/page/sidebar zones flip via
+ * the tokens (no per-zone dark rule). The ONE sanctioned [data-theme="dark"] exception
+ * is the active nav item: --hpk-primary text on its tint is ~2:1 on the navy sidebar
+ * (illegible), so dark flips it to the light-blue #A9C5FF on a stronger wash — a pair
+ * computed AA (see that block). Dark consumes only dark-DEFINED tokens (brand/semantic
+ * + g100-g300 + ink/text/muted/border); no g400-g900 (deferred-work.md:17). Zero
+ * override flags (RULE 2): the bundle stays flag-free; this layer adds none.
+ */
+
+/* ============================================================================
+ * Shell scaffold — a flex column: sticky topbar, the sidebar+main row, the footer.
+ * ========================================================================== */
+.hpk-client .hpk-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.hpk-client .hpk-shell-body {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: stretch;
+}
+
+/* Skip-to-main link (WCAG 2.4.1) — the FIRST focusable element; off-screen until
+   focused, then a brand chip at the top inline-start. An <a>, so .hpk-client-scoped
+   to out-rank the base link colour. */
+.hpk-client .hpk-skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+  top: 0;
+  z-index: 200;
+  padding: var(--hpk-space-2) var(--hpk-space-3);
+  background: var(--hpk-primary);
+  color: #fff;
+  text-decoration: none;
+  border-end-end-radius: var(--hpk-r-sm);
+}
+.hpk-client .hpk-skip-link:focus {
+  inset-inline-start: 0;
+}
+
+/* ============================================================================
+ * Top brand bar — 64px, --hpk-primary in BOTH themes, --hpk-topbar-shadow, sticky.
+ * ========================================================================== */
+.hpk-client .hpk-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-3);
+  height: var(--hpk-space-topbar-height);
+  padding: 0 var(--hpk-space-3);
+  background: var(--hpk-primary);
+  box-shadow: var(--hpk-topbar-shadow);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+/* Keep the white logo legible if the user forces system colours: opt the brand
+   strip out of forced-colors remapping (else the white logo can land on a white
+   Canvas — deferred-work.md:24). The blue focus-ring box-shadow then still composes
+   for the bar's controls (it is not stripped under forced-color-adjust:none). */
+@media (forced-colors: active) {
+  .hpk-client .hpk-topbar,
+  .hpk-client .hpk-footer { forced-color-adjust: none; }
+}
+
+/* Every direct topbar link is white, no underline (the bar is brand-blue). Element-
+   level under .hpk-topbar (0,2,1) so it ties/beats base .hpk-client a / a:hover on
+   source order. The account/language MENU links live inside the bar too but flip back
+   to ink via the same-specificity .hpk-disclosure-menu a rule LATER in this file
+   (source-order tiebreak) — they sit on a white surface popover. */
+.hpk-client .hpk-topbar a {
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Logo — the bar is brand-blue in both themes, so always show the WHITE variant
+   (.hpk-logo-dark = images/logo.svg) and hide the colour one, overriding the
+   components.css [data-theme] swap inside the bar only. The brand bar sizes the logo
+   here (the stock per-logo inline height style is dropped — RULE 1 keeps partials
+   inline-style-free). */
+.hpk-client .hpk-topbar-logo {
+  display: inline-flex;
+  align-items: center;
+}
+.hpk-client .hpk-topbar-logo img {
+  max-height: 36px;
+  width: auto;
+  display: block;
+}
+.hpk-client .hpk-topbar .hpk-logo-light { display: none; }
+.hpk-client .hpk-topbar .hpk-logo-dark { display: inline; }
+.hpk-client .hpk-brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: #fff;
+  font-family: var(--hpk-font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+/* Text login link (shown when not authed) + the account chip name. */
+.hpk-client .hpk-topbar-login {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--hpk-space-2);
+}
+.hpk-client .hpk-account-name {
+  font-weight: var(--hpk-nav-link-font-weight);
+}
+@media (max-width: 479.98px) {
+  .hpk-client .hpk-account-name { display: none; }
+}
+
+/* The trailing control cluster sits at the inline-end edge. */
+.hpk-client .hpk-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-1);
+  margin-inline-start: auto;
+}
+
+/* Topbar icon controls (notifications) + the lifted theme toggle share the 44px
+   transparent-on-blue chip look; color:#fff drives the currentColor glyphs white. */
+.hpk-client .hpk-topbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--hpk-space-2);
+  border-radius: var(--hpk-r-md);
+  background: transparent;
+  border: 0;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hpk-client .hpk-topbar-icon:hover {
+  background: rgba(255, 255, 255, .14);
+}
+.hpk-client .hpk-topbar-icon .hpk-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* ── Account chip + language switcher — native <details>/<summary> disclosures
+ * (no Bootstrap-dropdown / Popper dependency; the 2.7 native-<dialog> precedent).
+ * The summary is the on-bar chip; the menu is an absolutely-positioned surface
+ * popover so opening overlays rather than pushing the bar. No-JS reachable
+ * (native disclosure), keyboard-operable by default. ----------------------- */
+.hpk-client .hpk-disclosure {
+  position: relative;
+}
+.hpk-client .hpk-disclosure-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 44px;
+  padding: var(--hpk-space-1) var(--hpk-space-2);
+  border-radius: var(--hpk-r-md);
+  color: #fff;
+  cursor: pointer;
+  list-style: none;          /* drop the Firefox disclosure triangle */
+  white-space: nowrap;
+}
+.hpk-client .hpk-disclosure-summary::-webkit-details-marker { display: none; }
+.hpk-client .hpk-disclosure-summary:hover {
+  background: rgba(255, 255, 255, .14);
+}
+.hpk-client .hpk-disclosure[open] > .hpk-disclosure-summary {
+  background: rgba(255, 255, 255, .18);
+}
+/* The chevron rotates to point up while open (decorative reinforcement). */
+.hpk-client .hpk-disclosure[open] > .hpk-disclosure-summary .hpk-disclosure-caret {
+  transform: rotate(180deg);
+}
+.hpk-client .hpk-disclosure-caret {
+  width: .8rem;
+  height: .8rem;
+  transition: transform .15s ease;
+}
+.hpk-client .hpk-disclosure-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + var(--hpk-space-1));
+  min-width: 220px;
+  padding: var(--hpk-space-1);
+  background: var(--hpk-surface);
+  color: var(--hpk-text);
+  border: 1px solid var(--hpk-border);
+  border-radius: var(--hpk-r-md);
+  box-shadow: var(--hpk-shadow);
+  z-index: 110;
+}
+.hpk-client .hpk-disclosure-menu a,
+.hpk-client .hpk-disclosure-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--hpk-space-2);
+  border-radius: var(--hpk-r-sm);
+  background: transparent;
+  border: 0;
+  color: var(--hpk-text);
+  font-size: var(--hpk-nav-link-font-size);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hpk-client .hpk-disclosure-menu a:hover,
+.hpk-client .hpk-disclosure-menu button:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client .hpk-disclosure-menu .hpk-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--hpk-muted);
+}
+.hpk-client .hpk-disclosure-divider {
+  height: 1px;
+  margin: var(--hpk-space-1) 0;
+  background: var(--hpk-border);
+}
+/* The language switcher reuses Blesta's stock submit-on-click list (app.min.js
+   keys on .language_code[language_code] + the hidden #language_selector form), so
+   its <ul>/<li> stay; reset the base list rhythm inside the menu. */
+.hpk-client .hpk-disclosure-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The staff-as-client "logged in as client" indicator (kept from stock). */
+.hpk-client .hpk-staff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-1);
+  padding: var(--hpk-space-1) var(--hpk-space-2);
+  border-radius: var(--hpk-r-pill);
+  background: rgba(255, 255, 255, .16);
+  font-size: var(--hpk-small-font-size);
+}
+
+/* ── Mobile ☰ drawer trigger — a real in-page <a href="#hpk-structure-sidebar">
+ * (CSS hamburger; the sprite has no list/menu glyph). Hidden ≥md, shown <md. --- */
+.hpk-client .hpk-drawer-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--hpk-r-md);
+  background: transparent;
+  border: 0;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hpk-client .hpk-drawer-toggle:hover {
+  background: rgba(255, 255, 255, .14);
+}
+.hpk-client .hpk-hamburger,
+.hpk-client .hpk-hamburger::before,
+.hpk-client .hpk-hamburger::after {
+  width: 20px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+.hpk-client .hpk-hamburger {
+  position: relative;
+  display: block;
+}
+.hpk-client .hpk-hamburger::before,
+.hpk-client .hpk-hamburger::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+}
+.hpk-client .hpk-hamburger::before { top: -6px; }
+.hpk-client .hpk-hamburger::after { top: 6px; }
+
+/* The drawer backdrop is inert until the drawer opens (mobile only). */
+.hpk-client .hpk-drawer-backdrop { display: none; }
+
+/* ============================================================================
+ * Sidebar — 248px surface column, border inline-end, sticky below the bar.
+ * ========================================================================== */
+.hpk-client .hpk-sidebar {
+  flex: 0 0 var(--hpk-space-sidebar-width);
+  width: var(--hpk-space-sidebar-width);
+  align-self: flex-start;
+  position: sticky;
+  top: var(--hpk-space-topbar-height);
+  height: calc(100vh - var(--hpk-space-topbar-height));
+  overflow-y: auto;
+  padding: var(--hpk-space-3) var(--hpk-space-2);
+  background: var(--hpk-surface);
+  border-inline-end: 1px solid var(--hpk-border);
+}
+
+/* Group section label — Urbanist-600 uppercase eyebrow (tokens.css applies the
+   letter-spacing at the chrome tier, not base.css). */
+.hpk-client .hpk-nav-group-label {
+  margin: var(--hpk-space-3) var(--hpk-space-2) var(--hpk-space-1);
+  font-family: var(--hpk-font-display);
+  font-size: var(--hpk-small-font-size);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--hpk-muted);
+}
+.hpk-client .hpk-nav-list {
+  list-style: none;
+  margin: 0 0 var(--hpk-space-2);
+  padding: 0;
+}
+
+/* Nav link — element-qualified so it beats the base link rules at rest AND on hover
+   (source-order tie, the 2.7 tab reconcile). The 4px inline-start accent is reserved
+   transparent at rest so the active state causes no shift. */
+.hpk-client a.hpk-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 44px;
+  padding: var(--hpk-space-2) var(--hpk-space-2);
+  border-inline-start: 4px solid transparent;
+  border-radius: var(--hpk-r-sm);
+  color: var(--hpk-text);
+  font-size: var(--hpk-nav-link-font-size);
+  font-weight: var(--hpk-nav-link-font-weight);
+  line-height: 1.2;
+  text-decoration: none;
+}
+.hpk-client a.hpk-nav-link:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client a.hpk-nav-link .hpk-nav-icon {
+  width: 1.1rem;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--hpk-muted);
+}
+/* Active item (light): primary-tint bg + primary text + the 4px accent. Primary on
+   --hpk-primary-tint measures 5.24:1 (AA). Radius --hpk-r-sm (inherited above). */
+.hpk-client a.hpk-nav-link.is-active {
+  background: var(--hpk-primary-tint);
+  color: var(--hpk-primary);
+  border-inline-start-color: var(--hpk-primary);
+}
+.hpk-client a.hpk-nav-link.is-active .hpk-nav-icon {
+  color: var(--hpk-primary);
+}
+/* Active item (dark) — the one sanctioned [data-theme="dark"] chrome exception.
+   --hpk-primary on its tint is ~2:1 on the navy sidebar (illegible), so dark flips
+   to the light-blue #A9C5FF text on a stronger rgba(20,87,230,.28) wash; that pair
+   composites to 6.14:1 (AA) over --hpk-surface dark. The literals are story-
+   prescribed (AC B), the same sanctioned-literal call as the 2.7 modal scrim. */
+[data-theme="dark"] .hpk-client a.hpk-nav-link.is-active {
+  background: rgba(20, 87, 230, .28);
+  color: #A9C5FF;
+  border-inline-start-color: #A9C5FF;
+}
+[data-theme="dark"] .hpk-client a.hpk-nav-link.is-active .hpk-nav-icon {
+  color: #A9C5FF;
+}
+
+/* Nested children (a parent's `sub` set + the active item's `secondary` set) render
+   inline under their parent, slightly indented + smaller, never dropped (UX-DR7). */
+.hpk-client .hpk-nav-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.hpk-client a.hpk-nav-sublink {
+  display: flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  min-height: 44px;
+  padding: var(--hpk-space-1) var(--hpk-space-2) var(--hpk-space-1) var(--hpk-space-5);
+  border-radius: var(--hpk-r-sm);
+  color: var(--hpk-muted);
+  font-size: var(--hpk-small-font-size);
+  text-decoration: none;
+}
+.hpk-client a.hpk-nav-sublink:hover {
+  background: var(--hpk-g100);
+  color: var(--hpk-ink);
+}
+.hpk-client a.hpk-nav-sublink.is-active {
+  color: var(--hpk-primary);
+  font-weight: 600;
+}
+[data-theme="dark"] .hpk-client a.hpk-nav-sublink.is-active {
+  color: #A9C5FF;
+}
+
+/* The "More" catch-all section label reads like any other group (no special chrome,
+   never a junk-drawer styling). */
+
+/* ============================================================================
+ * Main content region — the tinted page area; echoes $content unchanged.
+ * ========================================================================== */
+.hpk-client .hpk-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  scroll-margin-top: var(--hpk-space-topbar-height);
+  padding: var(--hpk-space-4);
+  background: var(--hpk-page);
+}
+.hpk-client .hpk-page-title {
+  margin-top: 0;
+  margin-bottom: var(--hpk-space-4);
+}
+
+/* ============================================================================
+ * Footer — compact brand-blue strip (replaces "Powered by Blesta"). White on
+ * --hpk-primary (the AA bar pair), both themes.
+ * ========================================================================== */
+.hpk-client .hpk-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hpk-space-2) var(--hpk-space-4);
+  padding: var(--hpk-space-3) var(--hpk-space-4);
+  background: var(--hpk-primary);
+  color: #fff;
+  font-size: var(--hpk-small-font-size);
+}
+.hpk-client .hpk-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #fff;
+  text-decoration: none;
+}
+.hpk-client .hpk-footer a:hover {
+  text-decoration: underline;
+}
+.hpk-client .hpk-footer-copyright {
+  margin-inline-start: auto;
+}
+
+/* ============================================================================
+ * Responsive — <md (~760px): the sidebar becomes the off-canvas ☰ drawer; the
+ * brand bar persists; single column. Touch targets are already ≥44px above.
+ * ========================================================================== */
+@media (max-width: 759.98px) {
+  .hpk-client .hpk-drawer-toggle { display: inline-flex; }
+  .hpk-client .hpk-sidebar {
+    position: fixed;
+    top: var(--hpk-space-topbar-height);
+    bottom: 0;
+    inset-inline-start: 0;
+    height: auto;
+    width: min(82vw, 300px);
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .2s ease;
+    z-index: 210;
+    box-shadow: var(--hpk-shadow);
+  }
+  /* Reveal via the Alpine `is-open` class OR the no-JS CSS :target fallback (the ☰
+     is a real in-page anchor) — reaching the nav links is never JS-gated (AC C). */
+  .hpk-client .hpk-sidebar.is-open,
+  .hpk-client .hpk-sidebar:target {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .hpk-client .hpk-drawer-backdrop.is-open {
+    display: block;
+    position: fixed;
+    inset: var(--hpk-space-topbar-height) 0 0 0;
+    background: rgba(0, 0, 0, .4);
+    z-index: 205;
+  }
+  .hpk-client .hpk-main {
+    padding: var(--hpk-space-3);
+  }
+}
+
+/* Honour reduced-motion: drop the drawer slide transition (no essential motion). */
+@media (prefers-reduced-motion: reduce) {
+  .hpk-client .hpk-sidebar { transition: none; }
+}
+
+/* ============================================================================
+ * Slim auth shell (Story 3.1 — FR14/FR16; UX-DR27). The login/account-entry
+ * layout used when Blesta suppresses the full chrome ($show_header=false). A
+ * brand-blue panel beside (or above) a centered form card. Component-tier rules
+ * gated behind .hpk-auth-* / .hpk-login-* classes; the panel stays brand-blue in
+ * both themes. Zero override flags.
+ * ========================================================================== */
+
+/* Strip the default page padding from the slim main; the auth shell owns all
+   layout + spacing so the brand panel can fill the viewport edge-to-edge. */
+.hpk-client .hpk-main-slim {
+  display: flex;
+  min-height: 100vh;
+  padding: 0;
+}
+
+/* Mobile-first: stacked column, full viewport height, brand panel auto-sized
+   on top, form card scrolls below if the viewport is short. */
+.hpk-client .hpk-auth-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  width: 100%;
+  min-height: 100vh;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Brand panel — the trust beacon. Brand-blue in BOTH themes; white foreground. */
+.hpk-client .hpk-auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-5) var(--hpk-space-4);
+  background: var(--hpk-primary);
+  color: #fff;
+  text-align: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.hpk-client .hpk-auth-logo {
+  display: inline-flex;
+}
+
+.hpk-client .hpk-auth-logo img {
+  max-height: 48px;
+  width: auto;
+  display: block;
+}
+.hpk-client .hpk-auth-logo .hpk-brand-wordmark {
+  min-height: 48px;
+  font-size: 1.5rem;
+}
+
+.hpk-client .hpk-auth-headline {
+  margin: 0;
+  width: 100%;
+  max-width: 30ch;
+  color: #fff;
+  font-size: var(--hpk-h3-font-size);
+  font-weight: var(--hpk-h3-font-weight);
+  line-height: var(--hpk-heading-line-height);
+  overflow-wrap: break-word;
+}
+
+.hpk-client .hpk-auth-trust {
+  margin: 0;
+  width: 100%;
+  max-width: 36ch;
+  color: rgba(255, 255, 255, .85);
+  font-size: var(--hpk-body-font-size);
+  overflow-wrap: break-word;
+}
+
+/* Form area — centers the card horizontally and vertically on the page tint. */
+.hpk-client .hpk-auth-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1 1 auto;
+  padding: var(--hpk-space-4);
+  background: var(--hpk-page);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Login card — surface background, shadow lift, capped width. The internal stack
+   uses a flex gap so fields/buttons/links stay evenly spaced without wrapper
+   margin micro-management. */
+.hpk-client .hpk-login-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-3);
+  padding: var(--hpk-space-card-padding);
+  background: var(--hpk-surface);
+  border-radius: var(--hpk-r-lg);
+  box-shadow: var(--hpk-shadow);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Full-width primary submit button inside the login card. */
+.hpk-client .hpk-login-card .hpk-btn-primary {
+  width: 100%;
+  justify-content: center;
+}
+
+/* The stock hidden fieldSubmit input is a layout/CSRF helper, not visible UI.
+   Bootstrap 4's .hidden utility is gone (Story 2.2 dropped application.min.css),
+   so scope the hide to the login card. */
+.hpk-client .hpk-login-card input.hidden {
+  display: none;
+}
+
+/* Field stack: label sits directly above the input with a small gap. */
+.hpk-client .hpk-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hpk-space-1);
+}
+
+/* Password toggle input group — relative wrapper so the toggle button can be
+   absolutely positioned at the inline end of the input. */
+.hpk-client .hpk-input-group {
+  --hpk-password-toggle-width: min(48%, 9rem);
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.hpk-client .hpk-input-group .form-control {
+  flex: 1 1 auto;
+  padding-inline-end: calc(var(--hpk-password-toggle-width) + var(--hpk-space-2));
+}
+
+.hpk-client .hpk-input-group .hpk-password-toggle {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--hpk-password-toggle-width);
+  max-width: 48%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hpk-client [x-cloak] {
+  display: none;
+}
+
+.hpk-client .hpk-login-captcha {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.hpk-client .hpk-login-captcha > *,
+.hpk-client .hpk-login-captcha iframe,
+.hpk-client .hpk-login-captcha img {
+  max-width: 100%;
+}
+
+/* Remember-me checkbox aligns label + control as one clickable row. */
+.hpk-client .hpk-login-remember {
+  display: flex;
+  align-items: center;
+}
+
+.hpk-client .hpk-login-remember .hpk-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hpk-space-2);
+  cursor: pointer;
+}
+
+/* Forgot-password / forgot-username links sit on one row with space-between. */
+.hpk-client .hpk-login-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--hpk-space-2);
+  font-size: var(--hpk-small-font-size);
+}
+
+/* Secure-login reassurance line — centred, muted, with a lock glyph. */
+.hpk-client .hpk-login-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hpk-space-2);
+  margin: 0;
+  font-size: var(--hpk-small-font-size);
+  color: var(--hpk-muted);
+}
+
+/* Desktop: side-by-side split. The brand panel locks to ~45% width and full
+   viewport height; the form area fills the remainder and keeps the card centred. */
+@media (min-width: 760px) {
+  .hpk-client .hpk-auth-shell {
+    flex-direction: row;
+  }
+  .hpk-client .hpk-auth-brand {
+    flex: 0 0 45%;
+    min-height: 100vh;
+    padding: var(--hpk-space-5);
+  }
+  .hpk-client .hpk-auth-content {
+    flex: 1 1 auto;
+    padding: var(--hpk-space-5);
+  }
+}
+
+/* Honour reduced-motion: no transition on the auth shell (none authored). */
+@media (prefers-reduced-motion: reduce) {
+  .hpk-client .hpk-auth-shell { transition: none; }
+}

@@ -1,0 +1,113 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: restyles the blestaModal-loaded cancel-confirmation body on-brand (.hpk-service-modal form scope, HosterPK radio rows / fields / buttons, .hpk-alert cancel messages) while preserving the Form->create(id=cancel_service) + CSRF contract, the cancel radio values (term|now|''), the cancellation_reason + password field names, the past-due gating, the danger-styled confirm submit, and the stock div.cancel_message show/hide jQuery (selectors #cancel_service input[name='cancel'] + div.cancel_message preserved, fenced). Stock baseline: bootstrap/client_services_cancel.pdt @ 6.0.0-b1 sha256:bd863b1b20ebb57b9cc103a58ee8537dc93e8e74b8a7d9b3645cc80455fec8ce */ ?>
+<?php
+/* Partial-level language load: this modal body renders outside structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+$this->Form->create(null, ['id' => 'cancel_service', 'class' => 'hpk-service-modal']);
+?>
+        <div class="modal-header hpk-service-modal__header">
+            <h5 class="global_modal_title hpk-service-modal__title"><?php echo $this->Html->safe($this->_('Hosterpk.service_cancel.heading_cancel', true)); ?></h5>
+            <button type="button" class="close hpk-service-modal__close" data-dismiss="modal" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.service_cancel.close', true)); ?>">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body hpk-service-modal__body">
+            <?php
+            foreach ((array)(isset($confirm_cancel_messages) ? $confirm_cancel_messages : []) as $type => $message) {
+            ?>
+                <div class="cancel_message hpk-alert hpk-alert-info hpk-service-modal__message <?php (print (isset($type) ? $this->Html->safe($type) : null)); ?>"><?php echo (isset($message) ? $message : null); ?></div>
+            <?php
+            }
+            ?>
+            <div class="hpk-service-modal__field">
+                <?php
+                if (empty($past_due_invoices)) {
+                    if ($clients_cancel_options == 'both' || $clients_cancel_options == 'end_of_term') {
+                    ?>
+                        <div class="hpk-service-modal__radio">
+                            <label>
+                                <?php
+                                $this->Form->fieldRadio('cancel', 'term', ((isset($vars->cancel) ? $vars->cancel : null) == 'term'));
+
+                                // Show language based on whether or not a renew date exists.
+                                if ((isset($service->date_renews) ? $service->date_renews : false)) {
+                                    $this->_('Hosterpk.service_cancel.field_term_date', false, $this->Date->cast((isset($service->date_renews) ? $service->date_renews : null), 'date'));
+                                } else {
+                                    $this->_('Hosterpk.service_cancel.field_term');
+                                }
+                                ?>
+                            </label>
+                        </div>
+                    <?php
+                    }
+                    ?>
+                    <?php
+                    if ($clients_cancel_options == 'both' || $clients_cancel_options == 'now') {
+                    ?>
+                        <div class="hpk-service-modal__radio">
+                            <label>
+                                <?php
+                                $this->Form->fieldRadio('cancel', 'now', ((isset($vars->cancel) ? $vars->cancel : null) == 'now'));
+                                $this->_('Hosterpk.service_cancel.field_now');
+                                ?>
+                            </label>
+                        </div>
+                    <?php
+                    }
+                }
+                ?>
+                <div class="hpk-service-modal__radio">
+                    <label>
+                        <?php
+                        $this->Form->fieldRadio('cancel', '', ((isset($vars->cancel) ? $vars->cancel : null) == ''));
+                        $this->_('Hosterpk.service_cancel.field_do_not');
+                        ?>
+                    </label>
+                </div>
+            </div>
+            <div class="hpk-service-modal__field">
+                <?php
+                $this->Form->label($this->_('Hosterpk.service_cancel.field_cancellation_reason', true), 'cancellation_reason', ['class' => 'hpk-service-modal__label']);
+                $this->Form->fieldTextarea('cancellation_reason', (isset($vars->cancellation_reason) ? $vars->cancellation_reason : null), ['id' => 'cancellation_reason', 'class' => 'hpk-input hpk-service-modal__control']);
+                ?>
+            </div>
+            <div class="hpk-service-modal__field">
+                <?php
+                $this->Form->label($this->_('Hosterpk.service_cancel.field_password', true), 'password', ['class' => 'hpk-service-modal__label']);
+                $this->Form->fieldPassword('password', ['id' => 'password', 'class' => 'hpk-input hpk-service-modal__control']);
+                ?>
+            </div>
+        </div>
+        <div class="modal-footer hpk-service-modal__footer">
+            <?php
+            $this->Form->fieldButton('cancel', $this->_('Hosterpk.service_cancel.field_cancel_cancel', true), ['class' => 'hpk-btn hpk-btn-ghost', 'data-dismiss' => 'modal']);
+            $this->Form->fieldButton('submit', $this->_('Hosterpk.service_cancel.field_cancel_submit', true), ['class' => 'hpk-btn hpk-btn-danger', 'type' => 'submit']);
+            ?>
+        </div>
+    <?php
+    $this->Form->end();
+    ?>
+
+<!-- HOSTERPK STOCK-JS PRESERVED -->
+<script type="text/javascript">
+    $(document).ready(function() {
+        setCancelMessage();
+
+        $("#cancel_service input[name='cancel']").change(function() {
+            setCancelMessage();
+        });
+
+        function setCancelMessage() {
+            $("div.cancel_message").hide();
+            var message_type = $("#cancel_service input[name='cancel']:checked").val();
+            if (message_type)
+                $("div.cancel_message" + "." + message_type).show();
+        }
+    });
+</script>
+<!-- /PRESERVED -->

@@ -1,0 +1,71 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces Bootstrap WidgetClient wrapper with HosterPK .hpk-card while preserving the 2-step flow and embedded contact/account partials. Stock baseline: bootstrap/client_accounts_add.pdt @ 6.0.0-b1 sha256:629b467b814924da3e4f9251b26cfca6441c10ebe2634501619647160aff377c */ ?>
+<?php
+/* Page-level language load: Blesta captures content before structure.pdt. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+?>
+<div class="hpk-accounts">
+    <div class="hpk-accounts__nav">
+        <?php echo ($navigation ?? null); ?>
+    </div>
+    <div class="hpk-accounts__content">
+        <?php echo (isset($message) ? $message : null); ?>
+        <div class="hpk-card" id="hpk-account-add">
+            <h1 class="hpk-accounts__title"><?php $this->_('Hosterpk.account_add.page_title');?></h1>
+            <p class="hpk-accounts__intro"><?php $this->_('Hosterpk.account_add.intro');?></p>
+
+            <?php
+            $this->Form->create(null, ['class' => 'disable-on-submit']);
+
+            if ((isset($step) ? $step : 1) == 1) {
+            ?>
+            <fieldset class="hpk-payment-method-list">
+                <legend class="hpk-payment-method-list__legend"><?php $this->_('Hosterpk.account_add.type_legend');?></legend>
+                <label class="hpk-payment-method">
+                    <input type="radio" name="payment_account_type" value="cc" class="hpk-payment-method__input"<?php echo ((isset($vars->account_type) ? $vars->account_type : 'cc') == 'cc') ? ' checked' : '';?>>
+                    <span class="hpk-payment-method__content">
+                        <span class="hpk-payment-method__radio"></span>
+                        <span class="hpk-payment-method__body">
+                            <span class="hpk-payment-method__label"><?php $this->_('Hosterpk.account_add.type_cc');?></span>
+                            <span class="hpk-payment-method__meta"><?php $this->_('Hosterpk.account_add.type_cc_detail');?></span>
+                        </span>
+                    </span>
+                </label>
+                <label class="hpk-payment-method">
+                    <input type="radio" name="payment_account_type" value="ach" class="hpk-payment-method__input"<?php echo ((isset($vars->account_type) ? $vars->account_type : null) == 'ach') ? ' checked' : '';?>>
+                    <span class="hpk-payment-method__content">
+                        <span class="hpk-payment-method__radio"></span>
+                        <span class="hpk-payment-method__body">
+                            <span class="hpk-payment-method__label"><?php $this->_('Hosterpk.account_add.type_ach');?></span>
+                            <span class="hpk-payment-method__meta"><?php $this->_('Hosterpk.account_add.type_ach_detail');?></span>
+                        </span>
+                    </span>
+                </label>
+            </fieldset>
+
+            <div class="hpk-accounts__form-actions hpk-accounts__form-actions--right">
+                <button type="submit" class="hpk-btn hpk-btn-primary"><?php $this->_('Hosterpk.account_add.action_continue');?></button>
+            </div>
+            <?php
+            } else {
+                $this->Form->fieldHidden('account_type', (isset($vars->account_type) ? $vars->account_type : null), ['id' => 'account_type']);
+                echo (isset($contact_info) ? $contact_info : null);
+            ?>
+            <hr />
+            <?php echo (isset($account_info) ? $account_info : null); ?>
+
+            <div class="hpk-accounts__form-actions hpk-accounts__form-actions--right">
+                <button type="submit" class="hpk-btn hpk-btn-primary"><?php $this->_('Hosterpk.account_add.action_create');?></button>
+            </div>
+            <?php
+            }
+            $this->Form->end();
+            ?>
+        </div>
+    </div>
+</div>

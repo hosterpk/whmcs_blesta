@@ -1,0 +1,279 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces WidgetClient chrome and Bootstrap card/grid/float layout with HosterPK .hpk-card/.hpk-table/.hpk-alert/.hpk-badge/.hpk-btn components while preserving the controller->view data contract (invoice/currency/client/company/electronic_formats/language/display_payments/applied_transactions/render_section/message), the money-safe settled predicate (shared with 5.1), the approved-only payments filter + gateway-name resolution, and the widget-mode guard. Pay is gated on the money-safe predicate (5.1 P-decision-1); Download PDF / electronic formats stay link-only (DEC-4/DEC-7); no payment-render work (DEC-3). Stock baseline: bootstrap/client_invoices_view.pdt @ 6.0.0-b1 sha256:7aa319ca875830693dac9bb2809d8a08f3a23c12c5c794b4aa4a18e9b352e1d2 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too. */
+$hpk_view_fs = null;
+if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+    $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+}
+if (isset($hpk_view_fs)) {
+    Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+}
+
+/* Money-safe settled predicate — lifted verbatim from the 5.1 list override
+ * (client_invoices.pdt). A due value that is null/empty/unparseable counts as
+ * NOT settled, so the detail badge/Pay gating and the list agree byte-for-byte. */
+$hpk_due_is_settled = function ($amount) {
+    if ($amount === null || $amount === '') {
+        return false; // unknown due = not settled (money-safe default)
+    }
+
+    $normalized = preg_replace('/[,\s]/', '', (string)$amount);
+    if (!preg_match('/^-?\d+(?:\.\d+)?$/', $normalized)) {
+        return false; // unparseable due = not settled (money-safe default)
+    }
+
+    $abs_amount = ltrim($normalized, '-');
+    $is_zero = trim(str_replace('.', '', $abs_amount), '0') === '';
+
+    return $is_zero || $normalized[0] === '-';
+};
+
+$hpk_invoice = isset($invoice) ? $invoice : null;
+$hpk_language = isset($language) ? $language : '';
+$hpk_currency_code = (isset($currency) && isset($currency->code)) ? $currency->code : null;
+$hpk_date_format = (isset($client->settings['date_format']) ? $client->settings['date_format'] : null);
+$hpk_is_inner = (isset($render_section) ? $render_section : null) || (isset($is_ajax) ? $is_ajax : null);
+
+$hpk_is_proforma = ((isset($hpk_invoice->status) ? $hpk_invoice->status : null) == 'proforma');
+$hpk_id_code = (isset($hpk_invoice->id_code) ? $hpk_invoice->id_code : null);
+
+/* Compute the money-safe settled flag ONCE; reuse for badge, banner, and Pay. */
+$hpk_due_settled = $hpk_due_is_settled(isset($hpk_invoice->due) ? $hpk_invoice->due : null);
+
+/* $past_due (AC7) — must agree with the badge and the 5.1 list. The list derives
+ * "open" from its $status TAB variable (value 'open'); the detail has no tab, so
+ * the per-invoice equivalent of "open" is empty(date_closed). The stock spec's
+ * literal $invoice->status == 'open' check is dead (invoice->status is
+ * active|proforma|draft|void, never 'open'), which would make the overdue
+ * badge/banner never fire and disagree with the list — so the not-closed gate is
+ * the faithful per-invoice form. The settled gate is applied separately below. */
+$past_due = (empty($hpk_invoice->date_closed)
+    && $this->Date->toTime($this->Date->cast(isset($hpk_invoice->date_due) ? $hpk_invoice->date_due : null)) < $this->Date->toTime(date('c')));
+
+if (!empty($hpk_invoice->date_closed) || $hpk_due_settled) {
+    $hpk_badge_class = 'success';
+    $hpk_badge_key = 'Hosterpk.status.paid';
+} elseif ($past_due) {
+    $hpk_badge_class = 'danger';
+    $hpk_badge_key = 'Hosterpk.status.overdue';
+} else {
+    $hpk_badge_class = 'warning';
+    $hpk_badge_key = 'Hosterpk.status.unpaid';
+}
+
+/* Pay shows only when not closed AND not settled (5.1 P-decision-1). */
+$hpk_show_pay = empty($hpk_invoice->date_closed) && !$hpk_due_settled;
+$hpk_heading_key = $hpk_is_proforma ? 'Hosterpk.invoice_detail.heading_proforma' : 'Hosterpk.invoice_detail.heading_invoice';
+
+$hpk_currency_options = [
+    'with_separator' => false,
+    'decimals' => 4,
+    'significant_decimals' => true
+];
+
+$hpk_line_columns = [
+    'description' => $this->_('Hosterpk.invoice_detail.description', true),
+    'quantity' => $this->_('Hosterpk.invoice_detail.quantity', true),
+    'unit_price' => $this->_('Hosterpk.invoice_detail.unit_price', true),
+    'cost' => $this->_('Hosterpk.invoice_detail.cost', true)
+];
+
+$hpk_payment_columns = [
+    'applied_date' => $this->_('Hosterpk.invoice_detail.payments_applied_date', true),
+    'type' => $this->_('Hosterpk.invoice_detail.payments_type', true),
+    'transaction_id' => $this->_('Hosterpk.invoice_detail.payments_transaction_id', true),
+    'amount' => $this->_('Hosterpk.invoice_detail.payments_amount', true)
+];
+
+$hpk_pay_url = $this->base_uri . 'pay/method/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/';
+$hpk_download_url = $this->base_uri . 'invoices/download/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/';
+?>
+<div id="hpk-invoice" class="hpk-invoice-detail<?php echo $this->Html->safe($hpk_is_inner ? ' hpk-invoice-detail--embedded' : ''); ?>">
+    <?php echo ($message ?? null); ?>
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    <section class="hpk-card hpk-invoice-detail__shell" aria-labelledby="hpk-invoice-title">
+    <?php } ?>
+
+        <header class="hpk-invoice-detail__header">
+            <h1 id="hpk-invoice-title" class="hpk-invoice-detail__title"><?php echo $this->_($hpk_heading_key, true, (isset($hpk_id_code) ? $this->Html->safe($hpk_id_code) : null)); ?></h1>
+            <span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($hpk_badge_class); ?>"><?php echo $this->Html->safe($this->_($hpk_badge_key, true)); ?></span>
+        </header>
+
+        <?php if ($past_due && !$hpk_due_settled) { ?>
+        <div class="hpk-alert hpk-alert-danger hpk-invoice-detail__overdue" role="alert">
+            <span class="hpk-invoice-detail__overdue-text"><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.overdue_banner', true)); ?></span>
+            <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($hpk_pay_url); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_pay', true)); ?></a>
+        </div>
+        <?php } ?>
+
+        <div class="hpk-invoice-detail__parties">
+            <div class="hpk-invoice-detail__party">
+                <h2 class="hpk-invoice-detail__party-title"><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.invoice_from', true)); ?></h2>
+                <p class="hpk-invoice-detail__party-name"><?php echo $this->Html->safe(isset($company->name) ? $company->name : ''); ?></p>
+                <?php if (!empty($company->address)) { ?>
+                <p class="hpk-invoice-detail__party-line"><?php echo nl2br($this->Html->safe($company->address)); ?></p>
+                <?php } ?>
+            </div>
+            <div class="hpk-invoice-detail__party">
+                <h2 class="hpk-invoice-detail__party-title"><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.bill_to', true)); ?></h2>
+                <p class="hpk-invoice-detail__party-name"><?php echo $this->Html->safe(trim((isset($client->first_name) ? $client->first_name : '') . ' ' . (isset($client->last_name) ? $client->last_name : ''))); ?></p>
+                <?php if (!empty($client->address1)) { ?>
+                <p class="hpk-invoice-detail__party-line">
+                    <?php
+                    echo nl2br($this->Html->safe($client->address1));
+                    if (!empty($client->address2)) {
+                        echo nl2br($this->Html->safe($client->address2));
+                    }
+                    ?>
+                </p>
+                <?php } ?>
+                <p class="hpk-invoice-detail__party-line"><?php echo $this->Html->safe(trim((isset($client->city) ? $client->city : '') . (isset($client->city) ? ', ' : '') . (isset($client->state_name) ? $client->state_name : (isset($client->state) ? $client->state : '')) . ' ' . (isset($client->zip) ? $client->zip : '') . ' ' . (isset($client->country_name) ? $client->country_name : (isset($client->country) ? $client->country : '')))); ?></p>
+                <dl class="hpk-invoice-detail__meta">
+                    <div class="hpk-invoice-detail__meta-row">
+                        <dt><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.client_id', true)); ?></dt>
+                        <dd><?php echo $this->Html->safe(isset($client->id_value) ? $client->id_value : ''); ?></dd>
+                    </div>
+                    <div class="hpk-invoice-detail__meta-row">
+                        <dt><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.date_billed', true)); ?></dt>
+                        <dd><?php echo $this->Date->cast(isset($hpk_invoice->date_billed) ? $hpk_invoice->date_billed : null, $hpk_date_format); ?></dd>
+                    </div>
+                    <div class="hpk-invoice-detail__meta-row">
+                        <dt><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.date_due', true)); ?></dt>
+                        <dd><?php echo $this->Date->cast(isset($hpk_invoice->date_due) ? $hpk_invoice->date_due : null, $hpk_date_format); ?></dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <div class="hpk-invoice-detail__lines">
+            <table class="hpk-table hpk-invoice-detail__lines-table">
+                <thead>
+                    <tr>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_line_columns['description']); ?></th>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_line_columns['quantity']); ?></th>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_line_columns['unit_price']); ?></th>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_line_columns['cost']); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ((isset($hpk_invoice->line_items) ? $hpk_invoice->line_items : []) as $hpk_line) { ?>
+                    <tr>
+                        <td data-label="<?php echo $this->Html->safe($hpk_line_columns['description']); ?>"><?php (print (isset($hpk_line->description) ? $this->Html->safe($hpk_line->description) : null)); ?></td>
+                        <td data-label="<?php echo $this->Html->safe($hpk_line_columns['quantity']); ?>"><?php echo $this->Html->safe($this->CurrencyFormat->truncateDecimal(isset($hpk_line->qty) ? $hpk_line->qty : null, 0)); ?></td>
+                        <td data-label="<?php echo $this->Html->safe($hpk_line_columns['unit_price']); ?>"><?php echo $this->CurrencyFormat->format(isset($hpk_line->amount) ? $hpk_line->amount : null, $hpk_currency_code, $hpk_currency_options); ?></td>
+                        <td data-label="<?php echo $this->Html->safe($hpk_line_columns['cost']); ?>"><?php echo $this->CurrencyFormat->format(isset($hpk_line->subtotal) ? $hpk_line->subtotal : null, $hpk_currency_code, $hpk_currency_options); ?></td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="hpk-invoice-detail__summary">
+            <dl class="hpk-invoice-detail__totals">
+                <div class="hpk-invoice-detail__totals-row">
+                    <dt><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.subtotal', true)); ?></dt>
+                    <dd><?php echo $this->CurrencyFormat->format(isset($hpk_invoice->subtotal) ? $hpk_invoice->subtotal : null, $hpk_currency_code); ?></dd>
+                </div>
+                <?php if (!empty($hpk_invoice->taxes)) { foreach ($hpk_invoice->taxes as $hpk_tax) { ?>
+                <div class="hpk-invoice-detail__totals-row">
+                    <dt><?php echo $this->_('Hosterpk.invoice_detail.tax', true, (isset($hpk_tax->name) ? $this->Html->safe($hpk_tax->name) : null), (isset($hpk_tax->amount) ? $this->Html->safe($hpk_tax->amount) : null)); ?></dt>
+                    <dd><?php echo $this->CurrencyFormat->format(isset($hpk_tax->tax_total) ? $hpk_tax->tax_total : null, $hpk_currency_code); ?></dd>
+                </div>
+                <?php } } ?>
+                <div class="hpk-invoice-detail__totals-row hpk-invoice-detail__totals-row--grand">
+                    <dt><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.total', true)); ?></dt>
+                    <dd><?php echo $this->CurrencyFormat->format(isset($hpk_invoice->total) ? $hpk_invoice->total : null, $hpk_currency_code); ?></dd>
+                </div>
+            </dl>
+        </div>
+
+        <?php if (!empty($hpk_invoice->note_public)) { ?>
+        <div class="hpk-invoice-detail__notes">
+            <h2 class="hpk-invoice-detail__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.notes', true)); ?></h2>
+            <p><?php echo nl2br($this->Html->safe($hpk_invoice->note_public)); ?></p>
+        </div>
+        <?php } ?>
+
+        <?php if (!empty($client->settings['inv_terms_' . $hpk_language])) { ?>
+        <div class="hpk-invoice-detail__terms">
+            <?php echo nl2br($this->Html->safe($client->settings['inv_terms_' . $hpk_language])); ?>
+        </div>
+        <?php } ?>
+
+        <?php
+        // Payments-applied section: gated on display_payments + approved transactions (stock parity).
+        if (($display_payments ?? false) && !empty($applied_transactions)) {
+            $hpk_approved = [];
+            foreach ($applied_transactions as $hpk_transaction) {
+                if ($hpk_transaction->status == 'approved') {
+                    // Use the type name, or the gateway name (only for other/nonmerchant).
+                    $hpk_type_name = isset($hpk_transaction->type_real_name) ? $hpk_transaction->type_real_name : '';
+                    if ($hpk_transaction->type == 'other' && $hpk_transaction->gateway_type == 'nonmerchant') {
+                        $hpk_type_name = isset($hpk_transaction->gateway_name) ? $hpk_transaction->gateway_name : $hpk_type_name;
+                    }
+
+                    $hpk_approved[] = [
+                        'applied_date' => $this->Date->cast($hpk_transaction->applied_date, $hpk_date_format),
+                        'type_name' => $hpk_type_name,
+                        'transaction_id' => isset($hpk_transaction->transaction_number) ? $hpk_transaction->transaction_number : '',
+                        'applied_amount' => $this->CurrencyFormat->format($hpk_transaction->applied_amount, $hpk_transaction->currency)
+                    ];
+                }
+            }
+
+            if (!empty($hpk_approved)) {
+        ?>
+        <div class="hpk-invoice-detail__payments">
+            <h2 class="hpk-invoice-detail__section-title"><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.payments_heading', true)); ?></h2>
+            <table class="hpk-table hpk-invoice-detail__payments-table">
+                <thead>
+                    <tr>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_payment_columns['applied_date']); ?></th>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_payment_columns['type']); ?></th>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_payment_columns['transaction_id']); ?></th>
+                        <th scope="col"><?php echo $this->Html->safe($hpk_payment_columns['amount']); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($hpk_approved as $hpk_paid) { ?>
+                    <tr>
+                        <td data-label="<?php echo $this->Html->safe($hpk_payment_columns['applied_date']); ?>"><?php echo $this->Html->safe($hpk_paid['applied_date']); ?></td>
+                        <td data-label="<?php echo $this->Html->safe($hpk_payment_columns['type']); ?>"><?php echo $this->Html->safe($hpk_paid['type_name']); ?></td>
+                        <td data-label="<?php echo $this->Html->safe($hpk_payment_columns['transaction_id']); ?>"><?php echo $this->Html->safe($hpk_paid['transaction_id']); ?></td>
+                        <td data-label="<?php echo $this->Html->safe($hpk_payment_columns['amount']); ?>"><?php echo $hpk_paid['applied_amount']; ?></td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+            <dl class="hpk-invoice-detail__totals hpk-invoice-detail__totals--balance">
+                <div class="hpk-invoice-detail__totals-row hpk-invoice-detail__totals-row--grand">
+                    <dt><?php echo $this->Html->safe($this->_('Hosterpk.invoice_detail.balance_due', true)); ?></dt>
+                    <dd><?php echo $this->CurrencyFormat->format(isset($hpk_invoice->due) ? $hpk_invoice->due : null, $hpk_currency_code); ?></dd>
+                </div>
+            </dl>
+        </div>
+        <?php
+            }
+        }
+        ?>
+
+        <div class="hpk-invoice-detail__actions">
+            <?php if ($hpk_show_pay) { ?>
+            <a class="hpk-btn hpk-btn-primary" href="<?php echo $this->Html->safe($hpk_pay_url); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_pay', true)); ?></a>
+            <?php } ?>
+            <a class="hpk-btn hpk-btn-outline" href="<?php echo $this->Html->safe($hpk_download_url); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_download', true)); ?></a>
+            <?php
+            if (!empty($electronic_formats)) {
+                foreach ($electronic_formats as $hpk_format_key => $hpk_format_name) {
+            ?>
+            <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($this->base_uri . 'invoices/downloadelectronic/' . (isset($hpk_invoice->id) ? $hpk_invoice->id : null) . '/' . $this->Html->safe($hpk_format_key) . '/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.invoice.action_download_electronic', true, $hpk_format_name)); ?></a>
+            <?php
+                }
+            }
+            ?>
+        </div>
+
+    <?php if (!(isset($render_section) ? $render_section : null) && !(isset($is_ajax) ? $is_ajax : null)) { ?>
+    </section>
+    <?php } ?>
+</div>

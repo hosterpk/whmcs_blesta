@@ -1,0 +1,334 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: opens the .hpk-client scope on the body element, DROPS the stock application.min.css link (Story 2.2, FR7/AR-D7), and links our populated (tokens + cascade) loaded-last override bundle via css/manifest.json. Story 2.3 adds the blocking dark-mode FOUC guard (the ONLY authored inline <script>, AR-ENF4), wires Alpine + js/bootstrap.js, the theme-toggle button, and the [data-theme] logo swap. Story 2.5 inlines the brand icon <symbol> sprite once at the top of <body> (raw echo of icons/hpk-sprite.svg via $hpk_view_fs) and migrates the theme toggle's two inline moon/sun SVGs to sprite <use> references. Story 2.10 REPLACES the stock Bootstrap header/navbar/title/footer chrome with the three-zone brand shell — a 64px top brand bar, a grouped $nav sidebar, a tinted <main>, and a compact footer + the mobile ☰ drawer — decomposed into partials/brand_bar.pdt + partials/sidebar_nav.pdt + partials/footer.pdt (the theme toggle lifts into the brand bar). Stock baseline: bootstrap/structure.pdt @ 6.0.0-b1 sha256:033268d208ccdb864a1e8838aa1d03a7b4dee2b03fda9bf39608112f92df4fa6 */ ?>
+<?php
+$html_dir = (in_array($this->_('AppController.lang.dir', true), ['ltr', 'rtl']) ? $this->_('AppController.lang.dir', true) : 'ltr');
+$html_lang = (!empty($language) ? substr($language, 0, 2) : 'en');
+?><!DOCTYPE html>
+<html dir="<?php (print (isset($html_dir) ? $this->Html->safe($html_dir) : null));?>" lang="<?php (print (isset($html_lang) ? $this->Html->safe($html_lang) : null));?>" xml:lang="<?php (print (isset($html_lang) ? $this->Html->safe($html_lang) : null));?>">
+    <head>
+        <meta http-equiv="content-type" content="text/html" />
+        <meta name="referrer" content="never" />
+        <meta charset="UTF-8" />
+        <title><?php echo $this->Html->safe(((isset($page_title) ? $page_title : null) ? $page_title . ' | ' : '') . (isset($system_company->name) ? $system_company->name : null));?></title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script>/* HOSTERPK FOUC guard (Story 2.3) — the ONLY authored inline <script> (AR-ENF4). Runs before any background-painting stylesheet so data-theme is set before first paint (no flash). No-JS -> no attribute -> light; localStorage-only (NO prefers-color-scheme); a localStorage throw falls through to light. */(function(){try{if(localStorage.getItem('hpk-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+
+        <?php /* HosterPK (Story 2.11): preload the one critical first-paint face (Hind Siliguri 400, the body/UI default) as EARLY as possible - ahead of the render-blocking Font Awesome / theme stylesheets below - so its fetch starts in parallel and the font-display:optional block window is usually satisfied before first paint (zero CLS at the cross-app seam). crossorigin is required even same-origin (fonts fetch in anonymous CORS mode). $this->view_dir stays proxy-prefix-relative under /dashboard. */ ?>
+        <link rel="preload" href="<?php echo $this->view_dir;?>fonts/hind-siliguri-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+
+        <?php
+        if (!empty($favicon_client)) {
+        ?>
+        <link rel="shortcut icon" href="<?php echo $this->Html->safe($favicon_client);?>" />
+        <?php
+        } elseif (!empty($client_icon)) {
+        ?>
+        <link rel="shortcut icon" href="<?php echo $this->Html->safe($client_icon);?>" />
+        <?php
+        } else {
+        ?>
+        <link rel="shortcut icon" href="<?php echo $this->view_dir;?>images/favicon.ico" />
+        <?php
+        }
+        ?>
+
+        <?php
+        /*
+         * HosterPK (Story 2.2): the stock css/application.min.css (Bootstrap 4.6)
+         * link is intentionally DROPPED (FR7/AR-D7). The content-hashed override
+         * bundle linked LAST below is now the framework floor — do not restore it.
+         * Invariant (architecture:345): app.min.css loaded before $theme_css; we
+         * own structure.pdt, so we remove the link here (not via the theme row).
+         */
+        // Theme CSS
+        if (isset($theme_css)) {
+        ?>
+        <link href="<?php (print (isset($theme_css) ? $this->Html->safe($theme_css) . '&hash=' . $this->Html->safe($theme_hash ?? '') : null));?>" rel="stylesheet" type="text/css" media="screen" />
+        <?php
+        }
+
+        if (!empty($custom_css)) {
+        ?>
+        <style><?php echo $custom_css;?></style>
+        <?php
+        }
+
+        if ($this->_('AppController.lang.dir', true) == 'rtl') {
+        ?>
+        <link href="<?php echo $this->view_dir;?>css/rtl.css" rel="stylesheet" type="text/css" media="screen" />
+        <?php
+        }
+        ?>
+        <link href="<?php echo $this->view_dir;?>css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+        <link href="<?php echo $this->view_dir;?>css/font-awesome-shims.min.css" rel="stylesheet" type="text/css" />
+        <?php
+        /*
+         * HosterPK: link the built override bundle LAST (after every stock sheet) so the
+         * D1 "loaded-last wins" cascade holds. structure.pdt is a pure READER; tooling/check.sh
+         * is the sole writer of css/manifest.json + the hashed bundle it names. $this->view_dir
+         * is a web path, so translate WEBDIR -> ROOTWEBDIR to read the manifest from disk.
+         */
+        $hpk_bundle = null;
+        if (defined('ROOTWEBDIR') && defined('WEBDIR') && strpos($this->view_dir, WEBDIR) === 0) {
+            $hpk_view_fs = ROOTWEBDIR . ltrim(substr($this->view_dir, strlen(WEBDIR)), '/\\');
+            $hpk_manifest_file = $hpk_view_fs . 'css' . DS . 'manifest.json';
+            if (is_file($hpk_manifest_file)) {
+                $hpk_manifest = json_decode((string)@file_get_contents($hpk_manifest_file), true);
+                $hpk_manifest_css = is_array($hpk_manifest) ? ($hpk_manifest['css'] ?? null) : null;
+                if (
+                    is_string($hpk_manifest_css)
+                    && preg_match('/\Ahpk\.[0-9a-f]{12}\.css\z/', $hpk_manifest_css)
+                    && is_file($hpk_view_fs . 'css' . DS . $hpk_manifest_css)
+                ) {
+                    $hpk_bundle = $hpk_manifest_css;
+                }
+            }
+            /*
+             * Guarded fallback (Story 2.2 review / DN-A): if manifest.json is
+             * missing, malformed, or points at an absent bundle, link the single
+             * on-disk hpk.<hash>.css instead of emitting NO stylesheet — after
+             * dropping stock application.min.css the bundle is the only CSS floor.
+             * Same 12-hex filename guard; NEVER reintroduce stock.
+             */
+            if ($hpk_bundle === null) {
+                $hpk_candidates = glob($hpk_view_fs . 'css' . DS . 'hpk.*.css');
+                if (is_array($hpk_candidates)) {
+                    foreach ($hpk_candidates as $hpk_candidate) {
+                        $hpk_candidate_base = basename($hpk_candidate);
+                        if (preg_match('/\Ahpk\.[0-9a-f]{12}\.css\z/', $hpk_candidate_base)) {
+                            $hpk_bundle = $hpk_candidate_base;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if ($hpk_bundle) {
+        ?>
+        <link href="<?php echo $this->view_dir;?>css/<?php echo $this->Html->safe($hpk_bundle);?>" rel="stylesheet" type="text/css" />
+        <?php
+        }
+
+        /*
+         * HosterPK (Story 2.3): load the template language file (the two theme-toggle
+         * accessible-name keys; Story 2.4 extends it into the full copy table). Reuse the
+         * WEBDIR -> ROOTWEBDIR filesystem path the manifest reader computed above so the
+         * toggle's aria-label copy is server-sourced (ENF5). Guarded: if the translation
+         * was not computed the toggle still renders with its static English aria-label.
+         */
+        if (isset($hpk_view_fs)) {
+            Language::loadLang('hosterpk', null, $hpk_view_fs . 'language' . DS);
+        }
+        ?>
+
+        <script type="text/javascript" src="<?php echo $this->view_dir;?>javascript/jquery.min.js"></script>
+        <script type="text/javascript" src="<?php echo $this->view_dir;?>javascript/jquery-migrate.min.js"></script>
+        <!--[if lt IE 10]>
+            <script type="text/javascript" src="<?php echo $this->view_dir;?>javascript/history/json2.js"></script>
+        <![endif]-->
+        <script type="text/javascript" src="<?php echo $this->view_dir;?>javascript/history/history.adapter.jquery.js"></script>
+        <script type="text/javascript" src="<?php echo $this->view_dir;?>javascript/history/history.js"></script>
+        <!--[if lt IE 10]>
+            <script type="text/javascript" src="<?php echo $this->view_dir;?>javascript/history/history.html4.js"></script>
+        <![endif]-->
+        <script type="text/javascript" src="<?php echo $this->Html->safe($this->view_dir . 'javascript/app.min.js' . (!empty($hash_version) ? '?v=' . $hash_version : ''));?>"></script>
+
+        <?php
+        /*
+         * HosterPK (Story 2.3): Alpine + our factories. bootstrap.js loads FIRST (both
+         * `defer`) so its `alpine:init` listener is registered before Alpine boots and
+         * x-data="hpkThemeToggle" resolves (AR-D2). Story 2.8 loads HTMX AFTER Alpine
+         * as the final script so the D2 document-level handlers are registered before
+         * HTMX scans for islands. $this->view_dir keeps paths proxy-safe (AR-D7).
+         * bootstrap.js carries a filemtime `?v=` cache-bust so an edit invalidates
+         * stale browser copies (matches the stock app.min.js `?v=` convention);
+         * Alpine + HTMX are version-pinned in their own filenames. Reuses the WEBDIR
+         * -> ROOTWEBDIR path the manifest reader resolved; falls back to $hash_version
+         * if that path was not computed.
+         */
+        ?>
+        <script type="text/javascript" defer src="<?php echo $this->Html->safe($this->view_dir . 'js/bootstrap.js' . (isset($hpk_view_fs) && is_file($hpk_view_fs . 'js' . DS . 'bootstrap.js') ? '?v=' . filemtime($hpk_view_fs . 'js' . DS . 'bootstrap.js') : (!empty($hash_version) ? '?v=' . $hash_version : ''))); ?>"></script>
+        <script type="text/javascript" defer src="<?php echo $this->view_dir;?>js/vendor/alpine.3.15.12.min.js"></script>
+        <script type="text/javascript" defer src="<?php echo $this->Html->safe($this->view_dir . 'js/vendor/htmx.2.0.10.min.js');?>"></script>
+
+        <?php
+        echo $this->Javascript->getFiles('head');
+        echo (isset($custom_head) ? $custom_head : null);
+        ?>
+
+        <!--[if lt IE 9]>
+            <script src="<?php echo $this->view_dir;?>javascript/html5shiv.js" type="text/javascript"></script>
+            <script src="<?php echo $this->view_dir;?>javascript/respond.min.js" type="text/javascript"></script>
+        <![endif]-->
+        <?php echo (isset($head) ? $head : null);?>
+    </head>
+    <body class="hpk-client <?php echo $this->Html->safe($css_route_class ?? ''); ?>">
+        <?php
+        /*
+         * HosterPK (Story 2.5, UX-DR5): inline the brand icon <symbol> sprite once
+         * per page at the very top of <body> so every <use href="#hpk-icon-<name>">
+         * resolves same-document. Reuse the WEBDIR -> ROOTWEBDIR filesystem path the
+         * manifest reader computed above ($hpk_view_fs). The sprite is a trusted,
+         * build-time, currentColor-gated LOCAL asset (never request data; RULE 3-
+         * linted) -> echo it RAW; Html->safe() would corrupt the SVG. Echo from the
+         * ROOT `<svg xmlns` onward so the XML prolog AND the leading documentation
+         * comment are stripped and the HTML body stays clean. (The comment itself
+         * contains a literal "<svg ...>" usage example, so cutting at a bare "<svg"
+         * would land mid-comment and leak the comment text into <body> - matching the
+         * namespaced root avoids that.) Guarded: only when the fs path resolved AND the
+         * file exists. The sprite root is width=0 height=0 aria-hidden focusable=false
+         * (zero-box, out of layout + the a11y tree).
+         */
+        if (isset($hpk_view_fs)) {
+            $hpk_sprite_file = $hpk_view_fs . 'icons' . DS . 'hpk-sprite.svg';
+            if (is_file($hpk_sprite_file)) {
+                // is_file() passed, so drop the error-suppression @: a read failure
+                // here (permission flip / TOCTOU) is a real fault worth logging, not
+                // swallowing. false -> skip strpos so a missing root isn't conflated
+                // with an unreadable file.
+                $hpk_sprite_svg = file_get_contents($hpk_sprite_file);
+                $hpk_sprite_at = ($hpk_sprite_svg !== false)
+                    ? strpos($hpk_sprite_svg, '<svg xmlns')
+                    : false;
+                if ($hpk_sprite_at !== false) {
+                    echo substr($hpk_sprite_svg, $hpk_sprite_at);
+                } else {
+                    // Observable, non-visual marker. The sprite is on disk but was
+                    // unreadable OR its root `<svg xmlns ...>` was not found (a future
+                    // reformatted/minified root). Without this the sprite is dropped
+                    // SILENTLY and every <use> resolves to an empty 1em box on every
+                    // page while the build stays green (verify_pins hashes the file
+                    // independently of this read). Surfaces in view-source / DevTools.
+                    echo "<!-- hpk: icon sprite present but unreadable or root <svg xmlns> not found -->\n";
+                }
+            }
+        }
+        ?>
+        <?php echo (isset($body_start) ? $body_start : null);?>
+
+        <?php
+        /*
+         * HOSTERPK three-zone brand shell (Story 2.10). Replaces the stock
+         * header/navbar/title/footer chrome with: the brand bar, the grouped $nav
+         * sidebar, a tinted <main>, and the compact footer (decomposed into the three
+         * chrome partials). One <header>/<nav>/<main>/<footer> landmark; one <h1>; a
+         * skip-to-main link first. The .hpk-shell wrapper carries the hpkNavDrawer
+         * Alpine island so the brand-bar ☰ trigger + the sidebar drawer share state;
+         * Esc closes (window-scoped). When $show_header is false (login / account-entry
+         * pages) only the slim <main> renders (E3 owns the real slim shell).
+         */
+        if ((isset($show_header) ? $show_header : true)) {
+        ?>
+        <a class="hpk-skip-link" href="#hpk-structure-main"><?php $this->_('Hosterpk.nav.skip_to_content');?></a>
+        <div class="hpk-shell"
+             x-data="hpkNavDrawer(<?php echo htmlspecialchars(json_encode(['open' => $this->_('Hosterpk.nav.open_menu', true), 'close' => $this->_('Hosterpk.nav.close_menu', true)], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES); ?>)"
+             @keydown.escape.window="close()">
+            <?php view('partials/brand_bar', $this); ?>
+            <div class="hpk-shell-body">
+                <div class="hpk-drawer-backdrop" :class="{ 'is-open': open }" @click="close()" aria-hidden="true"></div>
+                <?php view('partials/sidebar_nav', $this); ?>
+                <main id="hpk-structure-main" class="hpk-main" x-ref="main" tabindex="-1">
+                    <?php
+                    $hpk_page_title = ((isset($title) ? $title : null)
+                        ? $title
+                        : $this->_('AppController.client_structure.default_title', true)
+                    );
+                    if (isset($css_route_class) && $css_route_class === 'client-client_main-index') {
+                        $hpk_page_title = isset($dashboard_greeting)
+                            ? $dashboard_greeting
+                            : $this->_('Hosterpk.dashboard.heading', true);
+                    }
+                    ?>
+                    <h1 class="hpk-page-title"><?php echo $this->Html->safe($hpk_page_title);?></h1>
+                    <?php echo $content;?>
+                    <?php
+                    if (Configure::get('System.debug')) {
+                        view('partials/client_query_logger', $this);
+                    }
+                    ?>
+                </main>
+            </div>
+            <?php view('partials/footer', $this); ?>
+        </div>
+        <?php
+        } else {
+            $hpk_auth_is_login = (
+                isset($css_route_class)
+                && $css_route_class === 'client-client_login-index'
+            );
+            $hpk_auth_headline_key = $hpk_auth_is_login
+                ? 'Hosterpk.login.headline'
+                : 'Hosterpk.auth_shell.headline';
+            $hpk_auth_trust_key = $hpk_auth_is_login
+                ? 'Hosterpk.login.trust_line'
+                : 'Hosterpk.auth_shell.trust_line';
+            $hpk_auth_headline_text = (
+                isset($hpk_auth_headline)
+                && is_string($hpk_auth_headline)
+                && $hpk_auth_headline !== ''
+            ) ? $hpk_auth_headline : $this->_($hpk_auth_headline_key, true);
+            $hpk_auth_trust_text = (
+                isset($hpk_auth_trust_line)
+                && is_string($hpk_auth_trust_line)
+                && $hpk_auth_trust_line !== ''
+            ) ? $hpk_auth_trust_line : $this->_($hpk_auth_trust_key, true);
+        ?>
+        <a class="hpk-skip-link" href="#hpk-structure-main"><?php $this->_('Hosterpk.nav.skip_to_content');?></a>
+        <main id="hpk-structure-main" class="hpk-main hpk-main-slim" tabindex="-1">
+            <div class="hpk-auth-shell">
+                <div class="hpk-auth-brand">
+                    <a href="<?php echo $this->Html->safe($this->base_uri);?>" class="hpk-auth-logo">
+                        <?php
+                        if (!empty($theme_logo)) {
+                        ?>
+                            <img src="<?php echo $this->Html->safe($theme_logo);?>" alt="<?php echo $this->Html->safe(isset($system_company->name) ? $system_company->name : ''); ?>" />
+                        <?php
+                        } else {
+                        ?>
+                            <?php /* Same fix as the brand bar: the .hpk-auth-brand panel is
+                                   brand-blue, so render the bundled OFFICIAL HosterPK white
+                                   logo instead of the text-wordmark placeholder. */ ?>
+                            <img src="<?php echo $this->Html->safe($this->view_dir);?>images/hpk-logo-white.svg" alt="<?php echo $this->Html->safe($this->_('Hosterpk.brand.logo_alt', true)); ?>" />
+                        <?php
+                        }
+                        ?>
+                    </a>
+                    <h1 class="hpk-auth-headline"><?php echo $this->Html->safe($hpk_auth_headline_text); ?></h1>
+                    <p class="hpk-auth-trust"><?php echo $this->Html->safe($hpk_auth_trust_text); ?></p>
+                </div>
+                <div class="hpk-auth-content">
+                    <?php echo $content;?>
+                </div>
+            </div>
+            <?php
+            if (Configure::get('System.debug')) {
+                view('partials/client_query_logger', $this);
+            }
+            ?>
+        </main>
+        <?php
+        }
+        ?>
+
+        <div class="modal fade" id="global_modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="global_modal_title"></h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <?php echo $this->Javascript->getFiles('body');?>
+        <?php echo $this->Javascript->getInline();?>
+        <?php echo (isset($body_end) ? $body_end : null);?>
+    </body>
+</html>
