@@ -1,0 +1,381 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the WidgetClient chrome with the HosterPK card / status-tabs / .hpk-table pattern, renders BOTH priority and status as text+color .hpk-badge on every row (status badge is net-new and stays visible on the closed tab, an intentional FR29/AC3 clarity drift like 7.1's net-new Status column), reflows to cards <=760px via data-label (no JS), and makes ticket close a real no-JS POST submit button. Preserves the controller->view data contract ($tickets/$status/$status_count/$statuses/$priorities/$priority_classes/$sort/$order/$negate_order/$filters/$filter_vars), the filters[ticket_number|priority|summary|last_reply] POST shape, the per-row close Form->create() + hidden id (CSRF / RULE 8 floor), and the byte-verbatim widget-mode guard. Drops the WidgetClient setStyleSheet (our bundle covers it) and the stock blestaModalConfirm close-confirm <script> (8.1 is a no-JS POST close; confirm-modal polish is 8.2). Index-only seam (DEC-A): reply/add/departments stay stock 'default'. Lives in the plugin tree (reached via the support_manager_controller HOSTERPK-SEAM), so copy loads from the app template path (DEC-6). Stock baseline: ../default/client_tickets.pdt @ 6.0.0-b1 sha256:bbfc1ee1e8c7b89eede7d09bbcc5ef589acfa62d7bf9cdfc4631d194e657e858 */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too.
+ * DEC-6: this view lives in the PLUGIN tree, so $this->view_dir points into
+ * plugins/support_manager/views/hosterpk/ - the core view_dir-relative derivation
+ * would look in the wrong (plugin) language dir. The canonical copy table is the app
+ * template's language/en_us/hosterpk.php; load it from the app template path. */
+if (defined('ROOTWEBDIR') && defined('APPDIR')) {
+    Language::loadLang(
+        'hosterpk',
+        null,
+        ROOTWEBDIR . APPDIR . 'views' . DS . 'client' . DS . 'hosterpk' . DS . 'language' . DS
+    );
+}
+
+// Widget/inner-render guard. $render_section is NOT set by ClientTickets::index();
+// it is injected only by the widget/inner render path (renderAjaxWidgetIfAsync),
+// which is exactly why the guard is isset()-defensive (AC7). $is_ajax is NOT part of
+// this view contract. The literal expression !(isset($render_section) ? $render_section
+// : null) is reused verbatim at every chrome wrap below.
+$hpk_is_inner = (isset($render_section) ? $render_section : null);
+
+// Whitelist request-controlled tokens before they reach URLs / aria-sort (7.1 review).
+$hpk_status = (isset($status) && in_array($status, ['not_closed', 'closed'], true)) ? $status : 'not_closed';
+$hpk_order = (isset($order) && in_array($order, ['asc', 'desc'], true)) ? $order : 'desc';
+$hpk_negate_order = (isset($negate_order) && in_array($negate_order, ['asc', 'desc'], true))
+    ? $negate_order
+    : ($hpk_order == 'asc' ? 'desc' : 'asc');
+$hpk_sort_whitelist = ['code', 'priority', 'department_name', 'last_reply_date', 'status'];
+$hpk_sort = (isset($sort) && in_array($sort, $hpk_sort_whitelist, true)) ? $sort : 'last_reply_date';
+
+$hpk_status_count = (isset($status_count) && is_array($status_count)) ? $status_count : [];
+$hpk_tickets = (isset($tickets) && is_array($tickets)) ? $tickets : [];
+$hpk_num_tickets = count($hpk_tickets);
+$hpk_priorities = (isset($priorities) && is_array($priorities)) ? $priorities : [];
+$hpk_statuses = (isset($statuses) && is_array($statuses)) ? $statuses : [];
+
+// Priority / status VALUE -> [semantic badge, copy key] (Dev Notes §C). Unknown
+// values (e.g. the staff-only 'trash' status) fall back to neutral + Blesta's own
+// localized $priorities / $statuses label, so nothing renders blank.
+$hpk_priority_badges = [
+    'low'       => ['neutral', 'Hosterpk.ticket.priority_low'],
+    'medium'    => ['info',    'Hosterpk.ticket.priority_medium'],
+    'high'      => ['info',    'Hosterpk.ticket.priority_high'],
+    'critical'  => ['warning', 'Hosterpk.ticket.priority_critical'],
+    'emergency' => ['danger',  'Hosterpk.ticket.priority_emergency'],
+];
+$hpk_status_badges = [
+    'open'           => ['info',    'Hosterpk.ticket.status_open'],
+    'awaiting_reply' => ['warning', 'Hosterpk.ticket.status_awaiting_reply'],
+    'in_progress'    => ['info',    'Hosterpk.ticket.status_in_progress'],
+    'on_hold'        => ['neutral', 'Hosterpk.ticket.status_on_hold'],
+    'closed'         => ['success', 'Hosterpk.ticket.status_closed'],
+];
+
+$hpk_columns = [
+    'code'       => $this->_('Hosterpk.ticket.heading_code', true),
+    'priority'   => $this->_('Hosterpk.ticket.heading_priority', true),
+    'department' => $this->_('Hosterpk.ticket.heading_department', true),
+    'summary'    => $this->_('Hosterpk.ticket.heading_summary', true),
+    'last_reply' => $this->_('Hosterpk.ticket.heading_last_reply', true),
+    'status'     => $this->_('Hosterpk.ticket.heading_status', true),
+    'options'    => $this->_('Hosterpk.ticket.heading_options', true),
+];
+// Column key -> sort token. The displayed last-reply value is $ticket->last_reply_time,
+// but the SORT token is last_reply_date (Dev Notes §C sort-key vs field-name trap).
+$hpk_sort_tokens = [
+    'code'       => 'code',
+    'priority'   => 'priority',
+    'department' => 'department_name',
+    'last_reply' => 'last_reply_date',
+    'status'     => 'status',
+];
+// Sortable tokens for the current tab. Status sorts only on the open tab - every
+// closed-tab row shares status 'closed', so sorting it is a no-op.
+$hpk_sortable = ['code', 'priority', 'department_name', 'last_reply_date'];
+if ($hpk_status === 'not_closed') {
+    $hpk_sortable[] = 'status';
+}
+
+$hpk_base_list = $this->base_uri . 'plugin/support_manager/client_tickets/index/';
+$hpk_filter_action = $hpk_base_list . $hpk_status . '/';
+
+// Build a query-string fragment that carries active filters so sort/tab/page links
+// do not reset the filter state. Empty values are omitted to keep URLs clean.
+$hpk_filter_vars = (isset($filter_vars) && is_array($filter_vars)) ? $filter_vars : [];
+$hpk_filter_qs_params = [];
+foreach ($hpk_filter_vars as $hpk_filter_key => $hpk_filter_value) {
+    if ($hpk_filter_value === '' || $hpk_filter_value === null) {
+        continue;
+    }
+    $hpk_filter_qs_params['filters[' . $hpk_filter_key . ']'] = $hpk_filter_value;
+}
+$hpk_filter_qs = $hpk_filter_qs_params ? ('&' . http_build_query($hpk_filter_qs_params, '', '&')) : '';
+
+$hpk_sort_url = function ($token) use ($hpk_base_list, $hpk_status, $hpk_sort, $hpk_order, $hpk_negate_order, $hpk_filter_qs) {
+    $target_order = ($hpk_sort === $token ? $hpk_negate_order : $hpk_order);
+    return $hpk_base_list . $hpk_status . '/?' . http_build_query(['sort' => $token, 'order' => $target_order], '', '&') . $hpk_filter_qs;
+};
+$hpk_tab_url = function ($target_status) use ($hpk_base_list, $hpk_filter_qs) {
+    return $hpk_base_list . $target_status . '/' . ($hpk_filter_qs ? '?' . ltrim($hpk_filter_qs, '&') : '');
+};
+$hpk_sort_class = function ($token) use ($hpk_sort, $hpk_order) {
+    return 'hpk-tickets__sort' . ($hpk_sort === $token ? ' ' . $hpk_order : '');
+};
+$hpk_aria_sort = function ($token) use ($hpk_sort, $hpk_order) {
+    if ($hpk_sort !== $token) {
+        return null;
+    }
+    return $hpk_order === 'asc' ? 'ascending' : 'descending';
+};
+
+$hpk_render_header = function ($col_key) use ($hpk_columns, $hpk_sort_tokens, $hpk_sortable, $hpk_is_inner, $hpk_sort_class, $hpk_sort_url, $hpk_aria_sort) {
+    $label = $hpk_columns[$col_key];
+    $token = isset($hpk_sort_tokens[$col_key]) ? $hpk_sort_tokens[$col_key] : null;
+    $is_sortable = ($token !== null && in_array($token, $hpk_sortable, true));
+    if (!$is_sortable) {
+?><th scope="col"><?php echo $this->Html->safe($label); ?></th><?php
+        return;
+    }
+    $aria = $hpk_is_inner ? null : $hpk_aria_sort($token);
+?><th scope="col"<?php if ($aria !== null) { ?> aria-sort="<?php echo $this->Html->safe($aria); ?>"<?php } elseif (!$hpk_is_inner) { ?> aria-sort="none"<?php } ?>>
+    <?php if ($hpk_is_inner) { ?>
+        <?php echo $this->Html->safe($label); ?>
+    <?php } else { ?>
+        <a class="<?php echo $this->Html->safe($hpk_sort_class($token)); ?>" href="<?php echo $this->Html->safe($hpk_sort_url($token)); ?>" data-hpk-filter-link><?php echo $this->Html->safe($label); ?></a>
+    <?php } ?>
+</th><?php
+};
+
+// text + color badge (never colour alone). Empty/null -> em-dash; unknown value ->
+// neutral + Blesta label.
+$hpk_render_badge = function ($value, $map, $stock_labels) {
+    $class = 'neutral';
+    $label = '—';
+    if ($value !== null && $value !== '') {
+        if (isset($map[$value])) {
+            $class = $map[$value][0];
+            $label = $this->_($map[$value][1], true);
+        } elseif (isset($stock_labels[$value])) {
+            $label = $stock_labels[$value];
+        } else {
+            $label = (string) $value;
+        }
+    }
+?><span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($class); ?>"><?php echo $this->Html->safe($label); ?></span><?php
+};
+
+// Per-page key with a canonical state.* fallback only if the tab key is absent (AC4).
+$hpk_lang_or = function ($key, $fallback) {
+    $val = $this->_($key, true);
+    return ($val === $key || $val === '') ? $this->_($fallback, true) : $val;
+};
+
+$hpk_filter_label_keys = [
+    'filters[ticket_number]' => 'Hosterpk.ticket.filter_ticket_number',
+    'filters[priority]'      => 'Hosterpk.ticket.filter_priority',
+    'filters[summary]'       => 'Hosterpk.ticket.filter_summary',
+    'filters[last_reply]'    => 'Hosterpk.ticket.filter_last_reply',
+];
+?>
+<?php
+// Flash message: preserve the controller's flash (e.g. the close-success notice) but
+// skin it as a token-driven .hpk-alert, type-detected from Blesta's rendered markup.
+$hpk_message = (!$hpk_is_inner && isset($message)) ? $message : '';
+if ($hpk_message !== '') {
+    $hpk_alert_type = 'info';
+    if (strpos($hpk_message, 'alert-danger') !== false || strpos($hpk_message, 'alert-error') !== false) {
+        $hpk_alert_type = 'danger';
+    } elseif (strpos($hpk_message, 'alert-success') !== false) {
+        $hpk_alert_type = 'success';
+    } elseif (strpos($hpk_message, 'alert-warning') !== false) {
+        $hpk_alert_type = 'warning';
+    }
+    // Strip Blesta's dismiss control (<* class="...close...">×</*>) before text
+    // extraction so its glyph does not leak into the skinned message. Handles double or
+    // single quoted class attributes and the unquoted form.
+    $hpk_message_clean = preg_replace(
+        [
+            '/<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*(["\'])(?:(?!\2).)*?\bclose\b(?:(?!\2).)*?\2[^>]*>.*?<\/\1>/is',
+            '/<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*close\b[^>]*>.*?<\/\1>/is',
+        ],
+        ' ',
+        $hpk_message
+    );
+    // PCRE backtrack-limit exhaustion would return null on PHP 8.1+; fall back to raw.
+    if ($hpk_message_clean === null) {
+        $hpk_message_clean = $hpk_message;
+    }
+    $hpk_message_text = trim(preg_replace('/\s+/', ' ', strip_tags(
+        str_replace(['</li>', '</p>', '<br>', '<br/>', '<br />'], ' ', html_entity_decode($hpk_message_clean !== null ? $hpk_message_clean : $hpk_message, ENT_QUOTES, 'UTF-8'))
+    )));
+    if ($hpk_message_text !== '') {
+?>
+<div class="hpk-alert hpk-alert-<?php echo $this->Html->safe($hpk_alert_type); ?>" role="<?php echo $this->Html->safe($hpk_alert_type === 'danger' ? 'alert' : 'status'); ?>">
+    <span><?php echo $this->Html->safe($hpk_message_text); ?></span>
+</div>
+<?php
+    }
+}
+?>
+<div id="client_tickets" class="hpk-tickets<?php echo $this->Html->safe($hpk_is_inner ? ' hpk-tickets--embedded' : ''); ?>">
+    <?php if (!(isset($render_section) ? $render_section : null)) { ?>
+    <section class="hpk-card hpk-tickets__shell" aria-labelledby="hpk-tickets-title">
+        <div class="hpk-tickets__header">
+            <div>
+                <h1 id="hpk-tickets-title" class="hpk-tickets__title"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.page_title', true)); ?></h1>
+            </div>
+            <a class="hpk-btn hpk-btn-primary" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/client_tickets/departments/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.action_create', true)); ?></a>
+        </div>
+
+        <nav class="hpk-tabs hpk-tickets__tabs" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.tabs_label', true)); ?>">
+            <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('not_closed')); ?>"<?php echo ($hpk_status == 'not_closed' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                <?php echo $this->Html->safe($this->_('Hosterpk.ticket.tab_open', true)); ?>
+                <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['open']) ? $hpk_status_count['open'] : 0); ?></span>
+            </a>
+            <a class="hpk-tab" href="<?php echo $this->Html->safe($hpk_tab_url('closed')); ?>"<?php echo ($hpk_status == 'closed' ? ' aria-current="page"' : ''); ?> data-hpk-filter-link>
+                <?php echo $this->Html->safe($this->_('Hosterpk.ticket.tab_closed', true)); ?>
+                <span class="hpk-tab__count"><?php echo $this->Html->safe(isset($hpk_status_count['closed']) ? $hpk_status_count['closed'] : 0); ?></span>
+            </a>
+        </nav>
+
+        <?php if (isset($filters)) { ?>
+        <?php $this->Form->create($hpk_filter_action, ['class' => 'hpk-tickets__filters hpk-tickets__filter-form', 'method' => 'get']); ?>
+            <?php
+            foreach ($filters->getFields() as $hpk_filter_field) {
+                foreach ($hpk_filter_field->fields as $hpk_filter_input) {
+                    if (!method_exists($this->Form, $hpk_filter_input->type)) {
+                        continue;
+                    }
+
+                    if ($hpk_filter_input->type == 'fieldHidden') {
+                        call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_input->params);
+                        continue;
+                    }
+
+                    $hpk_filter_params = $hpk_filter_input->params;
+                    $hpk_filter_name = isset($hpk_filter_params['name']) ? $hpk_filter_params['name'] : '';
+                    $hpk_filter_attrs = isset($hpk_filter_params['attributes']) ? $hpk_filter_params['attributes'] : [];
+                    $hpk_filter_id = isset($hpk_filter_attrs['id']) ? $hpk_filter_attrs['id'] : preg_replace('/[^A-Za-z0-9_-]+/', '_', $hpk_filter_name);
+                    $hpk_filter_classes = isset($hpk_filter_attrs['class']) ? preg_split('/\s+/', trim($hpk_filter_attrs['class'])) : [];
+                    $hpk_filter_classes = array_diff($hpk_filter_classes, ['form-control', 'stretch', 'input-sm']);
+                    $hpk_filter_classes[] = 'hpk-tickets__control';
+                    $hpk_filter_attrs['id'] = $hpk_filter_id;
+                    $hpk_filter_attrs['class'] = trim(implode(' ', array_unique(array_filter($hpk_filter_classes))));
+
+                    $hpk_label_key = isset($hpk_filter_label_keys[$hpk_filter_name])
+                        ? $hpk_filter_label_keys[$hpk_filter_name]
+                        : 'Hosterpk.ticket.filter_generic';
+                    // Text inputs get a placeholder; a placeholder on a <select> is invalid.
+                    if ($hpk_filter_input->type !== 'fieldSelect') {
+                        $hpk_filter_attrs['placeholder'] = $this->_($hpk_label_key, true);
+                    } else {
+                        $hpk_filter_options = isset($hpk_filter_params['options']) ? $hpk_filter_params['options'] : [];
+                        foreach ($hpk_filter_options as $hpk_option_value => $hpk_option_label) {
+                            if ((string) $hpk_option_value === '') {
+                                $hpk_filter_options[$hpk_option_value] = $this->_('Hosterpk.ticket.filter_any', true);
+                                continue;
+                            }
+                            if ($hpk_filter_name !== 'filters[last_reply]') {
+                                continue;
+                            }
+                            $hpk_minutes = (int) $hpk_option_value;
+                            if ($hpk_minutes < 1) {
+                                continue;
+                            }
+                            if ($hpk_minutes >= 60 && $hpk_minutes % 60 === 0) {
+                                $hpk_hours = (int) ($hpk_minutes / 60);
+                                $hpk_filter_options[$hpk_option_value] = ($hpk_hours === 1)
+                                    ? $this->_('Hosterpk.ticket.filter_hour', true)
+                                    : $this->_('Hosterpk.ticket.filter_hours', true, $hpk_hours);
+                            } else {
+                                $hpk_filter_options[$hpk_option_value] = $this->_('Hosterpk.ticket.filter_minutes', true, $hpk_minutes);
+                            }
+                        }
+                        $hpk_filter_params['options'] = $hpk_filter_options;
+                    }
+                    $hpk_filter_params['attributes'] = $hpk_filter_attrs;
+            ?>
+            <div class="hpk-tickets__filter">
+                <?php $this->Form->label($this->_($hpk_label_key, true), $hpk_filter_id, ['class' => 'hpk-tickets__filter-label']); ?>
+                <?php call_user_func_array([$this->Form, $hpk_filter_input->type], $hpk_filter_params); ?>
+            </div>
+            <?php
+                }
+            }
+            ?>
+            <div class="hpk-tickets__filter-actions">
+                <?php $this->Form->fieldSubmit('submit', $this->_('Hosterpk.ticket.filter_submit', true), ['class' => 'hpk-btn hpk-btn-outline hpk-btn-sm', 'formaction' => $hpk_filter_action]); ?>
+            </div>
+        <?php $this->Form->end(); ?>
+        <?php } ?>
+    <?php } ?>
+
+        <div class="hpk-tickets__results" aria-live="polite">
+            <?php if ($hpk_num_tickets > 0) { ?>
+            <div class="hpk-tickets__table">
+                <table class="hpk-table" id="hpk-tickets-table">
+                    <thead>
+                        <tr>
+                            <?php $hpk_render_header('code'); ?>
+                            <?php $hpk_render_header('priority'); ?>
+                            <?php $hpk_render_header('department'); ?>
+                            <?php $hpk_render_header('summary'); ?>
+                            <?php $hpk_render_header('last_reply'); ?>
+                            <?php $hpk_render_header('status'); ?>
+                            <?php $hpk_render_header('options'); ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php for ($i = 0; $i < $hpk_num_tickets; $i++) {
+                            $hpk_ticket = $hpk_tickets[$i];
+                            $hpk_ticket_id = (isset($hpk_ticket->id) ? $hpk_ticket->id : null);
+                            $hpk_ticket_priority = (isset($hpk_ticket->priority) ? $hpk_ticket->priority : null);
+                            $hpk_ticket_status = (isset($hpk_ticket->status) ? $hpk_ticket->status : null);
+                            $hpk_summary_raw = (isset($hpk_ticket->summary) ? $hpk_ticket->summary : '');
+                            $hpk_summary = ((isset($string) && is_object($string))
+                                ? $string->truncate($hpk_summary_raw, ['word_length' => Configure::get('SupportManager.summary_truncate_length')])
+                                : $hpk_summary_raw);
+                            $hpk_summary_suffix = ($hpk_summary != $hpk_summary_raw ? '...' : '');
+                        ?>
+                        <tr>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['code']); ?>">
+                                <a href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/client_tickets/reply/' . $hpk_ticket_id . '/'); ?>"><?php echo (isset($hpk_ticket->code) ? $this->Html->safe($hpk_ticket->code) : null); ?></a>
+                            </td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['priority']); ?>"><?php $hpk_render_badge($hpk_ticket_priority, $hpk_priority_badges, $hpk_priorities); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['department']); ?>"><?php echo (isset($hpk_ticket->department_name) ? $this->Html->safe($hpk_ticket->department_name) : null); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['summary']); ?>"><?php echo $this->Html->safe($hpk_summary) . $this->Html->safe($hpk_summary_suffix); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['last_reply']); ?>"><?php echo (isset($hpk_ticket->last_reply_time) ? $this->Html->safe($hpk_ticket->last_reply_time) : null); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['status']); ?>"><?php $hpk_render_badge($hpk_ticket_status, $hpk_status_badges, $hpk_statuses); ?></td>
+                            <td data-label="<?php echo $this->Html->safe($hpk_columns['options']); ?>">
+                                <div class="hpk-tickets__actions">
+                                    <?php if ($hpk_status != 'closed') { ?>
+                                    <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/client_tickets/reply/' . $hpk_ticket_id . '/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.action_reply', true)); ?></a>
+                                    <?php
+                                    // Close is a real no-JS POST: ClientTickets::close() requires $_POST['id']
+                                    // (controllers/client_tickets.php:788), so a GET link would only redirect.
+                                    // The Form->create() also auto-injects the CSRF token (RULE 8 floor).
+                                    $this->Form->create($this->base_uri . 'plugin/support_manager/client_tickets/close/');
+                                    $this->Form->fieldHidden('id', $hpk_ticket_id);
+                                    ?>
+                                    <button type="submit" class="hpk-btn hpk-btn-outline hpk-btn-sm"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.action_close', true)); ?></button>
+                                    <?php $this->Form->end(); ?>
+                                    <?php } else { ?>
+                                    <a class="hpk-btn hpk-btn-outline hpk-btn-sm" href="<?php echo $this->Html->safe($this->base_uri . 'plugin/support_manager/client_tickets/feedback/' . $hpk_ticket_id . '/'); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.action_feedback', true)); ?></a>
+                                    <?php } ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php } else { ?>
+            <div class="hpk-empty hpk-empty--tickets">
+                <svg class="hpk-icon hpk-empty__icon" aria-hidden="true" focusable="false"><use href="#hpk-icon-life-preserver"></use></svg>
+                <?php
+                $hpk_empty_slug = ($hpk_status === 'closed') ? 'closed' : 'open';
+                $hpk_empty_title = $hpk_lang_or('Hosterpk.ticket.empty_' . $hpk_empty_slug . '_title', 'Hosterpk.state.empty_generic');
+                $hpk_empty_body = $hpk_lang_or('Hosterpk.ticket.empty_' . $hpk_empty_slug . '_body', 'Hosterpk.state.empty_generic');
+                ?>
+                <?php if ($hpk_is_inner) { ?>
+                <h3 class="hpk-empty__title"><?php echo $this->Html->safe($hpk_empty_title); ?></h3>
+                <?php } else { ?>
+                <h2 class="hpk-empty__title"><?php echo $this->Html->safe($hpk_empty_title); ?></h2>
+                <?php } ?>
+                <p class="hpk-empty__body"><?php echo $this->Html->safe($hpk_empty_body); ?></p>
+            </div>
+            <?php } ?>
+
+            <?php if (!(isset($render_section) ? $render_section : null) && $this->Pagination->hasPages()) { ?>
+            <nav class="hpk-tickets__pagination" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.pagination_label', true)); ?>">
+                <?php $this->Pagination->build(); ?>
+            </nav>
+            <?php } ?>
+        </div>
+
+    <?php if (!(isset($render_section) ? $render_section : null)) { ?>
+    </section>
+    <?php } ?>
+</div>

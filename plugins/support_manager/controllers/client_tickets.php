@@ -91,16 +91,18 @@ class ClientTickets extends SupportManagerController
         $sort = (isset($this->get['sort']) ? $this->get['sort'] : 'last_reply_date');
         $order = (isset($this->get['order']) ? $this->get['order'] : 'desc');
 
-        // Set filters from post input
+        // Set filters from post input (widget mode) or GET query string (owned list mode)
         $post_filters = [];
         if (isset($this->post['filters'])) {
             $post_filters = $this->post['filters'];
             unset($this->post['filters']);
+        } elseif (isset($this->get['filters']) && is_array($this->get['filters'])) {
+            $post_filters = $this->get['filters'];
+        }
 
-            foreach($post_filters as $filter => $value) {
-                if (empty($value)) {
-                    unset($post_filters[$filter]);
-                }
+        foreach($post_filters as $filter => $value) {
+            if (empty($value)) {
+                unset($post_filters[$filter]);
             }
         }
 
@@ -127,13 +129,17 @@ class ClientTickets extends SupportManagerController
         );
         $total_results = $this->SupportManagerTickets->getListCount($status, null, $this->client_id, $post_filters);
 
-        // Overwrite default pagination settings
+        // Overwrite default pagination settings; carry active filters in page/sort links.
+        $pagination_filter_params = [];
+        foreach ($post_filters as $filter_key => $filter_value) {
+            $pagination_filter_params['filters[' . $filter_key . ']'] = $filter_value;
+        }
         $settings = array_merge(
             Configure::get('Blesta.pagination_client'),
             [
                 'total_results' => $total_results,
                 'uri' => $this->base_uri . 'plugin/support_manager/client_tickets/index/' . $status . '/[p]/',
-                'params' => ['sort' => $sort, 'order' => $order]
+                'params' => array_merge(['sort' => $sort, 'order' => $order], $pagination_filter_params)
             ]
         );
         $this->setPagination($this->get, $settings);
@@ -317,6 +323,9 @@ class ClientTickets extends SupportManagerController
                 // Error, reset vars
                 $vars = (object)$this->post;
                 $this->setMessage('error', $errors, false, null, false);
+                // HOSTERPK 8-3: expose the error array so the owned create view can
+                // decorate the specific failed fields inline (AC2). View guards isset().
+                $this->set('errors', $errors);
             } else {
                 // Success, commit the transaction
                 $this->SupportManagerTickets->commit();
@@ -374,6 +383,9 @@ class ClientTickets extends SupportManagerController
 
         $this->set('vars', $vars);
         $this->set('priorities', ($please_select + $this->SupportManagerDepartments->getPriorities($department->id)));
+        // HOSTERPK 8-3: the owned create view needs the department object for the
+        // dept-named heading and the attach-hint (attachment_types / max_attachment_size).
+        $this->set('department', $department);
         $this->set('department_fields', $department_fields->generate());
         $this->set('enable_related_services', $department->enable_related_services);
         $this->set('logged_in', $logged_in);
@@ -551,6 +563,12 @@ class ClientTickets extends SupportManagerController
 
         $department = $this->SupportManagerDepartments->get($ticket->department_id);
 
+        // HOSTERPK-ISLAND: expose the full department object so the HosterPK reply
+        // override can render the live attachment limits ($department->attachment_types
+        // and $department->max_attachment_size) in the accessible attachment hint
+        // (Story 8.2 AC4). Harmless to the stock view, which ignores it.
+        $this->set('department', $department);
+
         // Reply to the ticket
         if (!empty($this->post)) {
             // Set custom field checkboxes default value
@@ -676,31 +694,48 @@ class ClientTickets extends SupportManagerController
                 // Send the email associated with this ticket
                 $this->SupportManagerTickets->sendEmail($reply_id);
 
-                // Check whether the ticket was just closed and set the appropriate message
-                if ($close && ($ticket = $this->SupportManagerTickets->get($ticket->id))
-                    && $ticket->status == 'closed') {
-                    $this->flashMessage(
-                        'message',
-                        Language::_('ClientTickets.!success.ticket_closed', true, $ticket->code),
-                        null,
-                        false
-                    );
+                // Check whether the ticket was just closed and set the appropriate message.
+                // The closed-state check re-fetches the ticket so a just-closed ticket
+                // reports correctly.
+                $is_closed_now = ($close && ($ticket = $this->SupportManagerTickets->get($ticket->id))
+                    && $ticket->status == 'closed');
+                $success_message = Language::_(
+                    ($is_closed_now ? 'ClientTickets.!success.ticket_closed' : 'ClientTickets.!success.ticket_updated'),
+                    true,
+                    $ticket->code
+                );
+
+                // HOSTERPK-ISLAND: on an HTMX request, return the re-rendered reply view
+                // (200) instead of redirecting (302), so the D2 island can hx-select
+                // #hpk-ticket-thread-inner in place. HTMX sends the HX-Request header and
+                // OMITS X-Requested-With, so $this->isAjax() would NEVER fire this branch
+                // (load-bearing trap). Close is a native full POST (no hx-*), so it always
+                // takes the stock redirect path below. (Story 8.2 / DEC-1a.)
+                if (isset($_SERVER['HTTP_HX_REQUEST']) && $_SERVER['HTTP_HX_REQUEST'] === 'true') {
+                    // Set the $message view var DIRECTLY (not setMessage) so the OOB
+                    // #hpk-ticket-flash region renders the notice on THIS response. We do
+                    // NOT use setMessage here: under the plugin-view-override seam,
+                    // setMessage renders its message.pdt partial through a View whose base
+                    // has been left pointing at the plugin tree by sendEmail() above, so it
+                    // throws "Files does not exist: .../client/default/message.pdt" and
+                    // aborts the whole render. The hosterpk flash skinner consumes a plain
+                    // $message string fine. (The stock ERROR path's setMessage runs BEFORE
+                    // sendEmail and resolves message.pdt from the theme dir — that one keeps
+                    // working given the app/views/client/hosterpk/message.pdt passthrough.)
+                    $this->set('message', $success_message);
+                    // Re-fetch unconditionally so the new reply is in $ticket->replies and
+                    // any status change is reflected, then fall through to the view render.
+                    $ticket = $this->SupportManagerTickets->get($ticket->id);
                 } else {
-                    $this->flashMessage(
-                        'message',
-                        Language::_('ClientTickets.!success.ticket_updated', true, $ticket->code),
-                        null,
-                        false
+                    $this->flashMessage('message', $success_message, null, false);
+                    $this->redirect(
+                        $this->base_uri . 'plugin/support_manager/client_tickets/'
+                        . ($access['allow_reply_by_url']
+                            ? 'reply/' . $ticket->id . '/?sid=' . rawurlencode($access['sid'])
+                            : ''
+                        )
                     );
                 }
-
-                $this->redirect(
-                    $this->base_uri . 'plugin/support_manager/client_tickets/'
-                    . ($access['allow_reply_by_url']
-                        ? 'reply/' . $ticket->id . '/?sid=' . rawurlencode($access['sid'])
-                        : ''
-                    )
-                );
             }
             } // end if (!$has_base64)
         }

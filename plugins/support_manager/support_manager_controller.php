@@ -26,8 +26,43 @@ class SupportManagerController extends AppController
         Language::loadLang([Loader::fromCamelCase(get_class($this))], null, dirname(__FILE__) . DS . 'language' . DS);
         Language::loadLang('global', null, dirname(__FILE__) . DS . 'language' . DS);
 
-        // Override default view directory
+        // Override default view directory.
+        // HOSTERPK-SEAM: the client portal honors the company client_view_dir (with a
+        // fallback to 'default') so the ticket list AND the ticket detail/reply can be
+        // OWNED at plugins/support_manager/views/<client_view_dir>/; the admin portal
+        // stays 'default'. Dir-gated + portal-gated + controller/action-gated:
+        // index + reply + add (Story 8.3 widens the index+reply 8.2 seam; departments/
+        // feedback/close stay stock 'default'). Each owned action carries its own
+        // per-action view-file guard, so the flip only happens when the matching
+        // override file is actually present (else 'default' renders — nothing 500s).
+        // Story 8.1 / 8.2 / 8.3 — UI-UX (DEC-A / DEC-1a) — support_manager plugin ONLY.
+        // support_manager sets no $this->portal, so the client/admin distinction is
+        // computed inline from the controller-name prefix. Do not remove or reword the
+        // HOSTERPK-SEAM sentinel: tooling/check.sh greps it as a drift tripwire.
         $this->view->view = 'default';
+        $is_client = (substr($this->controller, 0, 5) !== 'admin');
+        $is_index = ($this->action == 'index' || empty($this->action));
+        $is_reply = ($this->action == 'reply');
+        $is_add = ($this->action == 'add');
+        if ($is_client && $this->controller == 'client_tickets' && ($is_index || $is_reply || $is_add)) {
+            // Per-action owned view file: list for index, reply for reply, create for add.
+            $client_view_file = $is_reply
+                ? 'client_tickets_reply.pdt'
+                : ($is_add ? 'client_tickets_add.pdt' : 'client_tickets.pdt');
+            $this->uses(['Companies']);
+            $client_view_dir = $this->Companies->getSetting(
+                Configure::get('Blesta.company_id'),
+                'client_view_dir'
+            );
+            $client_view_dir = ($client_view_dir ? $client_view_dir->value : null);
+            if (!empty($client_view_dir) && $client_view_dir !== 'default'
+                && preg_match('/^[A-Za-z0-9_-]+$/', $client_view_dir)
+                && is_dir(PLUGINDIR . 'support_manager' . DS . 'views' . DS . $client_view_dir)
+                && is_file(PLUGINDIR . 'support_manager' . DS . 'views' . DS . $client_view_dir . DS . $client_view_file)
+            ) {
+                $this->view->view = $client_view_dir;
+            }
+        }
         $this->orig_structure_view = $this->structure->view;
         $this->structure->view = 'default';
     }

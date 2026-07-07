@@ -1,0 +1,484 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the WidgetClient chrome with the HosterPK card / .hpk-ticket-thread / .hpk-badge / .hpk-btn pattern, and makes the reply submit the SECOND HTMX island (DEC-1a): the Reply button hx-posts to the same reply URL and hx-selects #hpk-ticket-thread-inner in place (the controller returns 200 + the re-rendered view on an HX-Request), while Close stays a native full POST behind the 7.3 confirm binder. Drops the jQuery markdown WYSIWYG editor (data-markdown-editor), blestaBindDropZone (drag-drop), and the support-manager.js lightbox (DEC-2): a plain textarea posts markdown the thread still server-renders, an always-present multiple file input (WCAG 2.5.7) carries a vanilla filename/remove enhancement, and image attachments render as a plain on-brand thumbnail-link grid. Preserves the markdown thread render path ($this->TextParser->encode('markdown', ...) UNESCAPED - the documented Html->safe exception), the blesta-attachment:// rewrite, the controller->view data contract ($ticket/$ticket->replies/$statuses/$priorities/$priority_classes/$contacts/$department_fields/$staff_settings/$service/$module/$thumbnails_per_row/$enable_related_services/$logged_in/$sid/$vars/$ai_assistant_name + the 8.2 $department object), the POST field shape (details/attachment[]/contacts[]/recipients[]/action_type/sid + custom fields), the implicit Form->create() CSRF token, and the byte-verbatim widget-mode guard. Reply+Close are submitters in ONE form so Close stays native; named submitters post action_type (reply/close) so no-JS Close actually closes. Lives in the plugin tree (reached via the support_manager_controller HOSTERPK-SEAM, widened to reply in 8.2), so copy loads from the app template path (DEC-6). Stock baseline: ../default/client_tickets_reply.pdt @ 6.0.0-b1 sha256:1ec59040705973bb4e5f94fdf3001e7ba14ccd459a38320df95f1d97691a10ce */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too.
+ * DEC-6: this view lives in the PLUGIN tree, so $this->view_dir points into
+ * plugins/support_manager/views/hosterpk/ - the core view_dir-relative derivation
+ * would look in the wrong (plugin) language dir. The canonical copy table is the app
+ * template's language/en_us/hosterpk.php; load it from the app template path. */
+if (defined('ROOTWEBDIR') && defined('APPDIR')) {
+    Language::loadLang(
+        'hosterpk',
+        null,
+        ROOTWEBDIR . APPDIR . 'views' . DS . 'client' . DS . 'hosterpk' . DS . 'language' . DS
+    );
+}
+
+// Widget/inner-render guard (verbatim with the 8.1 list view). $render_section is
+// injected only by the widget/inner render path; the outer chrome wrap is suppressed
+// in that case. The literal expression !(isset($render_section) ? $render_section :
+// null) is reused verbatim at every chrome wrap below.
+$hpk_is_inner = (isset($render_section) ? $render_section : null);
+
+// ----- Resolved view data (defensive, mirrors 8.1) -------------------------
+$hpk_ticket = (isset($ticket) && is_object($ticket)) ? $ticket : null;
+$hpk_replies = ($hpk_ticket !== null && isset($hpk_ticket->replies) && is_array($hpk_ticket->replies))
+    ? $hpk_ticket->replies
+    : [];
+$hpk_priorities = (isset($priorities) && is_array($priorities)) ? $priorities : [];
+$hpk_statuses = (isset($statuses) && is_array($statuses)) ? $statuses : [];
+$hpk_staff_settings = (isset($staff_settings) && is_array($staff_settings)) ? $staff_settings : [];
+$hpk_sid = (isset($sid) && $sid !== '') ? $sid : null;
+$hpk_ai_name = (isset($ai_assistant_name) && $ai_assistant_name !== '') ? $ai_assistant_name : null;
+$hpk_enable_services = (isset($enable_related_services) ? (bool) $enable_related_services : false);
+$hpk_thumbs_per_row = max(1, (int) (isset($thumbnails_per_row) ? $thumbnails_per_row : 4));
+
+// Draft preserved on validation error ($vars = (object)$this->post); on a fresh GET or
+// a successful HX reply $vars is the ticket object (no ->details) -> empty box.
+$hpk_draft = (isset($vars) && is_object($vars) && isset($vars->details)) ? $vars->details : '';
+
+$hpk_reply_date_format = Configure::get('SupportManager.reply_date_format');
+
+// Plugin URL base (keeps the /dashboard proxy prefix - 8.1 §F). Core client routes
+// (the related-service link) use $this->client_uri.
+$hpk_plugin_base = $this->base_uri . 'plugin/support_manager/client_tickets/';
+$hpk_reply_url = $hpk_plugin_base . 'reply/' . (isset($hpk_ticket->id) ? $hpk_ticket->id : '') . '/';
+$hpk_attach_url = $hpk_plugin_base . 'getattachment/';
+$hpk_sid_query = ($hpk_sid !== null ? '?sid=' . rawurlencode($hpk_sid) : '');
+
+// Priority / status VALUE -> [semantic badge, copy key] (Dev Notes §C, reused from
+// 8.1, CONTRAST 24/24). Unknown values fall back to neutral + Blesta's own localized
+// label; empty/null -> em-dash (8.1 review finding).
+$hpk_priority_badges = [
+    'low'       => ['neutral', 'Hosterpk.ticket.priority_low'],
+    'medium'    => ['info',    'Hosterpk.ticket.priority_medium'],
+    'high'      => ['info',    'Hosterpk.ticket.priority_high'],
+    'critical'  => ['warning', 'Hosterpk.ticket.priority_critical'],
+    'emergency' => ['danger',  'Hosterpk.ticket.priority_emergency'],
+];
+$hpk_status_badges = [
+    'open'           => ['info',    'Hosterpk.ticket.status_open'],
+    'awaiting_reply' => ['warning', 'Hosterpk.ticket.status_awaiting_reply'],
+    'in_progress'    => ['info',    'Hosterpk.ticket.status_in_progress'],
+    'on_hold'        => ['neutral', 'Hosterpk.ticket.status_on_hold'],
+    'closed'         => ['success', 'Hosterpk.ticket.status_closed'],
+];
+
+// text + color badge (never colour alone). Empty/null -> em-dash; unknown -> neutral
+// + Blesta label.
+$hpk_render_badge = function ($value, $map, $stock_labels) {
+    $class = 'neutral';
+    $label = '—';
+    if ($value !== null && $value !== '') {
+        if (isset($map[$value])) {
+            $class = $map[$value][0];
+            $label = $this->_($map[$value][1], true);
+        } elseif (isset($stock_labels[$value])) {
+            $label = $stock_labels[$value];
+        } else {
+            $label = (string) $value;
+        }
+    }
+?><span class="hpk-badge hpk-badge-<?php echo $this->Html->safe($class); ?>"><?php echo $this->Html->safe($label); ?></span><?php
+};
+
+// Author + role resolution mirrors the stock branch logic exactly: staff_id===0 is the
+// AI assistant, a non-empty non-zero staff_id is staff, an empty/null staff_id is the
+// client. Returns [display_name, role_modifier, role_label].
+$hpk_resolve_author = function ($reply) use ($hpk_ticket, $hpk_ai_name, $hpk_staff_settings) {
+    $staff_id = (isset($reply->staff_id) ? $reply->staff_id : null);
+    $first = (isset($reply->first_name) ? $reply->first_name : '');
+    $last = (isset($reply->last_name) ? $reply->last_name : '');
+    $is_ai_reply = (isset($reply->staff_id) && (string) $staff_id === '0');
+    if ($is_ai_reply && $hpk_ai_name !== null) {
+        // AI assistant (only when a name is configured; otherwise fall through to client)
+        return [$hpk_ai_name, 'ai', $this->_('Hosterpk.ticket.reply_system', true)];
+    }
+    if ($staff_id !== null && $staff_id !== '' && !$is_ai_reply) {
+        // Staff: prefer the staff title, else the generic Support label
+        $name = trim($first . ' ' . $last);
+        if ($name === '') {
+            $name = $this->_('Hosterpk.ticket.reply_system', true);
+        }
+        $role = $this->_('Hosterpk.ticket.reply_staff', true);
+        if (isset($hpk_staff_settings[$staff_id]) && !empty($hpk_staff_settings[$staff_id]['title'])) {
+            $role = $hpk_staff_settings[$staff_id]['title'];
+        }
+        return [$name, 'staff', $role];
+    }
+    // Client
+    $name = trim($first . ' ' . $last);
+    if ($name === '' && isset($hpk_ticket->email)) {
+        $name = $hpk_ticket->email;
+    }
+    return [$name, 'client', $this->_('Hosterpk.ticket.reply_you', true)];
+};
+
+// Skin the controller's $message (setMessage 'message' on HX success, or the validation
+// error array) into the OOB #hpk-ticket-flash region. Type-detect from the rendered
+// markup like the 8.1 list view; strip Blesta's dismiss glyph.
+$hpk_flash_html = '';
+if (isset($message) && $message !== '') {
+    $hpk_flash_type = 'info';
+    if (strpos($message, 'alert-danger') !== false || strpos($message, 'alert-error') !== false) {
+        $hpk_flash_type = 'danger';
+    } elseif (strpos($message, 'alert-success') !== false) {
+        $hpk_flash_type = 'success';
+    } elseif (strpos($message, 'alert-warning') !== false) {
+        $hpk_flash_type = 'warning';
+    }
+    $hpk_flash_clean = preg_replace(
+        [
+            '/<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*(["\'])(?:(?!\2).)*?\bclose\b(?:(?!\2).)*?\2[^>]*>.*?<\/\1>/is',
+            '/<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*close\b[^>]*>.*?<\/\1>/is',
+        ],
+        ' ',
+        $message
+    );
+    if ($hpk_flash_clean === null) {
+        $hpk_flash_clean = $message;
+    }
+    $hpk_flash_text = trim(preg_replace('/\s+/', ' ', strip_tags(
+        str_replace(['</li>', '</p>', '<br>', '<br/>', '<br />'], ' ', html_entity_decode($hpk_flash_clean, ENT_QUOTES, 'UTF-8'))
+    )));
+    if ($hpk_flash_text !== '') {
+        $hpk_flash_html = '<div class="hpk-alert hpk-alert-' . $this->Html->safe($hpk_flash_type) . '" role="'
+            . $this->Html->safe($hpk_flash_type === 'danger' ? 'alert' : 'status') . '"><span>'
+            . $this->Html->safe($hpk_flash_text) . '</span></div>';
+    }
+}
+?>
+<?php if (!(isset($render_section) ? $render_section : null)) { ?>
+<div class="hpk-ticket-detail">
+<?php } ?>
+
+    <?php
+    // OOB flash region (hx-select-oob target). Skin the initial/inline $message here;
+    // success/error on an HX reply OOB-swaps this element.
+    ?>
+    <div id="hpk-ticket-flash" aria-live="polite"><?php echo $hpk_flash_html; ?></div>
+
+    <?php if ($hpk_ticket !== null) { ?>
+    <?php
+    $hpk_code = (isset($hpk_ticket->code) ? $hpk_ticket->code : '');
+    $hpk_summary = (isset($hpk_ticket->summary) ? $hpk_ticket->summary : '');
+    $hpk_dept = (isset($hpk_ticket->department_name) ? $hpk_ticket->department_name : '');
+    $hpk_priority = (isset($hpk_ticket->priority) ? $hpk_ticket->priority : null);
+    $hpk_status = (isset($hpk_ticket->status) ? $hpk_ticket->status : null);
+    $hpk_opened = $this->Date->cast((isset($hpk_ticket->date_added) ? $hpk_ticket->date_added : null), 'date_time');
+    ?>
+    <section class="hpk-card hpk-ticket-summary" aria-labelledby="hpk-ticket-title">
+        <div class="hpk-ticket-summary__head">
+            <h1 id="hpk-ticket-title" class="hpk-ticket-summary__title"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.detail_title', true, $hpk_code)); ?></h1>
+            <?php $hpk_render_badge($hpk_status, $hpk_status_badges, $hpk_statuses); ?>
+        </div>
+        <p class="hpk-ticket-summary__subject"><?php echo $this->Html->safe($hpk_summary); ?></p>
+        <dl class="hpk-ticket-summary__meta">
+            <div class="hpk-ticket-summary__cell">
+                <dt><?php echo $this->Html->safe($this->_('Hosterpk.ticket.heading_department', true)); ?></dt>
+                <dd><?php echo $this->Html->safe($hpk_dept); ?></dd>
+            </div>
+            <div class="hpk-ticket-summary__cell">
+                <dt><?php echo $this->Html->safe($this->_('Hosterpk.ticket.heading_priority', true)); ?></dt>
+                <dd><?php $hpk_render_badge($hpk_priority, $hpk_priority_badges, $hpk_priorities); ?></dd>
+            </div>
+            <?php if ($hpk_enable_services) { ?>
+            <div class="hpk-ticket-summary__cell">
+                <dt><?php echo $this->Html->safe($this->_('Hosterpk.ticket.heading_service', true)); ?></dt>
+                <dd>
+                    <?php if (isset($service) && is_object($service) && isset($service->id)) {
+                        $hpk_service_name = (empty($service->name) ? (isset($service->package->name) ? $service->package->name : '') : $service->name);
+                        $hpk_is_registrar = (isset($module->type) && $module->type === 'registrar');
+                        $hpk_service_suffix = $hpk_is_registrar
+                            ? $this->_('ClientTickets.reply.text_domain', true)
+                            : mb_strimwidth((isset($service->package->name) ? $service->package->name : ''), 0, 45, '...');
+                    ?>
+                    <a href="<?php echo $this->Html->safe($this->client_uri . 'services/manage/' . $service->id); ?>"><?php echo $this->Html->safe($hpk_service_name); ?> (<?php echo $this->Html->safe($hpk_service_suffix); ?>)</a>
+                    <?php } else { ?>
+                    <span>—</span>
+                    <?php } ?>
+                </dd>
+            </div>
+            <?php } ?>
+            <div class="hpk-ticket-summary__cell">
+                <dt><?php echo $this->Html->safe($this->_('Hosterpk.ticket.heading_opened', true)); ?></dt>
+                <dd><?php echo $this->Html->safe($hpk_opened); ?></dd>
+            </div>
+        </dl>
+    </section>
+
+    <?php
+    // ----- Thread region (the HTMX island target) -------------------------
+    // Status region carries the loading + result announce copy (read by the generalized
+    // bootstrap.js island announce helper). Skeleton is a SIBLING of the target so the
+    // innerHTML swap never deletes it. data-hpk-error-scope tells the result announce to
+    // also inspect #hpk-ticket-flash for an error marker.
+    ?>
+    <div id="hpk-ticket-thread-status" class="hpk-visually-hidden" aria-live="polite"
+         data-hpk-announce="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.thread_loading_announce', true)); ?>"
+         data-hpk-announce-success="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_sent_announce', true)); ?>"
+         data-hpk-announce-error="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_error_announce', true)); ?>"></div>
+
+    <section class="hpk-card hpk-ticket-thread-shell" aria-labelledby="hpk-ticket-thread-heading">
+        <h2 id="hpk-ticket-thread-heading" class="hpk-ticket-thread-shell__heading"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.thread_heading', true)); ?></h2>
+
+        <div id="hpk-ticket-thread-skeleton" class="hpk-skeleton hpk-skeleton--thread htmx-indicator" aria-hidden="true">
+            <span class="hpk-skeleton hpk-skeleton__bar hpk-skeleton__bar--title"></span>
+            <span class="hpk-skeleton hpk-skeleton__bar"></span>
+            <span class="hpk-skeleton hpk-skeleton__bar hpk-skeleton__bar--short"></span>
+        </div>
+
+        <div id="hpk-ticket-thread" class="hpk-ticket-thread" aria-busy="false" tabindex="-1"
+             data-hpk-aria-busy data-hpk-announce-target="#hpk-ticket-thread-status"
+             data-hpk-error-scope="#hpk-ticket-flash"
+             data-hpk-focus-after-swap="#hpk-ticket-thread">
+            <div id="hpk-ticket-thread-inner">
+                <?php
+                if (empty($hpk_replies)) {
+                ?>
+                <p class="hpk-ticket-thread__empty"><?php echo $this->Html->safe($this->_('Hosterpk.state.empty_generic', true)); ?></p>
+                <?php
+                }
+                foreach ($hpk_replies as $hpk_reply) {
+                    $hpk_reply_type = (isset($hpk_reply->type) ? $hpk_reply->type : null);
+                    list($hpk_author, $hpk_role_mod, $hpk_role_label) = $hpk_resolve_author($hpk_reply);
+                    $hpk_reply_date = $this->Date->cast((isset($hpk_reply->date_added) ? $hpk_reply->date_added : null), $hpk_reply_date_format);
+
+                    if ($hpk_reply_type === 'log') {
+                ?>
+                <div class="hpk-alert hpk-alert-info hpk-ticket-log" role="status">
+                    <span class="hpk-ticket-log__label"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.log_entry', true)); ?></span>
+                    <span class="hpk-ticket-log__detail"><?php echo (isset($hpk_reply->details) ? $this->Html->safe($hpk_reply->details) : null); ?></span>
+                    <span class="hpk-ticket-log__meta"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_meta', true, $hpk_author, $hpk_reply_date)); ?></span>
+                </div>
+                <?php
+                        continue;
+                    }
+                ?>
+                <article class="hpk-ticket-reply hpk-ticket-reply--<?php echo $this->Html->safe($hpk_role_mod); ?>">
+                    <div class="hpk-ticket-reply__avatar" aria-hidden="true">
+                        <img src="<?php echo $this->Html->safe(WEBDIR . 'uploads/avatar/' . (int)(isset($hpk_reply->user_id) ? $hpk_reply->user_id : 0) . '/?support_manager=true'); ?>" alt="" loading="lazy">
+                    </div>
+                    <div class="hpk-ticket-reply__content">
+                        <header class="hpk-ticket-reply__head">
+                            <span class="hpk-ticket-reply__author"><?php echo $this->Html->safe($hpk_author); ?></span>
+                            <span class="hpk-ticket-reply__role"><?php echo $this->Html->safe($hpk_role_label); ?></span>
+                            <span class="hpk-ticket-reply__date"><?php echo $this->Html->safe($hpk_reply_date); ?></span>
+                        </header>
+                        <?php
+                        // Attachment name-links (all attachments) - getattachment/{id}/ + ?sid.
+                        if (!empty($hpk_reply->attachments)) {
+                        ?>
+                        <ul class="hpk-ticket-reply__attachments">
+                            <?php foreach ($hpk_reply->attachments as $hpk_att) {
+                                $hpk_att_id = (isset($hpk_att->id) ? $hpk_att->id : null);
+                                $hpk_att_name = (isset($hpk_att->name) ? $hpk_att->name : '');
+                            ?>
+                            <li>
+                                <a href="<?php echo $this->Html->safe($hpk_attach_url . $hpk_att_id . '/' . $hpk_sid_query); ?>">
+                                    <svg class="hpk-icon" aria-hidden="true" focusable="false"><use href="#hpk-icon-receipt"></use></svg>
+                                    <?php echo $this->Html->safe($hpk_att_name); ?>
+                                </a>
+                            </li>
+                            <?php } ?>
+                        </ul>
+                        <?php } ?>
+                        <div class="hpk-ticket-reply__body">
+                            <?php
+                            // Markdown body: escape-then-markdown pipeline so we do not rely
+                            // solely on the markdown parser for XSS prevention. Rewrite
+                            // blesta-attachment:// to the getattachment route first (raw URL
+                            // so the subsequent escape does not double-escape the query).
+                            $hpk_body = (isset($hpk_reply->details) ? $hpk_reply->details : null);
+                            if ($hpk_body && strpos($hpk_body, 'blesta-attachment://') !== false) {
+                                $hpk_body = preg_replace_callback('/blesta-attachment:\/\/(\d+)/', function ($matches) use ($hpk_attach_url, $hpk_sid_query) {
+                                    return $hpk_attach_url . (int)$matches[1] . '/' . $hpk_sid_query;
+                                }, $hpk_body);
+                            }
+                            $hpk_body_escaped = $hpk_body !== null
+                                ? htmlspecialchars($hpk_body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                                : null;
+                            echo $this->TextParser->encode('markdown', $hpk_body_escaped);
+                            ?>
+                        </div>
+                        <?php
+                        // Image attachments: plain on-brand thumbnail-link grid (DEC-2: the
+                        // jQuery lightbox + support-manager.js are dropped).
+                        if (!empty($hpk_reply->images)) {
+                        ?>
+                        <div class="hpk-ticket-reply__images">
+                            <?php foreach ($hpk_reply->images as $hpk_img_id => $hpk_img_name) {
+                                $hpk_img_href = $hpk_attach_url . $hpk_img_id . '/' . $hpk_sid_query;
+                            ?>
+                            <a class="hpk-ticket-reply__thumb" href="<?php echo $this->Html->safe($hpk_img_href); ?>">
+                                <img src="<?php echo $this->Html->safe($hpk_img_href); ?>" alt="<?php echo $this->Html->safe($hpk_img_name); ?>" title="<?php echo $this->Html->safe($hpk_img_name); ?>" loading="lazy">
+                            </a>
+                            <?php } ?>
+                        </div>
+                        <?php } ?>
+                    </div>
+                </article>
+                <?php } ?>
+            </div>
+        </div>
+    </section>
+
+    <?php
+    // ----- Reply form (ONE form: Reply = HTMX island button; Close = native + confirm) -
+    // Form->create(null, multipart) posts to self (the reply URL) for the no-JS path and
+    // carries the implicit _csrf_token (RULE 8 floor). The hidden sid is preserved.
+    $this->Form->create(null, ['enctype' => 'multipart/form-data', 'class' => 'hpk-ticket-reply-form', 'id' => 'hpk-ticket-reply-form', 'data-hpk-ticket-form' => '']);
+    if ($hpk_sid !== null) {
+        $this->Form->fieldHidden('sid', $hpk_sid);
+    }
+    // Retained empty action_type (no default 'reply'): the named submitters below post
+    // the authoritative value with JS OFF; the bootstrap.js setter mirrors the clicked
+    // submitter into this field as a compatibility guard (e.g. the confirm-binder shim
+    // path). Placed BEFORE the buttons so a submitter value always wins on last-write.
+    $this->Form->fieldHidden('action_type', '', ['id' => 'action_type']);
+    ?>
+    <section class="hpk-card hpk-ticket-reply-box" data-hpk-confirm-scope aria-labelledby="hpk-ticket-reply-label">
+        <h2 id="hpk-ticket-reply-label" class="hpk-ticket-reply-box__heading"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_label', true)); ?></h2>
+
+        <div class="hpk-form-group hpk-ticket-reply-box__field">
+            <label class="hpk-visually-hidden" for="hpk-ticket-details"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_label', true)); ?></label>
+            <textarea class="form-control hpk-ticket-reply-box__textarea" name="details" id="hpk-ticket-details" rows="6" placeholder="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_placeholder', true)); ?>"><?php echo $this->Html->safe($hpk_draft); ?></textarea>
+        </div>
+
+        <?php
+        // ----- Attachment UI (Task 4 / AC4 / WCAG 2.5.7) ------------------
+        // Always-present multiple file input (the accessible click/tap path). The hint
+        // states accepted types + max size from the department object the controller
+        // now passes; falls back to a static statement if those fields are missing.
+        $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint_generic', true);
+        $hpk_accept_attr = '';
+        $hpk_size_str = '';
+        $hpk_types_raw = [];
+        if (isset($department) && is_object($department)) {
+            if (!empty($department->attachment_types)) {
+                $hpk_types_raw = array_values(array_filter(
+                    array_map(function ($t) {
+                        return ltrim(trim($t), '.');
+                    }, preg_split('/\s*,\s*/', trim((string) $department->attachment_types))),
+                    'strlen'
+                ));
+            }
+            if (!empty($hpk_types_raw)) {
+                $hpk_accept_attr = '.' . implode(',.', $hpk_types_raw);
+            }
+            if (isset($department->max_attachment_size)
+                && is_numeric($department->max_attachment_size)
+                && (int) $department->max_attachment_size > 0
+            ) {
+                $hpk_size_str = ((int) $department->max_attachment_size) . ' MB';
+            }
+            if (!empty($hpk_types_raw) && $hpk_size_str !== '') {
+                $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint', true, implode(', ', $hpk_types_raw), $hpk_size_str);
+            } elseif (!empty($hpk_types_raw)) {
+                $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint_types', true, implode(', ', $hpk_types_raw));
+            } elseif ($hpk_size_str !== '') {
+                $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint_size', true, $hpk_size_str);
+            }
+        }
+        ?>
+        <div class="hpk-form-group hpk-ticket-reply-box__field hpk-ticket-attach" data-hpk-ticket-attach>
+            <label for="hpk-ticket-attachment"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.attach_label', true)); ?></label>
+            <input type="file" class="form-control hpk-ticket-attach__input" name="attachment[]" id="hpk-ticket-attachment" aria-describedby="hpk-ticket-attach-hint"<?php echo ($hpk_accept_attr !== '' ? ' accept="' . $this->Html->safe($hpk_accept_attr) . '"' : ''); ?> multiple>
+            <p class="hpk-ticket-attach__hint" id="hpk-ticket-attach-hint"><?php echo $this->Html->safe($hpk_attach_hint); ?></p>
+            <ul id="hpk-ticket-attachments" class="hpk-ticket-attach__list" data-hpk-attach-list
+                data-hpk-attach-none="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.attach_none', true)); ?>"
+                data-hpk-attach-remove="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.attach_remove', true, '%s')); ?>"></ul>
+        </div>
+
+        <?php
+        // ----- Recipients / contacts (optional) ----------------------------
+        // Native <details> collapse (no-JS friendly). contacts[] checkboxes + recipients[]
+        // text inputs preserve the POST shape; the bootstrap.js handler re-implements the
+        // add/remove recipient affordances and trims empty recipient fields on submit.
+        $hpk_form_source = (isset($vars) && is_object($vars)) ? $vars : $hpk_ticket;
+        $hpk_recipients = ($hpk_form_source !== null && isset($hpk_form_source->recipients) && is_array($hpk_form_source->recipients))
+            ? $hpk_form_source->recipients
+            : [];
+        $hpk_not_empty = function ($value) {
+            return (string) $value !== '';
+        };
+        $hpk_has_recipients = !empty(array_filter($hpk_recipients, $hpk_not_empty));
+        if (empty($hpk_recipients)) {
+            $hpk_recipients = [''];
+        }
+        $hpk_ticket_contacts = ($hpk_form_source !== null && isset($hpk_form_source->contacts) && is_array($hpk_form_source->contacts))
+            ? $hpk_form_source->contacts
+            : [];
+        $hpk_open_recipients = (!empty(array_filter($hpk_ticket_contacts, $hpk_not_empty)) || $hpk_has_recipients);
+        ?>
+        <details class="hpk-ticket-recipients" data-hpk-ticket-recipients<?php echo ($hpk_open_recipients ? ' open' : ''); ?>>
+            <summary class="hpk-ticket-recipients__toggle"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipients_toggle', true)); ?></summary>
+            <div class="hpk-ticket-recipients__body">
+                <?php if (isset($contacts) && !empty($contacts)) { ?>
+                <fieldset class="hpk-ticket-recipients__contacts">
+                    <legend class="hpk-ticket-recipients__label"><?php echo $this->Html->safe($this->_('ClientTickets.reply.field_contacts', true)); ?></legend>
+                    <?php $this->Form->fieldHidden('contacts[]', '', ['id' => 'contacts_placeholder']); ?>
+                    <?php foreach ($contacts as $hpk_contact_id => $hpk_contact_name) { ?>
+                    <label class="hpk-checkbox">
+                        <?php
+                        // Normalise both sides to strings so strict comparison repopulates
+                        // correctly after a validation retry (POST values arrive as strings).
+                        $hpk_ticket_contacts_str = array_map('strval', $hpk_ticket_contacts);
+                        $hpk_contact_checked = in_array((string)$hpk_contact_id, $hpk_ticket_contacts_str, true);
+                        $this->Form->fieldCheckbox('contacts[]', $hpk_contact_id, $hpk_contact_checked, ['id' => 'hpk-contact-' . $hpk_contact_id]);
+                        ?>
+                        <span><?php echo $this->Html->safe($hpk_contact_name); ?></span>
+                    </label>
+                    <?php } ?>
+                </fieldset>
+                <?php } ?>
+                <div class="hpk-ticket-recipients__emails">
+                    <span class="hpk-ticket-recipients__label"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipients_label', true)); ?></span>
+                    <div id="hpk-ticket-recipient-list" class="hpk-ticket-recipients__list" data-hpk-recipient-list>
+                        <?php foreach ($hpk_recipients as $hpk_recipient) { ?>
+                        <div class="hpk-ticket-recipients__row" data-hpk-recipient-row>
+                            <input type="text" class="form-control" name="recipients[]" value="<?php echo $this->Html->safe($hpk_recipient); ?>" placeholder="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipient_placeholder', true)); ?>">
+                            <button type="button" class="hpk-btn hpk-btn-ghost hpk-btn-sm" data-hpk-recipient-remove aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipient_remove', true)); ?>">&times;</button>
+                        </div>
+                        <?php } ?>
+                    </div>
+                    <button type="button" class="hpk-btn hpk-btn-outline hpk-btn-sm" data-hpk-recipient-add><?php echo $this->Html->safe($this->_('Hosterpk.ticket.add_recipient', true)); ?></button>
+                </div>
+            </div>
+        </details>
+
+        <div class="hpk-ticket-reply-box__custom"><?php echo (isset($department_fields) ? $department_fields : ''); ?></div>
+
+        <div class="hpk-ticket-reply-box__actions">
+            <button type="submit" name="action_type" value="reply"
+                class="hpk-btn hpk-btn-primary"
+                hx-post="<?php echo $this->Html->safe($hpk_reply_url); ?>"
+                hx-target="#hpk-ticket-thread"
+                hx-select="#hpk-ticket-thread-inner"
+                hx-swap="innerHTML"
+                hx-select-oob="#hpk-ticket-flash"
+                hx-indicator="#hpk-ticket-thread-skeleton"
+                hx-encoding="multipart/form-data"
+                hx-disabled-elt="this"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.reply_submit', true)); ?></button>
+            <?php if ($hpk_status !== 'closed') { ?>
+            <button type="submit" name="action_type" value="close"
+                class="hpk-btn hpk-btn-danger modal-confirm-warning"
+                data-confirm-message="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.confirm_close_message', true)); ?>"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.close_submit', true)); ?></button>
+            <?php } ?>
+        </div>
+    </section>
+    <?php $this->Form->end(); ?>
+
+    <?php
+    // Confirm copy island (Task 5 / DEC-3). The generalized 7.3 binder reads these
+    // chrome labels; the consequence sentence is the Close button's data-confirm-message.
+    ?>
+    <div id="hpk-confirm-copy"
+        data-title="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.confirm_title', true)); ?>"
+        data-cancel="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.confirm_cancel', true)); ?>"
+        data-close="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.confirm_close_label', true)); ?>"
+        data-confirm-fallback="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.confirm_fallback', true)); ?>"
+        hidden></div>
+    <?php } ?>
+<?php if (!(isset($render_section) ? $render_section : null)) { ?>
+</div>
+<?php } ?>

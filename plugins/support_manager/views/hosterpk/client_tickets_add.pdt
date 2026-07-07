@@ -1,0 +1,324 @@
+<?php /* HOSTERPK OVERRIDE - diverges from stock: replaces the WidgetClient chrome with the HosterPK card / .hpk-field / .hpk-btn pattern for the "Open a ticket" create form (client_tickets::add). NOT an HTMX island (unlike the 8.2 reply): a plain multipart/form-data POST that round-trips to the stock add() controller - success redirects to the 8.1 list (landing-banner flash), a validation error re-renders this view (200, no redirect). Renders a view-authored summary alert (.hpk-alert-danger, skinned from the controller's $message - the SINGLE summary render, structure.pdt emits none) plus inline field-level errors (.hpk-invalid + aria-invalid/aria-describedby + .hpk-field-error) on each view-authored field whose key is in $errors, with the submitted draft preserved from $vars. Drops the markdown WYSIWYG editor (data-markdown-editor), the inline_image_temp_ids hidden field, blestaBindDropZone, and support-manager.js (DEC-2): a plain textarea posts markdown the controller still parses, and an always-present multiple file input (WCAG 2.5.7) carries the vanilla filename/remove + recipients enhancement generalized in bootstrap.js (shared [data-hpk-ticket-form] marker, reused with the reply form). The department is fixed by URL and shown read-only in the heading (no department select - preserves the $this->get[0] contract). Preserves the controller->view contract ($vars/$priorities/$department_fields/$enable_related_services/$logged_in/$captcha/$service_ids/$contacts + the 8.3 $department/$errors), the POST field shape (summary/priority/details/attachment[]/service_id/recipients[]/contacts[]/custom_fields/email guest-only), the implicit Form->create() CSRF token, and the byte-verbatim widget-mode guard. Lives in the plugin tree (reached via the support_manager_controller HOSTERPK-SEAM widened to add in 8.3), so copy loads from the app template path (DEC-6). Stock baseline: ../default/client_tickets_add.pdt @ 6.0.0-b1 sha256:6fce044a9ecab0e89ce708c46111c589610d3686eda20c83b6f72b031fc356ce */ ?>
+<?php
+/* Blesta captures content before structure.pdt, so page copy must load here too.
+ * DEC-6: this view lives in the PLUGIN tree, so $this->view_dir points into
+ * plugins/support_manager/views/hosterpk/ - the core view_dir-relative derivation
+ * would look in the wrong (plugin) language dir. The canonical copy table is the app
+ * template's language/en_us/hosterpk.php; load it from the app template path. */
+if (defined('ROOTWEBDIR') && defined('APPDIR')) {
+    Language::loadLang(
+        'hosterpk',
+        null,
+        ROOTWEBDIR . APPDIR . 'views' . DS . 'client' . DS . 'hosterpk' . DS . 'language' . DS
+    );
+}
+
+// ----- Resolved view data (defensive, mirrors 8.1/8.2) ---------------------
+$hpk_logged_in = (isset($logged_in) ? (bool) $logged_in : false);
+$hpk_vars = (isset($vars) && is_object($vars)) ? $vars : new stdClass();
+$hpk_priorities = (isset($priorities) && is_array($priorities)) ? $priorities : [];
+$hpk_service_ids = (isset($service_ids) && is_array($service_ids)) ? $service_ids : [];
+$hpk_enable_services = (isset($enable_related_services) ? (bool) $enable_related_services : false);
+$hpk_department_fields = (isset($department_fields) ? $department_fields : '');
+$hpk_captcha = (isset($captcha) ? $captcha : '');
+$hpk_dept = (isset($department) && is_object($department)) ? $department : null;
+$hpk_dept_name = ($hpk_dept !== null && isset($hpk_dept->name)) ? (string) $hpk_dept->name : '';
+$hpk_errors = (isset($errors) && is_array($errors)) ? $errors : [];
+
+// Inline error helper: Blesta Input errors are two-level
+// ($errors[<field>][<rule>] => <message>); after isset(), read the first message via
+// reset(). Returns null when the field has no error. Accepts a single key or an array
+// of keys; bracketed keys (recipients[], details[base64]) are looked up literally
+// first, then the bare alias (recipients, details).
+$hpk_field_error = function ($key) use ($hpk_errors) {
+    $keys = (array) $key;
+    foreach ($keys as $lookup) {
+        if (isset($hpk_errors[$lookup]) && is_array($hpk_errors[$lookup]) && !empty($hpk_errors[$lookup])) {
+            return (string) reset($hpk_errors[$lookup]);
+        }
+        $bracket_pos = strpos($lookup, '[');
+        if ($bracket_pos !== false) {
+            $parent = substr($lookup, 0, $bracket_pos);
+            if (isset($hpk_errors[$parent]) && is_array($hpk_errors[$parent]) && !empty($hpk_errors[$parent])) {
+                return (string) reset($hpk_errors[$parent]);
+            }
+        }
+    }
+    return null;
+};
+
+// Augment a Form-helper attribute array with the invalid state + aria wiring when the
+// mapped error key is present.
+$hpk_invalid_attrs = function ($key, array $attrs, $describe_id) use ($hpk_field_error) {
+    if ($hpk_field_error($key) !== null) {
+        $attrs['class'] = (isset($attrs['class']) ? $attrs['class'] . ' ' : '') . 'hpk-invalid';
+        $attrs['aria-invalid'] = 'true';
+        $attrs['aria-describedby'] = $describe_id;
+    }
+    return $attrs;
+};
+
+// Render the inline .hpk-field-error message for a field, if errored. The describe id is
+// a view-authored literal (safe); the message is escaped.
+$hpk_error_block = function ($key, $describe_id) use ($hpk_field_error) {
+    $err = $hpk_field_error($key);
+    if ($err === null) {
+        return;
+    }
+?><p class="hpk-field-error" id="<?php echo $describe_id; ?>"><?php echo $this->Html->safe($err); ?></p><?php
+};
+
+// Skin the controller's error $message (setMessage('error', ...) -> message.pdt) into the
+// SOLE summary alert. structure.pdt emits no $message region, so this is the only render.
+$hpk_summary_html = '';
+if (isset($message) && $message !== '') {
+    $hpk_clean = preg_replace(
+        [
+            '/<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*(["\'])(?:(?!\2).)*?\bclose\b(?:(?!\2).)*?\2[^>]*>.*?<\/\1>/is',
+            '/<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*close\b[^>]*>.*?<\/\1>/is',
+        ],
+        ' ',
+        $message
+    );
+    if ($hpk_clean === null) {
+        $hpk_clean = $message;
+    }
+    $hpk_summary_text = trim(preg_replace('/\s+/', ' ', strip_tags(
+        str_replace(['</li>', '</p>', '<br>', '<br/>', '<br />'], ' ', html_entity_decode($hpk_clean, ENT_QUOTES, 'UTF-8'))
+    )));
+    if ($hpk_summary_text !== '') {
+        $hpk_summary_html = '<div class="hpk-alert hpk-alert-danger" role="alert"><span class="hpk-alert__intro">'
+            . $this->Html->safe($this->_('Hosterpk.ticket.create_error_summary', true)) . '</span> <span>'
+            . $this->Html->safe($hpk_summary_text) . '</span></div>';
+    }
+}
+?>
+<?php
+// Don't show the outer container when only rendering the widget section (verbatim guard).
+if (!(isset($render_section) ? $render_section : null)) {
+?>
+<div class="hpk-ticket-create">
+<?php
+}
+?>
+    <section class="hpk-card hpk-ticket-form" aria-labelledby="hpk-ticket-create-title">
+        <h1 id="hpk-ticket-create-title" class="hpk-ticket-form__title"><?php echo $this->Html->safe(sprintf(Language::_('Hosterpk.ticket.create_title', true), $hpk_dept_name)); ?></h1>
+
+        <?php echo $hpk_summary_html; ?>
+
+        <?php
+        $this->Form->create(null, [
+            'id' => 'hpk-ticket-create-form',
+            'enctype' => 'multipart/form-data',
+            'class' => 'hpk-ticket-form__form',
+            'data-hpk-ticket-form' => '',
+            'data-hpk-native-submit-lock' => '',
+        ]);
+        ?>
+
+        <?php
+        // ----- Email (guest only - the controller renders email iff !$logged_in) ------
+        if (!$hpk_logged_in) {
+            $hpk_email_attrs = $hpk_invalid_attrs('email', [
+                'id' => 'hpk-ticket-email',
+                'class' => 'hpk-input',
+                'placeholder' => $this->_('Hosterpk.ticket.email_label', true),
+            ], 'hpk-err-email');
+        ?>
+        <div class="hpk-form-group">
+            <?php $this->Form->label($this->_('Hosterpk.ticket.email_label', true), 'hpk-ticket-email'); ?>
+            <?php $this->Form->fieldText('email', (isset($hpk_vars->email) ? $hpk_vars->email : null), $hpk_email_attrs); ?>
+            <?php $hpk_error_block('email', 'hpk-err-email'); ?>
+        </div>
+        <?php } ?>
+
+        <?php
+        // ----- Subject / summary ---------------------------------------------------
+        $hpk_summary_attrs = $hpk_invalid_attrs('summary', [
+            'id' => 'hpk-ticket-summary',
+            'class' => 'hpk-input',
+            'placeholder' => $this->_('Hosterpk.ticket.subject_placeholder', true),
+        ], 'hpk-err-summary');
+        ?>
+        <div class="hpk-form-group">
+            <?php $this->Form->label($this->_('Hosterpk.ticket.subject_label', true), 'hpk-ticket-summary'); ?>
+            <?php $this->Form->fieldText('summary', (isset($hpk_vars->summary) ? $hpk_vars->summary : null), $hpk_summary_attrs); ?>
+            <?php $hpk_error_block('summary', 'hpk-err-summary'); ?>
+        </div>
+
+        <?php
+        // ----- Priority (a SELECT, not a badge - render the controller labels as-is) --
+        $hpk_priority_attrs = $hpk_invalid_attrs('priority', [
+            'id' => 'hpk-ticket-priority',
+            'class' => 'hpk-input',
+        ], 'hpk-err-priority');
+        ?>
+        <div class="hpk-form-group">
+            <?php $this->Form->label($this->_('Hosterpk.ticket.priority_label', true), 'hpk-ticket-priority'); ?>
+            <?php $this->Form->fieldSelect('priority', $hpk_priorities, (isset($hpk_vars->priority) ? $hpk_vars->priority : null), $hpk_priority_attrs); ?>
+            <?php $hpk_error_block('priority', 'hpk-err-priority'); ?>
+        </div>
+
+        <?php
+        // ----- Related service (only when the department enables it) ----------------
+        if ($hpk_enable_services) {
+            $hpk_service_attrs = $hpk_invalid_attrs('service_id', [
+                'id' => 'hpk-ticket-service',
+                'class' => 'hpk-input',
+            ], 'hpk-err-service');
+        ?>
+        <div class="hpk-form-group">
+            <?php $this->Form->label($this->_('Hosterpk.ticket.service_label', true), 'hpk-ticket-service'); ?>
+            <?php $this->Form->fieldSelect('service_id', $hpk_service_ids, (isset($hpk_vars->service_id) ? $hpk_vars->service_id : null), $hpk_service_attrs); ?>
+            <?php $hpk_error_block('service_id', 'hpk-err-service'); ?>
+        </div>
+        <?php } ?>
+
+        <?php
+        // ----- Message (plain textarea - DEC-2 drops the markdown editor) -----------
+        $hpk_details_attrs = $hpk_invalid_attrs(['details', 'details[base64]'], [
+            'id' => 'hpk-ticket-details',
+            'class' => 'hpk-input hpk-ticket-form__textarea',
+            'rows' => 6,
+            'placeholder' => $this->_('Hosterpk.ticket.message_placeholder', true),
+        ], 'hpk-err-details');
+        ?>
+        <div class="hpk-form-group">
+            <?php $this->Form->label($this->_('Hosterpk.ticket.message_label', true), 'hpk-ticket-details'); ?>
+            <?php $this->Form->fieldTextarea('details', (isset($hpk_vars->details) ? $hpk_vars->details : null), $hpk_details_attrs); ?>
+            <?php $hpk_error_block(['details', 'details[base64]'], 'hpk-err-details'); ?>
+        </div>
+
+        <?php
+        // ----- Attachment (Task 4 / AC4 / WCAG 2.5.7) ------------------------------
+        // Always-present multiple file input (the accessible click/tap path). The hint
+        // states accepted types + max size from the department object; falls back to the
+        // neutral statement when those fields are missing. attachment_types is a
+        // comma-separated extension list -> dot-prefixed accept values; max_attachment_size
+        // is MB. Task 2a enforces both server-side through the Upload component.
+        $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint_generic', true);
+        $hpk_accept_attr = '';
+        $hpk_size_str = '';
+        $hpk_types_raw = [];
+        if ($hpk_dept !== null) {
+            if (!empty($hpk_dept->attachment_types)) {
+                $hpk_types_raw = array_values(array_filter(
+                    array_map(function ($t) {
+                        return ltrim(trim($t), '.');
+                    }, preg_split('/\s*,\s*/', trim((string) $hpk_dept->attachment_types))),
+                    'strlen'
+                ));
+            }
+            if (!empty($hpk_types_raw)) {
+                $hpk_accept_attr = '.' . implode(',.', $hpk_types_raw);
+            }
+            if (isset($hpk_dept->max_attachment_size)
+                && is_numeric($hpk_dept->max_attachment_size)
+                && (int) $hpk_dept->max_attachment_size > 0
+            ) {
+                $hpk_size_str = ((int) $hpk_dept->max_attachment_size) . ' MB';
+            }
+            if (!empty($hpk_types_raw) && $hpk_size_str !== '') {
+                $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint', true, implode(', ', $hpk_types_raw), $hpk_size_str);
+            } elseif (!empty($hpk_types_raw)) {
+                $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint_types', true, implode(', ', $hpk_types_raw));
+            } elseif ($hpk_size_str !== '') {
+                $hpk_attach_hint = $this->_('Hosterpk.ticket.attach_hint_size', true, $hpk_size_str);
+            }
+        }
+        $hpk_attach_err = $hpk_field_error('attachment');
+        ?>
+        <div class="hpk-form-group hpk-ticket-attach<?php echo ($hpk_attach_err !== null ? ' hpk-invalid' : ''); ?>" data-hpk-ticket-attach>
+            <label for="hpk-ticket-attachment"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.attach_label', true)); ?></label>
+            <input type="file" class="hpk-ticket-attach__input" name="attachment[]" id="hpk-ticket-attachment" aria-describedby="hpk-ticket-attach-hint<?php echo ($hpk_attach_err !== null ? ' hpk-err-attachment' : ''); ?>"<?php echo ($hpk_attach_err !== null ? ' aria-invalid="true"' : ''); ?><?php echo ($hpk_accept_attr !== '' ? ' accept="' . $this->Html->safe($hpk_accept_attr) . '"' : ''); ?> multiple>
+            <p class="hpk-ticket-attach__hint" id="hpk-ticket-attach-hint"><?php echo $this->Html->safe($hpk_attach_hint); ?></p>
+            <?php $hpk_error_block('attachment', 'hpk-err-attachment'); ?>
+            <ul id="hpk-ticket-attachments" class="hpk-ticket-attach__list" data-hpk-attach-list
+                data-hpk-attach-none="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.attach_none', true)); ?>"
+                data-hpk-attach-remove="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.attach_remove', true, '%s')); ?>"></ul>
+        </div>
+
+        <?php
+        // ----- Recipients / contacts (optional, native <details>) ------------------
+        // Draft re-population from $vars on a validation retry (the controller sets
+        // $vars = (object)$this->post). Empty values are trimmed by the model.
+        $hpk_draft_recipients = (isset($hpk_vars->recipients) && is_array($hpk_vars->recipients)) ? $hpk_vars->recipients : [];
+        $hpk_draft_contacts = (isset($hpk_vars->contacts) && is_array($hpk_vars->contacts)) ? $hpk_vars->contacts : [];
+        $hpk_draft_contact_ids = array_map('strval', $hpk_draft_contacts);
+        $hpk_not_empty = function ($value) {
+            return (string) $value !== '';
+        };
+        $hpk_has_recipients = !empty(array_filter($hpk_draft_recipients, $hpk_not_empty));
+        if (empty($hpk_draft_recipients)) {
+            $hpk_draft_recipients = [''];
+        }
+        $hpk_open_recipients = (!empty(array_filter($hpk_draft_contacts, $hpk_not_empty)) || $hpk_has_recipients);
+        $hpk_recipients_err = $hpk_field_error('recipients[]');
+        ?>
+        <details class="hpk-ticket-recipients" data-hpk-ticket-recipients<?php echo ($hpk_open_recipients ? ' open' : ''); ?>>
+            <summary class="hpk-ticket-recipients__toggle"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipients_toggle', true)); ?></summary>
+            <div class="hpk-ticket-recipients__body">
+                <?php
+                $hpk_contacts_err = $hpk_field_error('contacts[]');
+                if (isset($contacts) && !empty($contacts)) {
+                ?>
+                <fieldset class="hpk-ticket-recipients__contacts<?php echo ($hpk_contacts_err !== null ? ' hpk-invalid' : ''); ?>"<?php echo ($hpk_contacts_err !== null ? ' aria-invalid="true" aria-describedby="hpk-err-contacts"' : ''); ?>>
+                    <legend class="hpk-ticket-recipients__label"><?php echo $this->Html->safe($this->_('ClientTickets.add.field_contacts', true)); ?></legend>
+                    <?php $this->Form->fieldHidden('contacts[]', '', ['id' => 'contacts_placeholder']); ?>
+                    <?php foreach ($contacts as $hpk_contact_id => $hpk_contact_name) { ?>
+                    <label class="hpk-checkbox">
+                        <?php $this->Form->fieldCheckbox('contacts[]', $hpk_contact_id, in_array((string) $hpk_contact_id, $hpk_draft_contact_ids, true), ['id' => 'hpk-contact-' . $hpk_contact_id]); ?>
+                        <span><?php echo $this->Html->safe($hpk_contact_name); ?></span>
+                    </label>
+                    <?php } ?>
+                    <?php $hpk_error_block('contacts[]', 'hpk-err-contacts'); ?>
+                </fieldset>
+                <?php } ?>
+                <div class="hpk-ticket-recipients__emails">
+                    <span class="hpk-ticket-recipients__label"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipients_label', true)); ?></span>
+                    <div id="hpk-ticket-recipient-list" class="hpk-ticket-recipients__list" data-hpk-recipient-list>
+                        <?php foreach ($hpk_draft_recipients as $hpk_recipient) { ?>
+                        <div class="hpk-ticket-recipients__row" data-hpk-recipient-row>
+                            <input type="text" class="hpk-input<?php echo ($hpk_recipients_err !== null ? ' hpk-invalid' : ''); ?>" name="recipients[]" value="<?php echo $this->Html->safe($hpk_recipient); ?>" placeholder="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipient_placeholder', true)); ?>" aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipients_label', true)); ?>"<?php echo ($hpk_recipients_err !== null ? ' aria-invalid="true" aria-describedby="hpk-err-recipients"' : ''); ?>>
+                            <button type="button" class="hpk-btn hpk-btn-ghost hpk-btn-sm" data-hpk-recipient-remove aria-label="<?php echo $this->Html->safe($this->_('Hosterpk.ticket.recipient_remove', true)); ?>">&times;</button>
+                        </div>
+                        <?php } ?>
+                    </div>
+                    <button type="button" class="hpk-btn hpk-btn-outline hpk-btn-sm" data-hpk-recipient-add><?php echo $this->Html->safe($this->_('Hosterpk.ticket.add_recipient', true)); ?></button>
+                    <?php $hpk_error_block('recipients[]', 'hpk-err-recipients'); ?>
+                </div>
+            </div>
+        </details>
+
+        <?php
+        // ----- Department custom fields (opaque FieldsHtml; partial_fields.pdt renders
+        // it; custom_fields[<id>] errors surface in the summary alert only) -----------
+        if ($hpk_department_fields !== '') {
+        ?>
+        <div class="hpk-form-group hpk-ticket-form__custom"><?php echo $hpk_department_fields; ?></div>
+        <?php } ?>
+
+        <?php
+        // ----- Captcha (guest only; controller-built vendor HTML - do not restyle) ---
+        $hpk_captcha_err = $hpk_field_error('captcha');
+        if ($hpk_captcha !== '') {
+        ?>
+        <div class="hpk-form-group hpk-ticket-form__captcha<?php echo ($hpk_captcha_err !== null ? ' hpk-invalid' : ''); ?>"<?php echo ($hpk_captcha_err !== null ? ' aria-invalid="true" aria-describedby="hpk-err-captcha"' : ''); ?>>
+            <?php echo $hpk_captcha; ?>
+            <?php $hpk_error_block('captcha', 'hpk-err-captcha'); ?>
+        </div>
+        <?php } ?>
+
+        <div class="hpk-ticket-form__actions">
+            <button type="submit" class="hpk-btn hpk-btn-primary"><?php echo $this->Html->safe($this->_('Hosterpk.ticket.create_submit', true)); ?></button>
+        </div>
+
+        <?php $this->Form->end(); ?>
+    </section>
+<?php
+if (!(isset($render_section) ? $render_section : null)) {
+?>
+</div>
+<?php
+}
+?>

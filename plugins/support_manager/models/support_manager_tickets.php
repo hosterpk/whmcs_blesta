@@ -1185,6 +1185,56 @@ class SupportManagerTickets extends SupportManagerModel
 
                     $this->Upload->setFiles($files, false);
                     $this->Upload->setUploadPath($upload_path);
+                    $this->Upload->setMaxFileSize(0);
+                    // Upload component contract: null resets allowed extensions to "allow all".
+                    $this->Upload->setAllowedFileExtensions(null);
+
+                    // HOSTERPK 8-3: enforce the department's attachment limits through the
+                    // existing Upload component before writing. Shared by ticket create
+                    // (which forces $vars['department_id']) and reply (which may not carry
+                    // it -> derive from the ticket). Never index $vars['department_id']
+                    // unguarded (PHP 8 warning on the reply path).
+                    $hpk_department_id = null;
+                    if (isset($vars['department_id']) && $vars['department_id'] !== '') {
+                        $hpk_department_id = $vars['department_id'];
+                    } elseif (!empty($ticket_id)) {
+                        $hpk_ticket_dept = $this->Record->select('department_id')
+                            ->from('support_tickets')
+                            ->where('id', '=', $ticket_id)
+                            ->fetch();
+                        if ($hpk_ticket_dept) {
+                            $hpk_department_id = $hpk_ticket_dept->department_id;
+                        }
+                    }
+                    if ($hpk_department_id !== null) {
+                        if (!isset($this->SupportManagerDepartments)) {
+                            Loader::loadModels($this, ['SupportManager.SupportManagerDepartments']);
+                        }
+                        if (($hpk_department = $this->SupportManagerDepartments->get($hpk_department_id))) {
+                            // max_attachment_size is stored in MB (matches the email-include
+                            // MB math at support_manager_tickets.php:2488).
+                            if (is_numeric($hpk_department->max_attachment_size)
+                                && $hpk_department->max_attachment_size > 0
+                                && $hpk_department->max_attachment_size <= PHP_INT_MAX / 1000000
+                            ) {
+                                $this->Upload->setMaxFileSize((int) $hpk_department->max_attachment_size * 1000000);
+                            }
+                            // attachment_types is a comma-separated extension list (admin
+                            // tooltip says extensions); dot-prefix for Upload's strrchr match.
+                            if (!empty($hpk_department->attachment_types)) {
+                                $hpk_exts = array_filter(
+                                    array_map('trim', explode(',', (string) $hpk_department->attachment_types)),
+                                    'strlen'
+                                );
+                                $hpk_exts = array_map(function ($ext) {
+                                    return '.' . ltrim($ext, '.');
+                                }, $hpk_exts);
+                                if (!empty($hpk_exts)) {
+                                    $this->Upload->setAllowedFileExtensions(array_values($hpk_exts));
+                                }
+                            }
+                        }
+                    }
 
                     $file_vars = ['files' => []];
                     if (!($errors = $this->Upload->errors())) {
